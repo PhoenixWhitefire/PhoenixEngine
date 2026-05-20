@@ -463,66 +463,6 @@ local function stubCoreAssets()
 	end
 end
 
-local function handleCoreAssetAliasMigration(config)
-	local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
-	assert(typeof(editorconf) == "table")
-	editorconf = editorconf :: { [string]: JsonSerializable }
-
-	local SymlinkMigrationChoices = {
-		Migrated = 1,
-		RemindLater = 2,
-		DoNotMigrate = 3
-	}
-
-	local lastSavedData = editorconf.Saved
-
-	if lastSavedData then
-		assert(typeof(lastSavedData) == "table")
-		lastSavedData = lastSavedData :: { [string]: JsonSerializable }
-
-		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 4 then
-			return
-		end
-	end
-
-	if not Engine.IsHeadless then
-		imgui.openpopup("Migrate core assets to alias")
-		local choiceIndex = 1
-
-		local connection; connection = game.OnFrameBegin:Connect(function()
-			if imgui.beginpopupmodal("Migrate core assets to alias") then
-				imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are not currently referred by aliases.")
-				imgui.text("This can cause incompatibilities with future versions of the Editor.")
-				imgui.text("It is recommended that you migrate these to use the `@base` alias.")
-
-				choiceIndex = imgui.combo("Choice", { "Migrate and alias", "Ignore until next time", "Do not migrate" }, choiceIndex)
-
-				imgui.setnextitemwidth(imgui.contentregionavail().x)
-				if imgui.button("Continue") then
-					assert(connection)
-					connection:Disconnect()
-
-					editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
-					assert(typeof(editorconf) == "table");
-					(editorconf :: any).CoreAssetsSymlinkMigrationChoice = choiceIndex;
-					(editorconf :: any).Saved.EditorBuild = EDITOR_BUILD
-
-					fs.write("@project/phoenix.conf", json.encode(editorconf))
-
-					if choiceIndex == SymlinkMigrationChoices.Migrated then
-						task.defer(stubCoreAssets)
-					end
-				end
-
-				imgui.endpopup()
-			else
-				assert(connection)
-				connection:Disconnect()
-			end
-		end)
-	end
-end
-
 local function openProject_(ManualPath: string?)
 	local path = ManualPath
 	local selecting = not path
@@ -595,9 +535,7 @@ local function openProject_(ManualPath: string?)
 
 	local config = json.parse(assert(fs.read("@project/phoenix.conf")))
 	assert(typeof(config) == "table", "Configuration file is corrupt")
-
 	config = config :: { [string]: JsonSerializable }
-	handleCoreAssetAliasMigration(config)
 
 	local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
 
@@ -689,7 +627,14 @@ local function openProject(ManualPath: string?)
 	LastAutosaved = game.Time
 end
 
-local SavedProjectsCache: { string }? = nil
+type CachedProjectInfo = {
+	Name: string,
+	EngineVersion: string,
+	Created: number,
+	Saved: number,
+}
+
+local SavedProjectsCache: { CachedProjectInfo }? = nil
 
 local function createNewProject_()
 	if not fs.isdirectory(EditorPreferences.ProjectsDirectory) then
@@ -2531,7 +2476,7 @@ local SelectorHoveringOver: number? = nil
 local OpenProjectContextMenu = false
 local ProjectContextMenuTarget = 0
 
-local function renderProjectSelectorTiles(Projects: { string })
+local function renderProjectSelectorTiles(Projects: { string } | { CachedProjectInfo })
 	local cpos = imgui.cursorposition()
 	local startX = cpos.x
 
@@ -2540,7 +2485,8 @@ local function renderProjectSelectorTiles(Projects: { string })
 	local hoveringOverWip = nil
 
 	for i = #Projects, 1, -1 do
-		local proj = Projects[i]
+		local projInfo = Projects[i]
+		local projName = if typeof(projInfo) == "string" then projInfo else projInfo.Name
 		local clicked = false
 		local hovered = false
 		cpos = imgui.cursorposition()
@@ -2564,18 +2510,22 @@ local function renderProjectSelectorTiles(Projects: { string })
 			end
 		end
 
-		imgui.image(`{ EditorPreferences.ProjectsDirectory }/{ proj }/icon.png`, vector.create(250, 250))
+		imgui.image(`{ EditorPreferences.ProjectsDirectory }/{ projName }/icon.png`, vector.create(250, 250))
 		clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
 		imgui.setcursorposition(cpos.x, cpos.y + 250)
-		imgui.text(proj)
+		imgui.text(projName)
 		clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
 		if clicked then
-			task.defer(openProject, proj)
+			task.defer(openProject, projName)
 		end
 
 		if hovered then
 			hoveringOverWip = i
+
+			if typeof(projInfo) ~= "string" then
+				imgui.settooltip(`Created: { os.date("%Y.%m.%d", projInfo.Created) }\nSaved: { os.date("%Y.%m.%d", projInfo.Saved) }\nEngine: { projInfo.EngineVersion }`)
+			end
 		end
 
 		if (lastnl - i) * 350 + 170 + 250 + 75 + startX > windowSizeX then
@@ -2657,7 +2607,28 @@ local function renderSavedProjects()
 				local title = conf["GameTitle" :: string]
 				assert(typeof(title == "string"))
 
-				table.insert(SavedProjectsCache, title)
+				local engine = "Unknown"
+				local savedTime = 0
+				local created = 0
+
+				local editorConfContents = fs.read(path .. "/phoenix.editor")
+
+				if editorConfContents then
+					local editorConf = json.parse(assert(fs.read(path .. "/phoenix.editor"))) :: any
+					local savedInfo = editorConf.Saved
+					local createdInfo = conf["Created" :: string] :: any
+
+					engine = if savedInfo then savedInfo.EngineVersion else "0"
+					savedTime = if savedInfo then savedInfo.Time else 0
+					created = if createdInfo then createdInfo.Time else 0
+				end
+
+				table.insert(SavedProjectsCache, {
+					EngineVersion = engine,
+					Created = created,
+					Saved = savedTime,
+					Name = title
+				})
 			end
 		end
 	end
@@ -2680,8 +2651,8 @@ local function renderSavedProjects()
 	
 	if imgui.beginpopup("ProjectContextMenu") then
 		if SavedProjectsCache and imgui.menuitem("Delete") then
-			local name = SavedProjectsCache[ProjectContextMenuTarget]
-			promptDeleteProject(name)
+			local proj = SavedProjectsCache[ProjectContextMenuTarget]
+			promptDeleteProject(proj.Name)
 		end
 	
 		imgui.endpopup()
@@ -2750,6 +2721,8 @@ function Stages.SelectProject(DeltaTime: number)
 				if onSwitchTo then
 					onSwitchTo()
 				end
+
+				PrevSelectedProjectsCategory = SelectedProjectsCategory
 			end
 		end
 		imgui.endchild()

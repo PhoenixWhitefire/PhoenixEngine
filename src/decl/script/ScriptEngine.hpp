@@ -135,6 +135,8 @@ namespace ScriptEngine::L
 		std::string SpawnTrace;
 		std::vector<EventConnectionData*> EventConnections;
 		std::vector<lua_State*> Coroutines; // Only populated for the main thread
+		std::vector<std::string> YieldBlockers;
+		double LastResumed = 0.f;
 	};
 
 	struct DebugBreakReason_

@@ -551,7 +551,6 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string_view& SourceCod
 	return result;
 }
 
-#define YIELDBLOCKERTRACKING "_YIELDBLOCKERS"
 #define SEENTABLES "ToGenericValueTemp_SeenTables"
 #define MAXDEPTH 16
 
@@ -661,32 +660,13 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 
 				for (const Reflection::GenericValue& i : Inputs)
 					PushGenericValue(CL, i);
-				
-				lua_getglobal(CL, YIELDBLOCKERTRACKING);
-				if (!lua_istable(CL, -1))
-				{
-					lua_pop(CL, 1); // pop nil value
-					lua_newtable(CL);
-					lua_pushvalue(CL, -1); // B
 
-					lua_setfield(CL, LUA_ENVIRONINDEX, YIELDBLOCKERTRACKING); // leaves same empty table at stack top after popping B
-				}
-
-				int ybsize = lua_objlen(CL, -1);
-				lua_pushinteger(CL, ybsize + 1);
-				lua_pushstring(CL, fndbinfo.c_str());
-				lua_settable(CL, -3);
-				lua_pop(CL, 1);
+				StateUserdata* ud = (StateUserdata*)lua_getthreaddata(CL);
+				ud->YieldBlockers.push_back(fndbinfo.c_str());
 
 				int status = L::ProtectedCall(CL, (int)Inputs.size(), -1, 0);
 
-				lua_getglobal(CL, YIELDBLOCKERTRACKING);
-				luaL_checktype(CL, -1, LUA_TTABLE);
-
-				lua_pushinteger(CL, ybsize + 1);
-				lua_pushnil(CL);
-				lua_settable(CL, -3);
-				lua_pop(CL, 1);
+				ud->YieldBlockers.pop_back();
 
 				if (status == LUA_OK)
 				{
@@ -1133,6 +1113,9 @@ int ScriptEngine::L::HandleMethodCall(
 		L::PushGenericValue(L, output);
 	}
 
+	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+	ud->LastResumed = GetRunningTime(); // definitely don't want `ScriptEngine:RunInVM` to throw an error in the Editor
+
 	return (int)func->Outputs.size();
 
 	// ... kinda expected more, but ngl i feel SOOOO gigabrain for
@@ -1172,27 +1155,19 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	lua_Debug ar = {};
 	lua_getinfo(L, 1, "sln", &ar);
 
-	lua_getglobal(L, YIELDBLOCKERTRACKING);
-	if (lua_istable(L, -1) && lua_objlen(L, -1) > 0)
+	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+
+	if (ud->YieldBlockers.size() > 0)
 	{
-		std::vector<std::string> blockerslist;
-
-		lua_pushnil(L);
-		while (lua_next(L, -2) != 0)
-		{
-			blockerslist.push_back(luaL_checkstring(L, -1));
-			lua_pop(L, 1);
-		}
-
 		std::string blockers;
 
-		for (size_t i = blockerslist.size(); i != 0; i--)
+		for (size_t i = ud->YieldBlockers.size(); i != 0; i--)
 		{
-			blockers.append(blockerslist[i - 1]);
+			blockers.append(ud->YieldBlockers[i - 1]);
 			blockers.append("\n");
 		}
 
-		lua_Debug yieldar;
+		lua_Debug yieldar = {};
 		lua_getinfo(L, 0, "n", &yieldar);
 
 		RAISE_RT(
@@ -1206,7 +1181,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 		// if a `lua_Exception` is thrown by `lua_yield`, we hit an assertion in
 		// `ldo.cpp` line 137
 		// LUAU_ASSERT(e.getThread() == L)
-		lua_Debug yieldar;
+		lua_Debug yieldar = {};
 		lua_getinfo(L, 0, "n", &yieldar);
 		RAISE_RT("Cannot yield with '{}' right now (across metamethod/C-call boundary)", ar.name ? ar.name : "<unknown>");
 	}
@@ -1639,6 +1614,7 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 			{
 				StateUserdata* ud = new StateUserdata;
 				DumpStacktrace(LP, &ud->SpawnTrace);
+				ud->LastResumed = GetRunningTime();
 				lua_setthreaddata(L, ud);
 
 				StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
@@ -1661,6 +1637,17 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 
 				ud->EventConnections.clear();
 				delete (StateUserdata*)lua_getthreaddata(L);
+			}
+		};
+
+	cb->interrupt = [](lua_State* L, int GcState)
+		{
+			StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+
+			if (GetRunningTime() - ud->LastResumed > 10.f)
+			{
+				ud->LastResumed = GetRunningTime(); // interrupt may recurse due to GC
+				luaL_error(L, "Script timed-out for running for more than 10 seconds without yielding (GC: %i)", GcState);
 			}
 		};
 
@@ -1751,12 +1738,18 @@ static lua_Status finishCoroutine(lua_State* L, int status)
 
 lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
 {
+	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+	ud->LastResumed = GetRunningTime();
+
 	int status = lua_resume(L, from, narg);
 	return finishCoroutine(L, status);
 }
 
 lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int errfunc)
 {
+	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+	ud->LastResumed = GetRunningTime();
+
 	int status = lua_pcall(L, narg, nret, errfunc);
 	return finishCoroutine(L, status);
 }
