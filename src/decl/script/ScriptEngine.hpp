@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <future>
 #include <thread>
+#include <deque>
 #include <lua.h>
 
 #include "datatype/GameObject.hpp"
@@ -70,10 +71,10 @@ namespace ScriptEngine
 		std::function<int(lua_State*)> RmPoll;
 
 		ResumptionMode Mode = ResumptionMode::INVALID;
+		bool Dead = false;
 	};
 
-	inline std::vector<YieldedCoroutine> s_YieldedCoroutines;
-	inline std::vector<YieldedCoroutine> s_YieldedCoroutinesProcessing;
+	inline std::deque<YieldedCoroutine> s_YieldedCoroutines;
 
 	inline std::mutex s_ParallelEventsMutex;
 	inline std::vector<std::function<void()>> s_ParallelEvents;

@@ -174,47 +174,46 @@ void ScriptEngine::StepScheduler()
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 	processParallelEvents();
 
-	s_YieldedCoroutinesProcessing = s_YieldedCoroutines;
-	s_YieldedCoroutines.clear();
+	std::deque<YieldedCoroutine*> processing;
+	processing.resize(s_YieldedCoroutines.size());
 
-	size_t size = s_YieldedCoroutinesProcessing.size();
+	for (size_t i = 0; i < s_YieldedCoroutines.size(); i++)
+		processing[i] = &s_YieldedCoroutines[i];
 
-	for (size_t i = 0; i < size; i++)
+	double stepStarted = GetRunningTime();
+
+	for (YieldedCoroutine* yc : processing)
 	{
-		// copy is intentional
-		// outside, `EventConnection:Disconnect` in `lhxconnection.cpp` might want to remove
-		// queued callbacks from `s_YieldedCoroutinesProcessing`
-		// don't it de-allocate something we need from under us
-		YieldedCoroutine yc = s_YieldedCoroutinesProcessing[i];
+		if (s_YieldedCoroutines.size() > 1000 && GetRunningTime() - stepStarted > 1.0)
+		{
+			Log.ErrorF("Scheduler is stalling! {} coroutines (throttling after 1 second)", s_YieldedCoroutines.size());
+			break;
+		}
+
+		if (yc->Dead)
+			continue;
 
 		// make sure the datamodel still exists
-		GameObject* dm = yc.DataModel.Referred();
+		GameObject* dm = yc->DataModel.Referred();
 		if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
 		{
-			s_YieldedCoroutinesProcessing.erase(s_YieldedCoroutinesProcessing.begin() + i);
-
-			// https://stackoverflow.com/a/17956637
-			// asan was not happy about the iterator from
-			// `::erase` for some reason?? TODO
-			// 10/06/2025
-			i--;
-			size = s_YieldedCoroutinesProcessing.size();
-
+			yc->Dead = true;
 			continue;
 		}
 
-		lua_State* coroutine = yc.Coroutine;
-		int corRef = yc.CoroutineReference;
+		lua_State* coroutine = yc->Coroutine;
+		int corRef = yc->CoroutineReference;
 
-		const ResumptionModeHandler handler = s_ResumptionModeHandlers[yc.Mode];
+		const ResumptionModeHandler handler = s_ResumptionModeHandlers[yc->Mode];
 		assert(handler);
 
-		int nretvals = handler(yc, coroutine);
+		int nretvals = handler(*yc, coroutine);
 
 		if (nretvals >= 0)
 		{
 			ZoneScopedN("Resume");
-			ZoneText(yc.DebugString.data(), yc.DebugString.size());
+			ZoneText(yc->DebugString.data(), yc->DebugString.size());
+			yc->Dead = true;
 
 			int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
@@ -232,28 +231,14 @@ void ScriptEngine::StepScheduler()
 			}
 
 			lua_unref(coroutine, corRef);
-
-			// check, we may have been removed by `:Disconnect` in lhxconnection.cpp
-			if (s_YieldedCoroutinesProcessing.size() > i && s_YieldedCoroutinesProcessing[i].Coroutine == yc.Coroutine)
-			{
-				s_YieldedCoroutinesProcessing.erase(s_YieldedCoroutinesProcessing.begin() + i);
-				// https://stackoverflow.com/a/17956637
-				// asan was not happy about the iterator from
-				// `::erase` for some reason?? TODO
-				// 10/06/2025
-				i--;
-				size = s_YieldedCoroutinesProcessing.size();
-			}
-		}
-
-		if (size != s_YieldedCoroutinesProcessing.size())
-		{
-			i--;
-			size = s_YieldedCoroutinesProcessing.size();
 		}
 	}
 
-	s_YieldedCoroutines.insert(s_YieldedCoroutines.begin(), s_YieldedCoroutinesProcessing.begin(), s_YieldedCoroutinesProcessing.end());
+	for (auto it = s_YieldedCoroutines.begin(); it < s_YieldedCoroutines.end(); it++)
+	{
+		if (it->Dead)
+			it = s_YieldedCoroutines.erase(it);
+	}
 }
 
 // Also in `EngineService.cpp`!!
@@ -1644,10 +1629,10 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 		{
 			StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
 
-			if (GetRunningTime() - ud->LastResumed > 10.f)
+			if (GetRunningTime() - ud->LastResumed > 10.0)
 			{
 				ud->LastResumed = GetRunningTime(); // interrupt may recurse due to GC
-				luaL_error(L, "Script timed-out for running for more than 10 seconds without yielding (GC: %i)", GcState);
+				luaL_error(L, "Script was timed-out for running for more than 10 seconds without yielding (GC: %i)", GcState);
 			}
 		};
 
@@ -1665,23 +1650,10 @@ void ScriptEngine::L::Close(lua_State* L)
 	lua_gettable(L, LUA_ENVIRONINDEX);
 	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
 
-	size_t size = s_YieldedCoroutines.size();
-
-	for (size_t i = 0; i < s_YieldedCoroutines.size(); i++)
+	for (YieldedCoroutine& yc : s_YieldedCoroutines)
 	{
-		YieldedCoroutine& yc = s_YieldedCoroutines[i];
 		if (lua_mainthread(yc.Coroutine) == L)
-			s_YieldedCoroutines.erase(s_YieldedCoroutines.begin() + i);
-
-		// https://stackoverflow.com/a/17956637
-		// asan was not happy about the iterator from
-		// `::erase` for some reason?? TODO
-		// 10/06/2025
-		if (size != s_YieldedCoroutines.size())
-		{
-			i--;
-			size = s_YieldedCoroutines.size();
-		}
+			yc.Dead = true;
 	}
 
 	StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(L);

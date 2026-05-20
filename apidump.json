@@ -204,7 +204,7 @@
       "Interface": {},
       "Logging": {
         "Events": {
-          "OnMessaged": "(Integer, String, String, Any)"
+          "OnMessaged": "(Double, Integer, String, String, Any)"
         },
         "Methods": {
           "Write": "(String, Integer, String?) -> ()"

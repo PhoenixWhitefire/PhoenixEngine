@@ -58,6 +58,7 @@ catch (...)                                                                     
 #endif
 
 #include <filesystem>
+#include <chrono>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -506,6 +507,9 @@ int main(int argc, char** argv)
 		else
 			Log.AppendF(" {}", argv[i]);
 
+	auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
+
+	Log.InfoF("Now: {:%F %T %Z}", now);
 	processCliArgs(argc, argv);
 
 	try

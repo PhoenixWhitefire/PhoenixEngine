@@ -471,7 +471,7 @@
         "Events": {
           "OnMessaged": {
             "Description": "Fires whenever a Log Message is created",
-            "ArgumentTypes": "EnumLogType, string, string, unknown"
+            "ArgumentTypes": "number, EnumLogType, string, string, unknown"
           }
         },
         "Methods": {

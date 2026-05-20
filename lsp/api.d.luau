@@ -353,7 +353,7 @@ export type EcLogging = {
 
   Write: (self: EcLogging, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
 
-  OnMessaged: EventSignal<EnumLogType, string, string, unknown>,
+  OnMessaged: EventSignal<(number, EnumLogType, string, string, unknown)>,
 }
 export type EcMesh = {
   CastsShadows: boolean,
@@ -402,9 +402,9 @@ export type EcPlayerInput = {
   ResetViewportInputRect: (self: EcPlayerInput) -> (),
   SetViewportInputRect: (self: EcPlayerInput, Position: vector, Size: vector) -> (),
 
-  KeyEvent: EventSignal<KeyInputEvent>,
-  MouseButtonEvent: EventSignal<MouseButtonInputEvent>,
-  ScrollEvent: EventSignal<ScrollInputEvent>,
+  KeyEvent: EventSignal<(KeyInputEvent)>,
+  MouseButtonEvent: EventSignal<(MouseButtonInputEvent)>,
+  ScrollEvent: EventSignal<(ScrollInputEvent)>,
 }
 export type EcPointLight = {
   Brightness: number,

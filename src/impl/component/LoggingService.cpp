@@ -36,18 +36,18 @@ const Reflection::StaticEventMap& LoggingComponentManager::GetEvents()
         REFLECTION_EVENT(
             EcLoggingService,
             OnMessaged,
-            Reflection::ValueType::Integer, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any
+            Reflection::ValueType::Double, Reflection::ValueType::Integer, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any
         )
     };
 
     return events;
 }
 
-void LoggingComponentManager::SignalNewLogMessage(Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags, const Reflection::GenericValue& Value)
+void LoggingComponentManager::SignalNewLogMessage(double Time, Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags, const Reflection::GenericValue& Value)
 {
     for (const EcLoggingService& cl : m_Components)
     {
         if (cl.Valid)
-            REFLECTION_SIGNAL_EVENT(cl.OnMessagedCallbacks, (int)MessageType, Message, ExtraTags, Value);
+            REFLECTION_SIGNAL_EVENT(cl.OnMessagedCallbacks, Time, (int)MessageType, Message, ExtraTags, Value);
     }
 }

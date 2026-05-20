@@ -17,6 +17,7 @@ public:
     const Reflection::StaticEventMap& GetEvents() override;
 
     void SignalNewLogMessage(
+        double Time,
         Logging::MessageType Type,
         const std::string_view& Message,
         const std::string_view& ExtraTags,

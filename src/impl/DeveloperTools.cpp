@@ -5263,10 +5263,29 @@ static ImGuiContext* debuggerContext = nullptr;
 static ImGuiContext* prevContext = nullptr;
 static int prevCursorMode = GLFW_CURSOR_NORMAL;
 
+static void resetScriptTimeouts()
+{
+	ZoneScoped;
+	double now = GetRunningTime();
+
+	for (const auto& [ _, vm ] : ScriptEngine::VMs)
+	{
+		ScriptEngine::L::StateUserdata* vud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+		vud->LastResumed = now;
+
+		for (lua_State* co : vud->Coroutines)
+		{
+			ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(co);
+			ud->LastResumed = now;
+		}
+	}
+}
+
 static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBreakReason Reason)
 {
 	using namespace ScriptEngine::L;
 	ZoneScoped;
+	resetScriptTimeouts();
 
 	if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt)
 	{
@@ -5413,6 +5432,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 		ImGui::DockSpaceOverViewport();
+		resetScriptTimeouts();
 
 		glClear(GL_COLOR_BUFFER_BIT);
 

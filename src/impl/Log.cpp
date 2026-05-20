@@ -3,6 +3,7 @@
 #include <fstream>
 #include <format>
 #include <thread>
+#include <chrono>
 #include <mutex>
 
 #include "Log.hpp"
@@ -20,6 +21,7 @@ struct ParallelLogEvent
 	std::string Message;
 	std::string ExtraTags;
 	Reflection::GenericValue Value;
+	double Time = 0.f;
 	Logging::MessageType Type;
 };
 static std::mutex ParallelLogEventsMutex;
@@ -60,9 +62,9 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 		std::cout << loggedString;
 	}
 
-	// log > 2 megabytes... just in case something goes wrong
+	// log > 24 megabytes... just in case something goes wrong
 	// 10/11/2024
-	if (ProgramLog.size() > 2e6)
+	if (ProgramLog.size() > 24e6)
 	{
 		ThrewLogCapacityExceededException = true;
 
@@ -70,44 +72,30 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 		ProgramLog.append("\nLSLETE: Log size limit exceeded, throwing exception\n");
 		Logging::Save();
 
-		RAISE_RT("Program log exceeds maximum size of 2e6 bytes (2 megabytes)");
+		RAISE_RT("Program log exceeds maximum size of 24e6 bytes (24 megabytes)");
 	}
 }
 
-// Append message to log, which is saved to file every second
-// and when app shuts down
-// If the Message ends with `&&`, won't insert a newline automatically
-// 11/11/2024
-void Logging::Context::Append(const std::string_view& Message, const std::string_view& ExtraTags) const
+static constexpr std::string_view TypeTags[] = {
+	"[NONE]",
+	"[INFO]",
+	"[WARN]",
+	"[ERRR]",
+};
+static_assert(std::size(TypeTags) == Logging::MessageType::Error + 1);
+
+static void log(
+	Logging::MessageType Type,
+	const std::string_view& Message,
+	const std::string_view& ExtraTags,
+	const std::string& ContextExtraTags,
+	const Reflection::GenericValue& Value = Reflection::GenericValue::Null(),
+	bool TaglessAppend = false
+)
 {
 	ZoneScoped;
-
-	std::string tags = std::string(ExtraTags);
-	if (ContextExtraTags.size() > 0)
-		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
-
-	if (std::this_thread::get_id() != MainThreadId)
-	{
-		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
-		ParallelLogEvents.push_back(ParallelLogEvent{
-			.Message = std::string(Message),
-			.ExtraTags = tags,
-			.Type = Logging::MessageType::None
-		});
-		return;
-	}
-
-	//if (ExtraTags != "")
-	//	appendToLog(ExtraTags, true);
-	appendToLog(Message, false);
-
-	if (IsGameObjectManagerAlive)
-		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::None, Message, tags);
-}
-
-void Logging::Context::AppendWithValue(const std::string_view& Message, const Reflection::GenericValue& Value, const std::string_view& ExtraTags) const
-{
-	ZoneScoped;
+	double time = GetRunningTime();
+	auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
 
 	std::string tags = std::string(ExtraTags);
 	if (ContextExtraTags.size() > 0)
@@ -120,101 +108,62 @@ void Logging::Context::AppendWithValue(const std::string_view& Message, const Re
 			.Message = std::string(Message),
 			.ExtraTags = tags,
 			.Value = Value,
-			.Type = Logging::MessageType::None
+			.Time = time,
+			.Type = Type,
 		});
 		return;
 	}
 
-	//if (ExtraTags != "")
-	//	appendToLog(ExtraTags, true);
+	if (!TaglessAppend)
+	{
+		appendToLog(std::format("[{:%H:%M:%S}]", now), true);
+		appendToLog(TypeTags[Type], true);
+		if (!tags.empty())
+		{
+			appendToLog("[", true);
+			appendToLog(tags, true);
+			appendToLog("]", true);
+		}
+		appendToLog(": ", true);
+	}
 	appendToLog(Message, false);
 
-	if (IsGameObjectManagerAlive)
-		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::None, Message, tags, Value);
+	if (Logging::IsGameObjectManagerAlive)
+		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(time, Type, Message, tags);
+}
+
+// Append message to log, which is saved to file every second
+// and when app shuts down
+// If the Message ends with `&&`, won't insert a newline automatically
+// 11/11/2024
+void Logging::Context::Append(const std::string_view& Message, const std::string_view& ExtraTags) const
+{
+	ZoneScoped;
+	log(Logging::MessageType::None, Message, ExtraTags, ContextExtraTags, Reflection::GenericValue::Null(), true);
+}
+
+void Logging::Context::AppendWithValue(const std::string_view& Message, const Reflection::GenericValue& Value, const std::string_view& ExtraTags) const
+{
+	ZoneScoped;
+	log(Logging::MessageType::None, Message, ExtraTags, ContextExtraTags, Value, true);
 }
 
 void Logging::Context::Info(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
-
-	std::string tags = std::string(ExtraTags);
-	if (ContextExtraTags.size() > 0)
-		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
-
-	if (std::this_thread::get_id() != MainThreadId)
-	{
-		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
-		ParallelLogEvents.push_back(ParallelLogEvent{
-			.Message = std::string(Message),
-			.ExtraTags = tags,
-			.Type = Logging::MessageType::Info
-		});
-		return;
-	}
-
-	appendToLog("[INFO]", true);
-	//appendToLog(ExtraTags, true);
-	appendToLog(": ", true);
-	appendToLog(Message);
-
-	if (IsGameObjectManagerAlive)
-		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Info, Message, tags);
+	log(Logging::MessageType::Info, Message, ExtraTags, ContextExtraTags);
 }
 
 void Logging::Context::Warning(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
-
-	std::string tags = std::string(ExtraTags);
-	if (ContextExtraTags.size() > 0)
-		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
-
-	if (std::this_thread::get_id() != MainThreadId)
-	{
-		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
-		ParallelLogEvents.push_back(ParallelLogEvent{
-			.Message = std::string(Message),
-			.ExtraTags = tags,
-			.Type = Logging::MessageType::Warning
-		});
-		return;
-	}
-
-	appendToLog("[WARN]", true);
-	//appendToLog(ExtraTags, true);
-	appendToLog(": ", true);
-	appendToLog(Message);
-
-	if (IsGameObjectManagerAlive)
-		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Warning, Message, tags);
+	log(Logging::MessageType::Warning, Message, ExtraTags, ContextExtraTags);
 }
 
 void Logging::Context::Error(const std::string_view& Message, const std::string_view& ExtraTags) const
 {
 	ZoneScoped;
-
-	std::string tags = std::string(ExtraTags);
-	if (ContextExtraTags.size() > 0)
-		tags += (tags.size() > 0 ? "," : "") + ContextExtraTags;
-
-	if (std::this_thread::get_id() != MainThreadId)
-	{
-		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelLogEventsMutex);
-		ParallelLogEvents.push_back(ParallelLogEvent{
-			.Message = std::string(Message),
-			.ExtraTags = tags,
-			.Type = Logging::MessageType::Error
-		});
-		return;
-	}
-
-	appendToLog("[ERRR]", true);
-	//appendToLog(ExtraTags, true);
-	appendToLog(": ", true);
-	appendToLog(Message);
-
-	if (IsGameObjectManagerAlive)
-		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(Logging::MessageType::Error, Message, tags);
+	log(Logging::MessageType::Error, Message, ExtraTags, ContextExtraTags);
 }
 
 void Logging::Context::Write(const std::string_view& Message, MessageType Type, const std::string_view& ExtraTags) const

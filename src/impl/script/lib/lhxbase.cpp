@@ -11,7 +11,7 @@ static std::string getScriptTraceExtraTags(lua_State* L)
 	lua_getinfo(L, 1, "sl", &ar);
 
 	if (ar.short_src)
-		return std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline);
+		return std::format("DocumentLine:{}", ar.currentline);
 	else
 		return "";
 }

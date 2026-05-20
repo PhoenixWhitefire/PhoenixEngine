@@ -566,7 +566,9 @@ local function dumpReflectionApi(t, d, cn, externType)
 					continue
 				end
 
-				s ..= `* \`{ n }{ rtolsub(v) }\`: { d.Events[n].Description }\n`
+				local argTypes = if d.Events[n].ArgumentTypes then `({d.Events[n].ArgumentTypes})` else rtolsub(v)
+
+				s ..= `* \`{ n }{ argTypes }\`: { d.Events[n].Description }\n`
 				documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
 					documentation = d.Events[n].Description
 				}
@@ -575,7 +577,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 					assert(#string.split(d.Events[n].ArgumentTypes, ",") == #string.split(v, ","), `incorrect number of event callback argument types: {n} ({d.Events[n].ArgumentTypes}) vs {v}`)
 				end
 
-				definitionsFile ..= `  { n }: EventSignal<{d.Events[n].ArgumentTypes or rtolsub(v)}>{ if externType then "" else "," }\n`
+				definitionsFile ..= `  { n }: EventSignal<{argTypes}>{ if externType then "" else "," }\n`
 			end
 		end
 	else

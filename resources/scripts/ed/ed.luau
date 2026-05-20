@@ -1850,7 +1850,7 @@ local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
 	warn(`Failed to figure out the interaction for a log message with tags '{ ExtraTags }'`)
 end
 
-Logging.OnMessaged:Connect(function(Type, Message, ExtraTags, Value)
+Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
 	if type(Value) == "table" then
 		table.freeze(Value :: any)
 	end
@@ -1912,7 +1912,7 @@ Logging.OnMessaged:Connect(function(Type, Message, ExtraTags, Value)
 		Closed = false,
 		Message = { firstItem },
 		Type = Type,
-		Time = os.date("%H:%M:%S"),
+		Time = os.date("%H:%M:%S", os.time() - (game.Time - Time)),
 		Source = source,
 		Line = line,
 		OpenTables = {},
@@ -1920,6 +1920,10 @@ Logging.OnMessaged:Connect(function(Type, Message, ExtraTags, Value)
 		TablePrettyOpen = {},
 		TablePrettyChangeOpen = {}
 	}
+
+	if #Log >= 999 then
+		table.remove(Log, 1)
+	end
 
 	table.insert(Log, logMessage)
 
