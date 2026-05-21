@@ -27,10 +27,10 @@ file(GLOB_RECURSE PHX_SRCS
 )
 
 add_executable(PhoenixEngine ${PHX_SRCS})
+target_compile_features(PhoenixEngine PUBLIC cxx_std_20)
 
 if (NOT MSVC)
-	target_compile_features(PhoenixEngine PRIVATE cxx_std_20)
-	target_compile_options(PhoenixEngine PRIVATE -std=gnu++20)
+	target_compile_options(PhoenixEngine PUBLIC -std=gnu++20)
 endif()
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${PHX_SRCS})

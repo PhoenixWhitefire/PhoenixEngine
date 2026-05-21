@@ -58,6 +58,7 @@ catch (...)                                                                     
 #endif
 
 #include <filesystem>
+#include <csignal>
 #include <chrono>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
@@ -481,6 +482,17 @@ static void processCliArgs(int argc, char** argv)
 #define IS_HEADLESS_STR "No"
 #endif
 
+extern "C" void handleQuitSignal(int signal);
+extern "C" void handleQuitSignal(int signal)
+{
+    std::signal(SIGINT, SIG_DFL);
+    std::signal(SIGTERM, SIG_DFL);
+
+    Engine* engine = Engine::Get();
+    engine->SystemSignal = signal;
+    engine->Close();
+}
+
 int main(int argc, char** argv)
 {
 	Logging::Initialize();
@@ -524,9 +536,15 @@ int main(int argc, char** argv)
 		engine.argc = argc;
 		engine.argv = argv;
 
+        std::signal(SIGINT, handleQuitSignal);
+        std::signal(SIGTERM, handleQuitSignal);
+
 		engine.Start();
 
-		Logging::Save(); // in case FileRW::WriteFile throws an exception
+		Logging::Save();
+
+        if (engine.SystemSignal != -1)
+            Log.InfoF("Engine received signal {}", engine.SystemSignal);
 
 		s_ExitCode = engine.ExitCode;
 		DeveloperTools::Shutdown();

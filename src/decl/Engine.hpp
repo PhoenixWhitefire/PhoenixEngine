@@ -84,6 +84,7 @@ public:
 
 	bool IsWindowFocused = true;
 
+	int SystemSignal = -1;
 	int ExitCode = 0;
 
 	int argc = 0;
