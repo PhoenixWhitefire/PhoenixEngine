@@ -11,6 +11,7 @@ enum class FaceCullingMode : uint8_t { None, BackFace, FrontFace };
 struct EcMesh : public Component<EntityComponent::Mesh>
 {
 	void SetRenderMesh(const std::string_view&);
+	void RecomputeBoneMatrices();
 
 	uint32_t RenderMeshId = UINT32_MAX;
 	uint32_t MaterialId = UINT32_MAX;

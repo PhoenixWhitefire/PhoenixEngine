@@ -20,6 +20,7 @@
 #include "Log.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
 static std::string getTexturePath(
@@ -601,17 +602,6 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 
 		const nlohmann::json& meshData = m_JsonData["meshes"][meshId];
 
-		// 30/12/2024
-		// https://math.stackexchange.com/a/1463487
-		//glm::vec3 embeddedScale
-		//{
-		//	glm::length(glm::vec3(matNextNode[0][0], matNextNode[1][0], matNextNode[2][0])),
-		//	glm::length(glm::vec3(matNextNode[0][1], matNextNode[1][1], matNextNode[2][1])),
-		//	glm::length(glm::vec3(matNextNode[0][2], matNextNode[1][2], matNextNode[2][2]))
-		//};
-
-		//scale *= embeddedScale;
-
 		nlohmann::json skinJson;
 		bool isSkinned = false;
 
@@ -648,12 +638,17 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 		}
 	}
 	else
+	{
 		m_Nodes.emplace_back(
 			nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
 			NodeIndex,
 			From,
 			ModelNode::NodeType::Container
 		);
+
+		m_Nodes.back().LocalTransform = matLocal;
+		m_Nodes.back().LocalScale = scale;
+	}
 
 	// traverse the node's children
 	if (const auto chIt = nodeJson.find("children"); chIt != nodeJson.end())
@@ -729,8 +724,22 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 	const nlohmann::json& samplers = Animation.at("samplers");
 	std::string data = "PHOENIXF/ANIM\n\0";
 
+	struct SeparablePose
+	{
+		glm::mat4 Transform = glm::mat4(1.f);
+		glm::vec3 Translation;
+		glm::vec3 Scale = { 1.f, 1.f, 1.f };
+		glm::vec4 Rotation = { 0.f, 0.f, 0.f, 1.f };
+		uint16_t BoneId = UINT16_MAX;
+	};
+
+	struct SeparableKeyframe
+	{
+		std::vector<SeparablePose> Poses;
+	};
+
 	// use `std::map` to order keyframes
-	std::map<float, AnimationData::Keyframe> keyframes;
+	std::map<float, SeparableKeyframe> keyframes;
 	std::vector<std::string> boneNames;
 	float animLength = 0.f;
 
@@ -764,23 +773,11 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 		{
 			float t = times[i];
 			const glm::vec4& v = vectors[i];
-			glm::mat4 trans = glm::mat4(1.f);
 
-			if (path == "translation")
-				trans = glm::translate(trans, glm::vec3(v));
-			else if (path == "rotation")
-				trans = glm::eulerAngleYXZ(v.x, v.y, v.z);
-			else if (path == "scale")
-				trans = glm::scale(trans, glm::vec3(v));
-			else
-				RAISE_RT("Invalid animation channel path '{}'", path);
+			SeparableKeyframe& keyframe = keyframes[t];
+			SeparablePose* pose = nullptr;
 
-			AnimationData::Keyframe& keyframe = keyframes[t];
-			keyframe.Time = t;
-
-			AnimationData::Pose* pose = nullptr;
-
-			for (AnimationData::Pose& p : keyframe.Poses)
+			for (SeparablePose& p : keyframe.Poses)
 			{
 				if (p.BoneId == boneId)
 				{
@@ -790,10 +787,30 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 			}
 
 			if (!pose)
+			{
 				pose = &keyframe.Poses.emplace_back();
+				pose->BoneId = boneId;
 
-			pose->Transform *= trans;
-			pose->BoneId = boneId;
+				glm::vec3 skew;
+				glm::vec4 perspective;
+				glm::quat restingRotation;
+				glm::decompose(boneNode.LocalTransform, pose->Scale, restingRotation, pose->Translation, skew, perspective);
+
+				pose->Rotation = glm::vec4(restingRotation.x, restingRotation.y, restingRotation.z, restingRotation.w);
+			}
+
+			if (path == "translation")
+				pose->Translation = glm::vec3(v);
+			else if (path == "scale")
+				pose->Scale = glm::vec3(v);
+			else if (path == "rotation")
+				pose->Rotation = v;
+			else
+				RAISE_RT("Invalid animation channel path '{}'", path);
+
+            pose->Transform = glm::translate(glm::mat4(1.f), pose->Translation)
+                                * glm::mat4_cast(glm::quat(pose->Rotation.w, pose->Rotation.x, pose->Rotation.y, pose->Rotation.z))
+                                * glm::scale(glm::mat4(1.f), pose->Scale);
 
 			animLength = std::max(animLength, t);
 		}
@@ -820,7 +837,7 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 		WriteF32(data, t);
 		WriteU8(data, (uint8_t)kf.Poses.size());
 
-		for (const AnimationData::Pose& pose : kf.Poses)
+		for (const SeparablePose& pose : kf.Poses)
 		{
 			WriteU16(data, pose.BoneId);
 

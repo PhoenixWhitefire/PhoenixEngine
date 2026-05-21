@@ -224,7 +224,37 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 				boneNameToObject[b.Name] = boneObj.Reference;
 			}
+
+            cm->RecomputeBoneMatrices();
 		}
 	);
 	this->Asset = MeshPath;
+}
+
+void EcMesh::RecomputeBoneMatrices()
+{
+    Mesh& meshData = MeshProvider::Get()->GetMeshResource(RenderMeshId);
+    MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
+
+    std::vector<glm::mat4> boneWorldTransforms = std::vector<glm::mat4>(meshData.Bones.size(), glm::mat4(1.f));
+
+    // TODO avoid recursion by sorting bones based on hierarchy
+    std::function<void(uint8_t, const glm::mat4&)> process = [&](uint8_t bid, const glm::mat4& parentTrans)
+        {
+            const Bone& b = meshData.Bones[bid];
+            boneWorldTransforms[bid] = parentTrans * b.Transform;
+            gpuMesh.BoneMatrices[bid] = boneWorldTransforms[bid] * b.InverseBind;
+
+            for (uint8_t cid = 0; cid < meshData.Bones.size(); cid++)
+            {
+                if (meshData.Bones[cid].Parent == bid)
+                    process(cid, boneWorldTransforms[bid]);
+            }
+        };
+
+    for (uint8_t bid = 0; bid < meshData.Bones.size(); bid++)
+    {
+        if (meshData.Bones[bid].Parent == UINT8_MAX)
+            process(bid, glm::mat4(1.f));
+    }
 }

@@ -4,6 +4,7 @@
 #include "component/Animation.hpp"
 #include "component/Transform.hpp"
 #include "component/Bone.hpp"
+#include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 #include "asset/Binary.hpp"
 #include "FileRW.hpp"
@@ -17,6 +18,7 @@ const Reflection::StaticPropertyMap& AnimationAssetComponentManager::GetProperti
             REFLECTION_PROPERTY_GET_SIMPLE(EcAnimationAsset, Animation),
             [](void* p, const Reflection::GenericValue& gv)
             {
+
                 static_cast<EcAnimationAsset*>(p)->SetAnimation(gv.AsString());
             }
         ),
@@ -27,6 +29,8 @@ const Reflection::StaticPropertyMap& AnimationAssetComponentManager::GetProperti
 
 void EcAnimationAsset::SetAnimation(const std::string& Asset)
 {
+    Animation = Asset;
+
     if (Asset.size() == 0)
     {
         AssetId = UINT32_MAX;
@@ -252,12 +256,16 @@ void EcAnimator::Step(double DeltaTime)
         if (!nearestKeyframe)
             continue;
 
+        std::unordered_set<EcMesh*> meshes;
         for (const AnimationData::Pose& pose : nearestKeyframe->Poses)
         {
             const std::string& name = animation.Bones[pose.BoneId];
 
             Object->ForEachDescendant([&](const ObjectHandle& desc)
             {
+                if (EcMesh* mesh = desc->FindComponent<EcMesh>())
+                    meshes.insert(mesh);
+
                 if (desc->Name == name)
                 {
                     if (EcBone* cb = desc->FindComponent<EcBone>())
@@ -278,5 +286,8 @@ void EcAnimator::Step(double DeltaTime)
                 return true;
             });
         }
+
+        for (const auto& it : meshes)
+            it->RecomputeBoneMatrices();
     }
 }

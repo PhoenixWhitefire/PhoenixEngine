@@ -127,7 +127,7 @@ end
 local commandBarSavedHistory = if fs.isfile("./editor/command-history.json") then json.parse(assert(fs.read("./editor/command-history.json"))) else {}
 assert(typeof(commandBarSavedHistory) == "table")
 CommandBarHistory = commandBarSavedHistory :: any
-CommandBarHistoryCursor = #CommandBarHistory
+CommandBarHistoryCursor = #CommandBarHistory + 1
 
 if not Engine.IsHeadless then
 	imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
@@ -834,8 +834,16 @@ local function watchModelForReimporting(reimportable: GameObject & EcModel)
 			assert(watcher)
 			print(`Re-importing { reimportable.ImportPath }`)
 
-			local imported = AssetManager:ImportModel(reimportable.ImportPath)
-			assert(imported, "Re-import failed")
+			local success, importedOrError = pcall(function()
+				return AssetManager:ImportModel(reimportable.ImportPath)
+			end)
+
+			if not success then
+                Logging:Write(`Re-import failed: { importedOrError }`, Enum.LogType.Error)
+                return
+            end
+
+			assert(typeof(importedOrError) == "GameObject")
 
 			local action = History:TryBeginAction("Auto re-import during session")
 
@@ -846,7 +854,7 @@ local function watchModelForReimporting(reimportable: GameObject & EcModel)
 					child.Parent = nil -- Allow undo
 				end
 
-				for _, newChild in imported:GetChildren() do
+				for _, newChild in importedOrError:GetChildren() do
 					newChild:Duplicate().Parent = model
 				end
 			end
@@ -1950,15 +1958,15 @@ local LogMessageHovering: number = -1
 local CommandBarActive = false
 
 local function runCurrentCommand()
-	if #CommandBarHistory == 0 or CommandBarHistory[#CommandBarHistory] ~= CommandBarCommand then
-		table.insert(CommandBarHistory, CommandBarCommand)
+    if #CommandBarHistory == 0 or CommandBarHistory[CommandBarHistoryCursor] ~= CommandBarCommand then
+        table.insert(CommandBarHistory, CommandBarCommand)
 
-		if #CommandBarHistory > 100 then
-			table.remove(CommandBarHistory, 1)
-		end
+        if #CommandBarHistory > 100 then
+            table.remove(CommandBarHistory, 1)
+        end
 
-		CommandBarHistoryCursor = #CommandBarHistory
-	end
+        CommandBarHistoryCursor = #CommandBarHistory
+    end
 
 	local commandBarAction = History:TryBeginAction("CommandBarCode")
 
@@ -1995,9 +2003,15 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 			CommandBarBlinkFrame = 1
 		end
 
-		if kie.Key == Enum.Key.Down and CommandBarHistoryCursor < #CommandBarHistory then
+		if kie.Key == Enum.Key.Down and CommandBarHistoryCursor <= #CommandBarHistory then
 			CommandBarHistoryCursor += 1
-			CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+
+            if CommandBarHistoryCursor > #CommandBarHistory then
+                CommandBarCommand = ""
+            else
+			    CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+            end
+
 			CommandBarBlinkFrame = 1
 		end
 	end
@@ -2777,8 +2791,17 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 
 			if ModelModifiedTimes[path] and ModelModifiedTimes[path] < fs.lastwritten(path) then
 				print(`Re-importing { path }`)
-				local imported = AssetManager:ImportModel(path)
-				assert(imported, "Re-import failed on Project open")
+
+                local success, importedOrError = pcall(function()
+                    return AssetManager:ImportModel(path)
+                end)
+
+                if not success then
+                    Logging:Write(`Re-import failed on Project open: { importedOrError }`, Enum.LogType.Error)
+                    continue
+                end
+
+                assert(typeof(importedOrError) == "GameObject")
 
 				local action = History:TryBeginAction("Auto re-import on Project open")
 
@@ -2789,7 +2812,7 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 						child.Parent = nil -- Allow undo
 					end
 
-					for _, newChild in imported:GetChildren() do
+					for _, newChild in importedOrError:GetChildren() do
 						newChild:Duplicate().Parent = model
 					end
 				end

@@ -60,8 +60,11 @@ const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
 			},
 			[](void* p, const Reflection::GenericValue& gv)
 			{
-				EcBone* boneObj = static_cast<EcBone*>(p);
-				boneObj->SetTransform(gv.AsMatrix());
+                EcBone* boneObj = static_cast<EcBone*>(p);
+                boneObj->SetTransform(gv.AsMatrix());
+
+                EcMesh* mesh = getTargetMesh(boneObj);
+                mesh->RecomputeBoneMatrices();
 			}
 		),
 
@@ -106,52 +109,13 @@ const Reflection::StaticPropertyMap& BoneComponentManager::GetProperties()
 
 void EcBone::SetTransform(const glm::mat4& trans)
 {
-	Bone* realBone = getUnderlyingBone(this);
+    Bone* realBone = getUnderlyingBone(this);
 
-	if (realBone)
-	{
-		ZoneScopedN("UpdateSkinningTransforms");
-		realBone->Transform = trans;
-
-		EcMesh* mesh = getTargetMesh(this);
-
-		Mesh& meshData = MeshProvider::Get()->GetMeshResource(mesh->RenderMeshId);
-		MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
-
-		glm::mat4 accumulatedTransform = { 1.f };
-		uint8_t parent = realBone->Parent;
-
-		while (parent != UINT8_MAX)
-		{
-			const Bone& parentBone = meshData.Bones[parent];
-			accumulatedTransform = parentBone.Transform * accumulatedTransform;
-			parent = parentBone.Parent;
-		}
-
-		gpuMesh.BoneMatrices[SkeletalBoneId] = (accumulatedTransform * realBone->Transform) * realBone->InverseBind;
-
-		/*
-		for (uint8_t bid = 0; bid < meshData.Bones.size(); bid++)
-		{
-			const Bone& child = meshData.Bones[bid];
-
-			if (child.Parent == SkeletalBoneId)
-			{
-				glm::mat4 accumulatedChildTransform = { 1.f };
-				uint8_t childParent = child.Parent;
-
-				while (childParent != UINT8_MAX)
-				{
-					const Bone& parentBone = meshData.Bones[childParent];
-					accumulatedChildTransform = parentBone.Transform * accumulatedChildTransform;
-					childParent = parentBone.Parent;
-				}
-
-				gpuMesh.BoneMatrices[bid] = (accumulatedChildTransform * child.Transform) * child.InverseBind;
-			}
-		}
-		*/
-	}
-	else
-		Transform = trans;
+    if (realBone)
+        realBone->Transform = trans;
+    else
+    {
+        Log.WarningF("Setting transform of unlinked bone {}", Object->GetFullName());
+        Transform = trans;
+    }
 }
