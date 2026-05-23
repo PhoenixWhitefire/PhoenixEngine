@@ -68,6 +68,7 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/luau/VM/include"
 	"Vendor/luau/Compiler/include"
 	"Vendor/luau/Ast/include"
+	"Vendor/luau/CodeGen/include"
 	"Vendor/glfw/include"
 	"Vendor/tinyfd"
 	"Vendor/curl/include"
@@ -103,6 +104,7 @@ target_link_libraries(PhoenixEngine PRIVATE
 	libcurl
 
 	Luau.Compiler
+	Luau.CodeGen
 	Luau.Ast
 	Luau.VM
 	Luau.Require
@@ -184,6 +186,7 @@ add_dependencies(PhoenixEngine
 	TracyClient
 	glm
 	Luau.Compiler
+	Luau.CodeGen
 	Luau.Require
 	Luau.VM
 	libcurl

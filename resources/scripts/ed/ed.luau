@@ -1168,7 +1168,7 @@ local function exportProject()
 			exportDir = fs.promptopenfolder("Change export directory")
 		end
 
-        keepOnlyScriptBytecode = imgui.checkbox("Only export script bytecode", keepOnlyScriptBytecode)
+        keepOnlyScriptBytecode = imgui.checkbox("Export scripts as bytecode", keepOnlyScriptBytecode)
 
 		exportTo = `{exportDir}/{exportName}`
 

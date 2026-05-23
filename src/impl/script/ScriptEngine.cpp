@@ -7,6 +7,8 @@
 
 #include <tracy/Tracy.hpp>
 
+#include <Luau/CodeGen.h>
+
 #include "script/ScriptEngine.hpp"
 #include "datatype/Color.hpp"
 #include "script/luhx.hpp"
@@ -59,7 +61,14 @@ void ScriptEngine::Initialize()
 void ScriptEngine::Shutdown()
 {
 	for (auto& [_, vm] : VMs)
+    {
 		L::Close(vm.MainThread);
+
+        L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+        lua_close(vm.MainThread);
+
+        delete vmud;
+    }
 
 	VMs.clear();
 }
@@ -172,8 +181,25 @@ static void processParallelEvents()
 
 void ScriptEngine::StepScheduler()
 {
-	ZoneScopedC(tracy::Color::LightSkyBlue);
-	processParallelEvents();
+    ZoneScopedC(tracy::Color::LightSkyBlue);
+    processParallelEvents();
+
+    for (auto& [ _, vm ] : ScriptEngine::VMs)
+    {
+        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+
+        if (vmud->Dead)
+        {
+            lua_close(vm.MainThread);
+            delete vmud; // delete after closing VM due to `userthread` callback
+        }
+    }
+
+    for (auto it = s_YieldedCoroutines.begin(); it < s_YieldedCoroutines.end(); it++)
+    {
+        if (it->Dead)
+            it = s_YieldedCoroutines.erase(it);
+    }
 
 	std::deque<YieldedCoroutine*> processing;
 	processing.resize(s_YieldedCoroutines.size());
@@ -233,12 +259,6 @@ void ScriptEngine::StepScheduler()
 
 			lua_unref(coroutine, corRef);
 		}
-	}
-
-	for (auto it = s_YieldedCoroutines.begin(); it < s_YieldedCoroutines.end(); it++)
-	{
-		if (it->Dead)
-			it = s_YieldedCoroutines.erase(it);
 	}
 }
 
@@ -518,12 +538,61 @@ std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode, in
 	return bytecode;
 }
 
+static constexpr std::string_view CodeGenStatuses[] = {
+    "Success",
+    "Nothing to compile",
+    "Module not declared native, or no native functions",
+    "CodeGen not initialized",
+    "Overflowed instruction limit",
+    "Overflowed block limit",
+    "Overflowed block instruction limit",
+    "Assembler finalization failed",
+    "Lowering failed",
+    "Allocation error",
+
+    "<COUNT>",
+};
+
+static_assert(std::size(CodeGenStatuses) == (int)Luau::CodeGen::CodeGenCompilationResult::Count + 1);
+
+static bool isCodeGenResultErroneous(Luau::CodeGen::CodeGenCompilationResult result)
+{
+    return result != Luau::CodeGen::CodeGenCompilationResult::Success
+        && result != Luau::CodeGen::CodeGenCompilationResult::NothingToCompile
+        && result != Luau::CodeGen::CodeGenCompilationResult::NotNativeModule;
+}
+
 int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, const std::string& ChunkName)
 {
 	ZoneScoped;
 	ZoneText(ChunkName.data(), ChunkName.size());
 
-	return luau_load(L, ChunkName.c_str(), Bytecode.data(), Bytecode.size(), 0);
+    int status = luau_load(L, ChunkName.c_str(), Bytecode.data(), Bytecode.size(), 0);
+
+    if (status == 0)
+    {
+        if (Luau::CodeGen::isSupported())
+        {
+            Luau::CodeGen::CompilationOptions opts;
+            opts.flags = Luau::CodeGen::CodeGenFlags::CodeGen_OnlyNativeModules;
+
+            Luau::CodeGen::CompilationResult result = Luau::CodeGen::compile(L, -1, opts);
+
+            if (result.hasErrors())
+            {
+                if (isCodeGenResultErroneous(result.result))
+                    Log.ErrorF("CodeGen encountered an error when compiling {}: {}", ChunkName, CodeGenStatuses[(int)result.result]);
+
+                for (const Luau::CodeGen::ProtoCompilationFailure& protoError : result.protoFailures)
+                {
+                    if (isCodeGenResultErroneous(protoError.result))
+                        Log.ErrorF("CodeGen encountered an error when compiling '{}' for {}: {}", protoError.debugname, ChunkName, CodeGenStatuses[(int)protoError.result]);
+                }
+            }
+        }
+    }
+
+	return status;
 }
 
 int ScriptEngine::CompileAndLoad(lua_State* L, const std::string_view& SourceCode, const std::string& ChunkName)
@@ -1532,10 +1601,14 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
 	lua_State* state = lua_newstate(l_alloc, nullptr);
-	// Load Standard Library ('print' etc)
-	luaL_openlibs(state);
-	// Load runtime-specific libraries
-	luhx_openlibs(state);
+
+    if (Luau::CodeGen::isSupported())
+        Luau::CodeGen::create(state);
+
+    // Load Standard Library ('print' etc)
+    luaL_openlibs(state);
+    // Load runtime-specific libraries
+    luhx_openlibs(state);
 
 	std::filesystem::path* requirePath = new std::filesystem::path;
 	luaopen_require(
@@ -1654,8 +1727,7 @@ void ScriptEngine::L::Close(lua_State* L)
 		ud->EventConnections.clear();
 	}
 
-	lua_close(L);
-	delete vmud; // delete after closing VM due to `userthread` callback
+    vmud->Dead = true;
 }
 
 static void breakHere(lua_State* L, ScriptEngine::L::DebugBreakReason Reason)
