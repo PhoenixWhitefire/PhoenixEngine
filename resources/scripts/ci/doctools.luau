@@ -1,4 +1,6 @@
 -- doctools.luau, 22/09/2025
+task.wait(0.1)
+
 local docComments = json.parse(assert(fs.read("./wikigen/doc-comments.json")));
 local apiDump = json.parse(assert(fs.read("./apidump.json")));
 
@@ -277,7 +279,7 @@ local function libTools()
                 imgui.pushstylecolor(0, { 1, 0, 0, 1 })
             end
 
-            local desc = imgui.inputstring("Description", docLib.Description or "")
+            local desc = imgui.inputstring("Description", if typeof(docLib.Description) == "string" then docLib.Description else if typeof(docLib.Description) == "table" then table.concat(docLib.Description, "\n*") else "")
             docLib.Description = if #desc > 0 then desc else nil
 
             if not hadLibDescription then
@@ -448,7 +450,7 @@ local function libTools()
 end
 
 local function runDocGen()
-    _G.LspDefinitionsGeneratorDoNotShutdown = true
+    --_G.LspDefinitionsGeneratorDoNotShutdown = true
     local co, err = task.loadfile("scripts/ci/docs.luau", "DocumentationGenerator")
     assert(co, err)
 
@@ -470,4 +472,4 @@ game.OnFrameBegin:Connect(function()
     imgui.endw()
 end)
 
-runDocGen()
+--runDocGen()

@@ -174,6 +174,7 @@ const Reflection::StaticMethodMap& NetworkComponentManager::GetMethods()
                 HttpRequest request = parseRequestFromReflection(inputs[0]);
 
                 ThreadManager::Get()->Dispatch(
+                    "HttpRequest",
                     [request, prom]()
                     {
                         makeHttpRequest(request, prom);

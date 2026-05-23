@@ -312,7 +312,7 @@
       "ScriptEngine": {
         "Methods": {
           "CloseVM": "(String) -> ()",
-          "CompileToBytecode": "(String) -> (Buffer)",
+          "CompileToBytecode": "(String, Integer?, Integer?) -> (Buffer)",
           "CreateVM": "(String) -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)"
         }

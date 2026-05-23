@@ -152,6 +152,8 @@ void EcTransform::SetWorldSize(const glm::vec3& NewWorldSize)
 
 void EcTransform::RecomputeTransformTree()
 {
+    ZoneScoped;
+
     recomputeWorldTransforms(this);
     recomputeAabbRecursive(Object);
 }

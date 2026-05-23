@@ -44,6 +44,7 @@ static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastB
 
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
+	assert(false);
 	RAISE_RT("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
 }
 
@@ -496,7 +497,7 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
 }
 #undef ERROR_CONTEXTUALIZED
 
-std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode)
+std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode, int OptimizationLevel, int DebugLevel)
 {
 	ZoneScoped;
 
@@ -509,8 +510,8 @@ std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode)
 	};
 
 	Luau::CompileOptions compileOptions;
-	compileOptions.optimizationLevel = L::DebugBreak ? 1 : 2;
-	compileOptions.debugLevel = L::DebugBreak ? 1 : 2;
+	compileOptions.optimizationLevel = OptimizationLevel != -1 ? OptimizationLevel : (L::DebugBreak ? 1 : 2);
+	compileOptions.debugLevel = DebugLevel != -1 ? DebugLevel : (L::DebugBreak ? 2 : 1);
 	compileOptions.mutableGlobals = mutableGlobals;
 
 	std::string bytecode = Luau::compile(std::string(SourceCode), compileOptions);
@@ -1357,65 +1358,44 @@ static void initRequireConfig(luarequire_Configuration* config)
 		};
 	config->to_child = [](lua_State*, void* ctx, const char* name)
 		{
-			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-			std::filesystem::path child = *curpath / name;
+            std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+            std::filesystem::path child = *curpath / name;
 
-			if (!std::filesystem::exists(child))
-			{
-				std::string directModule = child.string() + ".luau";
-				std::string bytecode = directModule + "c"; // `.luauc`
+            if (!std::filesystem::exists(child))
+            {
+                std::string childCompiled = child.string() + "c"; // `.luauc`, if the path already ends in `.luau`
+                std::string specCompliantModule = child.string() + ".luau";
+                std::string bytecode = specCompliantModule + "c"; // `.luauc`
 
-				if (!std::filesystem::exists(directModule) && !std::filesystem::exists(bytecode))
-				{
-					std::string file = name;
-					if (size_t pos = file.find_last_of(".luau"); pos != std::string::npos)
-					{
-						std::filesystem::path prevState = *curpath;
+                bool hasChildCompiled = std::filesystem::is_regular_file(childCompiled);
+                bool hasSpecCompliantModule = std::filesystem::is_regular_file(specCompliantModule);
+                bool hasdDirectModuleBytecode = std::filesystem::is_regular_file(bytecode);
 
-						file = file.substr(0, pos - sizeof(".luau") + 2);
-						*curpath = *curpath / file;
+                if (!hasChildCompiled && !hasSpecCompliantModule && !hasdDirectModuleBytecode)
+                {
+                    if (!std::filesystem::is_regular_file(*curpath / "init.luau") && !std::filesystem::is_regular_file(*curpath / "init.luauc"))
+                        return NAVIGATE_NOT_FOUND;
+                }
+                else
+                {
+                    if ((hasChildCompiled && hasSpecCompliantModule) || (hasSpecCompliantModule && hasdDirectModuleBytecode) || (hasChildCompiled && hasdDirectModuleBytecode))
+                        return NAVIGATE_AMBIGUOUS;
 
-						if (!std::filesystem::is_regular_file(*curpath / "init.luau"))
-						{
-							*curpath = prevState;
-							return NAVIGATE_NOT_FOUND;
-						}
-					}
-					else
-						return NAVIGATE_NOT_FOUND;
-				}
-				else
-					child = std::filesystem::exists(directModule) ? directModule : bytecode;
-			}
+					child = hasChildCompiled ? childCompiled : (hasSpecCompliantModule ? specCompliantModule : bytecode);
+                }
+            }
 
-			*curpath = child;
-			return NAVIGATE_SUCCESS;
+            *curpath = child;
+            return NAVIGATE_SUCCESS;
 		};
-	config->is_module_present = [](lua_State*, void* ctx)
-		{
-			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-
-			if (std::filesystem::is_regular_file(*curpath) || std::filesystem::is_regular_file(*curpath / "init.luau"))
-				return true;
-			else
-			{
-				std::string file = curpath->filename().string();
-				if (size_t pos = file.find_last_of(".luau"); pos != std::string::npos)
-				{
-					std::filesystem::path prevState = *curpath;
-
-					file = file.substr(0, pos - sizeof(".luau") + 2);
-					*curpath = curpath->parent_path() / file;
-
-					if (std::filesystem::is_regular_file(*curpath / "init.luau"))
-						return true;
-					else
-						*curpath = prevState;
-				}
-
-				return false;
-			}
-		};
+    config->is_module_present = [](lua_State*, void* ctx)
+        {
+            std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+            return std::filesystem::is_regular_file(*curpath)
+                    || std::filesystem::is_regular_file(curpath->string() + "c") // `.luauc`
+                    || std::filesystem::is_regular_file(*curpath / "init.luau")
+                    || std::filesystem::is_regular_file(*curpath / "init.luauc");
+        };
 	config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
 		{
 			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
@@ -1471,13 +1451,15 @@ static void initRequireConfig(luarequire_Configuration* config)
 				modulePath = curpath->string();
 			else
 			{
-				modulePath = (*curpath / "init.luau").string();
+                std::filesystem::path initSource = *curpath / "init.luau";
+                std::filesystem::path initCompiled = *curpath / "init.luauc";
 
-				if (!std::filesystem::is_regular_file(modulePath))
-				{
-					std::string file = curpath->filename().string();
-					modulePath = (curpath->parent_path() / file.substr(0, file.find_last_of(".luau") - sizeof(".luau") + 2)).string();
-				}
+                if (std::filesystem::is_regular_file(initSource))
+                    modulePath = initSource.string();
+                else if (std::filesystem::is_regular_file(initCompiled))
+                    modulePath = initCompiled.string();
+                else
+                    RAISE_RT("Could not find module, got path '{}'", curpath->string());
 			}
 
 			// from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025

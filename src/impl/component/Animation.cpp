@@ -1,5 +1,6 @@
 #include <vector>
 #include <Vendor/nljson.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "component/Animation.hpp"
 #include "component/Transform.hpp"
@@ -225,6 +226,8 @@ ObjectHandle EcAnimator::LoadAnimation(uint32_t Id)
 
 void EcAnimator::Step(double DeltaTime)
 {
+    ZoneScoped;
+
     AnimatorComponentManager* acm = (AnimatorComponentManager*)AnimatorComponentManager::Get();
 
     for (const ObjectHandle& animObj : Animations)

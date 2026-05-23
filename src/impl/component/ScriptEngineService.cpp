@@ -99,11 +99,14 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
         } },
 
         { "CompileToBytecode", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer), REFLECTION_OPTIONAL(Integer) },
             { Reflection::ValueType::Buffer },
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
-                std::string bytecode = ScriptEngine::CompileBytecode(inputs[0].AsStringView());
+                int optLevel = inputs.size() > 1 ? (int)inputs[1].AsInteger() : -1;
+                int debugLevel = inputs.size() > 2 ? (int)inputs[2].AsInteger() : -1;
+
+                std::string bytecode = ScriptEngine::CompileBytecode(inputs[0].AsStringView(), optLevel, debugLevel);
                 Reflection::GenericValue retval = bytecode;
                 retval.Type = Reflection::ValueType::Buffer;
 

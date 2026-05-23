@@ -139,6 +139,8 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 		false,
 		[obj, meshPathStr, meshProvider](Mesh& mesh)
 		{
+			ZoneScoped;
+
 			if (mesh.Bones.size() == 0)
 				return;
 
@@ -233,6 +235,8 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 
 void EcMesh::RecomputeBoneMatrices()
 {
+	ZoneScoped;
+
     Mesh& meshData = MeshProvider::Get()->GetMeshResource(RenderMeshId);
     MeshProvider::GpuMesh& gpuMesh = MeshProvider::Get()->GetGpuMesh(meshData.GpuId);
 

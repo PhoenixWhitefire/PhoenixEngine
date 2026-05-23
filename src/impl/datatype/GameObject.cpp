@@ -670,6 +670,8 @@ GameObject* GameObject::GetParent() const
 
 void GameObject::ForEachChild(const std::function<bool(const ObjectHandle&)>& Callback)
 {
+	ZoneScoped;
+
 	GameObjectManager* ObjectManager = GameObjectManager::Get();
 	size_t beforeSize = ObjectManager->WorldArray.size();
 
@@ -691,6 +693,8 @@ void GameObject::ForEachChild(const std::function<bool(const ObjectHandle&)>& Ca
 
 bool GameObject::ForEachDescendant(const std::function<bool(const ObjectHandle&)>& Callback)
 {
+	ZoneScoped;
+
 	GameObjectManager* ObjectManager = GameObjectManager::Get();
 	size_t beforeSize = ObjectManager->WorldArray.size();
 

@@ -269,12 +269,16 @@ void EcSound::Update(double)
 
 	bool playing = ma_sound_is_playing(SoundInstance);
 
-	if (!Object->Enabled && playing)
-	{
-		if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
-			Log.ErrorF("Failed to stop sound '{}' (disabled object), error code: {}", Object->GetFullName(), (int)result);
-		return;
-	}
+    if (!Object->Enabled)
+    {
+        if (playing)
+        {
+            if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
+                Log.ErrorF("Failed to stop sound '{}' (disabled object), error code: {}", Object->GetFullName(), (int)result);
+        }
+
+        return;
+    }
 
 	if (playing && !m_PlayRequested)
 	{
@@ -301,8 +305,11 @@ void EcSound::Update(double)
 		NextRequestedPosition = -1.f;
 	}
 
-	if (ma_result result = ma_sound_get_cursor_in_seconds(SoundInstance, &Position); result != MA_SUCCESS)
-		Log.ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+    if (m_PlayRequested)
+    {
+        if (ma_result result = ma_sound_get_cursor_in_seconds(SoundInstance, &Position); result != MA_SUCCESS)
+            Log.ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+    }
 
 	if (EcTransform* trans = Object->FindComponent<EcTransform>())
 	{

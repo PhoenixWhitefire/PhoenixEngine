@@ -948,10 +948,9 @@ uint32_t MeshProvider::LoadFromPath(
 			m_Meshes.at(resourceId).MeshDataPreserved = PreserveMeshData;
 		
 			ThreadManager::Get()->Dispatch(
+				"AsyncMeshLoad",
 				[promise, resourceId, this, Path]()
 				{
-					ZoneScopedN("AsyncMeshLoad");
-
 					bool success = true;
 					std::string contents = FileRW::ReadFile(Path, &success);
 
@@ -1050,6 +1049,8 @@ void MeshProvider::FinalizeAsyncLoadedMeshes()
 	{
 		if (!it->Future.valid() || it->Future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
 			continue;
+
+		ZoneScopedN("MeshReady");
 
 		const Mesh& loadedMesh = it->Future.get();
 		Mesh* mesh = &m_Meshes.at(it->ResourceId);

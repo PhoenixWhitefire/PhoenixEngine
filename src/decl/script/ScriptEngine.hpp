@@ -19,7 +19,7 @@ namespace ScriptEngine
 	void Initialize();
 	void Shutdown();
 
-	std::string CompileBytecode(const std::string_view&);
+	std::string CompileBytecode(const std::string_view&, int OptimizationLevel = -1, int DebugLevel = -1);
 	int LoadBytecode(lua_State*, const std::string_view& Bytecode, const std::string& ChunkName);
 	int CompileAndLoad(lua_State*, const std::string_view& SourceCode, const std::string& ChunkName);
 	nlohmann::json DumpApiToJson();

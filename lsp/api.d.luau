@@ -436,7 +436,7 @@ export type EcRigidBody = {
 export type EcScriptEngine = {
 
   CloseVM: (self: EcScriptEngine, VmName: string) -> (),
-  CompileToBytecode: (self: EcScriptEngine, Source: string) -> (buffer),
+  CompileToBytecode: (self: EcScriptEngine, Source: string, OptimizationLevel: number?, DebugLevel: number?) -> (buffer),
   CreateVM: (self: EcScriptEngine, VmName: string) -> (),
   RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
 }

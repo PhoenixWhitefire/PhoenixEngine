@@ -17,12 +17,12 @@ local GizmoPrevTargetTransform = Matrix.identity
 local GizmoPrevTargetSize = vector.zero
 local GizmoPieceToDirection: { [GameObject & EcMesh]: vector } = {}
 local GizmoPieces = {
-    [vector.create( 1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create(-1, 0, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create(0,  1, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create(0, -1, 0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create(0, 0,  1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create(0, 0, -1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") }
+    [vector.create( 1,  0,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create(-1,  0,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create( 0,  1,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create( 0, -1,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create( 0,  0,  1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
+    [vector.create( 0,  0, -1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") }
 }
 
 for direction, piece in GizmoPieces do
@@ -265,7 +265,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
             PrevDragMousePos = cpos
 
             local axisLocal = assert(GizmoPieceToDirection[hit])
-            -- TODO manual annotation is luau bug (inferring `never`)
+            -- TODO luau manual annotation is luau bug (inferring `never`)
             local rotOnly: vector = target.Transform - target.Transform.Position
             local axisWorld = vector.normalize(rotOnly * axisLocal)
 

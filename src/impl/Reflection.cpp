@@ -183,16 +183,20 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 	Target.Type = Source.Type;
 	Target.Size = Source.Size;
 
-	switch (Target.Type)
+	switch (Source.Type)
 	{
 	case ValueType::Null:
 		return;
-	case ValueType::String: case ValueType::Buffer:
-	{
-		std::string_view str = Source.AsStringView();
-		fromString(Target, str.data());
-		break;
-	}
+    case ValueType::String: case ValueType::Buffer:
+    {
+        std::string_view str = std::string_view(Source.Size < REFLECTION_GV_SSO ? Source.Val.StrSso : Source.Val.Str, Source.Size);
+        fromString(Target, str.data());
+
+        if (Source.Type == ValueType::Buffer)
+            Target.Type = Reflection::ValueType::Buffer;
+
+        break;
+    }
 	case ValueType::Color: case ValueType::Vector3:
 	{
 		Target.Val.Vec3 = Source.Val.Vec3;
@@ -266,6 +270,8 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 		Target.Val.Ptr = Source.Val.Ptr;
 	}
 	}
+
+    assert(Target.Type == Source.Type && Target.Size == Source.Size);
 }
 
 Reflection::GenericValue::GenericValue(GenericValue&& Other)
@@ -304,6 +310,9 @@ std::string Reflection::GenericValue::ToString() const
 	case ValueType::Double:
 		return std::to_string(AsDouble());
 
+    case ValueType::Buffer:
+        return std::format("<{} bytes>", Size);
+
 	case ValueType::String:
 	{
 		if (this->Size + 1 > REFLECTION_GV_SSO)
@@ -311,7 +320,7 @@ std::string Reflection::GenericValue::ToString() const
 		else
 			return Val.StrSso;
 	}
-	
+
 	case ValueType::Color:
 		return Color(*this).ToString();
 

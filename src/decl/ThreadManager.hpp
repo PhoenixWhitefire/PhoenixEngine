@@ -23,7 +23,7 @@ public:
 	// window waits on everything to finish so that the app does not
 	// appear like a suspicious background process if it gets frozen
 	// somewhere in teardown
-	void Dispatch(std::function<void()>, bool IsCritical);
+	void Dispatch(const std::string_view& Name, std::function<void()>, bool IsCritical);
 
 	static ThreadManager* Get();
 
@@ -31,6 +31,7 @@ private:
 	struct Task
 	{
 		std::function<void()> Function;
+		std::string_view Name;
 		bool IsCritical = true;
 	};
 

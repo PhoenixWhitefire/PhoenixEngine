@@ -153,6 +153,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 					}
 
 					ZoneScopedN("Task");
+					ZoneText(task.Name.data(), task.Name.size());
 
 					task.Function();
 				}
@@ -167,7 +168,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 	Log.Info("ThreadManager initialized");
 }
 
-void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
+void ThreadManager::Dispatch(const std::string_view& Name, std::function<void()> Task, bool IsCritical)
 {
 	assert(s_Instance == this);
 	assert(!m_Stop);
@@ -180,7 +181,11 @@ void ThreadManager::Dispatch(std::function<void()> Task, bool IsCritical)
 
 	{
 		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
-		m_Tasks.emplace(std::move(Task), IsCritical);
+		m_Tasks.push({
+			.Function = std::move(Task),
+			.Name = Name,
+			.IsCritical = IsCritical,
+		});
 	}
 
 	m_TasksCv.notify_one();

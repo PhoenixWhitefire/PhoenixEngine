@@ -567,16 +567,15 @@ local function openProject_(ManualPath: string?)
 	-- TODO luau
 	Project.Workspace = assert(Project.DataModel :: any):FindChildWithComponent("Workspace")
 	if not Project.Workspace then
-		-- TODO luau: Project.Workspace is refining to `nil`
-		Project.Workspace = GameObject.new("Workspace")
-		assert(Project.Workspace)
+		local newWorkspace = GameObject.new("Workspace")
 
-		Project.Workspace.SceneCamera = GameObject.new("Camera")
-		Project.Workspace.SceneCamera.Parent = Project.Workspace
+		newWorkspace.SceneCamera = GameObject.new("Camera")
+		newWorkspace.SceneCamera.Parent = Project.Workspace
 
-		Project.Workspace.Name = "Workspace"
-		Project.Workspace.SceneCamera.Name = "Camera"
+		newWorkspace.Name = "Workspace"
+		newWorkspace.SceneCamera.Name = "Camera"
 
+		Project.Workspace = newWorkspace;
 		warn("Re-created Workspace")
 	end
 
@@ -1097,6 +1096,37 @@ local function findEnginePath(): string?
 	end
 end
 
+local function compileScriptBytecodeRecursive(dir)
+    for path, ty in fs.listdir(dir) do
+        if ty == "f" then
+            if path:find(".config.luau") then
+                continue
+            end
+
+            local extLoc = path:find(".luau")
+            if not extLoc or extLoc ~= #path - #(".luau") + 1 then
+                continue
+            end
+
+            local contents, err = fs.read(path)
+            if not contents then
+                error(`Error compiling bytecode for '{ path }': { err }`)
+            end
+
+            local bytecode = ScriptEngine:CompileToBytecode(
+                contents,
+                2, -- optimization level
+                1  -- debug level
+            )
+            fs.write(path .. "c", bytecode) -- file extension is `.luauc`
+
+            fs.remove(path) -- remove original source code
+        else
+            compileScriptBytecodeRecursive(path)
+        end
+    end
+end
+
 local function exportProject()
 	saveProject()
 
@@ -1117,6 +1147,7 @@ local function exportProject()
 		return
 	end
 	
+    local keepOnlyScriptBytecode = false
 	local prevExportTo = ""
 
 	while true do
@@ -1136,6 +1167,8 @@ local function exportProject()
 		if imgui.button("...") then
 			exportDir = fs.promptopenfolder("Change export directory")
 		end
+
+        keepOnlyScriptBytecode = imgui.checkbox("Only export script bytecode", keepOnlyScriptBytecode)
 
 		exportTo = `{exportDir}/{exportName}`
 
@@ -1212,6 +1245,8 @@ local function exportProject()
 			fs.copy(`./resources/{ a }`, path)
 		end
 	end
+
+    compileScriptBytecodeRecursive(exportTo .. "/resources/scripts")
 
 	if enginePath:find("x64/Debug") and enginePath:find(".exe") then
 		Engine:ShowMessageBox(

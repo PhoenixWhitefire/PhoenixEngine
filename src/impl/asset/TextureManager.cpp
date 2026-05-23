@@ -412,9 +412,10 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 			std::promise<Texture>* promise = new std::promise<Texture>;
 
 			ThreadManager::Get()->Dispatch(
+				"AsyncTextureLoad",
 				[promise, ActualPath, newResourceId]()
 				{
-					ZoneScopedN("AsyncTextureLoad");
+					ZoneScopedN("Texture");
 					ZoneText(ActualPath.data(), ActualPath.size());
 
 					Texture asyncTexture;

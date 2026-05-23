@@ -198,16 +198,18 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
     std::string modulePath = Module;
     bool isAotBytecode = false;
 
-    if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(modulePath)))
+    if (!std::filesystem::is_regular_file(modulePath))
     {
-        if (std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(modulePath + ".luau")))
+        if (std::filesystem::is_regular_file(modulePath + "c")) // if the path ends in `.luau`, check `.luauc`
+            modulePath.append("c");
+        else if (std::filesystem::is_regular_file(modulePath + ".luau"))
             modulePath.append(".luau");
-        else if (std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(modulePath + ".luauc")))
-        {
+        else if (std::filesystem::is_regular_file(modulePath + ".luauc"))
             modulePath.append(".luauc");
-            isAotBytecode = true;
-        }
     }
+
+    if (modulePath.find(".luauc") == modulePath.size() - strlen(".luauc"))
+        isAotBytecode = true;
 
     bool readSuccess = true;
 	std::string sourceCodeOrBytecode = FileRW::ReadFile(modulePath, &readSuccess);
@@ -300,7 +302,7 @@ void EcDataModel::Bind()
 
     std::string path = FileRW::ResolvePathNormalized(LiveScripts);
 
-    if (std::filesystem::is_regular_file(path))
+    if (!std::filesystem::is_directory(path))
     {
         lua_State* script = loadModule(path, this);
         if (script)
@@ -308,7 +310,7 @@ void EcDataModel::Bind()
         else
             CanLoadModules = false;
     }
-    else if (std::filesystem::is_directory(path))
+    else
     {
         for (const auto& entry : std::filesystem::directory_iterator(path))
         {
@@ -321,11 +323,6 @@ void EcDataModel::Bind()
                     CanLoadModules = false;
             }
         }
-    }
-    else
-    {
-        Log.ErrorF("Invalid `LiveScripts` path '{}' ({}), expected to be a file or directory", LiveScripts, path);
-        CanLoadModules = false;
     }
 }
 

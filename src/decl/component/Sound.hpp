@@ -6,8 +6,16 @@
 #include <string>
 #include <future>
 #include <cfloat>
-#include <miniaudio/miniaudio.h>
 #include <glm/mat4x4.hpp>
+
+#ifdef __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
+#include <miniaudio/miniaudio.h>
+
+#pragma GCC diagnostic pop
+#endif
 
 #include "datatype/ComponentBase.hpp"
 

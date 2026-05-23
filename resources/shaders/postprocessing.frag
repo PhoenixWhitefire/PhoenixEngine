@@ -38,11 +38,6 @@ float log10(float x)
 	return (1 / log(10)) * log(x);
 }
 
-float getBrightness(vec3 Value)
-{
-	return dot(Value, vec3(0.299f, 0.587f, 0.114f));
-}
-
 void main()
 {
 	if (!Phoenix_PostFxEnabled)
@@ -58,9 +53,6 @@ void main()
 	vec2 PixelScale = vec2(1.0f / TextureSize.x, 1.0f / TextureSize.y);
 
 	vec2 UVOffset = vec2(0.f, 0.f);
-
-	//if (Phoenix_DistortionEnabled)
-	//	UVOffset = (texture(Phoenix_DistortionTexture, Frag_UV).xy - Center) * (sin(Phoenix_Time) * 5);
 
 	vec2 sampleUV = Frag_UV + UVOffset;
 
@@ -83,24 +75,7 @@ void main()
 	}*/
 
 	//Color += texture(BloomTexture, sampleUV).xyz;
-	
-	/*
-	// https://youtu.be/wbn5ULLtkHs?t=271
-	float Lin = getBrightness(Color);
-	float Lavg = getBrightness(textureLod(Phoenix_FramebufferTexture, sampleUV, 10).xyz);
 
-	float logLrw = log10(Lavg) + 0.84f;
-	float alphaRw = 0.4f * logLrw + 2.92f;
-	float betaRw = -0.4f * logLrw * logLrw - 2.584f * logLrw + 2.0208f;
-	float Lwd = LdMax / sqrt(ContrastMax);
-	float logLd = log10(Lwd) + 0.84f;
-	float alphaD = 0.4f * logLd + 2.92f;
-	float betaD = -0.4f * logLd * logLd - 2.584f * logLd + 2.0208f;
-	float Lout = pow(Lin, alphaRw / alphaD) / LdMax * pow(10.f, (betaRw - betaD) / alphaD) - (1.f - ContrastMax);
-
-	Color = Color / Lin * Lout;
-	Color *= 0.6f;
-	*/
 	if (Phoenix_ScreenEdgeBlurEnabled)
 	{
 		vec3 BlurredColor;
@@ -131,7 +106,17 @@ void main()
 		Color = mix(Color, BlurredColor, RadialBlurWeight);
 	}
 
+	// Reinhardt extended
+	/*
+	const float WhitePoint = 2.5f;
+
+	float luminanceI = Color.r * 0.2126f + Color.g * 0.7152f + Color.b * 0.0722f;
+	float luminanceO = (luminanceI * (1 + (luminanceI/pow(WhitePoint, 2.f))))/(1+luminanceI);
+
+	Color = Color * (luminanceO / luminanceI);
+	*/
+
 	Color = pow(Color, vec3(gamma, gamma, gamma));
-	
+
 	FragColor = vec4(Color, 1.0f);
 }
