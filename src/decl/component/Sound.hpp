@@ -11,15 +11,15 @@
 #ifdef __GNUG__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 
 #include <miniaudio/miniaudio.h>
 
+#ifdef __GNUG__
 #pragma GCC diagnostic pop
 #endif
 
 #include "datatype/ComponentBase.hpp"
-
-struct ma_sound;
 
 struct EcSound : public Component<EntityComponent::Sound>
 {
