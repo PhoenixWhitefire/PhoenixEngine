@@ -61,14 +61,7 @@ void ScriptEngine::Initialize()
 void ScriptEngine::Shutdown()
 {
 	for (auto& [_, vm] : VMs)
-    {
 		L::Close(vm.MainThread);
-
-        L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(vm.MainThread);
-        lua_close(vm.MainThread);
-
-        delete vmud;
-    }
 
 	VMs.clear();
 }
@@ -183,17 +176,6 @@ void ScriptEngine::StepScheduler()
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
     processParallelEvents();
-
-    for (auto& [ _, vm ] : ScriptEngine::VMs)
-    {
-        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
-
-        if (vmud->Dead)
-        {
-            lua_close(vm.MainThread);
-            delete vmud; // delete after closing VM due to `userthread` callback
-        }
-    }
 
     for (auto it = s_YieldedCoroutines.begin(); it < s_YieldedCoroutines.end(); it++)
     {
@@ -1705,11 +1687,11 @@ void ScriptEngine::L::Close(lua_State* L)
 	lua_gettable(L, LUA_ENVIRONINDEX);
 	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
 
-	for (YieldedCoroutine& yc : s_YieldedCoroutines)
-	{
-		if (lua_mainthread(yc.Coroutine) == L)
-			yc.Dead = true;
-	}
+    for (auto it = s_YieldedCoroutines.begin(); it != s_YieldedCoroutines.end(); it++)
+    {
+        if (!it->Dead && lua_mainthread(it->Coroutine) == L)
+            it->Dead = true;
+    }
 
 	StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(L);
 
@@ -1727,7 +1709,8 @@ void ScriptEngine::L::Close(lua_State* L)
 		ud->EventConnections.clear();
 	}
 
-    vmud->Dead = true;
+    lua_close(L);
+    delete vmud; // delete after closing VM due to `userthread` callback
 }
 
 static void breakHere(lua_State* L, ScriptEngine::L::DebugBreakReason Reason)

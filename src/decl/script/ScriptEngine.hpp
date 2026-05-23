@@ -138,7 +138,6 @@ namespace ScriptEngine::L
 		std::vector<lua_State*> Coroutines; // Only populated for the main thread
 		std::vector<std::string> YieldBlockers;
 		double LastResumed = 0.f;
-		bool Dead = false; // clean up on next scheduler cycle
 	};
 
 	struct DebugBreakReason_
