@@ -19,46 +19,48 @@
 
 #include "datatype/ComponentBase.hpp"
 
+struct ma_sound;
+
 struct EcSound : public Component<EntityComponent::Sound>
 {
-	void Update(double);
-	void Reload();
+    void Update(double);
+    void Reload();
 
-	std::string SoundFile;
-	float Position = 0.f;
-	float Length = 0.f;
-	float Volume = 1.f;
-	float Speed = 1.f;
-	bool Looped = false;
-	bool FinishedLoading = true;
-	bool LoadSucceeded = false;
+    std::string SoundFile;
+    float Position = 0.f;
+    float Length = 0.f;
+    float Volume = 1.f;
+    float Speed = 1.f;
+    bool Looped = false;
+    bool FinishedLoading = true;
+    bool LoadSucceeded = false;
 
-	float NextRequestedPosition = -1.f;
+    float NextRequestedPosition = -1.f;
 
-	ObjectRef Object;
-	uint32_t EcId = UINT32_MAX;
+    ObjectRef Object;
+    uint32_t EcId = UINT32_MAX;
 
-	std::vector<Reflection::EventCallback> OnLoadedCallbacks;
-	ma_sound* SoundInstance;
-	
-	bool m_PlayRequested = false;
-	bool Valid = true;
+    std::vector<Reflection::EventCallback> OnLoadedCallbacks;
+    ma_sound* SoundInstance;
+
+    bool m_PlayRequested = false;
+    bool Valid = true;
 };
 
 class SoundComponentManager : public ComponentManager<EcSound>
 {
 public:
-	SoundComponentManager();
+    SoundComponentManager();
 
-	uint32_t CreateComponent(GameObject*) override;
-	void DeleteComponent(uint32_t) override;
-	const Reflection::StaticPropertyMap& GetProperties() override;
-	const Reflection::StaticMethodMap& GetMethods() override;
-	const Reflection::StaticEventMap& GetEvents() override;
+    uint32_t CreateComponent(GameObject*) override;
+    void DeleteComponent(uint32_t) override;
+    const Reflection::StaticPropertyMap& GetProperties() override;
+    const Reflection::StaticMethodMap& GetMethods() override;
+    const Reflection::StaticEventMap& GetEvents() override;
 
-	void UpdateListener(const glm::mat4& CameraTransform);
-	void Shutdown() override;
+    void UpdateListener(const glm::mat4& CameraTransform);
+    void Shutdown() override;
 
-	ma_engine AudioEngine;
-	bool IsHeadless = false;
+    ma_engine AudioEngine;
+    bool IsHeadless = false;
 };
