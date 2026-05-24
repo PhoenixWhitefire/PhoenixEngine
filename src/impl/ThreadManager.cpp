@@ -113,6 +113,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 		numThreads = static_cast<size_t>(NumThreadsOverride);
 
 	Log.InfoF("Creating {} parallel threads...", numThreads);
+	Concurrency = numThreads;
 
 	for (size_t i = 0; i < numThreads; i++)
 	{

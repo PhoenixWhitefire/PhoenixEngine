@@ -32,6 +32,9 @@ int luhxopen_json(lua_State*);
 #define LUHX_TASKLIBNAME "task"
 int luhxopen_task(lua_State*);
 
+#define LUHX_PARALLELLIBNAME "parallel"
+int luhxopen_parallel(lua_State*);
+
 int luhxopen_debug(lua_State*);
 
 #define LUHX_ENUMLIBNAME "Enum"

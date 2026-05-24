@@ -27,6 +27,8 @@ public:
 
 	static ThreadManager* Get();
 
+	int Concurrency = 1;
+
 private:
 	struct Task
 	{

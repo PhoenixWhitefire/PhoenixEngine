@@ -3,6 +3,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <cstdint>
 #include <future>
 #include <thread>
 #include <deque>
@@ -74,20 +75,22 @@ namespace ScriptEngine
 		bool Dead = false;
 	};
 
-	inline std::deque<YieldedCoroutine> s_YieldedCoroutines;
+    struct LuauVM
+    {
+        void StepScheduler();
 
-	inline std::mutex s_ParallelEventsMutex;
-	inline std::vector<std::function<void()>> s_ParallelEvents;
+        std::deque<YieldedCoroutine> YieldedCoroutines;
+        std::string Name;
+        lua_State* MainThread = nullptr;
+        int ParallelAllocated = 0;
+        bool IsParallel = false;
+        bool Desynchronized = false;
+    };
 
-	struct LuauVM
-	{
-		std::string Name;
-		lua_State* MainThread = nullptr;
-	};
+    const LuauVM& RegisterNewVM(const std::string& Name);
 
-	const LuauVM& RegisterNewVM(const std::string& Name);
-
-	inline std::unordered_map<std::string, LuauVM> VMs;
+    inline std::unordered_map<std::string, LuauVM> VMs;
+    inline std::vector<LuauVM> ParallelVMs;
 };
 
 namespace ScriptEngine::L
@@ -130,6 +133,8 @@ namespace ScriptEngine::L
 		std::function<void(YieldedCoroutine&)> Configure
 	);
 
+    bool IsSynchronized(lua_State*);
+
 	struct StateUserdata
 	{
 		std::string VM;
@@ -138,6 +143,8 @@ namespace ScriptEngine::L
 		std::vector<lua_State*> Coroutines; // Only populated for the main thread
 		std::vector<std::string> YieldBlockers;
 		double LastResumed = 0.f;
+        uint32_t ParallelVM = UINT32_MAX;
+		bool IsParallelVM = false;
 	};
 
 	struct DebugBreakReason_

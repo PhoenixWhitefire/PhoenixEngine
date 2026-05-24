@@ -203,54 +203,57 @@ namespace Reflection
 	using EventConnectFunction = std::function<uint32_t(void*, EventCallback)>;
 	using EventDisconnectFunction = std::function<void(void*, uint32_t)>;
 
-	struct PropertyDescriptor
-	{
-		std::string_view Name;
-		PropertyGetter Get;
-		PropertySetter Set;
+    struct PropertyDescriptor
+    {
+        std::string_view Name;
+        PropertyGetter Get;
+        PropertySetter Set;
 
-		Reflection::ValueType Type = ValueType::Null; // at the end for better size
-		bool Serializes = true;
+        Reflection::ValueType Type = ValueType::Null; // at the end for better size
+        bool Serializes = true;
+        bool ParallelReadSafe = true;
+        bool ParallelWriteSafe = false;
 
-		PropertyDescriptor(std::string_view N, Reflection::ValueType Ty, const PropertyGetter& Getter, const PropertySetter& Setter, bool Serializes = true)
-			: Name(N), Get(Getter), Set(Setter), Type(Ty), Serializes(Serializes)
-		{
-		}
-		PropertyDescriptor() = default;
-	};
+        PropertyDescriptor(std::string_view N, Reflection::ValueType Ty, const PropertyGetter& Getter, const PropertySetter& Setter, bool Serializes = true)
+            : Name(N), Get(Getter), Set(Setter), Type(Ty), Serializes(Serializes)
+        {
+        }
+        PropertyDescriptor() = default;
+    };
 
-	struct MethodDescriptor
-	{
-		MethodDescriptor(
-			const std::vector<ValueType>& Inputs,
-			const std::vector<ValueType>& Outputs,
-			const MethodFunction Func
-		)
-		: Inputs(Inputs),
-		  Outputs(Outputs),
-		  Func(Func)
-		{
-		}
+    struct MethodDescriptor
+    {
+        MethodDescriptor(
+            const std::vector<ValueType>& Inputs,
+            const std::vector<ValueType>& Outputs,
+            const MethodFunction Func
+        )
+        : Inputs(Inputs),
+          Outputs(Outputs),
+          Func(Func)
+        {
+        }
 
-		MethodDescriptor(
-			const std::vector<ValueType>& Inputs,
-			const std::vector<ValueType>& Outputs,
-			const YieldingMethodFunction YieldFunc
-		)
-		: Inputs(Inputs),
-		  Outputs(Outputs),
-		  YieldFunc(YieldFunc),
-		  Yields(true)
-		{
-		}
+        MethodDescriptor(
+            const std::vector<ValueType>& Inputs,
+            const std::vector<ValueType>& Outputs,
+            const YieldingMethodFunction YieldFunc
+        )
+        : Inputs(Inputs),
+          Outputs(Outputs),
+          YieldFunc(YieldFunc),
+          Yields(true)
+        {
+        }
 
-		std::vector<ValueType> Inputs;
-		std::vector<ValueType> Outputs;
+        std::vector<ValueType> Inputs;
+        std::vector<ValueType> Outputs;
 
-		YieldingMethodFunction YieldFunc = nullptr;
-		MethodFunction Func = nullptr;
-		bool Yields = false;
-	};
+        YieldingMethodFunction YieldFunc = nullptr;
+        MethodFunction Func = nullptr;
+        bool ParallelSafe = false;
+        bool Yields = false;
+    };
 
 	struct EventDescriptor
 	{

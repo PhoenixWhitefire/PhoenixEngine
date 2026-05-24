@@ -9,6 +9,7 @@ static const luaL_Reg luhxlibs[] =
     { LUHX_IMGUILIBNAME, luhxopen_imgui },
     { LUHX_JSONLIBNAME, luhxopen_json },
     { LUHX_TASKLIBNAME, luhxopen_task },
+    { LUHX_PARALLELLIBNAME, luhxopen_parallel },
     { LUA_DBLIBNAME, luhxopen_debug},
 
     { LUHX_ENUMLIBNAME, luhxopen_Enum },
