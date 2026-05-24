@@ -62,6 +62,19 @@ public:
 
 	Scene CurrentScene;
 
+	ThreadManager ThreadManager;
+	MaterialManager MaterialManager;
+	TextureManager TextureManager;
+	ShaderManager ShaderManager;
+	MeshProvider MeshProvider;
+	Physics Physics;
+	History History;
+
+	ShaderProgram PostFxShader;
+	ShaderProgram SkyboxShader;
+	ShaderProgram SeparableBlurShader;
+	GpuFrameBuffer SunShadowMap;
+
 	ImVec2 OverrideViewportDockSpacePosition = { -1.f, -1.f };
 	ImVec2 OverrideViewportDockSpaceSize = { -1.f, -1.f };
 	ImVec2 OverrideViewportInputSize = { 1.f, 1.f };
@@ -101,19 +114,6 @@ private:
 	int m_WindowedHeight = 800;
 	int m_WindowedPosX = 0;
 	int m_WindowedPosY = 0;
-
-	ThreadManager m_ThreadManager;
-	MaterialManager m_MaterialManager;
-	TextureManager m_TextureManager;
-	ShaderManager m_ShaderManager;
-	MeshProvider m_MeshProvider;
-	Physics m_Physics;
-	History m_History;
-
-	ShaderProgram m_PostFxShader;
-	ShaderProgram m_SkyboxShader;
-	ShaderProgram m_SeparableBlurShader;
-	GpuFrameBuffer m_SunShadowMap;
 
 	uint32_t m_FboResourceId = UINT32_MAX;
 };

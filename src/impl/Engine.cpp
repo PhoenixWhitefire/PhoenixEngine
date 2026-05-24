@@ -64,7 +64,7 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 	this->WindowSizeY = NewSizeY;
 
 	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
-	Texture& fboRes = m_TextureManager.GetTextureResource(m_FboResourceId);
+	Texture& fboRes = TextureManager.GetTextureResource(m_FboResourceId);
 	fboRes.Width = NewSizeX;
 	fboRes.Height = NewSizeY;
 }
@@ -414,12 +414,12 @@ Engine::Engine()
 
 	Log.Info("Initializing managers...");
 
-	m_ThreadManager.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
+	ThreadManager.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
 
-	m_TextureManager.Initialize(IsHeadlessMode);
-	m_ShaderManager.Initialize(IsHeadlessMode);
-	m_MaterialManager.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
-	m_MeshProvider.Initialize(IsHeadlessMode);
+	TextureManager.Initialize(IsHeadlessMode);
+	ShaderManager.Initialize(IsHeadlessMode);
+	MaterialManager.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
+	MeshProvider.Initialize(IsHeadlessMode);
 
 	if (!PHX_HEADLESS_BUILD && !IsHeadlessMode)
 	{
@@ -441,15 +441,15 @@ Engine::Engine()
 
 		ZoneScopedN("Load core shaders and sun shadowmap");
 
-		m_PostFxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("@base/shaders/postprocessing.shp"));
-		m_SkyboxShader = m_ShaderManager.GetShaderResource(m_ShaderManager.LoadFromPath("@base/shaders/skybox.shp"));
+		PostFxShader = ShaderManager.GetShaderResource(ShaderManager.LoadFromPath("@base/shaders/postprocessing.shp"));
+		SkyboxShader = ShaderManager.GetShaderResource(ShaderManager.LoadFromPath("@base/shaders/skybox.shp"));
 
-		m_PostFxShader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::PostProcessFramebuffer);
-		m_SkyboxShader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
-		m_SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
-		//m_PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
+		PostFxShader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::PostProcessFramebuffer);
+		SkyboxShader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
+		SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
+		//PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
 
-		m_SunShadowMap.Initialize(
+		SunShadowMap.Initialize(
 			SunShadowMapResolutionSq, SunShadowMapResolutionSq,
 			/* MSSamples = */ 0,
 			/* DepthOnly = */ true
@@ -668,12 +668,12 @@ static void traverseAndRenderUIHierarchy(
 
 		if (EcUIImage* uimg = child->FindComponent<EcUIImage>())
 		{
-			TextureManager* textureManager = TextureManager::Get();
+			TextureManager* TextureManager = TextureManager::Get();
 
 			shader.SetUniform("Phoenix_BackgroundColor", uimg->ImageTint.ToGenericValue());
 			shader.SetUniform("Phoenix_BackgroundTransparency", uimg->ImageTransparency);
 			shader.SetUniform("Phoenix_IsImage", true);
-			shader.SetTextureUniform("Phoenix_Image", textureManager->LoadFromPath(uimg->Image));
+			shader.SetTextureUniform("Phoenix_Image", TextureManager->LoadFromPath(uimg->Image));
 			shader.Activate();
 
 			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
@@ -691,12 +691,12 @@ static void renderUIElements(GameObject* Root, Renderer& renderer)
 	glDisable(GL_CULL_FACE);
 	glDepthFunc(GL_LEQUAL);
 
-	static MeshProvider* meshProvider = MeshProvider::Get();
+	static MeshProvider* MeshProvider = MeshProvider::Get();
 	static ShaderManager* shdManager = ShaderManager::Get();
-	static uint32_t quadMeshId = meshProvider->LoadFromPath("!Quad");
+	static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
 
-	const Mesh& quadMesh = meshProvider->GetMeshResource(quadMeshId);
-	const MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(quadMesh.GpuId);
+	const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
+	const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
 	gpuMesh.VertexArray.Bind();
 	gpuMesh.VertexBuffer.Bind();
 	gpuMesh.ElementBuffer.Bind();
@@ -716,8 +716,8 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 {
 	ZoneScoped;
 
-	static const Mesh cubeMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Cube"));
-	static const Mesh quadMesh = m_MeshProvider.GetMeshResource(m_MeshProvider.LoadFromPath("!Quad"));
+	static const Mesh cubeMesh = MeshProvider.GetMeshResource(MeshProvider.LoadFromPath("!Cube"));
+	static const Mesh quadMesh = MeshProvider.GetMeshResource(MeshProvider.LoadFromPath("!Quad"));
 
 	if (VSync)
 		glfwSwapInterval(1);
@@ -750,8 +750,8 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 	glm::mat4 skyRenderMatrix = projection * view;
 
-	m_SkyboxShader.SetUniform("Phoenix_RenderMatrix", skyRenderMatrix);
-	m_SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
+	SkyboxShader.SetUniform("Phoenix_RenderMatrix", skyRenderMatrix);
+	SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
 	const EcEnvironmentService* env = ComponentManagers.Environment.GetService();
 
@@ -759,13 +759,13 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	{
 		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
 		glBindTexture(GL_TEXTURE_2D, env->SkyboxTextureGpuId);
-		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", true);
+		SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", true);
 	}
 	else
 	{
 		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxCubemap);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
-		m_SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
+		SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
 	}
 
 	RendererContext.FrameBuffer.Bind();
@@ -781,7 +781,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 	RendererContext.DrawMesh(
 		cubeMesh,
-		m_SkyboxShader,
+		SkyboxShader,
 		{ 1.f, 1.f, 1.f },
 		skyRenderMatrix,
 		FaceCullingMode::FrontFace // Cull the Outside, not the Inside
@@ -811,31 +811,31 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	{
 		ZoneScopedN("ApplyPostFxSettings");
 
-		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", 1);
-		m_PostFxShader.SetUniform(
+		PostFxShader.SetUniform("Phoenix_PostFxEnabled", 1);
+		PostFxShader.SetUniform(
 			"Phoenix_ScreenEdgeBlurEnabled",
 			EngineJsonConfig.value("postfx_blurvignette", false)
 		);
-		m_PostFxShader.SetUniform(
+		PostFxShader.SetUniform(
 			"Phoenix_DistortionEnabled",
 			EngineJsonConfig.value("postfx_distortion", false)
 		);
 
-		m_PostFxShader.SetUniform(
+		PostFxShader.SetUniform(
 			"Phoenix_Gamma",
 			env->GammaCorrection
 		);
-		m_SkyboxShader.SetUniform(
+		SkyboxShader.SetUniform(
 			"Phoenix_HdrEnabled",
 			true
 		);
 
-		m_PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
+		PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
 	}
 	else
 	{
-		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
-		m_SkyboxShader.SetUniform(
+		PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
+		SkyboxShader.SetUniform(
 			"Phoenix_HdrEnabled",
 			false
 		);
@@ -849,7 +849,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
 		RendererContext.DrawMesh(
 			quadMesh,
-			m_PostFxShader,
+			PostFxShader,
 			{ 2.f, 2.f, 2.f },
 			glm::mat4(1.f),
 			FaceCullingMode::None,
@@ -857,10 +857,10 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		);
 
 		RendererContext.FrameBuffer.Unbind();
-		m_PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
+		PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
 		RendererContext.DrawMesh(
 			quadMesh,
-			m_PostFxShader,
+			PostFxShader,
 			{ 2.f, 2.f, 2.f },
 			glm::mat4(1.f),
 			FaceCullingMode::None,
@@ -916,6 +916,32 @@ void Engine::BindDataModel(const ObjectHandle& NewDataModel)
 	NewDataModel->FindComponent<EcDataModel>()->BindServices();
 }
 
+static void dispatchParallelVMs(Engine* engine)
+{
+    ZoneScoped;
+
+    for (ScriptEngine::LuauVM& vm : ScriptEngine::ParallelVMs)
+    {
+        engine->ThreadManager.Dispatch(
+            "ParallelVM",
+            [&]()
+            {
+                ZoneText(vm.Name.data(), vm.Name.size());
+                vm.StepScheduler();
+            },
+            true
+        );
+    }
+}
+
+static void waitForParallelVMs()
+{
+    ZoneScoped;
+
+    while (ScriptEngine::ParallelVMsExecuting != 0)
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+}
+
 void Engine::Start()
 {
 	if (!IsHeadlessMode)
@@ -937,7 +963,7 @@ void Engine::Start()
 
 	ComponentManagers.Environment.GetService()->ChangeSkybox(ComponentManagers.Environment.GetService()->Skybox);
 
-	m_FboResourceId = m_TextureManager.Assign({
+	m_FboResourceId = TextureManager.Assign({
 		.ImagePath = "!Framebuffer:Main",
 		.ResourceId = UINT32_MAX,
 		.GpuId = RendererContext.FrameBuffer.GpuTextureId,
@@ -1016,9 +1042,9 @@ void Engine::Start()
 		DataModelRef->FindComponent<EcDataModel>()->Bind();
 
 		if (!IsHeadlessMode)
-			m_TextureManager.FinalizeAsyncLoadedTextures();
+			TextureManager.FinalizeAsyncLoadedTextures();
 
-		m_MeshProvider.FinalizeAsyncLoadedMeshes();
+		MeshProvider.FinalizeAsyncLoadedMeshes();
 		Logging::FlushParallelEvents();
 
 		if (EcEnvironmentService* env = ComponentManagers.Environment.GetService(); env->SkyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
@@ -1027,7 +1053,7 @@ void Engine::Start()
 
 			for (uint32_t skyboxFace : env->SkyboxFacesBeingLoaded)
 			{
-				Texture& texture = m_TextureManager.GetTextureResource(skyboxFace);
+				Texture& texture = TextureManager.GetTextureResource(skyboxFace);
 
 				if (texture.Status != Texture::LoadStatus::Succeeded)
 				{
@@ -1044,7 +1070,7 @@ void Engine::Start()
 
 				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
 				{
-					Texture& texture = m_TextureManager.GetTextureResource(env->SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
+					Texture& texture = TextureManager.GetTextureResource(env->SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
 					glTexImage2D(
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
@@ -1110,6 +1136,7 @@ void Engine::Start()
 
 		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 		ScriptEngine::StepScheduler(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
+		dispatchParallelVMs(this);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
@@ -1134,18 +1161,18 @@ void Engine::Start()
 				sceneCamera,
 				deltaTime,
 				&sun,
-				m_Physics.DebugCollisionAabbs
+				Physics.DebugCollisionAabbs
 			);
 
 			// TODO weird skybox graphical corruption if we don't draw anything
 			if (CurrentScene.RenderList.size() == 0)
 				CurrentScene.RenderList.push_back(RenderItem{
 					.RenderMeshId = 1,
-					.MaterialId = m_MaterialManager.LoadFromPath("@base/materials/plastic.mtl"),
+					.MaterialId = MaterialManager.LoadFromPath("@base/materials/plastic.mtl"),
 					.Transparency = 1.f
 				});
 
-			if (m_Physics.DebugSpatialHeat)
+			if (Physics.DebugSpatialHeat)
 			{
 				workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
 				assert(workspaceComponent);
@@ -1159,7 +1186,7 @@ void Engine::Start()
 						.RenderMeshId = 0,
 						.Transform = glm::translate(glm::mat4(1.f), (glm::vec3)it.first),
 						.Size = glm::vec3(SPATIAL_HASH_GRID_SIZE),
-						.MaterialId = m_MaterialManager.LoadFromPath("@base/materials/neon.mtl"),
+						.MaterialId = MaterialManager.LoadFromPath("@base/materials/neon.mtl"),
 						.TintColor = glm::vec3(1.f, 0.f, 0.f),
 						.Transparency = std::clamp(1.f - ((float)(it.second.size() + 5) / 64.f), 0.2f, 1.f),
 						.FaceCulling = FaceCullingMode::None
@@ -1170,18 +1197,18 @@ void Engine::Start()
 			sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 		}
 
-		if (m_Physics.Simulating && !m_Physics.SimulatingForcePaused && physWorld.Dynamics.size() > 0)
-			m_Physics.Step(physWorld, deltaTime * m_Physics.Timescale);
+		if (Physics.Simulating && !Physics.SimulatingForcePaused && physWorld.Dynamics.size() > 0)
+			Physics.Step(physWorld, deltaTime * Physics.Timescale);
 
 		if (!IsHeadlessMode)
 		{
 			CurrentScene.UsedShaders.clear();
 
 			for (const RenderItem& ri : CurrentScene.RenderList)
-				CurrentScene.UsedShaders.insert(m_MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
+				CurrentScene.UsedShaders.insert(MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
 
 			if (particleEmittersRenderList.size() > 0)
-				CurrentScene.UsedShaders.insert(m_ShaderManager.LoadFromPath("@base/shaders/particle.shp"));
+				CurrentScene.UsedShaders.insert(ShaderManager.LoadFromPath("@base/shaders/particle.shp"));
 		}
 
 		if (!IsHeadlessMode && sun)
@@ -1216,24 +1243,24 @@ void Engine::Start()
 
 			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
 
-			m_SunShadowMap.Bind();
+			SunShadowMap.Bind();
 			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
 			glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
 			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
-				ShaderProgram& shd = m_ShaderManager.GetShaderResource(shdId);
+				ShaderProgram& shd = ShaderManager.GetShaderResource(shdId);
 				shd.SetUniform("Phoenix_IsShadowMap", true);
 
 				glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Shadowmap);
-				m_SunShadowMap.BindTexture();
+				SunShadowMap.BindTexture();
 				shd.SetUniform("Phoenix_ShadowAtlas", ReservedTextureSlot::Shadowmap);
 
 				shd.SetUniform("Phoenix_DirectionalLightProjection", sunRenderMatrix);
 			}
 
 			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
-			m_SunShadowMap.Unbind();
+			SunShadowMap.Unbind();
 
 			glViewport(0, 0, WindowSizeX, WindowSizeY);
 		}
@@ -1244,7 +1271,7 @@ void Engine::Start()
 
 			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
-				ShaderProgram& shader = m_ShaderManager.GetShaderResource(shdId);
+				ShaderProgram& shader = ShaderManager.GetShaderResource(shdId);
 				shader.SetUniform("Phoenix_IsShadowMap", false);
 				shader.SetUniform("Phoenix_LightAmbient", env->AmbientLight.ToGenericValue());
 
@@ -1256,6 +1283,8 @@ void Engine::Start()
 			m_Render(deltaTime, particleEmittersRenderList);
 			RendererContext.SwapBuffers();
 		}
+
+		waitForParallelVMs();
 
 		// End of frame
 		RunningTime = GetRunningTime();
@@ -1315,7 +1344,7 @@ void Engine::Shutdown()
 	ScriptEngine::Shutdown();
 
 	Log.Info("Shutting down History...");
-	m_History.Shutdown();
+	History.Shutdown();
 
 	Log.Info("Shutting down Component Managers...");
 	// skip the first "None" component manager
@@ -1329,12 +1358,12 @@ void Engine::Shutdown()
 
 	Log.Info("Shutting down managers...");
 
-	m_MaterialManager.Shutdown();
-	m_TextureManager.Shutdown();
-	m_ShaderManager.Shutdown();
-	m_MeshProvider.Shutdown();
+	MaterialManager.Shutdown();
+	TextureManager.Shutdown();
+	ShaderManager.Shutdown();
+	MeshProvider.Shutdown();
 
-	m_ThreadManager.Shutdown();
+	ThreadManager.Shutdown();
 
 	Log.Info("Shutting down libraries...");
 

@@ -31,12 +31,6 @@ static int parallel_spawn(lua_State* L)
 
     const char* path = luaL_checkstring(L, 1);
 
-    bool fileLoaded = true;
-    std::string contents = FileRW::ReadFile(path, &fileLoaded);
-
-    if (!fileLoaded)
-        luaL_error(L, "%s", path, contents.c_str());
-
     ThreadManager* threadManager = ThreadManager::Get();
 
     if (ScriptEngine::ParallelVMs.empty())
@@ -53,15 +47,8 @@ static int parallel_spawn(lua_State* L)
     if (!bestVM)
         luaL_error(L, "Parallelization is not available");
 
-    lua_State* P = lua_newthread(bestVM->MainThread);
-    int result = ScriptEngine::CompileAndLoad(P, contents, "@" + FileRW::ResolvePathNormalized(path));
-
-    if (result != 0)
-        luaL_error(L, "Error while loading %s: %s", path, lua_tostring(P, -1));
-
-    result = ScriptEngine::L::Resume(P, nullptr, 0);
-    if (result != LUA_OK && result != LUA_YIELD)
-        luaL_error(L, "Parallel thread errored in initial step: %s", lua_tostring(P, -1));
+    std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(bestVM->ParallelSpawnRequestsMutex);
+    bestVM->ParallelSpawnRequests.push_back(path);
 
     return 0;
 }

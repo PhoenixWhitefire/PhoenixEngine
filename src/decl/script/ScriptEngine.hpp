@@ -82,6 +82,8 @@ namespace ScriptEngine
         std::deque<YieldedCoroutine> YieldedCoroutines;
         std::string Name;
         lua_State* MainThread = nullptr;
+		std::vector<std::string> ParallelSpawnRequests;
+		std::mutex ParallelSpawnRequestsMutex;
         int ParallelAllocated = 0;
         bool IsParallel = false;
         bool Desynchronized = false;
@@ -91,6 +93,7 @@ namespace ScriptEngine
 
     inline std::unordered_map<std::string, LuauVM> VMs;
     inline std::vector<LuauVM> ParallelVMs;
+	inline std::atomic_int ParallelVMsExecuting = 0;
 };
 
 namespace ScriptEngine::L
