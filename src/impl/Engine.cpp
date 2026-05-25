@@ -923,8 +923,9 @@ static void dispatchParallelVMs(Engine* engine)
     {
         engine->ThreadManagerInstance.Dispatch(
             "ParallelVM",
-            [&]()
+            [=]()
             {
+                ZoneScoped;
                 ZoneText(vm->Name.data(), vm->Name.size());
                 vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Parallel);
             },

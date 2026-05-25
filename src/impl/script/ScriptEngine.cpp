@@ -107,6 +107,9 @@ ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
     vm->Name = name;
     vm->MainThread = L::CreateMainThread(name);
 
+    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(vm->MainThread);
+    vmud->PVM = vm;
+
     ParallelVMs.push_back(vm);
 	return vm;
 }
@@ -324,8 +327,11 @@ void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
         L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
         for (lua_State* coro : vmud->Coroutines)
         {
-            lua_pushthread(coro);
-            CoroutineRefs.push_back(lua_ref(coro, -1));
+            if (lua_status(coro) == LUA_YIELD)
+            {
+                lua_pushthread(coro);
+                CoroutineRefs.push_back(lua_ref(coro, -1));
+            }
         }
 
         Desynchronized = true;
@@ -1778,6 +1784,7 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
 
 				StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 				vmud->Coroutines.push_back(L);
+                ud->PVM = vmud->PVM;
 				ud->VM = vmud->VM;
 			}
 			else
