@@ -62,13 +62,13 @@ public:
 
 	Scene CurrentScene;
 
-	ThreadManager ThreadManager;
-	MaterialManager MaterialManager;
-	TextureManager TextureManager;
-	ShaderManager ShaderManager;
-	MeshProvider MeshProvider;
-	Physics Physics;
-	History History;
+	ThreadManager ThreadManagerInstance;
+	MaterialManager MaterialManagerInstance;
+	TextureManager TextureManagerInstance;
+	ShaderManager ShaderManagerInstance;
+	MeshProvider MeshProviderInstance;
+	Physics PhysicsInstance;
+	History HistoryInstance;
 
 	ShaderProgram PostFxShader;
 	ShaderProgram SkyboxShader;

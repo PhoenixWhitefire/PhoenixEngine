@@ -17,12 +17,12 @@ static void createParallelVMs()
 
 static int parallel_spawn(lua_State* L)
 {
-    if (!ScriptEngine::L::IsSynchronized(L))
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+
+    if (vmud->PVM && vmud->PVM->Desynchronized)
         luaL_error(L, "Cannot spawn parallel threads while desynchronized");
 
     const char* path = luaL_checkstring(L, 1);
-
-    ThreadManager* threadManager = ThreadManager::Get();
 
     if (ScriptEngine::ParallelVMs.empty())
         createParallelVMs();
@@ -38,15 +38,34 @@ static int parallel_spawn(lua_State* L)
     if (!bestVM)
         luaL_error(L, "Parallelization is not available");
 
+    std::vector<Reflection::GenericValue> arguments;
+    arguments.reserve(lua_gettop(L) - 1);
+
+    for (int i = 2; i <= lua_gettop(L); i++)
+        arguments.push_back(ScriptEngine::L::ToGeneric(L, i));
+
     std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(bestVM->ParallelSpawnRequestsMutex);
-    bestVM->ParallelSpawnRequests.push_back(path);
+    bestVM->ParallelSpawnRequests.emplace_back(path, arguments);
     bestVM->ParallelAllocated++;
 
     return 0;
 }
 
+static int parallel_synchronized(lua_State* L)
+{
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+
+    if (vmud->PVM && vmud->PVM->Desynchronized)
+        lua_pushboolean(L, false);
+    else
+        lua_pushboolean(L, true);
+
+    return 1;
+}
+
 static const luaL_Reg parallel_funcs[] = {
     { "spawn", parallel_spawn },
+    { "synchronized", parallel_synchronized },
 
     { NULL, NULL }
 };

@@ -2190,6 +2190,22 @@
           }
         }
       },
+      "parallel": {
+        "Description": "Parallelization of Luau",
+        "Members": {
+          "spawn": {
+            "Description": [
+              "Spawns a new parallel routine in a parallel VM",
+              "Passed arguments will be available to the spawned script through `...` in the top-level scope"
+            ],
+            "In": "FilePath: string, ...: unknown"
+          },
+          "synchronized": {
+            "Description": "Returns whether the current thread is synchronized with the main thread",
+            "Out": "boolean"
+          }
+        }
+      },
       "task": {
         "Description": "Scheduling of tasks (coroutines or functions)",
         "Members": {

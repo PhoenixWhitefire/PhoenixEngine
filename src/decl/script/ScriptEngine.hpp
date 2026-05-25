@@ -97,7 +97,7 @@ namespace ScriptEngine
         std::deque<YieldedCoroutine> YieldedCoroutinesSync;
         std::vector<int> CoroutineRefs; // have to pin coroutines outside of serial phase
 
-        std::vector<std::string> ParallelSpawnRequests;
+        std::vector<std::pair<std::string, std::vector<Reflection::GenericValue>>> ParallelSpawnRequests;
         std::mutex ParallelSpawnRequestsMutex;
         int ParallelAllocated = 0;
         bool IsParallel = false;
@@ -112,6 +112,9 @@ namespace ScriptEngine
     inline std::unordered_map<std::string, LuauVM> VMs;
     inline std::vector<ParallelVM*> ParallelVMs;
     inline std::atomic_int ParallelVMsExecuting = 0;
+
+	inline std::vector<std::function<void()>> ParallelEvents;
+	inline std::mutex ParallelEventsMutex;
 };
 
 namespace ScriptEngine::L
@@ -163,7 +166,7 @@ namespace ScriptEngine::L
 		std::vector<lua_State*> Coroutines; // Only populated for the main thread
 		std::vector<std::string> YieldBlockers;
 		double LastResumed = 0.f;
-        ParallelVM* ParallelVM = nullptr;
+        ParallelVM* PVM = nullptr;
 	};
 
 	struct DebugBreakReason_

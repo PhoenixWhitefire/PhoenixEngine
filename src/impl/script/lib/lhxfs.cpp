@@ -629,8 +629,8 @@ static int fs_watch(lua_State* L)
 				.Type = (int)Type
 			};
 
-			std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelEventsMutex);
-			ScriptEngine::s_ParallelEvents.push_back([fwe]()
+			std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::ParallelEventsMutex);
+			ScriptEngine::ParallelEvents.push_back([fwe]()
 			{
 				lua_pushvalue(fwe.Thread, -1);
 				lua_pushlstring(fwe.Thread, fwe.File.data(), fwe.File.size());

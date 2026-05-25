@@ -30,7 +30,6 @@
 #include "script/ScriptEngine.hpp"
 #include "render/TextureSlots.hpp"
 #include "GlobalJsonConfig.hpp"
-#include "ThreadManager.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
 #include "Timing.hpp"
@@ -56,17 +55,17 @@ void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 
 void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 {
-	ZoneScoped;
-	if (NewSizeX == 0 || NewSizeY == 0)
-		return;
+    ZoneScoped;
+    if (NewSizeX == 0 || NewSizeY == 0)
+        return;
 
-	this->WindowSizeX = NewSizeX;
-	this->WindowSizeY = NewSizeY;
+    this->WindowSizeX = NewSizeX;
+    this->WindowSizeY = NewSizeY;
 
-	RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
-	Texture& fboRes = TextureManager.GetTextureResource(m_FboResourceId);
-	fboRes.Width = NewSizeX;
-	fboRes.Height = NewSizeY;
+    RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
+    Texture& fboRes = TextureManagerInstance.GetTextureResource(m_FboResourceId);
+    fboRes.Width = NewSizeX;
+    fboRes.Height = NewSizeY;
 }
 
 void Engine::SetIsFullscreen(bool MakeFullscreen)
@@ -399,61 +398,61 @@ std::string GetUserHomeDirectoryPath()
 
 Engine::Engine()
 {
-	ZoneScopedC(tracy::Color::Aqua);
+    ZoneScopedC(tracy::Color::Aqua);
 
-	assert(!EngineInstance);
-	EngineInstance = this;
-	
-	this->LoadConfiguration();
-	m_InitializeVideo();
+    assert(!EngineInstance);
+    EngineInstance = this;
 
-	FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
-	FileRW::DefineAlias("home", GetUserHomeDirectoryPath());
-	FileRW::DefineAlias("base", "resources");
-	FileRW::DefineAlias("project", ".");
+    this->LoadConfiguration();
+    m_InitializeVideo();
 
-	Log.Info("Initializing managers...");
+    FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
+    FileRW::DefineAlias("home", GetUserHomeDirectoryPath());
+    FileRW::DefineAlias("base", "resources");
+    FileRW::DefineAlias("project", ".");
 
-	ThreadManager.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
+    Log.Info("Initializing managers...");
 
-	TextureManager.Initialize(IsHeadlessMode);
-	ShaderManager.Initialize(IsHeadlessMode);
-	MaterialManager.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
-	MeshProvider.Initialize(IsHeadlessMode);
+    ThreadManagerInstance.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
 
-	if (!PHX_HEADLESS_BUILD && !IsHeadlessMode)
-	{
-		{
-			ZoneScopedN("Blue Frame");
-			Log.Info("Blue frame...");
+    TextureManagerInstance.Initialize(IsHeadlessMode);
+    ShaderManagerInstance.Initialize(IsHeadlessMode);
+    MaterialManagerInstance.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
+    MeshProviderInstance.Initialize(IsHeadlessMode);
 
-			RendererContext.FrameBuffer.Unbind();
+    if (!PHX_HEADLESS_BUILD && !IsHeadlessMode)
+    {
+        {
+            ZoneScopedN("Blue Frame");
+            Log.Info("Blue frame...");
 
-			glDisable(GL_FRAMEBUFFER_SRGB);
+            RendererContext.FrameBuffer.Unbind();
 
-			glClearColor(0.07f, 0.13f, 0.17f, 1.f);
-			glClear(GL_COLOR_BUFFER_BIT);
-			RendererContext.SwapBuffers();
-			glfwMaximizeWindow(Window); // Can only maximize after Texture Manager is initialized
+            glDisable(GL_FRAMEBUFFER_SRGB);
 
-			glDisable(GL_FRAMEBUFFER_SRGB);
-		}
+            glClearColor(0.07f, 0.13f, 0.17f, 1.f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            RendererContext.SwapBuffers();
+            glfwMaximizeWindow(Window); // Can only maximize after Texture Manager is initialized
 
-		ZoneScopedN("Load core shaders and sun shadowmap");
+            glDisable(GL_FRAMEBUFFER_SRGB);
+        }
 
-		PostFxShader = ShaderManager.GetShaderResource(ShaderManager.LoadFromPath("@base/shaders/postprocessing.shp"));
-		SkyboxShader = ShaderManager.GetShaderResource(ShaderManager.LoadFromPath("@base/shaders/skybox.shp"));
+        ZoneScopedN("Load core shaders and sun shadowmap");
 
-		PostFxShader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::PostProcessFramebuffer);
-		SkyboxShader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
-		SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
-		//PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
+        PostFxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/postprocessing.shp"));
+        SkyboxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/skybox.shp"));
 
-		SunShadowMap.Initialize(
-			SunShadowMapResolutionSq, SunShadowMapResolutionSq,
-			/* MSSamples = */ 0,
-			/* DepthOnly = */ true
-		);
+        PostFxShader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::PostProcessFramebuffer);
+        SkyboxShader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
+        SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
+        //PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
+
+        SunShadowMap.Initialize(
+            SunShadowMapResolutionSq, SunShadowMapResolutionSq,
+            /* MSSamples = */ 0,
+            /* DepthOnly = */ true
+        );
 	}
 
 	Log.Info("Engine initialized");
@@ -714,59 +713,59 @@ ImVec2 Engine::GetViewportInputRectSize() const
 
 void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& particleEmitters)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	static const Mesh cubeMesh = MeshProvider.GetMeshResource(MeshProvider.LoadFromPath("!Cube"));
-	static const Mesh quadMesh = MeshProvider.GetMeshResource(MeshProvider.LoadFromPath("!Quad"));
+    static const Mesh cubeMesh = MeshProviderInstance.GetMeshResource(MeshProviderInstance.LoadFromPath("!Cube"));
+    static const Mesh quadMesh = MeshProviderInstance.GetMeshResource(MeshProviderInstance.LoadFromPath("!Quad"));
 
-	if (VSync)
-		glfwSwapInterval(1);
-	else
-		glfwSwapInterval(0);
+    if (VSync)
+        glfwSwapInterval(1);
+    else
+        glfwSwapInterval(0);
 
-	ImVec2 viewportSize = GetViewportInputRectSize();
-	float aspectRatio = viewportSize.x / viewportSize.y;
+    ImVec2 viewportSize = GetViewportInputRectSize();
+    float aspectRatio = viewportSize.x / viewportSize.y;
 
-	const ObjectHandle& sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();
-	EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+    const ObjectHandle& sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();
+    EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
-	// we do this AFTER  `traverseHierarchy` in case any Scripts
-	// update the camera transform
-	glm::mat4 renderMatrix = sceneCamera->GetRenderMatrix(aspectRatio);
+    // we do this AFTER  `traverseHierarchy` in case any Scripts
+    // update the camera transform
+    glm::mat4 renderMatrix = sceneCamera->GetRenderMatrix(aspectRatio);
 
-	glm::mat4 camTrans = sceneCamera->GetWorldTransform();
+    glm::mat4 camTrans = sceneCamera->GetWorldTransform();
 
-	glm::mat4 view = glm::lookAt(
-		glm::vec3(0.f),
-		glm::vec3(camTrans[2]),
-		glm::vec3(camTrans[1])
-	);
-	glm::mat4 projection = glm::perspective(
-		glm::radians(sceneCamera->FieldOfView),
-		aspectRatio,
-		sceneCamera->NearPlane,
-		sceneCamera->FarPlane
-	);
+    glm::mat4 view = glm::lookAt(
+        glm::vec3(0.f),
+        glm::vec3(camTrans[2]),
+        glm::vec3(camTrans[1])
+    );
+    glm::mat4 projection = glm::perspective(
+        glm::radians(sceneCamera->FieldOfView),
+        aspectRatio,
+        sceneCamera->NearPlane,
+        sceneCamera->FarPlane
+    );
 
-	glm::mat4 skyRenderMatrix = projection * view;
+    glm::mat4 skyRenderMatrix = projection * view;
 
-	SkyboxShader.SetUniform("Phoenix_RenderMatrix", skyRenderMatrix);
-	SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
+    SkyboxShader.SetUniform("Phoenix_RenderMatrix", skyRenderMatrix);
+    SkyboxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
-	const EcEnvironmentService* env = ComponentManagers.Environment.GetService();
+    const EcEnvironmentService* env = ComponentManagers.Environment.GetService();
 
-	if (env->SkyboxIsEquirectangularImage)
-	{
-		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
-		glBindTexture(GL_TEXTURE_2D, env->SkyboxTextureGpuId);
-		SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", true);
-	}
-	else
-	{
-		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxCubemap);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
-		SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
-	}
+    if (env->SkyboxIsEquirectangularImage)
+    {
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxEquirectangular);
+        glBindTexture(GL_TEXTURE_2D, env->SkyboxTextureGpuId);
+        SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", true);
+    }
+    else
+    {
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::SkyboxCubemap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
+        SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
+    }
 
 	RendererContext.FrameBuffer.Bind();
 
@@ -922,7 +921,7 @@ static void dispatchParallelVMs(Engine* engine)
 
     for (ScriptEngine::ParallelVM* vm : ScriptEngine::ParallelVMs)
     {
-        engine->ThreadManager.Dispatch(
+        engine->ThreadManagerInstance.Dispatch(
             "ParallelVM",
             [&]()
             {
@@ -952,40 +951,40 @@ static void waitForParallelVMs()
 
 void Engine::Start()
 {
-	if (!IsHeadlessMode)
-	{
-		Log.Info("Scaling...");
-		updateImGuiForDisplayScaling();
-	}
+    if (!IsHeadlessMode)
+    {
+        Log.Info("Scaling...");
+        updateImGuiForDisplayScaling();
+    }
 
-	Log.Info("Validating DataModel...");
-	ensureDataModelValid(DataModelRef.Dereference());
+    Log.Info("Validating DataModel...");
+    ensureDataModelValid(DataModelRef.Dereference());
 
-	Log.Info("Final initializations...");
+    Log.Info("Final initializations...");
 
-	ScriptEngine::Initialize(); // can only do this after datamodel is bound
+    ScriptEngine::Initialize(); // can only do this after datamodel is bound
 
-	double RunningTime = GetRunningTime();
-	double LastFrame = RunningTime;
-	double LastSecond = 0.f;
+    double RunningTime = GetRunningTime();
+    double LastFrame = RunningTime;
+    double LastSecond = 0.f;
 
-	ComponentManagers.Environment.GetService()->ChangeSkybox(ComponentManagers.Environment.GetService()->Skybox);
+    ComponentManagers.Environment.GetService()->ChangeSkybox(ComponentManagers.Environment.GetService()->Skybox);
 
-	m_FboResourceId = TextureManager.Assign({
-		.ImagePath = "!Framebuffer:Main",
-		.ResourceId = UINT32_MAX,
-		.GpuId = RendererContext.FrameBuffer.GpuTextureId,
-		.Width = WindowSizeX, .Height = WindowSizeY,
-		.NumColorChannels = 3
-	}, "!Framebuffer:Main");
+    m_FboResourceId = TextureManagerInstance.Assign({
+        .ImagePath = "!Framebuffer:Main",
+        .ResourceId = UINT32_MAX,
+        .GpuId = RendererContext.FrameBuffer.GpuTextureId,
+        .Width = WindowSizeX, .Height = WindowSizeY,
+        .NumColorChannels = 3
+    }, "!Framebuffer:Main");
 
-	Physics::World physWorld;
-	std::vector<EcParticleEmitter*> particleEmittersRenderList;
+    Physics::World physWorld;
+    std::vector<EcParticleEmitter*> particleEmittersRenderList;
 
-	m_IsRunning = true;
-	bool firstFrame = true;
+    m_IsRunning = true;
+    bool firstFrame = true;
 
-	Log.Info("Main engine loop start");
+    Log.Info("Main engine loop start");
 
 	while ((!PHX_HEADLESS_BUILD && !IsHeadlessMode) ? (!glfwWindowShouldClose(Window) && m_IsRunning) : m_IsRunning)
 	{
@@ -1050,25 +1049,25 @@ void Engine::Start()
 		DataModelRef->FindComponent<EcDataModel>()->Bind();
 
 		if (!IsHeadlessMode)
-			TextureManager.FinalizeAsyncLoadedTextures();
+			TextureManagerInstance.FinalizeAsyncLoadedTextures();
 
-		MeshProvider.FinalizeAsyncLoadedMeshes();
+		MeshProviderInstance.FinalizeAsyncLoadedMeshes();
 		Logging::FlushParallelEvents();
 
-		if (EcEnvironmentService* env = ComponentManagers.Environment.GetService(); env->SkyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
-		{
-			bool skyboxLoaded = true;
+        if (EcEnvironmentService* env = ComponentManagers.Environment.GetService(); env->SkyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
+        {
+            bool skyboxLoaded = true;
 
-			for (uint32_t skyboxFace : env->SkyboxFacesBeingLoaded)
-			{
-				Texture& texture = TextureManager.GetTextureResource(skyboxFace);
+            for (uint32_t skyboxFace : env->SkyboxFacesBeingLoaded)
+            {
+                Texture& texture = TextureManagerInstance.GetTextureResource(skyboxFace);
 
-				if (texture.Status != Texture::LoadStatus::Succeeded)
-				{
-					skyboxLoaded = false;
-					break;
-				}
-			}
+                if (texture.Status != Texture::LoadStatus::Succeeded)
+                {
+                    skyboxLoaded = false;
+                    break;
+                }
+            }
 
 			if (skyboxLoaded)
 			{
@@ -1076,33 +1075,33 @@ void Engine::Start()
 				
 				glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
 
-				for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
-				{
-					Texture& texture = TextureManager.GetTextureResource(env->SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
+                for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
+                {
+                    Texture& texture = TextureManagerInstance.GetTextureResource(env->SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
-					glTexImage2D(
-						GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
-						0,
-						GL_RGB,
-						texture.Width,
-						texture.Height,
-						0,
-						texture.NumColorChannels == 1 ? GL_RED
-							: texture.NumColorChannels == 2 ? GL_RG
-							: texture.NumColorChannels == 3 ? GL_RGB
-							: GL_RGBA,
-						GL_UNSIGNED_BYTE,
-						texture.TMP_ImageByteData
-					);
+                    glTexImage2D(
+                        GL_TEXTURE_CUBE_MAP_POSITIVE_X + skyboxFaceIndex,
+                        0,
+                        GL_RGB,
+                        texture.Width,
+                        texture.Height,
+                        0,
+                        texture.NumColorChannels == 1 ? GL_RED
+                            : texture.NumColorChannels == 2 ? GL_RG
+                            : texture.NumColorChannels == 3 ? GL_RGB
+                            : GL_RGBA,
+                        GL_UNSIGNED_BYTE,
+                        texture.TMP_ImageByteData
+                    );
 
-					//glGenerateMipmap(GL_TEXTURE_2D);
+                    //glGenerateMipmap(GL_TEXTURE_2D);
 
-					free(texture.TMP_ImageByteData);
-					texture.TMP_ImageByteData = nullptr;
-				}
+                    free(texture.TMP_ImageByteData);
+                    texture.TMP_ImageByteData = nullptr;
+                }
 
-				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-				env->SkyboxFacesBeingLoaded.clear();
+                glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+                env->SkyboxFacesBeingLoaded.clear();
 			}
 		}
 
@@ -1142,9 +1141,11 @@ void Engine::Start()
 		if (!IsHeadlessMode)
 			workspaceComponent->UpdateSoundListener();
 
-		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
-		ScriptEngine::StepVMs(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
-		dispatchParallelVMs(this); // only after serial phase!!
+        REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+
+        parallelVMsSerialPhase();
+        ScriptEngine::StepVMs(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
+        dispatchParallelVMs(this); // only after serial phase!!
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
@@ -1169,55 +1170,55 @@ void Engine::Start()
 				sceneCamera,
 				deltaTime,
 				&sun,
-				Physics.DebugCollisionAabbs
+				PhysicsInstance.DebugCollisionAabbs
 			);
 
-			// TODO weird skybox graphical corruption if we don't draw anything
-			if (CurrentScene.RenderList.size() == 0)
-				CurrentScene.RenderList.push_back(RenderItem{
-					.RenderMeshId = 1,
-					.MaterialId = MaterialManager.LoadFromPath("@base/materials/plastic.mtl"),
-					.Transparency = 1.f
-				});
+            // TODO weird skybox graphical corruption if we don't draw anything
+            if (CurrentScene.RenderList.size() == 0)
+                CurrentScene.RenderList.push_back(RenderItem{
+                    .RenderMeshId = 1,
+                    .MaterialId = MaterialManagerInstance.LoadFromPath("@base/materials/plastic.mtl"),
+                    .Transparency = 1.f
+                });
 
-			if (Physics.DebugSpatialHeat)
-			{
-				workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
-				assert(workspaceComponent);
+            if (PhysicsInstance.DebugSpatialHeat)
+            {
+                workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
+                assert(workspaceComponent);
 
-				for (const auto& it : workspaceComponent->SpatialHash)
-				{
-					if (it.second.size() == 0)
-						continue;
+                for (const auto& it : workspaceComponent->SpatialHash)
+                {
+                    if (it.second.size() == 0)
+                        continue;
 
-					CurrentScene.RenderList.push_back(RenderItem{
-						.RenderMeshId = 0,
-						.Transform = glm::translate(glm::mat4(1.f), (glm::vec3)it.first),
-						.Size = glm::vec3(SPATIAL_HASH_GRID_SIZE),
-						.MaterialId = MaterialManager.LoadFromPath("@base/materials/neon.mtl"),
-						.TintColor = glm::vec3(1.f, 0.f, 0.f),
-						.Transparency = std::clamp(1.f - ((float)(it.second.size() + 5) / 64.f), 0.2f, 1.f),
-						.FaceCulling = FaceCullingMode::None
-					});
-				}
-			}
+                    CurrentScene.RenderList.push_back(RenderItem{
+                        .RenderMeshId = 0,
+                        .Transform = glm::translate(glm::mat4(1.f), (glm::vec3)it.first),
+                        .Size = glm::vec3(SPATIAL_HASH_GRID_SIZE),
+                        .MaterialId = MaterialManagerInstance.LoadFromPath("@base/materials/neon.mtl"),
+                        .TintColor = glm::vec3(1.f, 0.f, 0.f),
+                        .Transparency = std::clamp(1.f - ((float)(it.second.size() + 5) / 64.f), 0.2f, 1.f),
+                        .FaceCulling = FaceCullingMode::None
+                    });
+                }
+            }
 
-			sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+            sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 		}
 
-		if (Physics.Simulating && !Physics.SimulatingForcePaused && physWorld.Dynamics.size() > 0)
-			Physics.Step(physWorld, deltaTime * Physics.Timescale);
+        if (PhysicsInstance.Simulating && !PhysicsInstance.SimulatingForcePaused && physWorld.Dynamics.size() > 0)
+            PhysicsInstance.Step(physWorld, deltaTime * PhysicsInstance.Timescale);
 
-		if (!IsHeadlessMode)
-		{
-			CurrentScene.UsedShaders.clear();
+        if (!IsHeadlessMode)
+        {
+            CurrentScene.UsedShaders.clear();
 
-			for (const RenderItem& ri : CurrentScene.RenderList)
-				CurrentScene.UsedShaders.insert(MaterialManager.GetMaterialResource(ri.MaterialId).ShaderId);
+            for (const RenderItem& ri : CurrentScene.RenderList)
+                CurrentScene.UsedShaders.insert(MaterialManagerInstance.GetMaterialResource(ri.MaterialId).ShaderId);
 
-			if (particleEmittersRenderList.size() > 0)
-				CurrentScene.UsedShaders.insert(ShaderManager.LoadFromPath("@base/shaders/particle.shp"));
-		}
+            if (particleEmittersRenderList.size() > 0)
+                CurrentScene.UsedShaders.insert(ShaderManagerInstance.LoadFromPath("@base/shaders/particle.shp"));
+        }
 
 		if (!IsHeadlessMode && sun)
 		{
@@ -1257,7 +1258,7 @@ void Engine::Start()
 
 			for (uint32_t shdId : CurrentScene.UsedShaders)
 			{
-				ShaderProgram& shd = ShaderManager.GetShaderResource(shdId);
+				ShaderProgram& shd = ShaderManagerInstance.GetShaderResource(shdId);
 				shd.SetUniform("Phoenix_IsShadowMap", true);
 
 				glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Shadowmap);
@@ -1277,16 +1278,16 @@ void Engine::Start()
 		{
 			EcEnvironmentService* env = ComponentManagers.Environment.GetService();
 
-			for (uint32_t shdId : CurrentScene.UsedShaders)
-			{
-				ShaderProgram& shader = ShaderManager.GetShaderResource(shdId);
-				shader.SetUniform("Phoenix_IsShadowMap", false);
-				shader.SetUniform("Phoenix_LightAmbient", env->AmbientLight.ToGenericValue());
+            for (uint32_t shdId : CurrentScene.UsedShaders)
+            {
+                ShaderProgram& shader = ShaderManagerInstance.GetShaderResource(shdId);
+                shader.SetUniform("Phoenix_IsShadowMap", false);
+                shader.SetUniform("Phoenix_LightAmbient", env->AmbientLight.ToGenericValue());
 
-				shader.SetUniform("Phoenix_Fog", env->Fog);
-				if (env->Fog)
-					shader.SetUniform("Phoenix_FogColor", env->FogColor.ToGenericValue());
-			}
+                shader.SetUniform("Phoenix_Fog", env->Fog);
+                if (env->Fog)
+                    shader.SetUniform("Phoenix_FogColor", env->FogColor.ToGenericValue());
+            }
 
 			m_Render(deltaTime, particleEmittersRenderList);
 			RendererContext.SwapBuffers();
@@ -1351,8 +1352,8 @@ void Engine::Shutdown()
 	Log.Info("Shutting down script engine...");
 	ScriptEngine::Shutdown();
 
-	Log.Info("Shutting down History...");
-	History.Shutdown();
+	Log.Info("Shutting down HistoryInstance...");
+	HistoryInstance.Shutdown();
 
 	Log.Info("Shutting down Component Managers...");
 	// skip the first "None" component manager
@@ -1366,12 +1367,12 @@ void Engine::Shutdown()
 
 	Log.Info("Shutting down managers...");
 
-	MaterialManager.Shutdown();
-	TextureManager.Shutdown();
-	ShaderManager.Shutdown();
-	MeshProvider.Shutdown();
+	MaterialManagerInstance.Shutdown();
+	TextureManagerInstance.Shutdown();
+	ShaderManagerInstance.Shutdown();
+	MeshProviderInstance.Shutdown();
 
-	ThreadManager.Shutdown();
+	ThreadManagerInstance.Shutdown();
 
 	Log.Info("Shutting down libraries...");
 

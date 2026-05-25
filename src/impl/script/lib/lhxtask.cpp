@@ -65,7 +65,16 @@ static void schedule(lua_State* L, double sleepTime, int taskStackIndex, int num
 		},
 		.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred
 	};
-	ScriptEngine::s_YieldedCoroutines.push_back(yc);
+
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
+
+    if (vmud->PVM)
+        yieldedCoros = &vmud->PVM->YieldedCoroutines;
+    else
+        yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
+
+    yieldedCoros->push_back(yc);
 }
 
 static int task_defer(lua_State* L)

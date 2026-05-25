@@ -904,8 +904,11 @@ declare json: {
   encode: (( Value: JsonSerializable, Indent: number? ) -> (string)),
   parse: (( Json: string ) -> (JsonSerializable))
 }
+declare parallel: {
+  spawn: (( FilePath: string, ...: unknown ) -> ()),
+  synchronized: ((  ) -> (boolean))
+}
 declare task: {
-  _pfork: <A..., R...>(fn: (A...) -> (R...), callback: ((R...) -> ())?, A...) -> boolean,
   defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
   delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
   load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),

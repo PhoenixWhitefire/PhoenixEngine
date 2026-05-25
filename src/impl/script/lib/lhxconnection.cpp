@@ -29,8 +29,8 @@ static int conn_namecall(lua_State* L)
         ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(ec->L));
         std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
 
-        if (vmud->ParallelVM)
-            yieldedCoros = &vmud->ParallelVM->YieldedCoroutinesSync;
+        if (vmud->PVM)
+            yieldedCoros = &vmud->PVM->YieldedCoroutinesSync;
         else
             yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
 

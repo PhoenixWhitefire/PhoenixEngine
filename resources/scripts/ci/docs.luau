@@ -813,7 +813,10 @@ for _, name in orderedLibraries do
 	local lib = docComments.ScriptEnv.Libraries[name]
 	libraries ..= `### \`{ name }\`\n`
 
-	assert(lib, name)
+    if not lib then
+        warn(`The '{ name }' library has no documentation`)
+        continue
+    end
 
 	local totalcomment = ""
 	for _, d in (if typeof(lib.Description) == "table" then lib.Description else { lib.Description }) do

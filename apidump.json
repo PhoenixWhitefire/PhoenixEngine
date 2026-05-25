@@ -763,8 +763,11 @@
         "encode": "function",
         "parse": "function"
       },
+      "parallel": {
+        "spawn": "function",
+        "synchronized": "function"
+      },
       "task": {
-        "_pfork": "function",
         "defer": "function",
         "delay": "function",
         "load": "function",

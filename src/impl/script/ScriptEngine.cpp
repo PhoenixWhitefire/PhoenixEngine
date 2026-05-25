@@ -62,10 +62,16 @@ void ScriptEngine::Shutdown()
 {
     ZoneScoped;
 
-    for (auto& [_, vm] : VMs)
-        vm.Close();
+    std::vector<LuauVM*> vms;
+    vms.reserve(VMs.size());
 
-    VMs.clear();
+    for (auto& [_, vm] : VMs)
+        vms.push_back(&vm);
+
+    for (LuauVM* vm : vms)
+        vm->Close();
+
+    assert(VMs.size() == 0);
 
     while (ParallelVMsExecuting != 0)
         std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -191,11 +197,11 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
     ZoneScoped;
 
     vm->ParallelSpawnRequestsMutex.lock();
-    std::vector<std::string> paths = vm->ParallelSpawnRequests;
+    std::vector<std::pair<std::string, std::vector<Reflection::GenericValue>>> requests = vm->ParallelSpawnRequests;
     vm->ParallelSpawnRequests.clear();
     vm->ParallelSpawnRequestsMutex.unlock();
 
-    for (const std::string& path : paths)
+    for (const auto& [ path, arguments ] : requests)
     {
         bool read = false;
         std::string contents = FileRW::ReadFile(path, &read);
@@ -216,7 +222,10 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
             continue;
         }
 
-        result = lua_resume(L, 0, 0);
+        for (const Reflection::GenericValue& gv : arguments)
+            ScriptEngine::L::PushGenericValue(L, gv);
+
+        result = lua_resume(L, nullptr, arguments.size());
 
         if (result != LUA_OK && result != LUA_YIELD && result != LUA_BREAK)
             Log.ErrorF("Parallel script init: {}", lua_tostring(L, -1));
@@ -330,6 +339,18 @@ void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
     ParallelVMsExecuting--;
 }
 
+static void processParallelEvents()
+{
+    ZoneScoped;
+
+    std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::ParallelEventsMutex);
+
+    for (const auto& pe : ScriptEngine::ParallelEvents)
+        pe();
+
+    ScriptEngine::ParallelEvents.clear();
+}
+
 void ScriptEngine::StepVMs()
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
@@ -343,6 +364,8 @@ void ScriptEngine::StepVMs()
         vm->Desynchronized = false;
         vm->StepParallelScheduler(ExecutionPhase::Serial);
     }
+
+    processParallelEvents();
 
     for (auto& it : VMs)
         it.second.StepScheduler();
@@ -1350,13 +1373,13 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 
     LuauVM* vm = nullptr;
 
-    if (ud->ParallelVM)
-        vm = ud->ParallelVM;
+    if (ud->PVM)
+        vm = ud->PVM;
     else
         vm = &VMs.at(ud->VM);
 
-	vm->YieldedCoroutines.push_back(yc);
-	return -1; // like lua_yield
+    vm->YieldedCoroutines.push_back(yc);
+    return -1; // like lua_yield
 }
 
 void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
@@ -1414,10 +1437,10 @@ void ScriptEngine::L::DumpStacktrace(
 	const char* Message
 )
 {
-    if (Into)
+  if   (Into)
         Into->clear();
 
-	lua_Debug ar;
+    lua_Debug ar;
 
 	if (Message)
 	{
@@ -1827,6 +1850,8 @@ void ScriptEngine::LuauVM::Close()
 
     lua_close(L);
     delete vmud; // delete after closing VM due to `userthread` callback
+
+	VMs.erase(Name);
 }
 
 static void breakHere(lua_State* L, ScriptEngine::L::DebugBreakReason Reason)

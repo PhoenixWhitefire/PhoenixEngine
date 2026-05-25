@@ -1118,11 +1118,17 @@
   "@phoenix/global/json.parse": {
     "documentation": "* Decodes the JSON string and returns it as a value"
   },
+  "@phoenix/global/parallel": {
+    "documentation": "* Parallelization of Luau"
+  },
+  "@phoenix/global/parallel.spawn": {
+    "documentation": "* Spawns a new parallel routine in a parallel VM\n* Passed arguments will be available to the spawned script through `...` in the top-level scope"
+  },
+  "@phoenix/global/parallel.synchronized": {
+    "documentation": "* Returns whether the current thread is synchronized with the main thread"
+  },
   "@phoenix/global/task": {
     "documentation": "* Scheduling of tasks (coroutines or functions)"
-  },
-  "@phoenix/global/task._pfork": {
-    "documentation": "* Obtuse rubber goose\n* Re-executes a copy of the script from the beginning in Parallel, then calls the global function given to it, passing arguments\n* Returns `true` if this is parallel execution, or `false` if this is the serial execution\n* In the parallel execution, the script cannot yield\n* Using this API will likely result in a crash or memory corruption, as no thread synchronization is used\n* After the function has run, the callback will be invoked with the return values\n* Callback can be omitted by providing `nil`"
   },
   "@phoenix/global/task.defer": {
     "documentation": "* Schedules the given function or coroutine to be resumed at the next scheduler step"

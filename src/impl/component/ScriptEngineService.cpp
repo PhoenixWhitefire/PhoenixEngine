@@ -27,9 +27,7 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
                 if (it == ScriptEngine::VMs.end())
                     RAISE_RT("Invalid VM");
 
-                ScriptEngine::L::Close(it->second.MainThread);
-                ScriptEngine::VMs.erase(it);
-
+                it->second.Close();
                 return {};
             }
         } },
