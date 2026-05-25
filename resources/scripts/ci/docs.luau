@@ -962,12 +962,12 @@ definitionsFile ..= "\n\n"
 
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
 
-fs.write(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv)
-fs.write(WIKI_PATH .. "/API-‐-Components.md", components)
-fs.write(WIKI_PATH .. "/API-‐-Enums.md", enums)
+fs.write(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv, true)
+fs.write(WIKI_PATH .. "/API-‐-Components.md", components, true)
+fs.write(WIKI_PATH .. "/API-‐-Enums.md", enums, true)
 
-fs.write("./lsp/api.d.luau", definitionsFile)
-fs.write("./lsp/api-docs.json", json.encode(documentationData))
+fs.write("./lsp/api.d.luau", definitionsFile, true)
+fs.write("./lsp/api-docs.json", json.encode(documentationData), true)
 
 print("Docs CI finish\n\n\n\n\n")
 
