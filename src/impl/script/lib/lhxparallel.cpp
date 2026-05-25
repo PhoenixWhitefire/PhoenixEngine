@@ -12,16 +12,7 @@ static void createParallelVMs()
     ScriptEngine::ParallelVMs.reserve(threadManager->Concurrency);
 
     for (int i = 0; i < threadManager->Concurrency; i++)
-    {
-        std::string name = "ParallelVM" + std::to_string(i);
-        lua_State* L = ScriptEngine::L::Create(name);
-
-        ScriptEngine::ParallelVMs.push_back(ScriptEngine::LuauVM{
-            .Name = name,
-            .MainThread = L,
-            .IsParallel = true,
-        });
-    }
+        ScriptEngine::CreateParallelVM();
 }
 
 static int parallel_spawn(lua_State* L)
@@ -36,12 +27,12 @@ static int parallel_spawn(lua_State* L)
     if (ScriptEngine::ParallelVMs.empty())
         createParallelVMs();
 
-    ScriptEngine::LuauVM* bestVM = nullptr;
+    ScriptEngine::ParallelVM* bestVM = nullptr;
 
-    for (ScriptEngine::LuauVM& parallelVM : ScriptEngine::ParallelVMs)
+    for (ScriptEngine::ParallelVM* parallelVM : ScriptEngine::ParallelVMs)
     {
-        if (!bestVM || parallelVM.ParallelAllocated < bestVM->ParallelAllocated)
-            bestVM = &parallelVM;
+        if (!bestVM || parallelVM->ParallelAllocated < bestVM->ParallelAllocated)
+            bestVM = parallelVM;
     }
 
     if (!bestVM)
@@ -49,6 +40,7 @@ static int parallel_spawn(lua_State* L)
 
     std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(bestVM->ParallelSpawnRequestsMutex);
     bestVM->ParallelSpawnRequests.push_back(path);
+    bestVM->ParallelAllocated++;
 
     return 0;
 }

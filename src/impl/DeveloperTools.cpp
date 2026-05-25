@@ -384,7 +384,8 @@ void DeveloperTools::Initialize(Renderer* renderer)
 	const nlohmann::json& librariesDocs = scriptEnvDocs.value("Libraries", nlohmann::json::object());
 	const nlohmann::json& globalsDocs = scriptEnvDocs.value("Globals", nlohmann::json::object());
 
-	lua_State* L = ScriptEngine::L::Create("EnvironmentScraper");
+	ScriptEngine::LuauVM& LVM = ScriptEngine::RegisterNewVM("EnvironmentScraper");
+	lua_State* L = LVM.MainThread;
 	lua_pushnil(L);
 
 	while (lua_next(L, LUA_ENVIRONINDEX))
@@ -440,8 +441,7 @@ void DeveloperTools::Initialize(Renderer* renderer)
 		lua_pop(L, 1);
 	}
 
-	ScriptEngine::L::Close(L);
-
+	LVM.Close();
 	tempwp->Destroy();
 	tempdm->Destroy();
 

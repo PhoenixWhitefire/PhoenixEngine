@@ -161,6 +161,13 @@ static int obj_index(lua_State* L)
 
 	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key, &ref))
 	{
+        ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+        if (ScriptEngine::ParallelVM* P = ud->ParallelVM)
+        {
+            if (P->Desynchronized && !prop->ParallelReadSafe)
+                luaL_error(L, "`%s` is not safe to read while desynchronized");
+        }
+
 		Reflection::GenericValue gv = prop->Get(ref.Referred());
 		assert(Reflection::TypeFits(prop->Type, gv.Type));
 
@@ -215,6 +222,13 @@ static int obj_newindex(lua_State* L)
 			);
 		}
 
+        ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+        if (ScriptEngine::ParallelVM* P = ud->ParallelVM)
+        {
+            if (P->Desynchronized && !prop->ParallelWriteSafe)
+                luaL_error(L, "`%s` is not safe to set while desynchronized");
+        }
+
 		ScriptEngine::L::CheckType(L, prop->Type, 3);
 		Reflection::GenericValue newValue = ScriptEngine::L::ToGeneric(L, 3);
 
@@ -263,6 +277,13 @@ static int obj_namecall(lua_State* L)
 
 	if (!func)
 		luaL_error(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
+
+    ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    if (ScriptEngine::ParallelVM* P = ud->ParallelVM)
+    {
+        if (P->Desynchronized && !func->ParallelSafe)
+            luaL_error(L, "`%s` is not safe to call while desynchronized");
+    }
 
 	int numresults = 0;
 

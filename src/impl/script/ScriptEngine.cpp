@@ -60,24 +60,49 @@ void ScriptEngine::Initialize()
 
 void ScriptEngine::Shutdown()
 {
-	for (auto& [_, vm] : VMs)
-		L::Close(vm.MainThread);
+    ZoneScoped;
 
-	VMs.clear();
+    for (auto& [_, vm] : VMs)
+        vm.Close();
+
+    VMs.clear();
+
+    while (ParallelVMsExecuting != 0)
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+    for (ParallelVM* vm : ParallelVMs)
+    {
+        vm->Close();
+        delete vm;
+    }
+
+    ParallelVMs.clear();
 }
 
-const ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
+ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
 {
-	const auto& it = VMs.find(Name);
-	if (it != VMs.end())
-		RAISE_RT("A VM already exists with that name");
+    const auto& it = VMs.find(Name);
+    if (it != VMs.end())
+        RAISE_RT("A VM already exists with that name");
 
-	VMs[Name] = {
-		.Name = Name,
-		.MainThread = L::Create(Name)
-	};
+    VMs[Name] = LuauVM{
+        .Name = Name,
+        .MainThread = L::CreateMainThread(Name)
+    };
 
-	return VMs[Name];
+    return VMs[Name];
+}
+
+ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
+{
+    std::string name = "Parallel" + std::to_string(ParallelVMs.size());
+
+    ParallelVM* vm = new ParallelVM;
+    vm->Name = name;
+    vm->MainThread = L::CreateMainThread(name);
+
+    ParallelVMs.push_back(vm);
+	return vm;
 }
 
 lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
@@ -161,41 +186,75 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] = {
 	shouldResume_Polled
 };
 
-static void processParallelEvents()
+static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
 {
-	ZoneScoped;
-	std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::s_ParallelEventsMutex);
+    ZoneScoped;
 
-	for (const auto& pe : ScriptEngine::s_ParallelEvents)
-		pe();
+    vm->ParallelSpawnRequestsMutex.lock();
+    std::vector<std::string> paths = vm->ParallelSpawnRequests;
+    vm->ParallelSpawnRequests.clear();
+    vm->ParallelSpawnRequestsMutex.unlock();
 
-	ScriptEngine::s_ParallelEvents.clear();
+    for (const std::string& path : paths)
+    {
+        bool read = false;
+        std::string contents = FileRW::ReadFile(path, &read);
+
+        if (!read)
+        {
+            Log.ErrorF("Failed to read parallel script: {}", contents);
+            continue;
+        }
+
+        lua_State* L = lua_newthread(vm->MainThread);
+        int result = ScriptEngine::CompileAndLoad(L, contents, "@" + FileRW::ResolvePathNormalized(path));
+
+        if (result != 0)
+        {
+            Log.ErrorF("Failed to compile parallel script '{}': {}", path, lua_tostring(L, -1));
+            lua_pop(vm->MainThread, 1);
+            continue;
+        }
+
+        result = lua_resume(L, 0, 0);
+
+        if (result != LUA_OK && result != LUA_YIELD && result != LUA_BREAK)
+            Log.ErrorF("Parallel script init: {}", lua_tostring(L, -1));
+
+        lua_pop(vm->MainThread, 1);
+    }
 }
 
-void ScriptEngine::StepScheduler()
+void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOverride)
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
-    processParallelEvents();
+    ZoneText(Name.data(), Name.size());
 
-    for (auto it = s_YieldedCoroutines.begin(); it < s_YieldedCoroutines.end(); it++)
+    std::deque<YieldedCoroutine>* yieldedCoros;
+    if (YieldedOverride)
+        yieldedCoros = YieldedOverride;
+    else
+        yieldedCoros = &YieldedCoroutines;
+
+    for (auto it = yieldedCoros->begin(); it < yieldedCoros->end(); it++)
     {
         if (it->Dead)
-            it = s_YieldedCoroutines.erase(it);
+            it = yieldedCoros->erase(it);
     }
 
 	std::deque<YieldedCoroutine*> processing;
-	processing.resize(s_YieldedCoroutines.size());
+	processing.resize(yieldedCoros->size());
 
-	for (size_t i = 0; i < s_YieldedCoroutines.size(); i++)
-		processing[i] = &s_YieldedCoroutines[i];
+	for (size_t i = 0; i < yieldedCoros->size(); i++)
+		processing[i] = &(*yieldedCoros)[i];
 
 	double stepStarted = GetRunningTime();
 
 	for (YieldedCoroutine* yc : processing)
 	{
-		if (s_YieldedCoroutines.size() > 1000 && GetRunningTime() - stepStarted > 1.0)
+		if (yieldedCoros->size() > 1000 && GetRunningTime() - stepStarted > 1.0)
 		{
-			Log.ErrorF("Scheduler is stalling! {} coroutines (throttling after 1 second)", s_YieldedCoroutines.size());
+			Log.ErrorF("Scheduler is stalling! {} coroutines (throttling after 1 second)", yieldedCoros->size());
 			break;
 		}
 
@@ -242,6 +301,51 @@ void ScriptEngine::StepScheduler()
 			lua_unref(coroutine, corRef);
 		}
 	}
+}
+
+void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
+{
+    ParallelVMsExecuting++;
+
+    ZoneScopedC(tracy::Color::LightSkyBlue);
+    ZoneText(Name.data(), Name.size());
+
+    if (Phase == ExecutionPhase::Parallel)
+    {
+        L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
+        for (lua_State* coro : vmud->Coroutines)
+        {
+            lua_pushthread(coro);
+            CoroutineRefs.push_back(lua_ref(coro, -1));
+        }
+
+        Desynchronized = true;
+
+        processParallelSpawnRequests(this);
+        LuauVM::StepScheduler();
+    }
+    else
+        LuauVM::StepScheduler(&YieldedCoroutinesSync);
+
+    ParallelVMsExecuting--;
+}
+
+void ScriptEngine::StepVMs()
+{
+    ZoneScopedC(tracy::Color::LightSkyBlue);
+
+    for (ParallelVM* vm : ParallelVMs)
+    {
+        for (int ref : vm->CoroutineRefs)
+            lua_unref(vm->MainThread, ref);
+        vm->CoroutineRefs.clear();
+
+        vm->Desynchronized = false;
+        vm->StepParallelScheduler(ExecutionPhase::Serial);
+    }
+
+    for (auto& it : VMs)
+        it.second.StepScheduler();
 }
 
 // Also in `EngineService.cpp`!!
@@ -1244,7 +1348,14 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	Configure(yc);
 	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
 
-	s_YieldedCoroutines.push_back(yc);
+    LuauVM* vm = nullptr;
+
+    if (ud->ParallelVM)
+        vm = ud->ParallelVM;
+    else
+        vm = &VMs.at(ud->VM);
+
+	vm->YieldedCoroutines.push_back(yc);
 	return -1; // like lua_yield
 }
 
@@ -1303,6 +1414,9 @@ void ScriptEngine::L::DumpStacktrace(
 	const char* Message
 )
 {
+    if (Into)
+        Into->clear();
+
 	lua_Debug ar;
 
 	if (Message)
@@ -1578,7 +1692,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 	assert(!config->get_alias);
 }
 
-lua_State* ScriptEngine::L::Create(const std::string& VmName)
+lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
@@ -1681,33 +1795,35 @@ lua_State* ScriptEngine::L::Create(const std::string& VmName)
 	return state;
 }
 
-void ScriptEngine::L::Close(lua_State* L)
+void ScriptEngine::LuauVM::Close()
 {
-	lua_pushinteger(L, 67);
-	lua_gettable(L, LUA_ENVIRONINDEX);
-	delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
+    lua_State* L = MainThread;
 
-    for (auto it = s_YieldedCoroutines.begin(); it != s_YieldedCoroutines.end(); it++)
+    lua_pushinteger(L, 67);
+    lua_gettable(L, LUA_ENVIRONINDEX);
+    delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
+
+    for (auto it = YieldedCoroutines.begin(); it != YieldedCoroutines.end(); it++)
     {
         if (!it->Dead && lua_mainthread(it->Coroutine) == L)
             it->Dead = true;
     }
 
-	StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(L);
+    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(L);
 
-	for (lua_State* co : vmud->Coroutines)
-	{
-		StateUserdata* ud = (StateUserdata*)lua_getthreaddata(co);
-		for (EventConnectionData* ec : ud->EventConnections)
-		{
-			assert(ec->ConnectionId != UINT32_MAX);
+    for (lua_State* co : vmud->Coroutines)
+    {
+        L::StateUserdata* ud = (L::StateUserdata*)lua_getthreaddata(co);
+        for (EventConnectionData* ec : ud->EventConnections)
+        {
+            assert(ec->ConnectionId != UINT32_MAX);
 
-			if (void* referred = ec->Reflector.Referred())
-				ec->Event->Disconnect(referred, ec->ConnectionId);
-		}
+            if (void* referred = ec->Reflector.Referred())
+                ec->Event->Disconnect(referred, ec->ConnectionId);
+        }
 
-		ud->EventConnections.clear();
-	}
+        ud->EventConnections.clear();
+    }
 
     lua_close(L);
     delete vmud; // delete after closing VM due to `userthread` callback
@@ -1771,7 +1887,9 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	GameObjectManager::Get()->DataModel = tempdm->ObjectId;
 
 	lua_State* base = lua_newstate(l_alloc, nullptr);
-	lua_State* luhx = L::Create("ApiDump");
+    // don't have to worry about re-allocs here
+    LuauVM& luhxVM = RegisterNewVM("ApiDump");
+	lua_State* luhx = luhxVM.MainThread;
 	// Load Standard Library ('print' etc)
 	luaL_openlibs(base);
 	lua_pushinteger(base, 0);
@@ -1908,8 +2026,8 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 	nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
 	eventConnection = nlohmann::json::object();
 
-	L::Close(luhx);
 	lua_close(base);
+    luhxVM.Close();
 
 	GameObjectManager::Get()->DataModel = PHX_GAMEOBJECT_NULL_ID;
 	tempdm->Destroy();

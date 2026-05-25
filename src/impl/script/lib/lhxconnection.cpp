@@ -26,7 +26,15 @@ static int conn_namecall(lua_State* L)
 			ud->EventConnections.erase(it);
 		}
 
-		for (ScriptEngine::YieldedCoroutine& yc : ScriptEngine::s_YieldedCoroutines)
+        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(ec->L));
+        std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
+
+        if (vmud->ParallelVM)
+            yieldedCoros = &vmud->ParallelVM->YieldedCoroutinesSync;
+        else
+            yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
+
+		for (ScriptEngine::YieldedCoroutine& yc : *yieldedCoros)
 		{
 			if (yc.Mode != ScriptEngine::YieldedCoroutine::ResumptionMode::DeferredEventResumption)
 				continue;

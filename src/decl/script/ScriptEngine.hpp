@@ -25,7 +25,6 @@ namespace ScriptEngine
 	int CompileAndLoad(lua_State*, const std::string_view& SourceCode, const std::string& ChunkName);
 	nlohmann::json DumpApiToJson();
 	lua_Type ReflectionTypeToLuauType(Reflection::ValueType);
-	void StepScheduler();
 
 	struct YieldedCoroutine
 	{
@@ -75,31 +74,49 @@ namespace ScriptEngine
 		bool Dead = false;
 	};
 
+	enum class ExecutionPhase : uint8_t
+	{
+		Serial,
+		Parallel,
+	};
+
     struct LuauVM
     {
-        void StepScheduler();
+        void StepScheduler(std::deque<YieldedCoroutine>* Yielded = nullptr);
+        void Close();
 
         std::deque<YieldedCoroutine> YieldedCoroutines;
         std::string Name;
         lua_State* MainThread = nullptr;
-		std::vector<std::string> ParallelSpawnRequests;
-		std::mutex ParallelSpawnRequestsMutex;
+    };
+
+    struct ParallelVM : public LuauVM
+    {
+        void StepParallelScheduler(ExecutionPhase Phase);
+
+        std::deque<YieldedCoroutine> YieldedCoroutinesSync;
+        std::vector<int> CoroutineRefs; // have to pin coroutines outside of serial phase
+
+        std::vector<std::string> ParallelSpawnRequests;
+        std::mutex ParallelSpawnRequestsMutex;
         int ParallelAllocated = 0;
         bool IsParallel = false;
         bool Desynchronized = false;
     };
 
-    const LuauVM& RegisterNewVM(const std::string& Name);
+    void StepVMs();
+
+    LuauVM& RegisterNewVM(const std::string& Name);
+    ParallelVM* CreateParallelVM();
 
     inline std::unordered_map<std::string, LuauVM> VMs;
-    inline std::vector<LuauVM> ParallelVMs;
-	inline std::atomic_int ParallelVMsExecuting = 0;
+    inline std::vector<ParallelVM*> ParallelVMs;
+    inline std::atomic_int ParallelVMsExecuting = 0;
 };
 
 namespace ScriptEngine::L
 {
-	lua_State* Create(const std::string& VmName);
-	void Close(lua_State*);
+	lua_State* CreateMainThread(const std::string& VmName);
 
 	lua_Status Resume(lua_State* L, lua_State* from, int narg);
 	lua_Status ProtectedCall(lua_State* L, int narg, int nret, int errfunc);
@@ -146,8 +163,7 @@ namespace ScriptEngine::L
 		std::vector<lua_State*> Coroutines; // Only populated for the main thread
 		std::vector<std::string> YieldBlockers;
 		double LastResumed = 0.f;
-        uint32_t ParallelVM = UINT32_MAX;
-		bool IsParallelVM = false;
+        ParallelVM* ParallelVM = nullptr;
 	};
 
 	struct DebugBreakReason_

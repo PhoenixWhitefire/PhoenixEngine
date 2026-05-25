@@ -920,18 +920,26 @@ static void dispatchParallelVMs(Engine* engine)
 {
     ZoneScoped;
 
-    for (ScriptEngine::LuauVM& vm : ScriptEngine::ParallelVMs)
+    for (ScriptEngine::ParallelVM* vm : ScriptEngine::ParallelVMs)
     {
         engine->ThreadManager.Dispatch(
             "ParallelVM",
             [&]()
             {
-                ZoneText(vm.Name.data(), vm.Name.size());
-                vm.StepScheduler();
+                ZoneText(vm->Name.data(), vm->Name.size());
+                vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Parallel);
             },
             true
         );
     }
+}
+
+static void parallelVMsSerialPhase()
+{
+    ZoneScoped;
+
+    for (ScriptEngine::ParallelVM* vm : ScriptEngine::ParallelVMs)
+        vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Serial);
 }
 
 static void waitForParallelVMs()
@@ -1135,8 +1143,8 @@ void Engine::Start()
 			workspaceComponent->UpdateSoundListener();
 
 		REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
-		ScriptEngine::StepScheduler(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
-		dispatchParallelVMs(this);
+		ScriptEngine::StepVMs(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
+		dispatchParallelVMs(this); // only after serial phase!!
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
@@ -1319,7 +1327,7 @@ void Engine::Shutdown()
 
 	Log.Info("Destroying DataModel...");
 	ComponentManagers.DataModel.NotifyAllOfShutdown();
-	ScriptEngine::StepScheduler(); // step event callbacks
+	ScriptEngine::StepVMs(); // step event callbacks
 
 	DataModelRef->Destroy();
 	WorkspaceRef->Destroy();

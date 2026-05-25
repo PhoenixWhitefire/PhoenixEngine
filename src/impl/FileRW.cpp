@@ -48,7 +48,7 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 	
 	if (file && file.is_open())
 	{
-		if (Success != nullptr)
+		if (Success)
 			*Success = true;
 
 		file.seekg(0, std::ios::end);

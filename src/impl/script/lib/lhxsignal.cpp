@@ -130,7 +130,15 @@ static int sig_namecall(lua_State* L)
 				if (co != cL)
 					lua_pop(eL, 1);
 
-				ScriptEngine::s_YieldedCoroutines.push_back(ScriptEngine::YieldedCoroutine{
+                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(co));
+                std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
+
+                if (vmud->ParallelVM)
+                    yieldedCoros = &vmud->ParallelVM->YieldedCoroutinesSync;
+                else
+                    yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
+
+				yieldedCoros->push_back(ScriptEngine::YieldedCoroutine{
 					.DebugString = "DeferredEventResumption",
 					.Coroutine = co,
 					.CoroutineReference = runnerRef,
