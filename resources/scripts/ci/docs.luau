@@ -253,7 +253,8 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 		lspDef = GameObjectOverrides[funcname] or lspDef
 	end
 
-	return `#### \`{libname}.{ funcname }{generics}({ docargs }): { returns }\`\n`, lspDef
+    assert(typeof(returns) == "string")
+    return `#### \`{libname}.{ funcname }{generics}({ docargs }){ if #returns > 0 then ": " .. returns else "" }\`\n`, lspDef
 end
 
 local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string)
@@ -934,7 +935,7 @@ for _, name in orderedGlobals do
 		end
 
 		globals ..= `#### \`{ name }{generics}({ args }): { returns }\`\n`
-		definitionsFile ..= `declare function { name }{generics}( { args } ): { returns }\n`
+		definitionsFile ..= `declare function { name }{generics}( { args } ){ if #returns > 0 then ": " .. returns else "" }\n`
 	else
 		globals ..= `#### \`{ name }: { apiDump.ScriptEnv.Globals[name] }\`\n`
 		definitionsFile ..= `declare { name }: { apiDump.ScriptEnv.Globals[name] }\n`

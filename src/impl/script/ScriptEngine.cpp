@@ -116,19 +116,19 @@ ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
     cb->debuginterrupt = nullptr;
 
     ParallelVMs.push_back(vm);
-	return vm;
+    return vm;
 }
 
 lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
 {
-	if (rvt == Reflection::ValueType::Any)
-	{
-		assert(false);
-		return LUA_TNIL;
-	}
+    if (rvt == Reflection::ValueType::Any)
+    {
+        assert(false);
+        return LUA_TNIL;
+    }
 
-	assert(size_t(rvt & ~Reflection::ValueType::Null) < std::size(s_ValueTypeToLuauType));
-	return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null];
+    assert(size_t(rvt & ~Reflection::ValueType::Null) < std::size(s_ValueTypeToLuauType));
+    return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null];
 }
 
 static int shouldResume_Wait(
@@ -136,13 +136,13 @@ static int shouldResume_Wait(
 	lua_State* L
 )
 {
-	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmWait.ResumeAt)
-	{
-		lua_pushnumber(L, curTime - CorInfo.RmWait.YieldedAt);
-		return 1;
-	}
-	else
-		return -1;
+    if (double curTime = GetRunningTime(); curTime >= CorInfo.RmWait.ResumeAt)
+    {
+        lua_pushnumber(L, curTime - CorInfo.RmWait.YieldedAt);
+        return 1;
+    }
+    else
+        return -1;
 }
 
 static int shouldResume_Deferred(
@@ -150,59 +150,59 @@ static int shouldResume_Deferred(
 	lua_State* L
 )
 {
-	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmDeferred.ResumeAt)
-	{
+    if (double curTime = GetRunningTime(); curTime >= CorInfo.RmDeferred.ResumeAt)
+    {
         if (CorInfo.RmDeferred.Arguments)
         {
-		    int narg = lua_gettop(CorInfo.RmDeferred.Arguments);
-		    lua_xmove(CorInfo.RmDeferred.Arguments, L, narg);
-		    lua_unref(L, CorInfo.RmDeferred.ArgumentsRef);
+            int narg = lua_gettop(CorInfo.RmDeferred.Arguments);
+            lua_xmove(CorInfo.RmDeferred.Arguments, L, narg);
+            lua_unref(L, CorInfo.RmDeferred.ArgumentsRef);
 
             return narg;
         }
         else
             return 0;
-	}
-	else
-		return -1;
+    }
+    else
+        return -1;
 }
 
 static int shouldResume_Promise(ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
 {
-	assert(CorInfo.RmPromise);
-	const std::shared_future<std::vector<Reflection::GenericValue>>& future = CorInfo.RmPromise_Future;
+    assert(CorInfo.RmPromise);
+    const std::shared_future<std::vector<Reflection::GenericValue>>& future = CorInfo.RmPromise_Future;
 
-	if (future.valid()
-		&& future.wait_for(std::chrono::seconds(0)) == std::future_status::ready
-	)
-	{
-		std::vector<Reflection::GenericValue> returnVals = future.get();
-		for (const Reflection::GenericValue& v : returnVals)
-			ScriptEngine::L::PushGenericValue(L, v);
+    if (future.valid()
+        && future.wait_for(std::chrono::seconds(0)) == std::future_status::ready
+    )
+    {
+        std::vector<Reflection::GenericValue> returnVals = future.get();
+        for (const Reflection::GenericValue& v : returnVals)
+            ScriptEngine::L::PushGenericValue(L, v);
 
-		delete CorInfo.RmPromise;
-		CorInfo.RmPromise = nullptr;
-		return (int)returnVals.size();
-	}
-	else
-		return -1;
+        delete CorInfo.RmPromise;
+        CorInfo.RmPromise = nullptr;
+        return (int)returnVals.size();
+    }
+    else
+        return -1;
 }
 
 static int shouldResume_Polled(ScriptEngine::YieldedCoroutine& CorInfo, lua_State* L)
 {
-	return CorInfo.RmPoll(L);
+    return CorInfo.RmPoll(L);
 }
 
-typedef int(*ResumptionModeHandler)(ScriptEngine::YieldedCoroutine&, lua_State*);
+using ResumptionModeHandler = int(*)(ScriptEngine::YieldedCoroutine&, lua_State*);
 
 static const ResumptionModeHandler s_ResumptionModeHandlers[] = {
-	nullptr,
+    nullptr,
 
-	shouldResume_Wait,
-	shouldResume_Deferred,
-	shouldResume_Promise,
-	shouldResume_Polled,
-	shouldResume_Polled
+    shouldResume_Wait,
+    shouldResume_Deferred,
+    shouldResume_Promise,
+    shouldResume_Polled,
+    shouldResume_Polled
 };
 
 static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
