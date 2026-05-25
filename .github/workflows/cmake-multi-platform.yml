@@ -164,7 +164,7 @@ jobs:
       shell: cmd
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        "PhoenixEngine.exe\" --headless --tool scripts/ci/docs.luau
+        "PhoenixEngine.exe" --headless --tool scripts/ci/docs.luau
 
     - name: Test (Windows)
       if: runner.os == 'Windows'
