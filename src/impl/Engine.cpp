@@ -921,6 +921,9 @@ static void dispatchParallelVMs(Engine* engine)
 
     for (ScriptEngine::ParallelVM* vm : ScriptEngine::ParallelVMs)
     {
+        if (vm->YieldedCoroutines.size() == 0 && vm->ParallelSpawnRequests.size() == 0)
+            continue;
+
         engine->ThreadManagerInstance.Dispatch(
             "ParallelVM",
             [=]()

@@ -216,6 +216,9 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
 
     for (const auto& [ path, arguments ] : requests)
     {
+        ZoneScopedN("process");
+        ZoneText(path.data(), path.size());
+
         bool read = false;
         std::string contents = FileRW::ReadFile(path, &read);
 
@@ -240,6 +243,7 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
         for (const Reflection::GenericValue& gv : arguments)
             ScriptEngine::L::PushGenericValue(L, gv);
 
+        ZoneNamedN(resumezone, "resume", true);
         result = lua_resume(L, nullptr, arguments.size());
 
         if (result != LUA_OK && result != LUA_YIELD && result != LUA_BREAK)
@@ -1756,6 +1760,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
+    ZoneText(VmName.data(), VmName.size());
 
 	lua_State* state = lua_newstate(l_alloc, nullptr);
 
