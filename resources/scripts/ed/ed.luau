@@ -1,13 +1,4 @@
 -- ed.luau, 14/09/2025
-
-print(_VMNAME)
-
-if (...) ~= true then
-    parallel.spawn("./resources/scripts/ed/ed.luau", true)
-else
-    print("We have liftoff!")
-end
-
 local DeveloperTools = game:GetService("DeveloperTools")
 local AssetManager = game:GetService("AssetManager")
 local ScriptEngine = game:GetService("ScriptEngine")

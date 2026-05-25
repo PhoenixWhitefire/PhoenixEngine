@@ -5265,20 +5265,23 @@ static int prevCursorMode = GLFW_CURSOR_NORMAL;
 
 static void resetScriptTimeouts()
 {
-	ZoneScoped;
-	double now = GetRunningTime();
+    ZoneScoped;
+    double now = GetRunningTime();
 
-	for (const auto& [ _, vm ] : ScriptEngine::VMs)
-	{
-		ScriptEngine::L::StateUserdata* vud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
-		vud->LastResumed = now;
+    for (const auto& [ _, vm ] : ScriptEngine::VMs)
+    {
+        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+        vmud->LastResumed = now;
+    }
 
-		for (lua_State* co : vud->Coroutines)
-		{
-			ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(co);
-			ud->LastResumed = now;
-		}
-	}
+    while (ScriptEngine::ParallelVMsExecuting != 0)
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+    for (ScriptEngine::ParallelVM* pvm : ScriptEngine::ParallelVMs)
+    {
+        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(pvm->MainThread);
+        vmud->LastResumed = now;
+    }
 }
 
 static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBreakReason Reason)

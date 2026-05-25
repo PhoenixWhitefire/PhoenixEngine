@@ -2193,12 +2193,18 @@
       "parallel": {
         "Description": "Parallelization of Luau",
         "Members": {
+          "desynchronize": {
+            "Description": "Yields the thread until the parallel phase"
+          },
           "spawn": {
             "Description": [
               "Spawns a new parallel routine in a parallel VM",
               "Passed arguments will be available to the spawned script through `...` in the top-level scope"
             ],
             "In": "FilePath: string, ...unknown"
+          },
+          "synchronize": {
+            "Description": "Yields the thread until the serial phase"
           },
           "synchronized": {
             "Description": "Returns whether the current thread is synchronized with the main thread",

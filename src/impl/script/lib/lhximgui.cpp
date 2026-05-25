@@ -5,6 +5,7 @@
 #include <lualib.h>
 
 #include "script/luhx.hpp"
+#include "script/ScriptEngine.hpp"
 #include "asset/TextureManager.hpp"
 #include "Engine.hpp"
 
@@ -1087,6 +1088,37 @@ int luhxopen_imgui(lua_State* L)
     }
 
     luaL_register(L, LUHX_IMGUILIBNAME, imgui_funcs);
+
+    lua_newtable(L);
+
+    const luaL_Reg* l = imgui_funcs;
+
+    for (; l->name; l++)
+    {
+        lua_pushcfunction(L, l->func, l->name);
+        lua_pushcclosure(
+            L,
+            [](lua_State* L)
+            {
+                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+
+                if (vmud->PVM && vmud->PVM->Desynchronized)
+                    luaL_error(L, "Dear ImGui bindings cannot be used while desynchronized");
+
+                lua_pushvalue(L, lua_upvalueindex(1));
+                lua_insert(L, 1);
+
+                lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
+                return lua_gettop(L);
+            },
+            l->name,
+            1
+        );
+
+        lua_setfield(L, -2, l->name);
+    }
+
+    lua_setglobal(L, LUHX_IMGUILIBNAME);
 
     return 1;
 }

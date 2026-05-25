@@ -905,7 +905,9 @@ declare json: {
   parse: (( Json: string ) -> (JsonSerializable))
 }
 declare parallel: {
+  desynchronize: ((  ) -> ()),
   spawn: (( FilePath: string, ...unknown ) -> ()),
+  synchronize: ((  ) -> ()),
   synchronized: ((  ) -> (boolean))
 }
 declare task: {

@@ -110,6 +110,11 @@ ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
     L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(vm->MainThread);
     vmud->PVM = vm;
 
+    lua_Callbacks* cb = lua_callbacks(vm->MainThread);
+
+    cb->debugbreak = nullptr;
+    cb->debuginterrupt = nullptr;
+
     ParallelVMs.push_back(vm);
 	return vm;
 }
@@ -147,11 +152,16 @@ static int shouldResume_Deferred(
 {
 	if (double curTime = GetRunningTime(); curTime >= CorInfo.RmDeferred.ResumeAt)
 	{
-		int narg = lua_gettop(CorInfo.RmDeferred.Arguments);
-		lua_xmove(CorInfo.RmDeferred.Arguments, L, narg);
-		lua_unref(L, CorInfo.RmDeferred.ArgumentsRef);
+        if (CorInfo.RmDeferred.Arguments)
+        {
+		    int narg = lua_gettop(CorInfo.RmDeferred.Arguments);
+		    lua_xmove(CorInfo.RmDeferred.Arguments, L, narg);
+		    lua_unref(L, CorInfo.RmDeferred.ArgumentsRef);
 
-		return narg;
+            return narg;
+        }
+        else
+            return 0;
 	}
 	else
 		return -1;
@@ -216,6 +226,8 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
         }
 
         lua_State* L = lua_newthread(vm->MainThread);
+        luaL_sandboxthread(L);
+
         int result = ScriptEngine::CompileAndLoad(L, contents, "@" + FileRW::ResolvePathNormalized(path));
 
         if (result != 0)
@@ -260,6 +272,9 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
 	for (size_t i = 0; i < yieldedCoros->size(); i++)
 		processing[i] = &(*yieldedCoros)[i];
 
+    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
+    bool isSynchronized = !vmud->PVM || !vmud->PVM->Desynchronized;
+
 	double stepStarted = GetRunningTime();
 
 	for (YieldedCoroutine* yc : processing)
@@ -295,7 +310,16 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
 			ZoneText(yc->DebugString.data(), yc->DebugString.size());
 			yc->Dead = true;
 
-			int resumeStatus = L::Resume(coroutine, nullptr, nretvals);
+            // TODO parallel debugger
+            int resumeStatus = -1;
+            if (isSynchronized)
+                resumeStatus = L::Resume(coroutine, nullptr, nretvals);
+            else
+            {
+                vmud->LastResumed = GetRunningTime();
+                resumeStatus = lua_resume(coroutine, nullptr, nretvals);
+            }
+
 			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
 			{
 				int top = lua_gettop(coroutine);
@@ -324,15 +348,17 @@ void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
 
     if (Phase == ExecutionPhase::Parallel)
     {
+        /*
         L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
         for (lua_State* coro : vmud->Coroutines)
         {
-            if (lua_status(coro) == LUA_YIELD)
+            if (lua_costatus(lua_mainthread(coro), coro) == LUA_COSUS)
             {
                 lua_pushthread(coro);
                 CoroutineRefs.push_back(lua_ref(coro, -1));
             }
         }
+        */
 
         Desynchronized = true;
 
@@ -1283,8 +1309,8 @@ int ScriptEngine::L::HandleMethodCall(
 		L::PushGenericValue(L, output);
 	}
 
-	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
-	ud->LastResumed = GetRunningTime(); // definitely don't want `ScriptEngine:RunInVM` to throw an error in the Editor
+	StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+	vmud->LastResumed = GetRunningTime(); // don't count external methods like `Engine:ShowMessageBox`
 
 	return (int)func->Outputs.size();
 
@@ -1308,7 +1334,7 @@ int ScriptEngine::L::HandleMethodCall(
 #pragma GCC diagnostic pop
 #endif
 
-int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure)
+int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure, std::deque<YieldedCoroutine>* YieldedCorosOverride)
 {
 	ZoneScoped;
 
@@ -1377,15 +1403,21 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 	Configure(yc);
 	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
 
-    LuauVM* vm = nullptr;
+    if (!YieldedCorosOverride)
+    {
+        LuauVM* vm = nullptr;
 
-    if (ud->PVM)
-        vm = ud->PVM;
+        if (ud->PVM)
+            vm = ud->PVM;
+        else
+            vm = &VMs.at(ud->VM);
+
+        vm->YieldedCoroutines.push_back(yc);
+    }
     else
-        vm = &VMs.at(ud->VM);
+        YieldedCorosOverride->push_back(yc);
 
-    vm->YieldedCoroutines.push_back(yc);
-    return -1; // like lua_yield
+    return -1; // like `lua_yield`
 }
 
 void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
@@ -1779,7 +1811,6 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
 			{
 				StateUserdata* ud = new StateUserdata;
 				DumpStacktrace(LP, &ud->SpawnTrace);
-				ud->LastResumed = GetRunningTime();
 				lua_setthreaddata(L, ud);
 
 				StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
@@ -1806,23 +1837,24 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
 			}
 		};
 
-	cb->interrupt = [](lua_State* L, int GcState)
-		{
-			StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+    cb->interrupt = [](lua_State* L, int GcState)
+        {
+            StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 
-			if (GetRunningTime() - ud->LastResumed > 10.0)
-			{
-				ud->LastResumed = GetRunningTime(); // interrupt may recurse due to GC
-				luaL_error(L, "Script was timed-out for running for more than 10 seconds without yielding (GC: %i)", GcState);
-			}
-		};
+            if (GetRunningTime() - vmud->LastResumed > 10.0)
+            {
+                vmud->LastResumed = GetRunningTime(); // interrupt may recurse due to GC
+                luaL_error(L, "Script VM was timed-out for running for more than 10 seconds without yielding (GC: %i)", GcState);
+            }
+        };
 
-	StateUserdata* ud = new StateUserdata;
-	ud->VM = VmName;
-	lua_setthreaddata(state, ud);
+    StateUserdata* vmud = new StateUserdata;
+    vmud->LastResumed = GetRunningTime();
+    vmud->VM = VmName;
+    lua_setthreaddata(state, vmud);
 
-	luaL_sandbox(state);
-	return state;
+    luaL_sandbox(state);
+    return state;
 }
 
 void ScriptEngine::LuauVM::Close()
@@ -1895,20 +1927,20 @@ static lua_Status finishCoroutine(lua_State* L, int status)
 
 lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
 {
-	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
-	ud->LastResumed = GetRunningTime();
+    StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    vmud->LastResumed = GetRunningTime();
 
-	int status = lua_resume(L, from, narg);
-	return finishCoroutine(L, status);
+    int status = lua_resume(L, from, narg);
+    return finishCoroutine(L, status);
 }
 
 lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int errfunc)
 {
-	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
-	ud->LastResumed = GetRunningTime();
+    StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    vmud->LastResumed = GetRunningTime();
 
-	int status = lua_pcall(L, narg, nret, errfunc);
-	return finishCoroutine(L, status);
+    int status = lua_pcall(L, narg, nret, errfunc);
+    return finishCoroutine(L, status);
 }
 
 nlohmann::json ScriptEngine::DumpApiToJson()

@@ -1121,8 +1121,14 @@
   "@phoenix/global/parallel": {
     "documentation": "* Parallelization of Luau"
   },
+  "@phoenix/global/parallel.desynchronize": {
+    "documentation": "* Yields the thread until the parallel phase"
+  },
   "@phoenix/global/parallel.spawn": {
     "documentation": "* Spawns a new parallel routine in a parallel VM\n* Passed arguments will be available to the spawned script through `...` in the top-level scope"
+  },
+  "@phoenix/global/parallel.synchronize": {
+    "documentation": "* Yields the thread until the serial phase"
   },
   "@phoenix/global/parallel.synchronized": {
     "documentation": "* Returns whether the current thread is synchronized with the main thread"

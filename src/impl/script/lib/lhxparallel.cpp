@@ -51,21 +51,65 @@ static int parallel_spawn(lua_State* L)
     return 0;
 }
 
+static bool isVMSynchronized(ScriptEngine::L::StateUserdata* vmud)
+{
+    return !vmud->PVM || !vmud->PVM->Desynchronized;
+}
+
 static int parallel_synchronized(lua_State* L)
 {
     ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-
-    if (vmud->PVM && vmud->PVM->Desynchronized)
-        lua_pushboolean(L, false);
-    else
-        lua_pushboolean(L, true);
+    lua_pushboolean(L, isVMSynchronized(vmud));
 
     return 1;
+}
+
+static int parallel_synchronize(lua_State* L)
+{
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+
+    if (!vmud->PVM)
+        luaL_error(L, "Tried to synchronize a non-parallel VM");
+
+    if (isVMSynchronized(vmud))
+        return 0;
+
+    return ScriptEngine::L::Yield(
+        L,
+        0,
+        [](ScriptEngine::YieldedCoroutine& yc)
+        {
+            yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred;
+        },
+        &vmud->PVM->YieldedCoroutinesSync
+    );
+}
+
+static int parallel_desynchronize(lua_State* L)
+{
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+
+    if (!vmud->PVM)
+        luaL_error(L, "Tried to desynchronize a non-parallel VM");
+
+    if (!isVMSynchronized(vmud))
+        return 0;
+
+    return ScriptEngine::L::Yield(
+        L,
+        0,
+        [](ScriptEngine::YieldedCoroutine& yc)
+        {
+            yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred;
+        }
+    );
 }
 
 static const luaL_Reg parallel_funcs[] = {
     { "spawn", parallel_spawn },
     { "synchronized", parallel_synchronized },
+    { "synchronize", parallel_synchronize },
+    { "desynchronize", parallel_desynchronize },
 
     { NULL, NULL }
 };

@@ -153,7 +153,8 @@ namespace ScriptEngine::L
 	int Yield(
 		lua_State*,
 		int NumResults,
-		std::function<void(YieldedCoroutine&)> Configure
+		std::function<void(YieldedCoroutine&)> Configure,
+		std::deque<YieldedCoroutine>* YieldedCorosOverride = nullptr
 	);
 
     bool IsSynchronized(lua_State*);

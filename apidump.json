@@ -764,7 +764,9 @@
         "parse": "function"
       },
       "parallel": {
+        "desynchronize": "function",
         "spawn": "function",
+        "synchronize": "function",
         "synchronized": "function"
       },
       "task": {
