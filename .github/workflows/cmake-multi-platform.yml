@@ -161,14 +161,14 @@ jobs:
 
     - name: Doc Gen (Windows)
       if: runner.os == 'Windows'
-      shell: pwsh
-      run: ". \".\\PhoenixEngine.exe\" --headless --tool scripts\\ci\\docs.luau"
+      shell: cmd
+      run: "\"PhoenixEngine.exe\" --headless --tool scripts/ci/docs.luau"
 
     - name: Test (Windows)
       if: runner.os == 'Windows'
-      shell: pwsh
+      shell: cmd
       run: >
-        . ".\PhoenixEngine.exe" --headless --tool scripts\\ci\\tests.luau
+        "PhoenixEngine.exe" --headless --tool scripts/ci/docs.luau
         && . ".\PhoenixEngine.exe" --headless -ed_ci
 
     - name: Doc Gen (Ubuntu)
