@@ -2053,10 +2053,11 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 end)
 
 local function renderOutput()
-	local renderOutput = false
-	if EditorPreferences.ToolsOpen.Output then
-		renderOutput, EditorPreferences.ToolsOpen.Output = imgui.begin("Output", "h", true)
-	end
+    local renderOutput = false
+    local outputBegan = false
+    if EditorPreferences.ToolsOpen.Output then
+        renderOutput, EditorPreferences.ToolsOpen.Output = imgui.begin("Output", "h", true)
+    end
 
 	if renderOutput then
 		local logMessageHoveringWip: number = -1
@@ -2325,7 +2326,9 @@ local function renderOutput()
 		LogMessageHovering = logMessageHoveringWip
 	end
 
-	imgui.endw()
+    if outputBegan then
+        imgui.endw()
+    end
 end
 
 local function renderViewport(DeltaTime: number)

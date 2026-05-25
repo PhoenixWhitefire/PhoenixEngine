@@ -482,11 +482,16 @@ static void processCliArgs(int argc, char** argv)
 #define IS_HEADLESS_STR "No"
 #endif
 
-extern "C" void handleQuitSignal(int signal);
-extern "C" void handleQuitSignal(int signal)
+static void unsetQuitSignalHandlers()
 {
     std::signal(SIGINT, SIG_DFL);
     std::signal(SIGTERM, SIG_DFL);
+}
+
+extern "C" void handleQuitSignal(int signal);
+extern "C" void handleQuitSignal(int signal)
+{
+    unsetQuitSignalHandlers();
 
     Engine* engine = Engine::Get();
     engine->SystemSignal = signal;
@@ -495,67 +500,68 @@ extern "C" void handleQuitSignal(int signal)
 
 int main(int argc, char** argv)
 {
-	Logging::Initialize();
-	Log.Info("Application startup");
+    Logging::Initialize();
+    Log.Info("Application startup");
 	
-	Log.InfoF("Phoenix Engine");
-	Log.AppendF(
-		"\tVersion: {}"
-		"\n\tCommit: {}"
-		"\n\tTag: {}"
-		"\n\tTarget platform: " PHX_TARGET_PLATFORM
-		"\n\tTarget compiler: " PHX_TARGET_COMPILER
-		"\n\tBuild type: " PHX_BUILD_TYPE
-		"\n\tBuild date: {} @ {}"
-		"\n\tHeadless: " IS_HEADLESS_STR,
-		GetEngineVersion(), GetEngineCommitHash(), GetEngineCommitTag(), GetEngineBuildDate(), GetEngineBuildTime()
-	);
+    Log.InfoF("Phoenix Engine");
+    Log.AppendF(
+        "\tVersion: {}"
+        "\n\tCommit: {}"
+        "\n\tTag: {}"
+        "\n\tTarget platform: " PHX_TARGET_PLATFORM
+        "\n\tTarget compiler: " PHX_TARGET_COMPILER
+        "\n\tBuild type: " PHX_BUILD_TYPE
+        "\n\tBuild date: {} @ {}"
+        "\n\tHeadless: " IS_HEADLESS_STR,
+        GetEngineVersion(), GetEngineCommitHash(), GetEngineCommitTag(), GetEngineBuildDate(), GetEngineBuildTime()
+    );
 
-	Log.Info("Command line: &&");
+    Log.Info("Command line: &&");
 
-	for (int i = 0; i < argc; i++)
-		if (i < argc - 1)
-			Log.AppendF(" {}&&", argv[i]);
-		else
-			Log.AppendF(" {}", argv[i]);
+    for (int i = 0; i < argc; i++)
+        if (i < argc - 1)
+            Log.AppendF(" {}&&", argv[i]);
+        else
+            Log.AppendF(" {}", argv[i]);
 
-	auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
+    auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
 
-	Log.InfoF("Now: {:%F %T %Z}", now);
-	processCliArgs(argc, argv);
+    Log.InfoF("Now: {:%F %T %Z}", now);
+    processCliArgs(argc, argv);
 
-	try
-	{
-		Engine engine;
-		Logging::IsGameObjectManagerAlive = true;
+    try
+    {
+        Engine engine;
+        Logging::IsGameObjectManagerAlive = true;
 
-		if (DoApiDump)
-			doApiDump();
+        if (DoApiDump)
+            doApiDump();
 
-		init();
-		engine.argc = argc;
-		engine.argv = argv;
+        init();
+        engine.argc = argc;
+        engine.argv = argv;
 
         std::signal(SIGINT, handleQuitSignal);
         std::signal(SIGTERM, handleQuitSignal);
 
-		engine.Start();
+        engine.Start();
 
-		Logging::Save();
+        unsetQuitSignalHandlers();
+        Logging::Save();
 
         if (engine.SystemSignal != -1)
             Log.InfoF("Engine received signal {}", engine.SystemSignal);
 
-		s_ExitCode = engine.ExitCode;
-		DeveloperTools::Shutdown();
-		engine.Shutdown();
-	}
-	PHX_MAIN_CRASHHANDLERS;
+        s_ExitCode = engine.ExitCode;
+        DeveloperTools::Shutdown();
+        engine.Shutdown();
+    }
+    PHX_MAIN_CRASHHANDLERS;
 
-	Logging::IsGameObjectManagerAlive = false;
-	Log.InfoF("The exit code is {}", s_ExitCode);
-	Log.Info("Application shutdown");
-	Logging::Save();
+    Logging::IsGameObjectManagerAlive = false;
+    Log.InfoF("The exit code is {}", s_ExitCode);
+    Log.Info("Application shutdown");
+    Logging::Save();
 
-	return s_ExitCode;
+    return s_ExitCode;
 }
