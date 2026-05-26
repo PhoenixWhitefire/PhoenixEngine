@@ -264,7 +264,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
     else
         yieldedCoros = &YieldedCoroutines;
 
-    for (auto it = yieldedCoros->begin(); it != yieldedCoros->end(); it)
+    for (auto it = yieldedCoros->begin(); it != yieldedCoros->end();)
     {
         if (it->Dead)
             it = yieldedCoros->erase(it);
