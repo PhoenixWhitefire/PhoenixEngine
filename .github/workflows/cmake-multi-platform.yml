@@ -161,7 +161,6 @@ jobs:
 
     - name: Doc Gen (Windows)
       if: runner.os == 'Windows'
-      continue-on-error: true
       shell: cmd
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -169,6 +168,7 @@ jobs:
 
     - name: Test (Windows)
       if: runner.os == 'Windows'
+      continue-on-error: true
       shell: cmd
       run: >
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
