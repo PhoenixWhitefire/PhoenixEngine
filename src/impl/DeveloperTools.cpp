@@ -54,41 +54,41 @@ constexpr char MATERIAL_NEW_NAME_DEFAULT[] = "newmaterial";
 
 struct TextEditorTab
 {
-	TextEditor Editor;
-	std::string FilePath;
-	std::ifstream* FileStream = nullptr;
-	std::vector<int> Breakpoints;
-	double LastCheckedIfUnderlyingFileExists = 0.f;
-	int JumpToLine = 0; // line to jump to, `0` to not jump
-	int DebuggerCurrentLine = 0;
-	bool WasPreviouslyVisible = false;
-	bool SetUIFocus = false;
-	bool HasUnderlyingFile = true;
-	bool WasEdited = false;
+    TextEditor Editor;
+    std::string FilePath;
+    std::ifstream* FileStream = nullptr;
+    std::vector<int> Breakpoints;
+    double LastCheckedIfUnderlyingFileExists = 0.f;
+    int JumpToLine = 0; // line to jump to, `0` to not jump
+    int DebuggerCurrentLine = 0;
+    bool WasPreviouslyVisible = false;
+    bool SetUIFocus = false;
+    bool HasUnderlyingFile = true;
+    bool WasEdited = false;
 };
 static std::vector<TextEditorTab> s_TextEditors;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
 
 static const std::string_view AddableComponents[] = {
-	"Camera",
-	"DirectionalLight",
-	"PointLight",
-	"SpotLight",
-	"Mesh",
-	"Model",
-	"ParticleEmitter",
-	"RigidBody",
-	"Sound",
-	"Transform",
-	"UIFrame",
-	"UIImage",
-	"UITransform"
+    "Camera",
+    "DirectionalLight",
+    "PointLight",
+    "SpotLight",
+    "Mesh",
+    "Model",
+    "ParticleEmitter",
+    "RigidBody",
+    "Sound",
+    "Transform",
+    "UIFrame",
+    "UIImage",
+    "UITransform"
 };
 
 static nlohmann::json DefaultNewMaterial = {
-	{ "ColorMap", "textures/materials/plastic.png" },
-	{ "specExponent", 32.f },
-	{ "specMultiply", 0.5f }
+    { "ColorMap", "textures/materials/plastic.png" },
+    { "specExponent", 32.f },
+    { "specMultiply", 0.5f }
 };
 
 static nlohmann::json DocumentationJson = nlohmann::json::object();
@@ -105,30 +105,30 @@ static bool ExplorerShouldSeekToCurrentSelection_Frame = false;
 
 static GpuFrameBuffer MtlEditorPreview;
 static Scene MtlPreviewScene = Scene{
-	// cube
-	.RenderList = {
-		RenderItem{
-			.RenderMeshId = 0u,
-			.Transform = glm::mat4(1.f),
-			.Size = glm::vec3(1.f),
-			.MaterialId = 0u,
-			.TintColor = glm::vec3(1.f),
-			.Transparency = 0.f,
-			.MetalnessFactor = 0.f,
-			.RoughnessFactor = 0.f,
-			.FaceCulling = FaceCullingMode::BackFace
-		}
-	},
-	// light source
-	.LightingList = {
-		LightItem{
-			.Position = glm::vec3(0.57f),
-			.LightColor = glm::vec3(1.f),
-			.Type = LightType::Directional,
-			.Shadows = false
-		}
-	},
-	.UsedShaders = {} // used shaders
+    // cube
+    .RenderList = {
+        RenderItem{
+            .RenderMeshId = 0u,
+            .Transform = glm::mat4(1.f),
+            .Size = glm::vec3(1.f),
+            .MaterialId = 0u,
+            .TintColor = glm::vec3(1.f),
+            .Transparency = 0.f,
+            .MetalnessFactor = 0.f,
+            .RoughnessFactor = 0.f,
+            .FaceCulling = FaceCullingMode::BackFace
+        }
+    },
+    // light source
+    .LightingList = {
+        LightItem{
+            .Position = glm::vec3(0.57f),
+            .LightColor = glm::vec3(1.f),
+            .Type = LightType::Directional,
+            .Shadows = false
+        }
+    },
+    .UsedShaders = {} // used shaders
 };
 static Renderer* MtlPreviewRenderer = nullptr;
 static ObjectHandle MtlPreviewCamera;
@@ -151,30 +151,30 @@ static ObjectHandle ExplorerRoot;
 
 static void setErrorMessage(std::string errm)
 {
-	ErrorTooltipMessage = errm;
-	ErrorTooltipTimeRemaining = 2.5f;
-	Log.Error(errm);
+    ErrorTooltipMessage = errm;
+    ErrorTooltipTimeRemaining = 2.5f;
+    Log.Error(errm);
 }
 
 static void copyStringToBuffer(char* buf, uint32_t capacity, const std::string_view& string)
 {
-	for (uint32_t i = 0; i < capacity; i++)
-		buf[i] = i < string.length() ? string.at(i) : 0;
+    for (uint32_t i = 0; i < capacity; i++)
+        buf[i] = i < string.length() ? string.at(i) : 0;
 
-	buf[capacity - 1] = 0;
+    buf[capacity - 1] = 0;
 }
 
 static char* bufferInitialize(uint32_t capacity, const std::string_view& value)
 {
-	char* buf = (char*)Memory::Alloc(capacity);
+    char* buf = (char*)Memory::Alloc(capacity);
 
-	if (!buf)
-		RAISE_RT("Failed to allocate {} bytes in BufferInitialize", capacity + 1);
+    if (!buf)
+        RAISE_RT("Failed to allocate {} bytes in BufferInitialize", capacity + 1);
 
-	buf[capacity - 1] = 0;
-	copyStringToBuffer(buf, capacity, value);
+    buf[capacity - 1] = 0;
+    copyStringToBuffer(buf, capacity, value);
 
-	return buf;
+    return buf;
 }
 
 #include "script/ScriptEngine.hpp"
@@ -183,282 +183,282 @@ static void debuggerLeaveCallback();
 
 static bool canBreakLineAtChar(char c)
 {
-	return c == ' ' || c == ',' || c == '.' || c == '!' || c == '?';
+    return c == ' ' || c == ',' || c == '.' || c == '!' || c == '?';
 }
 
 static std::string addLinebreaks(std::string String, const size_t MaxCharactersBeforeLinebreak)
 {
-	if (String.size() < MaxCharactersBeforeLinebreak)
-		return String;
+    if (String.size() < MaxCharactersBeforeLinebreak)
+        return String;
 
-	if (MaxCharactersBeforeLinebreak < 10)
-		return String;
+    if (MaxCharactersBeforeLinebreak < 10)
+        return String;
 
-	size_t sinceLinebreak = 0;
+    size_t sinceLinebreak = 0;
 
-	for (size_t i = 0; i < String.size(); i++)
-	{
-		if (sinceLinebreak == MaxCharactersBeforeLinebreak)
-		{
-			if (canBreakLineAtChar(String[i]))
-				String.insert(String.begin() + i, '\n');
-			else
-			{
-				bool didBreak = false;
+    for (size_t i = 0; i < String.size(); i++)
+    {
+        if (sinceLinebreak == MaxCharactersBeforeLinebreak)
+        {
+            if (canBreakLineAtChar(String[i]))
+                String.insert(String.begin() + i, '\n');
+            else
+            {
+                bool didBreak = false;
 
-				for (size_t j = i; j > 0; j--)
-					if (canBreakLineAtChar(String[j]))
-					{
-						String.insert(String.begin() + j, '\n');
-						didBreak = true;
-						break;
-					}
+                for (size_t j = i; j > 0; j--)
+                    if (canBreakLineAtChar(String[j]))
+                    {
+                        String.insert(String.begin() + j, '\n');
+                        didBreak = true;
+                        break;
+                    }
 
-				if (!didBreak)
-					String.insert(i, "-\n");
-			}
+                if (!didBreak)
+                    String.insert(i, "-\n");
+            }
 
-			sinceLinebreak = 0;
-		}
+            sinceLinebreak = 0;
+        }
 
-		sinceLinebreak++;
-	}
+        sinceLinebreak++;
+    }
 
-	return String;
+    return String;
 }
 
 static std::string getDescriptionAsString(const nlohmann::json& DescriptionJson, size_t nCharsPerLine)
 {
-	if (DescriptionJson.is_string())
-	{
-		return addLinebreaks(DescriptionJson, nCharsPerLine);
-	}
-	else if (DescriptionJson.is_object())
-	{
-		return getDescriptionAsString(DescriptionJson["Description"], nCharsPerLine);
-	}
-	else if (DescriptionJson.is_array())
-	{
-		std::string desc;
+    if (DescriptionJson.is_string())
+    {
+        return addLinebreaks(DescriptionJson, nCharsPerLine);
+    }
+    else if (DescriptionJson.is_object())
+    {
+        return getDescriptionAsString(DescriptionJson["Description"], nCharsPerLine);
+    }
+    else if (DescriptionJson.is_array())
+    {
+        std::string desc;
 
-		for (auto descit = DescriptionJson.begin(); descit != DescriptionJson.end(); descit++)
-			desc += "* " + addLinebreaks(descit.value(), nCharsPerLine) + "\n";
+        for (auto descit = DescriptionJson.begin(); descit != DescriptionJson.end(); descit++)
+            desc += "* " + addLinebreaks(descit.value(), nCharsPerLine) + "\n";
 
-		desc = desc.substr(0, desc.size() - 1);
+        desc = desc.substr(0, desc.size() - 1);
 
-		return desc;
-	}
-	else if (DescriptionJson.is_null())
-		return "Standard Luau";
+        return desc;
+    }
+    else if (DescriptionJson.is_null())
+        return "Standard Luau";
 
-	else
-		return std::format("Unexpected description type '{}'", DescriptionJson.type_name());
+    else
+        return std::format("Unexpected description type '{}'", DescriptionJson.type_name());
 }
 
 static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, const std::string& RuntimeType)
 {
-	if (!Docs.is_object())
-		return RuntimeType;
+    if (!Docs.is_object())
+        return RuntimeType;
 
-	if (const auto& it = Docs.find("In"); it != Docs.end())
-	{
-		std::string inStr;
-		if (it.value().is_string())
-		{
-			inStr = (std::string)it.value();
-		}
-		else
-		{
-			for (size_t i = 0; i < it.value().size(); i++)
-			{
-				const nlohmann::json& v = it.value()[i];
-				std::string vstr = v.is_string() ? (std::string)v : (std::string)v[0];
-				inStr = vstr + ", ";
-			}
+    if (const auto& it = Docs.find("In"); it != Docs.end())
+    {
+        std::string inStr;
+        if (it.value().is_string())
+        {
+            inStr = (std::string)it.value();
+        }
+        else
+        {
+            for (size_t i = 0; i < it.value().size(); i++)
+            {
+                const nlohmann::json& v = it.value()[i];
+                std::string vstr = v.is_string() ? (std::string)v : (std::string)v[0];
+                inStr = vstr + ", ";
+            }
 
-			inStr = inStr.substr(0, inStr.size() - 2);
-		}
+            inStr = inStr.substr(0, inStr.size() - 2);
+        }
 
-		std::string ty = "( " + inStr + " )";
+        std::string ty = "( " + inStr + " )";
 
-		if (const auto& oit = Docs.find("Out"); oit != Docs.end())
-			ty += " -> ( " + (std::string)oit.value() + " )";
+        if (const auto& oit = Docs.find("Out"); oit != Docs.end())
+            ty += " -> ( " + (std::string)oit.value() + " )";
 
-		return ty;
-	}
+        return ty;
+    }
 
-	if (const auto& it = Docs.find("Out"); it != Docs.end())
-		return "() -> ( " + (std::string)it.value() + " )";
+    if (const auto& it = Docs.find("Out"); it != Docs.end())
+        return "() -> ( " + (std::string)it.value() + " )";
 
-	if (const auto& it = Docs.find("Type"); it != Docs.end())
-		return (std::string)it.value();
+    if (const auto& it = Docs.find("Type"); it != Docs.end())
+        return (std::string)it.value();
 
-	return RuntimeType;
+    return RuntimeType;
 }
 
 void DeveloperTools::Initialize(Renderer* renderer)
 {
-	FileRW::DefineAlias("editres", "./resources");
+    FileRW::DefineAlias("editres", "./resources");
 
-	MtlEditorPreview.Initialize(256, 256);
-	MtlPreviewRenderer = renderer;
-	MtlPreviewCamera = GameObjectManager::s_Create(EntityComponent::Camera);
-	MtlPreviewCamera->AddComponent(EntityComponent::Transform);
-	MtlPreviewCamera->Name = "MtlPreviewCamera";
+    MtlEditorPreview.Initialize(256, 256);
+    MtlPreviewRenderer = renderer;
+    MtlPreviewCamera = GameObjectManager::s_Create(EntityComponent::Camera);
+    MtlPreviewCamera->AddComponent(EntityComponent::Transform);
+    MtlPreviewCamera->Name = "MtlPreviewCamera";
 
-	EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
-	cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
-	cc->FieldOfView = 50.f;
+    EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
+    cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
+    cc->FieldOfView = 50.f;
 
-	try
-	{
-		bool readSuccess = true;
-		std::string contents = FileRW::ReadFile("./wikigen/doc-comments.json", &readSuccess);
+    try
+    {
+        bool readSuccess = true;
+        std::string contents = FileRW::ReadFile("./wikigen/doc-comments.json", &readSuccess);
 
-		if (readSuccess)
-			DocumentationJson = nlohmann::json::parse(contents);
-		else
-			Log.Warning("Documentation tooltips will not be available (`doc-comments.json` could not be read)");
-	}
-	catch (const nlohmann::json::parse_error& Err)
-	{
-		Log.ErrorF("Parse error reading doc comments for Editor: {}", Err.what());
-	}
+        if (readSuccess)
+            DocumentationJson = nlohmann::json::parse(contents);
+        else
+            Log.Warning("Documentation tooltips will not be available (`doc-comments.json` could not be read)");
+    }
+    catch (const nlohmann::json::parse_error& Err)
+    {
+        Log.ErrorF("Parse error reading doc comments for Editor: {}", Err.what());
+    }
 
-	if (!DocumentationJson.is_null())
-	{
-		ObjectDocCommentsJson = DocumentationJson["GameObject"];
-		
-		if (ObjectDocCommentsJson.is_null())
-		{
-			Log.Error("`doc-comments.json` malformed");
+    if (!DocumentationJson.is_null())
+    {
+        ObjectDocCommentsJson = DocumentationJson["GameObject"];
+        
+        if (ObjectDocCommentsJson.is_null())
+        {
+            Log.Error("`doc-comments.json` malformed");
 
-			ObjectDocCommentsJson["Base"] = {};
-			ObjectDocCommentsJson["Components"] = {};
-		}
-	}
+            ObjectDocCommentsJson["Base"] = {};
+            ObjectDocCommentsJson["Components"] = {};
+        }
+    }
 
-	try
-	{
-		bool readSuccess = false;
-		std::string contents = FileRW::ReadFile("./apidump.json", &readSuccess);
+    try
+    {
+        bool readSuccess = false;
+        std::string contents = FileRW::ReadFile("./apidump.json", &readSuccess);
 
-		if (readSuccess)
-			ApiDumpJson = nlohmann::json::parse(contents);
-		else
-			Log.Warning("Failed to read API Dump, some documentation information may be unavailable");
-	}
-	catch(const nlohmann::json::parse_error& e)
-	{
-		Log.ErrorF("Parse error reading API Dump: {}", e.what());
-	}
+        if (readSuccess)
+            ApiDumpJson = nlohmann::json::parse(contents);
+        else
+            Log.Warning("Failed to read API Dump, some documentation information may be unavailable");
+    }
+    catch(const nlohmann::json::parse_error& e)
+    {
+        Log.ErrorF("Parse error reading API Dump: {}", e.what());
+    }
 
-	bool prologueFound = true;
-	DatatypesDocPrologue = FileRW::ReadFile("./wikigen/datatypes-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Datatypes prologue - ./wikigen/datatypes-prologue.md");
+    bool prologueFound = true;
+    DatatypesDocPrologue = FileRW::ReadFile("./wikigen/datatypes-prologue.md", &prologueFound);
+    PHX_CHECK(prologueFound && "Datatypes prologue - ./wikigen/datatypes-prologue.md");
 
-	LibrariesDocPrologue = FileRW::ReadFile("./wikigen/libraries-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Libraries prologue - ./wikigen/libraries-prologue.md");
+    LibrariesDocPrologue = FileRW::ReadFile("./wikigen/libraries-prologue.md", &prologueFound);
+    PHX_CHECK(prologueFound && "Libraries prologue - ./wikigen/libraries-prologue.md");
 
-	GlobalsDocPrologue = FileRW::ReadFile("./wikigen/globals-prologue.md", &prologueFound);
-	PHX_CHECK(prologueFound && "Globals prologue - ./wikigen/globals-prologue.md");
+    GlobalsDocPrologue = FileRW::ReadFile("./wikigen/globals-prologue.md", &prologueFound);
+    PHX_CHECK(prologueFound && "Globals prologue - ./wikigen/globals-prologue.md");
 
-	ScriptEngine::L::DebugBreak = &debugBreakHook;
-	ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
+    ScriptEngine::L::DebugBreak = &debugBreakHook;
+    ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
 
-	ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
-	ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
-	tempwp->SetParent(tempdm);
-	GameObjectManager::Get()->DataModel = tempdm->ObjectId;
+    ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
+    ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
+    tempwp->SetParent(tempdm);
+    GameObjectManager::Get()->DataModel = tempdm->ObjectId;
 
-	s_EditorLuauLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
-	s_EditorLuauLang.mTokenRegexStrings.push_back({ "\\`(?:\\.|[^\\`{]|\\{[^}]*\\})*\\`", TextEditor::PaletteIndex::String }); // string interpolation
+    s_EditorLuauLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
+    s_EditorLuauLang.mTokenRegexStrings.push_back({ "\\`(?:\\.|[^\\`{]|\\{[^}]*\\})*\\`", TextEditor::PaletteIndex::String }); // string interpolation
 
-	s_EditorLuauLang.mKeywords.emplace("continue");
-	s_EditorLuauLang.mIdentifiers.clear();
-	s_EditorLuauLang.mName = "Luau";
+    s_EditorLuauLang.mKeywords.emplace("continue");
+    s_EditorLuauLang.mIdentifiers.clear();
+    s_EditorLuauLang.mName = "Luau";
 
-	const nlohmann::json& scriptEnvDocs = DocumentationJson.value("ScriptEnv", nlohmann::json::object());
+    const nlohmann::json& scriptEnvDocs = DocumentationJson.value("ScriptEnv", nlohmann::json::object());
 
-	const nlohmann::json& datatypesDocs = scriptEnvDocs.value("Datatypes", nlohmann::json::object());
-	const nlohmann::json& librariesDocs = scriptEnvDocs.value("Libraries", nlohmann::json::object());
-	const nlohmann::json& globalsDocs = scriptEnvDocs.value("Globals", nlohmann::json::object());
+    const nlohmann::json& datatypesDocs = scriptEnvDocs.value("Datatypes", nlohmann::json::object());
+    const nlohmann::json& librariesDocs = scriptEnvDocs.value("Libraries", nlohmann::json::object());
+    const nlohmann::json& globalsDocs = scriptEnvDocs.value("Globals", nlohmann::json::object());
 
-	ScriptEngine::LuauVM& LVM = ScriptEngine::RegisterNewVM("EnvironmentScraper");
-	lua_State* L = LVM.MainThread;
-	lua_pushnil(L);
+    ScriptEngine::LuauVM& LVM = ScriptEngine::RegisterNewVM("EnvironmentScraper");
+    lua_State* L = LVM.MainThread;
+    lua_pushnil(L);
 
-	while (lua_next(L, LUA_ENVIRONINDEX))
-	{
-		std::string name = luaL_tolstring(L, -2, nullptr);
-		lua_pop(L, 1);
+    while (lua_next(L, LUA_ENVIRONINDEX))
+    {
+        std::string name = luaL_tolstring(L, -2, nullptr);
+        lua_pop(L, 1);
 
-		nlohmann::json mainDescriptionData = globalsDocs.find(name) != globalsDocs.end() ? globalsDocs[name]
-												: librariesDocs.find(name) != librariesDocs.end() ? librariesDocs[name]
-												: datatypesDocs.find(name) != datatypesDocs.end() ? datatypesDocs[name]
-												: "Standard Luau";
+        nlohmann::json mainDescriptionData = globalsDocs.find(name) != globalsDocs.end() ? globalsDocs[name]
+                                                : librariesDocs.find(name) != librariesDocs.end() ? librariesDocs[name]
+                                                : datatypesDocs.find(name) != datatypesDocs.end() ? datatypesDocs[name]
+                                                : "Standard Luau";
 
-		s_EditorLuauLang.mIdentifiers[name] = TextEditor::Identifier(
-			std::format("{}: {}\n{}", name, findLuauTypeFromDocumentation(mainDescriptionData, luaL_typename(L, -1)), getDescriptionAsString(mainDescriptionData, 64))
-		);
+        s_EditorLuauLang.mIdentifiers[name] = TextEditor::Identifier(
+            std::format("{}: {}\n{}", name, findLuauTypeFromDocumentation(mainDescriptionData, luaL_typename(L, -1)), getDescriptionAsString(mainDescriptionData, 64))
+        );
 
-		if (lua_type(L, -1) == LUA_TTABLE && name != "_G")
-		{
-			auto it = librariesDocs.find(name);
-			bool hasAnyDocs = true;
-			bool isLibrary = true;
+        if (lua_type(L, -1) == LUA_TTABLE && name != "_G")
+        {
+            auto it = librariesDocs.find(name);
+            bool hasAnyDocs = true;
+            bool isLibrary = true;
 
-			if (it == librariesDocs.end())
-			{
-				it = datatypesDocs.find(name);
-				isLibrary = false;
+            if (it == librariesDocs.end())
+            {
+                it = datatypesDocs.find(name);
+                isLibrary = false;
 
-				if (it == datatypesDocs.end())
-					hasAnyDocs = false;
-			}
+                if (it == datatypesDocs.end())
+                    hasAnyDocs = false;
+            }
 
-			lua_pushnil(L);
-			while (lua_next(L, -2))
-			{
-				std::string innerName = luaL_tolstring(L, -2, nullptr);
-				lua_pop(L, 1);
+            lua_pushnil(L);
+            while (lua_next(L, -2))
+            {
+                std::string innerName = luaL_tolstring(L, -2, nullptr);
+                lua_pop(L, 1);
 
-				const nlohmann::json& docs = hasAnyDocs ? (
-					isLibrary ? it.value()["Members"] : it.value()["Library"]
-				) : nlohmann::json::object();
+                const nlohmann::json& docs = hasAnyDocs ? (
+                    isLibrary ? it.value()["Members"] : it.value()["Library"]
+                ) : nlohmann::json::object();
 
-				nlohmann::json descriptionData = docs.value(innerName, nlohmann::json{{ "Description", "Standard Luau" }});
-				std::string fullName = std::format("{}.{}", name, innerName);
+                nlohmann::json descriptionData = docs.value(innerName, nlohmann::json{{ "Description", "Standard Luau" }});
+                std::string fullName = std::format("{}.{}", name, innerName);
 
-				s_EditorLuauLang.mIdentifiers[fullName] = TextEditor::Identifier(
-					std::format("{}: {}\n{}", fullName, findLuauTypeFromDocumentation(descriptionData, luaL_typename(L, -1)), getDescriptionAsString(descriptionData, 64))
-				);
+                s_EditorLuauLang.mIdentifiers[fullName] = TextEditor::Identifier(
+                    std::format("{}: {}\n{}", fullName, findLuauTypeFromDocumentation(descriptionData, luaL_typename(L, -1)), getDescriptionAsString(descriptionData, 64))
+                );
 
-				lua_pop(L, 1);
-			}
-		}
+                lua_pop(L, 1);
+            }
+        }
 
-		lua_pop(L, 1);
-	}
+        lua_pop(L, 1);
+    }
 
-	LVM.Close();
-	tempwp->Destroy();
-	tempdm->Destroy();
+    LVM.Close();
+    tempwp->Destroy();
+    tempdm->Destroy();
 
-	DeveloperTools::Initialized = true;
+    DeveloperTools::Initialized = true;
 }
 
 static const char* mtlIterator(void*, int index)
 {
-	MaterialManager* mtlManager = MaterialManager::Get();
-	RenderMaterial& selected = mtlManager->GetLoadedMaterials()[index];
+    MaterialManager* mtlManager = MaterialManager::Get();
+    RenderMaterial& selected = mtlManager->GetLoadedMaterials()[index];
 
-	return selected.Name.c_str();
+    return selected.Name.c_str();
 }
 
 static std::string getFileDirectory(const std::string& FilePath)
 {
-	return std::filesystem::path(FilePath).parent_path().string();
+    return std::filesystem::path(FilePath).parent_path().string();
 }
 
 #define EDCHECKEXPR(expr) { if (!(expr)) { setErrorMessage(#expr " failed"); } }
@@ -467,836 +467,836 @@ static std::string getFileDirectory(const std::string& FilePath)
 
 static std::string escapeFileBody(const std::string& body)
 {
-	std::string newBody = body;
-	size_t size = newBody.size();
+    std::string newBody = body;
+    size_t size = newBody.size();
 
-	for (size_t i = 0; i < size; i++)
-	{
-		if (newBody[i] == '"' || newBody[i] == '\'' || newBody[i] == '`')
-		{
-			newBody.insert(newBody.begin() + i, '\\');
-			size = newBody.size();
-			i++;
-		}
-	}
+    for (size_t i = 0; i < size; i++)
+    {
+        if (newBody[i] == '"' || newBody[i] == '\'' || newBody[i] == '`')
+        {
+            newBody.insert(newBody.begin() + i, '\\');
+            size = newBody.size();
+            i++;
+        }
+    }
 
-	return newBody;
+    return newBody;
 }
 
 static bool textEditorAskSaveFileAs(
-	bool AskSave,
-	const std::string& Contents,
-	const std::string& Reason = "Do you want to save the following file?",
-	bool isError = false
+    bool AskSave,
+    const std::string& Contents,
+    const std::string& Reason = "Do you want to save the following file?",
+    bool isError = false
 )
 {
-	if (AskSave)
-	{
-		std::string truncated = Contents.substr(0, std::min((size_t)50ull, Contents.size()));
-		std::string displayedContents = escapeFileBody(truncated);
+    if (AskSave)
+    {
+        std::string truncated = Contents.substr(0, std::min((size_t)50ull, Contents.size()));
+        std::string displayedContents = escapeFileBody(truncated);
 
-		std::string message = std::format(
-			"{}\n\nLength: {} characters\nBody:\n{}{}",
-			Reason,
-			Contents.size(), displayedContents,
-			Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
-		);
+        std::string message = std::format(
+            "{}\n\nLength: {} characters\nBody:\n{}{}",
+            Reason,
+            Contents.size(), displayedContents,
+            Contents.size() > (size_t)50ull ? "\n... (truncated)" : ""
+        );
 
-		int choice = tinyfd_messageBox(
-			"Save File?",
-			message.c_str(),
-			"yesno",
-			isError ? "error" : "question",
-			1
-		);
+        int choice = tinyfd_messageBox(
+            "Save File?",
+            message.c_str(),
+            "yesno",
+            isError ? "error" : "question",
+            1
+        );
 
-		if (choice == 0)
-			return false;
-	}
+        if (choice == 0)
+            return false;
+    }
 
-	const char* saveTargetRaw = tinyfd_saveFileDialog(
-		"Save Text Document",
-		FileRW::ResolvePathAbsolute("@projres/").c_str(),
-		0,
-		nullptr,
-		nullptr
-	);
+    const char* saveTargetRaw = tinyfd_saveFileDialog(
+        "Save Text Document",
+        FileRW::ResolvePathAbsolute("@projres/").c_str(),
+        0,
+        nullptr,
+        nullptr
+    );
 
-	if (!saveTargetRaw)
-	{
-		Log.Info("No file path selected in `textEditorAskSaveFileAs`");
-		return false;
-	}
-	std::string savePath = FileRW::ResolvePathNormalized(saveTargetRaw);
+    if (!saveTargetRaw)
+    {
+        Log.Info("No file path selected in `textEditorAskSaveFileAs`");
+        return false;
+    }
+    std::string savePath = FileRW::ResolvePathNormalized(saveTargetRaw);
 
-	std::string errMessage;
-	if (!FileRW::WriteFile(savePath, Contents, &errMessage))
-	{
-		Log.ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
-		return textEditorAskSaveFileAs(
-			true,
-			Contents,
-			std::format("Couldn't save to file '{}' because of error {}\nRetry?", savePath, errMessage),
-			true
-		);
-	}
+    std::string errMessage;
+    if (!FileRW::WriteFile(savePath, Contents, &errMessage))
+    {
+        Log.ErrorF("`textEditorAskSaveFileAs` save failed with {} to {}, re-prompting", savePath, errMessage);
+        return textEditorAskSaveFileAs(
+            true,
+            Contents,
+            std::format("Couldn't save to file '{}' because of error {}\nRetry?", savePath, errMessage),
+            true
+        );
+    }
 
-	return true;
+    return true;
 }
 
 static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 {
-	Tab.WasEdited = false;
+    Tab.WasEdited = false;
 
-	std::string contents = Tab.Editor.GetText();
-	std::string textEditorFile = Tab.FilePath;
+    std::string contents = Tab.Editor.GetText();
+    std::string textEditorFile = Tab.FilePath;
 
-	if (textEditorFile == SAVINGTAG)
-	{
-		setErrorMessage("Can't... Shouldn't try and save that... How'd you do this?");
-		return;
-	}
+    if (textEditorFile == SAVINGTAG)
+    {
+        setErrorMessage("Can't... Shouldn't try and save that... How'd you do this?");
+        return;
+    }
 
-	if (size_t lastChar = contents.find_last_not_of('\n'); lastChar != std::string::npos)
-		contents = contents.substr(0, lastChar + 1) + "\n";
+    if (size_t lastChar = contents.find_last_not_of('\n'); lastChar != std::string::npos)
+        contents = contents.substr(0, lastChar + 1) + "\n";
 
-	if (Tab.FileStream)
-	{
-		if (Tab.FileStream->is_open())
-			Tab.FileStream->close();
-		delete Tab.FileStream;
-		Tab.FileStream = nullptr;
-	}
+    if (Tab.FileStream)
+    {
+        if (Tab.FileStream->is_open())
+            Tab.FileStream->close();
+        delete Tab.FileStream;
+        Tab.FileStream = nullptr;
+    }
 
-	if (textEditorFile == UNSAVEDTAG || textEditorFile.empty() || !std::filesystem::is_regular_file(textEditorFile))
-	{
-		static uint32_t ErrCount = 0;
-		ErrCount++;
+    if (textEditorFile == UNSAVEDTAG || textEditorFile.empty() || !std::filesystem::is_regular_file(textEditorFile))
+    {
+        static uint32_t ErrCount = 0;
+        ErrCount++;
 
-		Tab.FilePath = SAVINGTAG;
-		if (!textEditorAskSaveFileAs(AskSave, contents))
-		{
-			Tab.FilePath = UNSAVEDTAG;
-			Tab.WasEdited = true;
-		}
-	}
-	else
-	{
-		std::string realSaveLoc = FileRW::ResolvePathNormalized(textEditorFile);
+        Tab.FilePath = SAVINGTAG;
+        if (!textEditorAskSaveFileAs(AskSave, contents))
+        {
+            Tab.FilePath = UNSAVEDTAG;
+            Tab.WasEdited = true;
+        }
+    }
+    else
+    {
+        std::string realSaveLoc = FileRW::ResolvePathNormalized(textEditorFile);
 
-		std::string error;
-		if (!FileRW::WriteFile(realSaveLoc, contents, &error))
-		{
-			if (!textEditorAskSaveFileAs(
-				true,
-				contents,
-				std::format("Couldn't save to {}: {}.\nClick YES to choose a different location, or NO to discard the file", error, realSaveLoc)
-			))
-				Tab.WasEdited = true;
-		}
-	}
+        std::string error;
+        if (!FileRW::WriteFile(realSaveLoc, contents, &error))
+        {
+            if (!textEditorAskSaveFileAs(
+                true,
+                contents,
+                std::format("Couldn't save to {}: {}.\nClick YES to choose a different location, or NO to discard the file", error, realSaveLoc)
+            ))
+                Tab.WasEdited = true;
+        }
+    }
 }
 
 static std::string textFileContentsFromPath(const std::string& Path, std::ifstream*& Stream)
 {
-	if (Path.find("!InlineDocument:") != std::string::npos)
-		return { Path.begin() + strlen("!InlineDocument:"), Path.end() };
+    if (Path.find("!InlineDocument:") != std::string::npos)
+        return { Path.begin() + strlen("!InlineDocument:"), Path.end() };
 
-	if (std::filesystem::is_directory(FileRW::ResolvePathNormalized(Path)))
-	{
-		std::string error = std::format(
-			"File '{}' couldn't be read, it is a directory",
-			Path
-		);
+    if (std::filesystem::is_directory(FileRW::ResolvePathNormalized(Path)))
+    {
+        std::string error = std::format(
+            "File '{}' couldn't be read, it is a directory",
+            Path
+        );
 
-		setErrorMessage(error);
-		return error;
-	}
+        setErrorMessage(error);
+        return error;
+    }
 
-	Stream = new std::ifstream(FileRW::ResolvePathNormalized(Path));
+    Stream = new std::ifstream(FileRW::ResolvePathNormalized(Path));
 
-	std::string scriptContents = "";
+    std::string scriptContents = "";
 
-	if (!(*Stream) || !Stream->is_open() || Stream->bad() || Stream->fail() || Stream->tellg() > 100e6)
-	{
-		std::string error = std::format(
-			"File '{}' couldn't be read",
-			Path
-		);
+    if (!(*Stream) || !Stream->is_open() || Stream->bad() || Stream->fail() || Stream->tellg() > 100e6)
+    {
+        std::string error = std::format(
+            "File '{}' couldn't be read",
+            Path
+        );
 
-		setErrorMessage(error);
-		return error;
-	}
-	else
-	{
-		Stream->seekg(0, std::ios::end);
-		scriptContents.resize(Stream->tellg());
-		Stream->seekg(0, std::ios::beg);
-		Stream->read(&scriptContents[0], scriptContents.size());
+        setErrorMessage(error);
+        return error;
+    }
+    else
+    {
+        Stream->seekg(0, std::ios::end);
+        scriptContents.resize(Stream->tellg());
+        Stream->seekg(0, std::ios::beg);
+        Stream->read(&scriptContents[0], scriptContents.size());
 
-		return scriptContents;
-	}
+        return scriptContents;
+    }
 }
 
 static std::optional<TextEditor::DebugAction> s_QueuedDebuggerAction = std::nullopt;
 
 static TextEditorTab& invokeTextEditor(const std::string& File)
 {
-	for (TextEditorTab& tab : s_TextEditors)
-	{
-		if (tab.FilePath == File)
-		{
-			tab.SetUIFocus = true;
-			return tab;
-		}
-	}
+    for (TextEditorTab& tab : s_TextEditors)
+    {
+        if (tab.FilePath == File)
+        {
+            tab.SetUIFocus = true;
+            return tab;
+        }
+    }
 
-	s_TextEditors.emplace_back();
+    s_TextEditors.emplace_back();
 
-	TextEditorTab& tab = s_TextEditors.back();
-	tab.SetUIFocus = true;
+    TextEditorTab& tab = s_TextEditors.back();
+    tab.SetUIFocus = true;
 
-	if (File.find(".luau") != std::string::npos)
-		tab.Editor.SetLanguageDefinition(s_EditorLuauLang);
+    if (File.find(".luau") != std::string::npos)
+        tab.Editor.SetLanguageDefinition(s_EditorLuauLang);
 
-	else if (File.find(".vert") != std::string::npos || File.find(".frag") != std::string::npos || File.find(".geom") != std::string::npos || File.find(".glsl") != std::string::npos)
-		tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::GLSL());
+    else if (File.find(".vert") != std::string::npos || File.find(".frag") != std::string::npos || File.find(".geom") != std::string::npos || File.find(".glsl") != std::string::npos)
+        tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::GLSL());
 
-	else if (File.find(".cpp") != std::string::npos || File.find(".hpp") != std::string::npos)
-		tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
+    else if (File.find(".cpp") != std::string::npos || File.find(".hpp") != std::string::npos)
+        tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
 
-	tab.FilePath = File;
-	tab.Editor.SetText(textFileContentsFromPath(File, tab.FileStream));
-	tab.Editor.OnDebuggerAction = [](TextEditor*, TextEditor::DebugAction action)
-	{
-		s_QueuedDebuggerAction = action;
-	};
+    tab.FilePath = File;
+    tab.Editor.SetText(textFileContentsFromPath(File, tab.FileStream));
+    tab.Editor.OnDebuggerAction = [](TextEditor*, TextEditor::DebugAction action)
+    {
+        s_QueuedDebuggerAction = action;
+    };
 
-	return tab;
+    return tab;
 }
 
 static void renderTextEditors()
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
-	double time = GetRunningTime();
+    ZoneScopedC(tracy::Color::DarkSeaGreen);
+    double time = GetRunningTime();
 
-	for (int index = 0; index < (int)s_TextEditors.size(); index++)
-	{
-		TextEditorTab& tab = s_TextEditors[index];
+    for (int index = 0; index < (int)s_TextEditors.size(); index++)
+    {
+        TextEditorTab& tab = s_TextEditors[index];
 
-		if (tab.JumpToLine > 0 || tab.SetUIFocus)
-		{
-			ImGui::SetNextWindowFocus();
-			tab.SetUIFocus = false;
-		}
+        if (tab.JumpToLine > 0 || tab.SetUIFocus)
+        {
+            ImGui::SetNextWindowFocus();
+            tab.SetUIFocus = false;
+        }
 
-		if (time - tab.LastCheckedIfUnderlyingFileExists > 0.5)
-		{
-			tab.HasUnderlyingFile = std::filesystem::is_regular_file(tab.FilePath);
-			tab.LastCheckedIfUnderlyingFileExists = time;
-		}
+        if (time - tab.LastCheckedIfUnderlyingFileExists > 0.5)
+        {
+            tab.HasUnderlyingFile = std::filesystem::is_regular_file(tab.FilePath);
+            tab.LastCheckedIfUnderlyingFileExists = time;
+        }
 
-		if (!tab.HasUnderlyingFile)
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
-		else if (tab.WasEdited)
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255.f/255.f, 221.f/255.f, 128.f/255.f, 1.f));
+        if (!tab.HasUnderlyingFile)
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
+        else if (tab.WasEdited)
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255.f/255.f, 221.f/255.f, 128.f/255.f, 1.f));
 
-		bool open = true;
-		bool render = ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open);
+        bool open = true;
+        bool render = ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open);
 
-		if (!tab.HasUnderlyingFile || tab.WasEdited)
-			ImGui::PopStyleColor();
+        if (!tab.HasUnderlyingFile || tab.WasEdited)
+            ImGui::PopStyleColor();
 
-		if (!open)
-		{
-			textEditorSaveFile(tab);
-			ImGui::End();
+        if (!open)
+        {
+            textEditorSaveFile(tab);
+            ImGui::End();
 
-			s_TextEditors.erase(s_TextEditors.begin() + index);
-			index--;
+            s_TextEditors.erase(s_TextEditors.begin() + index);
+            index--;
 
-			continue;
-		}
+            continue;
+        }
 
-		if (!render)
-		{
-			ImGui::End();
+        if (!render)
+        {
+            ImGui::End();
 
-			if (tab.WasPreviouslyVisible)
-			{
-				textEditorSaveFile(tab);
-				tab.WasPreviouslyVisible = false;
-			}
+            if (tab.WasPreviouslyVisible)
+            {
+                textEditorSaveFile(tab);
+                tab.WasPreviouslyVisible = false;
+            }
 
-			continue;
-		}
+            continue;
+        }
 
-		tab.WasPreviouslyVisible = true;
+        tab.WasPreviouslyVisible = true;
 
-		if (tab.DebuggerCurrentLine > 0)
-			tab.Editor.SetCurrentLineIndicator(tab.DebuggerCurrentLine);
+        if (tab.DebuggerCurrentLine > 0)
+            tab.Editor.SetCurrentLineIndicator(tab.DebuggerCurrentLine);
 
-		tab.Editor.Render("TextEditor");
+        tab.Editor.Render("TextEditor");
 
-		if (tab.Editor.IsTextChanged())
-			tab.WasEdited = true;
+        if (tab.Editor.IsTextChanged())
+            tab.WasEdited = true;
 
-		if (tab.JumpToLine > 0)
-		{
-			tab.Editor.SetCursorPosition({ 0, 0 }); // force scroll
-			tab.Editor.SetCursorPosition({ tab.JumpToLine - 1, 0 });
-			tab.JumpToLine = 0;
-		}
+        if (tab.JumpToLine > 0)
+        {
+            tab.Editor.SetCursorPosition({ 0, 0 }); // force scroll
+            tab.Editor.SetCursorPosition({ tab.JumpToLine - 1, 0 });
+            tab.JumpToLine = 0;
+        }
 
-		ImGui::End();
-	}
+        ImGui::End();
+    }
 }
 
 static void uniformsEditor(
-	std::unordered_map<std::string, Reflection::GenericValue>& Uniforms,
-	int* Selection, const char* Name,
-	const std::string& AncestorShader = ""
+    std::unordered_map<std::string, Reflection::GenericValue>& Uniforms,
+    int* Selection, const char* Name,
+    const std::string& AncestorShader = ""
 )
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
+    ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (!ImGui::CollapsingHeader(Name))
-		return;
+    if (!ImGui::CollapsingHeader(Name))
+        return;
 
-	ImVec2 winSize = ImGui::GetWindowSize();
-	ImGui::BeginChild(Name, ImVec2(0.f, 0.f), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY);
+    ImVec2 winSize = ImGui::GetWindowSize();
+    ImGui::BeginChild(Name, ImVec2(0.f, 0.f), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY);
 
-	if ((*Selection) + 1ull > Uniforms.size())
-		*Selection = -1;
+    if ((*Selection) + 1ull > Uniforms.size())
+        *Selection = -1;
 
-	static int NewTypeId = 0;
+    static int NewTypeId = 0;
 
-	static std::string NewUniformNameBuf;
-	NewUniformNameBuf.reserve(32);
+    static std::string NewUniformNameBuf;
+    NewUniformNameBuf.reserve(32);
 
-	if (AncestorShader.size() == 0 && ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-	{
-		ImGui::OpenPopup("AddShaderUniform");
-		NewUniformNameBuf.clear();
-		NewTypeId = 0;
-	}
+    if (AncestorShader.size() == 0 && ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+    {
+        ImGui::OpenPopup("AddShaderUniform");
+        NewUniformNameBuf.clear();
+        NewTypeId = 0;
+    }
 
-	if (ImGui::BeginPopup("AddShaderUniform"))
-	{
-		if (ImGui::IsWindowAppearing())
-			ImGui::SetKeyboardFocusHere();
+    if (ImGui::BeginPopup("AddShaderUniform"))
+    {
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
 
-		ImGui::InputText("Variable Name", &NewUniformNameBuf);
-		ImGui::Combo("Variable Type", &NewTypeId, "Float\0Integer\0Boolean\0");
+        ImGui::InputText("Variable Name", &NewUniformNameBuf);
+        ImGui::Combo("Variable Type", &NewTypeId, "Float\0Integer\0Boolean\0");
 
-		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-		{
-			Reflection::GenericValue initialValue;
+        if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+        {
+            Reflection::GenericValue initialValue;
 
-			switch (NewTypeId)
-			{
-			case 2:
-			{
-				initialValue = true;
-				break;
-			}
-			case 1:
-			{
-				initialValue = 0;
-				break;
-			}
-			case 0:
-			{
-				initialValue = 0.f;
-				break;
-			}
-			default:
-				assert(false);
-			}
+            switch (NewTypeId)
+            {
+            case 2:
+            {
+                initialValue = true;
+                break;
+            }
+            case 1:
+            {
+                initialValue = 0;
+                break;
+            }
+            case 0:
+            {
+                initialValue = 0.f;
+                break;
+            }
+            default:
+                assert(false);
+            }
 
-			Uniforms[NewUniformNameBuf] = initialValue;
-			*Selection = (int)Uniforms.size() - 1;
-			ImGui::CloseCurrentPopup();
-		}
+            Uniforms[NewUniformNameBuf] = initialValue;
+            *Selection = (int)Uniforms.size() - 1;
+            ImGui::CloseCurrentPopup();
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	std::vector<std::string> uniformsArray;
-	uniformsArray.reserve(Uniforms.size());
+    std::vector<std::string> uniformsArray;
+    uniformsArray.reserve(Uniforms.size());
 
-	for (auto& it : Uniforms)
-		uniformsArray.push_back(it.first);
+    for (auto& it : Uniforms)
+        uniformsArray.push_back(it.first);
 
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-	ImGui::ListBox(
-		"##List",
-		Selection,
-		[](void* ud, int index)
-		{
-			std::vector<std::string>* uniforms = (std::vector<std::string>*)ud;
-			return uniforms->at(index).c_str();
-		},
-		&uniformsArray,
-		static_cast<int>(Uniforms.size())
-	);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    ImGui::ListBox(
+        "##List",
+        Selection,
+        [](void* ud, int index)
+        {
+            std::vector<std::string>* uniforms = (std::vector<std::string>*)ud;
+            return uniforms->at(index).c_str();
+        },
+        &uniformsArray,
+        static_cast<int>(Uniforms.size())
+    );
 
-	if (*Selection != -1 && uniformsArray.size() >= 1)
-	{
-		const std::string& name = uniformsArray.at(*Selection);
-		Reflection::GenericValue& value = Uniforms[name];
+    if (*Selection != -1 && uniformsArray.size() >= 1)
+    {
+        const std::string& name = uniformsArray.at(*Selection);
+        Reflection::GenericValue& value = Uniforms[name];
 
-		if (AncestorShader.size() == 0)
-		{
-			static std::string NameEditBuf;
-			NameEditBuf = name;
+        if (AncestorShader.size() == 0)
+        {
+            static std::string NameEditBuf;
+            NameEditBuf = name;
 
-			if (ImGui::InputText("Name", &NameEditBuf, ImGuiInputTextFlags_EnterReturnsTrue))
-			{
-				Uniforms[NameEditBuf] = value;
-				value = Uniforms[NameEditBuf];
-				Uniforms.erase(name);
-			}
+            if (ImGui::InputText("Name", &NameEditBuf, ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+                Uniforms[NameEditBuf] = value;
+                value = Uniforms[NameEditBuf];
+                Uniforms.erase(name);
+            }
 
-			switch (value.Type)
-			{
-			case Reflection::ValueType::Boolean:
-			{
-				ImGui::Checkbox("Value", &value.Val.Bool);
-				break;
-			}
-			case Reflection::ValueType::Integer:
-			{
-				int32_t curVal = static_cast<int32_t>(value.AsInteger());
-				ImGui::InputInt("Value", &curVal);
+            switch (value.Type)
+            {
+            case Reflection::ValueType::Boolean:
+            {
+                ImGui::Checkbox("Value", &value.Val.Bool);
+                break;
+            }
+            case Reflection::ValueType::Integer:
+            {
+                int32_t curVal = static_cast<int32_t>(value.AsInteger());
+                ImGui::InputInt("Value", &curVal);
 
-				value = curVal;
-				break;
-			}
-			case Reflection::ValueType::Double:
-			{
-				ImGui::InputDouble("Value", &value.Val.Double);
-				break;
-			}
-			default:
-			{
-				ImGui::Text(
-					"<Type ID:%i ('%s') editing not supported>",
-					(int)value.Type,
-					Reflection::TypeAsString(value.Type).data()
-				);
-				break;
-			}
-			}
+                value = curVal;
+                break;
+            }
+            case Reflection::ValueType::Double:
+            {
+                ImGui::InputDouble("Value", &value.Val.Double);
+                break;
+            }
+            default:
+            {
+                ImGui::Text(
+                    "<Type ID:%i ('%s') editing not supported>",
+                    (int)value.Type,
+                    Reflection::TypeAsString(value.Type).data()
+                );
+                break;
+            }
+            }
 
-			ImGui::SetNextItemWidth(winSize.x);
-			if (ImGui::Button("Remove"))
-				Uniforms.erase(NameEditBuf);
-		}
-		else
-		{
-			ImGui::Text("Modify inherited uniforms through the ancestor shader (%s)", AncestorShader.c_str());
-			ImGui::Text("Name: %s", name.c_str());
-			ImGui::Text("Value: %s", value.ToString().c_str());
-		}
-	}
+            ImGui::SetNextItemWidth(winSize.x);
+            if (ImGui::Button("Remove"))
+                Uniforms.erase(NameEditBuf);
+        }
+        else
+        {
+            ImGui::Text("Modify inherited uniforms through the ancestor shader (%s)", AncestorShader.c_str());
+            ImGui::Text("Name: %s", name.c_str());
+            ImGui::Text("Value: %s", value.ToString().c_str());
+        }
+    }
 
-	ImGui::EndChild();
+    ImGui::EndChild();
 }
 
 static void shaderPreprocessorDefinitionsEditor(
-	std::unordered_map<std::string, std::string>& Definitions,
-	int* Selection, const char* Name
+    std::unordered_map<std::string, std::string>& Definitions,
+    int* Selection, const char* Name
 )
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
+    ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (!ImGui::CollapsingHeader(Name))
-		return;
+    if (!ImGui::CollapsingHeader(Name))
+        return;
 
-	ImVec2 winSize = ImGui::GetWindowSize();
-	ImGui::BeginChild(Name, ImVec2(0.f, winSize.y / 4.f), ImGuiChildFlags_Borders);
+    ImVec2 winSize = ImGui::GetWindowSize();
+    ImGui::BeginChild(Name, ImVec2(0.f, winSize.y / 4.f), ImGuiChildFlags_Borders);
 
-	if ((*Selection) + 1ull > Definitions.size())
-		*Selection = -1;
+    if ((*Selection) + 1ull > Definitions.size())
+        *Selection = -1;
 
-	static std::string NewDefNameBuf;
-	static std::string NewDefValueBuf;
-	NewDefNameBuf.reserve(32);
-	NewDefValueBuf.reserve(16);
+    static std::string NewDefNameBuf;
+    static std::string NewDefValueBuf;
+    NewDefNameBuf.reserve(32);
+    NewDefValueBuf.reserve(16);
 
-	if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-	{
-		ImGui::OpenPopup("AddShaderDefinition");
-		NewDefNameBuf.clear();
-		NewDefValueBuf.clear();
-	}
+    if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+    {
+        ImGui::OpenPopup("AddShaderDefinition");
+        NewDefNameBuf.clear();
+        NewDefValueBuf.clear();
+    }
 
-	if (ImGui::BeginPopup("AddShaderDefinition"))
-	{
-		if (ImGui::IsWindowAppearing())
-			ImGui::SetKeyboardFocusHere();
+    if (ImGui::BeginPopup("AddShaderDefinition"))
+    {
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
 
-		ImGui::InputText("Name", &NewDefNameBuf);
-		ImGui::InputText("Value", &NewDefValueBuf);
+        ImGui::InputText("Name", &NewDefNameBuf);
+        ImGui::InputText("Value", &NewDefValueBuf);
 
-		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-		{
-			Definitions[NewDefNameBuf] = NewDefValueBuf;
-			*Selection = (int)Definitions.size() - 1;
-			ImGui::CloseCurrentPopup();
-		}
+        if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+        {
+            Definitions[NewDefNameBuf] = NewDefValueBuf;
+            *Selection = (int)Definitions.size() - 1;
+            ImGui::CloseCurrentPopup();
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	std::vector<std::string> defsArray;
-	defsArray.reserve(Definitions.size());
+    std::vector<std::string> defsArray;
+    defsArray.reserve(Definitions.size());
 
-	for (auto& it : Definitions)
-		defsArray.push_back(it.first);
+    for (auto& it : Definitions)
+        defsArray.push_back(it.first);
 
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-	ImGui::ListBox(
-		"##List",
-		Selection,
-		[](void* ud, int index)
-		{
-			std::vector<std::string>* uniforms = (std::vector<std::string>*)ud;
-			return uniforms->at(index).c_str();
-		},
-		&defsArray,
-		static_cast<int>(Definitions.size())
-	);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    ImGui::ListBox(
+        "##List",
+        Selection,
+        [](void* ud, int index)
+        {
+            std::vector<std::string>* uniforms = (std::vector<std::string>*)ud;
+            return uniforms->at(index).c_str();
+        },
+        &defsArray,
+        static_cast<int>(Definitions.size())
+    );
 
-	if (*Selection != -1 && defsArray.size() >= 1)
-	{
-		const std::string& name = defsArray.at(*Selection);
-		std::string& value = Definitions[name];
+    if (*Selection != -1 && defsArray.size() >= 1)
+    {
+        const std::string& name = defsArray.at(*Selection);
+        std::string& value = Definitions[name];
 
-		static std::string NameEditBuf;
-		NameEditBuf = name;
+        static std::string NameEditBuf;
+        NameEditBuf = name;
 
-		if (ImGui::InputText("Name", &NameEditBuf, ImGuiInputTextFlags_EnterReturnsTrue))
-		{
-			Definitions[NameEditBuf] = value;
-			value = Definitions[NameEditBuf];
-			Definitions.erase(name);
-		}
+        if (ImGui::InputText("Name", &NameEditBuf, ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            Definitions[NameEditBuf] = value;
+            value = Definitions[NameEditBuf];
+            Definitions.erase(name);
+        }
 
-		ImGui::InputText("Value", &value);
+        ImGui::InputText("Value", &value);
 
-		ImGui::SetNextItemWidth(winSize.x);
-		if (ImGui::Button("Remove"))
-			Definitions.erase(NameEditBuf);
-	}
+        ImGui::SetNextItemWidth(winSize.x);
+        if (ImGui::Button("Remove"))
+            Definitions.erase(NameEditBuf);
+    }
 
-	ImGui::EndChild();
+    ImGui::EndChild();
 }
 
 static void shaderPipelineShaderSelect(const std::string& Label, std::string* Target)
 {
-	ImGui::TextUnformatted(Label.c_str());
-	ImGui::SameLine();
+    ImGui::TextUnformatted(Label.c_str());
+    ImGui::SameLine();
 
-	bool editFile = ImGui::TextLink(Target->c_str());
-	ImGui::SetItemTooltip("View file");
+    bool editFile = ImGui::TextLink(Target->c_str());
+    ImGui::SetItemTooltip("View file");
 
-	if (editFile)
-		invokeTextEditor(*Target);
+    if (editFile)
+        invokeTextEditor(*Target);
 
-	ImGui::SameLine();
+    ImGui::SameLine();
 
-	ImGui::PushID(Label.c_str());
+    ImGui::PushID(Label.c_str());
 
-	bool changeFile = ImGui::Button("...");
-	ImGui::SetItemTooltip("Select file");
+    bool changeFile = ImGui::Button("...");
+    ImGui::SetItemTooltip("Select file");
 
-	ImGui::PopID();
+    ImGui::PopID();
 
-	if (changeFile)
-	{
-		std::string shddir = getFileDirectory(*Target);
-		const char* filter[] = { "*.vert", "*.frag", "*.geom" };
+    if (changeFile)
+    {
+        std::string shddir = getFileDirectory(*Target);
+        const char* filter[] = { "*.vert", "*.frag", "*.geom" };
 
-		const char* file = tinyfd_openFileDialog(
-			"Select Shader File",
-			shddir.c_str(),
-			3,
-			filter,
-			"Shader Files",
-			false
-		);
+        const char* file = tinyfd_openFileDialog(
+            "Select Shader File",
+            shddir.c_str(),
+            3,
+            filter,
+            "Shader Files",
+            false
+        );
 
-		if (file)
-		{
-			std::string fullpath = file;
-	
-			// windows SMELLS :( 18/02/2025
-			size_t off = fullpath.find_first_of("\\");
-	
-			while (off != std::string::npos)
-				off = fullpath.replace(off, 1, "/").find_first_of("\\");
-	
-			size_t resDirOffset = fullpath.find("resources/");
-	
-			if (resDirOffset == std::string::npos)
-			{
-				setErrorMessage("Selection must be within the Project's `resources/` directory!");
-			}
-			else
-			{
-				std::string shortpath = fullpath.substr(resDirOffset + 10);
-				*Target = shortpath;
-			}
-		}
-	}
+        if (file)
+        {
+            std::string fullpath = file;
+    
+            // windows SMELLS :( 18/02/2025
+            size_t off = fullpath.find_first_of("\\");
+    
+            while (off != std::string::npos)
+                off = fullpath.replace(off, 1, "/").find_first_of("\\");
+    
+            size_t resDirOffset = fullpath.find("resources/");
+    
+            if (resDirOffset == std::string::npos)
+            {
+                setErrorMessage("Selection must be within the Project's `resources/` directory!");
+            }
+            else
+            {
+                std::string shortpath = fullpath.substr(resDirOffset + 10);
+                *Target = shortpath;
+            }
+        }
+    }
 }
 
 static void collectInheritedUniforms(std::unordered_map<std::string, Reflection::GenericValue>& inheritedUniforms, const ShaderProgram& sp)
 {
-	if (sp.UniformsAncestor.size() > 0)
-	{
-		ShaderManager* shdManager = ShaderManager::Get();
-		const ShaderProgram& ancestor = shdManager->GetShaderResource(shdManager->LoadFromPath(sp.UniformsAncestor));
+    if (sp.UniformsAncestor.size() > 0)
+    {
+        ShaderManager* shdManager = ShaderManager::Get();
+        const ShaderProgram& ancestor = shdManager->GetShaderResource(shdManager->LoadFromPath(sp.UniformsAncestor));
 
-		// override ancestral uniforms
-		collectInheritedUniforms(inheritedUniforms, ancestor);
-		inheritedUniforms.insert(ancestor.DefaultUniforms.begin(), ancestor.DefaultUniforms.end());
-	}
+        // override ancestral uniforms
+        collectInheritedUniforms(inheritedUniforms, ancestor);
+        inheritedUniforms.insert(ancestor.DefaultUniforms.begin(), ancestor.DefaultUniforms.end());
+    }
 }
 
 static void renderShaderPipelinesEditor()
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
+    ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (!DeveloperTools::ShadersShown)
-		return;
+    if (!DeveloperTools::ShadersShown)
+        return;
 
-	if (!ImGui::Begin("Shader Pipelines", &DeveloperTools::ShadersShown))
-	{
-		ImGui::End();
-		return;
-	}
+    if (!ImGui::Begin("Shader Pipelines", &DeveloperTools::ShadersShown))
+    {
+        ImGui::End();
+        return;
+    }
 
-	ShaderManager* shdManager = ShaderManager::Get();
-	std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
+    ShaderManager* shdManager = ShaderManager::Get();
+    std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
 
-	static int curItemIdx = -1;
-	static std::string NewShdName = "";
-	NewShdName.reserve(64);
+    static int curItemIdx = -1;
+    static std::string NewShdName = "";
+    NewShdName.reserve(64);
 
-	if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-	{
-		ImGui::OpenPopup("CreateNewPipeline");
-		NewShdName.clear();
-	}
-	ImGui::SetItemTooltip("Create new pipeline");
+    if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+    {
+        ImGui::OpenPopup("CreateNewPipeline");
+        NewShdName.clear();
+    }
+    ImGui::SetItemTooltip("Create new pipeline");
 
-	if (ImGui::BeginPopup("CreateNewPipeline"))
-	{
-		if (ImGui::IsWindowAppearing())
-			ImGui::SetKeyboardFocusHere();
+    if (ImGui::BeginPopup("CreateNewPipeline"))
+    {
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
 
-		ImGui::InputText("Name", &NewShdName);
+        ImGui::InputText("Name", &NewShdName);
 
-		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-		{
-			std::string realShpPath = (NewShdName.find("shaders/") == std::string::npos ? "shaders/" : "") + NewShdName + ".shp";
+        if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+        {
+            std::string realShpPath = (NewShdName.find("shaders/") == std::string::npos ? "shaders/" : "") + NewShdName + ".shp";
 
-			if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(realShpPath)))
-			{
-				ShaderProgram np;
-				np.Name = NewShdName;
-				np.VertexShader = "worldUber.vert";
-				np.GeometryShader = "worldUber.geom";
-				np.FragmentShader = "worldUber.frag";
+            if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(realShpPath)))
+            {
+                ShaderProgram np;
+                np.Name = NewShdName;
+                np.VertexShader = "worldUber.vert";
+                np.GeometryShader = "worldUber.geom";
+                np.FragmentShader = "worldUber.frag";
 
-				np.Save();
-			}
+                np.Save();
+            }
 
-			curItemIdx = (int)shdManager->LoadFromPath(NewShdName);
-			ImGui::CloseCurrentPopup();
-		}
+            curItemIdx = (int)shdManager->LoadFromPath(NewShdName);
+            ImGui::CloseCurrentPopup();
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-	ImGui::ListBox(
-		"##LoadedPipelines",
-		&curItemIdx,
-		[](void* udat, int idx)
-		-> const char*
-		{
-			return ((std::vector<ShaderProgram>*)udat)->at(idx).Name.c_str();
-		},
-		&shaders,
-		static_cast<int>(shaders.size())
-	);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    ImGui::ListBox(
+        "##LoadedPipelines",
+        &curItemIdx,
+        [](void* udat, int idx)
+        -> const char*
+        {
+            return ((std::vector<ShaderProgram>*)udat)->at(idx).Name.c_str();
+        },
+        &shaders,
+        static_cast<int>(shaders.size())
+    );
 
-	if (curItemIdx != -1)
-	{
-		ShaderProgram& curItem = shaders[curItemIdx];
+    if (curItemIdx != -1)
+    {
+        ShaderProgram& curItem = shaders[curItemIdx];
 
-		shaderPipelineShaderSelect("Vertex Shader: ", &curItem.VertexShader);
-		shaderPipelineShaderSelect("Fragment Shader: ", &curItem.FragmentShader);
-		shaderPipelineShaderSelect("Geometry Shader: ", &curItem.GeometryShader);
+        shaderPipelineShaderSelect("Vertex Shader: ", &curItem.VertexShader);
+        shaderPipelineShaderSelect("Fragment Shader: ", &curItem.FragmentShader);
+        shaderPipelineShaderSelect("Geometry Shader: ", &curItem.GeometryShader);
 
-		static int MainUniformSelectionIdx = -1;
-		static int InheritedUniformSelectionIdx = -1;
-		static int PreprocDefinitionSelectionIdx = -1;
+        static int MainUniformSelectionIdx = -1;
+        static int InheritedUniformSelectionIdx = -1;
+        static int PreprocDefinitionSelectionIdx = -1;
 
-		ImGui::Text("Inherit variables of: ");
-		ImGui::SameLine();
+        ImGui::Text("Inherit variables of: ");
+        ImGui::SameLine();
 
-		curItem.UniformsAncestor.reserve(64);
-		ImGui::InputText("##", &curItem.UniformsAncestor);
+        curItem.UniformsAncestor.reserve(64);
+        ImGui::InputText("##", &curItem.UniformsAncestor);
 
-		std::unordered_map<std::string, Reflection::GenericValue>& mainUniforms = curItem.DefaultUniforms;
-		std::unordered_map<std::string, Reflection::GenericValue> inheritedUniforms;
-		collectInheritedUniforms(inheritedUniforms, curItem);
+        std::unordered_map<std::string, Reflection::GenericValue>& mainUniforms = curItem.DefaultUniforms;
+        std::unordered_map<std::string, Reflection::GenericValue> inheritedUniforms;
+        collectInheritedUniforms(inheritedUniforms, curItem);
 
-		uniformsEditor(mainUniforms, &MainUniformSelectionIdx, "Uniforms");
+        uniformsEditor(mainUniforms, &MainUniformSelectionIdx, "Uniforms");
 
-		if (inheritedUniforms.size() > 0)
-			uniformsEditor(inheritedUniforms, &InheritedUniformSelectionIdx, "Inherited Uniforms", /* AncestorShader = */ curItem.UniformsAncestor);
+        if (inheritedUniforms.size() > 0)
+            uniformsEditor(inheritedUniforms, &InheritedUniformSelectionIdx, "Inherited Uniforms", /* AncestorShader = */ curItem.UniformsAncestor);
 
-		shaderPreprocessorDefinitionsEditor(curItem.PreprocessorDefinitions, &PreprocDefinitionSelectionIdx, "Preprocessor Definitions");
+        shaderPreprocessorDefinitionsEditor(curItem.PreprocessorDefinitions, &PreprocDefinitionSelectionIdx, "Preprocessor Definitions");
 
-		if (ImGui::Button("Save & Reload", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-		{
-			curItem.Save();
-			curItem.Reload();
-		}
-	}
+        if (ImGui::Button("Save & Reload", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+        {
+            curItem.Save();
+            curItem.Reload();
+        }
+    }
 
-	ImGui::End();
+    ImGui::End();
 }
 
 static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* CurrentPath, bool CanRemove = true)
 {
-	ImGui::PushID(TextureIdPtr);
+    ImGui::PushID(TextureIdPtr);
 
-	ImGui::TextUnformatted(Label);
-	ImGui::SameLine();
+    ImGui::TextUnformatted(Label);
+    ImGui::SameLine();
 
-	TextureManager* texManager = TextureManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
-	bool addTextureDialog = false;
+    bool addTextureDialog = false;
 
-	if (*TextureIdPtr == 0)
-	{
-		if (ImGui::Button("Add"))
-		{
-			addTextureDialog = true;
-			memcpy(CurrentPath, (const char*)("textures/"), 9); // start the file dialog in the textures directory
-		}
-		else
-		{
-			ImGui::PopID();
-			return;
-		}
-	}
+    if (*TextureIdPtr == 0)
+    {
+        if (ImGui::Button("Add"))
+        {
+            addTextureDialog = true;
+            memcpy(CurrentPath, (const char*)("textures/"), 9); // start the file dialog in the textures directory
+        }
+        else
+        {
+            ImGui::PopID();
+            return;
+        }
+    }
 
-	const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
+    const Texture& tx = texManager->GetTextureResource(*TextureIdPtr);
 
-	CurrentPath[MATERIAL_TEXTUREPATH_BUFSIZE - 1] = 0;
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 2.f - 4.f);
-	ImGui::InputText("##", CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE);
+    CurrentPath[MATERIAL_TEXTUREPATH_BUFSIZE - 1] = 0;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 2.f - 4.f);
+    ImGui::InputText("##", CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE);
 
-	if (ImGui::IsItemDeactivatedAfterEdit())
-	{
-		uint32_t newtexid = texManager->LoadFromPath(CurrentPath);
-		// i'm so silly 04/12/2024
-		// x2 22/04/2026
-		*TextureIdPtr = newtexid;
-	}
+    if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+        uint32_t newtexid = texManager->LoadFromPath(CurrentPath);
+        // i'm so silly 04/12/2024
+        // x2 22/04/2026
+        *TextureIdPtr = newtexid;
+    }
 
-	ImGui::SameLine();
-	bool fileDialogRequested = addTextureDialog ? true : ImGui::Button("...");
-	ImGui::SetItemTooltip("Open file dialog");
+    ImGui::SameLine();
+    bool fileDialogRequested = addTextureDialog ? true : ImGui::Button("...");
+    ImGui::SetItemTooltip("Open file dialog");
 
-	if (fileDialogRequested)
-	{
-		std::string texdir = getFileDirectory(CurrentPath);
-		const char* filter[] = { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.psd", "*.gif", "*.hdr" };
+    if (fileDialogRequested)
+    {
+        std::string texdir = getFileDirectory(CurrentPath);
+        const char* filter[] = { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.psd", "*.gif", "*.hdr" };
 
-		const char* path = tinyfd_openFileDialog(
-			"Select Texture",
-			texdir.c_str(),
-			sizeof(filter) / sizeof(*filter),
-			filter,
-			"Images",
-			false
-		);
+        const char* path = tinyfd_openFileDialog(
+            "Select Texture",
+            texdir.c_str(),
+            sizeof(filter) / sizeof(*filter),
+            filter,
+            "Images",
+            false
+        );
 
-		if (path)
-		{
-			std::string fullpath = path;
+        if (path)
+        {
+            std::string fullpath = path;
 
-			// windows SMELLS :( 18/02/2025
-			size_t off = fullpath.find_first_of("\\");
+            // windows SMELLS :( 18/02/2025
+            size_t off = fullpath.find_first_of("\\");
 
-			while (off != std::string::npos)
-				off = fullpath.replace(off, 1, "/").find_first_of("\\");
+            while (off != std::string::npos)
+                off = fullpath.replace(off, 1, "/").find_first_of("\\");
 
-			size_t resDirOffset = fullpath.find("resources/");
+            size_t resDirOffset = fullpath.find("resources/");
 
-			if (resDirOffset == std::string::npos)
-			{
-				setErrorMessage("Selection must be within the Project's `resources/` directory!");
-			}
-			else
-			{
-				std::string shortpath = fullpath.substr(resDirOffset + 10);
-				copyStringToBuffer(CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE, shortpath);
+            if (resDirOffset == std::string::npos)
+            {
+                setErrorMessage("Selection must be within the Project's `resources/` directory!");
+            }
+            else
+            {
+                std::string shortpath = fullpath.substr(resDirOffset + 10);
+                copyStringToBuffer(CurrentPath, MATERIAL_TEXTUREPATH_BUFSIZE, shortpath);
 
-				uint32_t newtexid = texManager->LoadFromPath(shortpath);
-				// i'm so silly 04/12/2024
-				*TextureIdPtr = newtexid;
-			}
-		}
-	}
+                uint32_t newtexid = texManager->LoadFromPath(shortpath);
+                // i'm so silly 04/12/2024
+                *TextureIdPtr = newtexid;
+            }
+        }
+    }
 
-	if (addTextureDialog)
-	{
-		ImGui::PopID();
-		return;
-	}
+    if (addTextureDialog)
+    {
+        ImGui::PopID();
+        return;
+    }
 
-	if (CanRemove && ImGui::Button("Remove"))
-	{
-		*TextureIdPtr = 0;
-		ImGui::PopID();
-		return;
-	}
+    if (CanRemove && ImGui::Button("Remove"))
+    {
+        *TextureIdPtr = 0;
+        ImGui::PopID();
+        return;
+    }
 
-	ImGui::Image(
-		tx.GpuId,
-		// Scale to 256 pixels wide, while maintaining aspect ratio
-		ImVec2(256.f, tx.Height * (256.f / tx.Width))
-	);
+    ImGui::Image(
+        tx.GpuId,
+        // Scale to 256 pixels wide, while maintaining aspect ratio
+        ImVec2(256.f, tx.Height * (256.f / tx.Width))
+    );
 
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
 
-		ImGui::Text("Resolution: %ix%i", tx.Width, tx.Height);
-		ImGui::Text("# Color channels: %i", tx.NumColorChannels);
+        ImGui::Text("Resolution: %ix%i", tx.Width, tx.Height);
+        ImGui::Text("# Color channels: %i", tx.NumColorChannels);
 
-		ImGui::EndTooltip();
-	}
+        ImGui::EndTooltip();
+    }
 
-	ImGui::PopID();
+    ImGui::PopID();
 }
 
 static std::string getMaterialFilePath(const std::string& Material)
 {
-	if (Material.find("materials/") == std::string::npos && Material.find(".mtl") == std::string::npos)
-		return "materials/" + Material + ".mtl";
-	else
-		return Material;
+    if (Material.find("materials/") == std::string::npos && Material.find(".mtl") == std::string::npos)
+        return "materials/" + Material + ".mtl";
+    else
+        return Material;
 }
 
 // 02/09/2024
@@ -1306,237 +1306,237 @@ static std::string getMaterialFilePath(const std::string& Material)
 // and it's just him screaming into the mic
 static void renderMaterialEditor()
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
+    ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (!DeveloperTools::MaterialsShown)
-		return;
+    if (!DeveloperTools::MaterialsShown)
+        return;
 
-	if (!ImGui::Begin("Materials", &DeveloperTools::MaterialsShown))
-	{
-		ImGui::End();
-		return;
-	}
+    if (!ImGui::Begin("Materials", &DeveloperTools::MaterialsShown))
+    {
+        ImGui::End();
+        return;
+    }
 
-	MaterialManager* mtlManager = MaterialManager::Get();
-	TextureManager* texManager = TextureManager::Get();
+    MaterialManager* mtlManager = MaterialManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
-	if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-	{
-		ImGui::OpenPopup("CreateOrLoadMaterial");
-		memset(MtlCreateNameBuf, '\0', MATERIAL_NEW_NAME_BUFSIZE);
-	}
+    if (ImGui::Button("+", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+    {
+        ImGui::OpenPopup("CreateOrLoadMaterial");
+        memset(MtlCreateNameBuf, '\0', MATERIAL_NEW_NAME_BUFSIZE);
+    }
 
-	if (ImGui::BeginPopup("CreateOrLoadMaterial"))
-	{
-		if (ImGui::IsWindowAppearing())
-			ImGui::SetKeyboardFocusHere();
+    if (ImGui::BeginPopup("CreateOrLoadMaterial"))
+    {
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
 
-		ImGui::InputText("Name", MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+        ImGui::InputText("Name", MtlCreateNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
 
-		if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-		{
-			std::string path = getMaterialFilePath(MtlCreateNameBuf);
+        if (ImGui::Button("Add", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+        {
+            std::string path = getMaterialFilePath(MtlCreateNameBuf);
 
-			if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(path)))
-			{
-				EDCHECKEXPR(FileRW::WriteFile(
-					path,
-					DefaultNewMaterial.dump(2)
-				));
-			}
+            if (!std::filesystem::is_regular_file(FileRW::ResolvePathNormalized(path)))
+            {
+                EDCHECKEXPR(FileRW::WriteFile(
+                    path,
+                    DefaultNewMaterial.dump(2)
+                ));
+            }
 
-			MtlCurItem = (int)mtlManager->LoadFromPath(MtlCreateNameBuf);
-			ImGui::CloseCurrentPopup();
-		}
+            MtlCurItem = (int)mtlManager->LoadFromPath(MtlCreateNameBuf);
+            ImGui::CloseCurrentPopup();
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
+    std::vector<RenderMaterial>& loadedMaterials = mtlManager->GetLoadedMaterials();
 
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-	ImGui::ListBox(
-		"##Loaded",
-		&MtlCurItem,
-		&mtlIterator,
-		nullptr,
-		static_cast<int>(loadedMaterials.size())
-	);
-	ImGui::SetItemTooltip("Use the 'Load' button to load a material if it isn't already loaded");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    ImGui::ListBox(
+        "##Loaded",
+        &MtlCurItem,
+        &mtlIterator,
+        nullptr,
+        static_cast<int>(loadedMaterials.size())
+    );
+    ImGui::SetItemTooltip("Use the 'Load' button to load a material if it isn't already loaded");
 
-	if (MtlCurItem == -1)
-	{
-		ImGui::End();
+    if (MtlCurItem == -1)
+    {
+        ImGui::End();
 
-		return;
-	}
+        return;
+    }
 
-	RenderMaterial& curItem = loadedMaterials.at(MtlCurItem);
+    RenderMaterial& curItem = loadedMaterials.at(MtlCurItem);
 
-	Texture& colorMap = texManager->GetTextureResource(curItem.ColorMap);
-	Texture& metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
-	Texture& normalMap = texManager->GetTextureResource(curItem.NormalMap);
-	Texture& emissionMap = texManager->GetTextureResource(curItem.EmissionMap);
+    Texture& colorMap = texManager->GetTextureResource(curItem.ColorMap);
+    Texture& metallicRoughnessMap = texManager->GetTextureResource(curItem.MetallicRoughnessMap);
+    Texture& normalMap = texManager->GetTextureResource(curItem.NormalMap);
+    Texture& emissionMap = texManager->GetTextureResource(curItem.EmissionMap);
 
-	static int SelectedUniformIdx = -1;
+    static int SelectedUniformIdx = -1;
 
-	static std::string s_SaveNameBuf = "";
+    static std::string s_SaveNameBuf = "";
 
-	if (MtlCurItem != MtlPrevItem)
-	{
-		copyStringToBuffer(MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
-		s_SaveNameBuf = curItem.Name;
+    if (MtlCurItem != MtlPrevItem)
+    {
+        copyStringToBuffer(MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE, curItem.GetShader().Name);
+        s_SaveNameBuf = curItem.Name;
 
-		copyStringToBuffer(MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
-		copyStringToBuffer(MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
-		copyStringToBuffer(MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE, normalMap.ImagePath);
-		copyStringToBuffer(MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE, emissionMap.ImagePath);
+        copyStringToBuffer(MtlDiffuseBuf, MATERIAL_TEXTUREPATH_BUFSIZE, colorMap.ImagePath);
+        copyStringToBuffer(MtlSpecBuf, MATERIAL_TEXTUREPATH_BUFSIZE, metallicRoughnessMap.ImagePath);
+        copyStringToBuffer(MtlNormalBuf, MATERIAL_TEXTUREPATH_BUFSIZE, normalMap.ImagePath);
+        copyStringToBuffer(MtlEmissionBuf, MATERIAL_TEXTUREPATH_BUFSIZE, emissionMap.ImagePath);
 
-		SelectedUniformIdx = -1;
-	}
+        SelectedUniformIdx = -1;
+    }
 
-	MtlPrevItem = MtlCurItem;
+    MtlPrevItem = MtlCurItem;
 
-	ImGui::Image(
-		MtlEditorPreview.GpuTextureId,
-		ImVec2(256.f, 256.f),
-		ImVec2(0.f, 1.f),
-		ImVec2(1.f, 0.f)
-	);
+    ImGui::Image(
+        MtlEditorPreview.GpuTextureId,
+        ImVec2(256.f, 256.f),
+        ImVec2(0.f, 1.f),
+        ImVec2(1.f, 0.f)
+    );
 
-	static double PreviewRotStart = 0.f;
+    static double PreviewRotStart = 0.f;
 
-	EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
+    EcCamera* cc = MtlPreviewCamera->FindComponent<EcCamera>();
 
-	if (ImGui::IsItemHovered())
-	{
-		if (PreviewRotStart == 0.f)
-			PreviewRotStart = GetRunningTime();
+    if (ImGui::IsItemHovered())
+    {
+        if (PreviewRotStart == 0.f)
+            PreviewRotStart = GetRunningTime();
 
-		glm::mat4 transform = MtlPreviewCamDefaultRotation * glm::rotate(
-			glm::mat4(1.f),
-			glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
-			glm::vec3(0.f, 1.f, 0.f)
-		);
-		cc->SetWorldTransform(transform * MtlPreviewCamOffset);
-	}
-	else
-	{
-		cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
-		PreviewRotStart = 0.f;
-	}
+        glm::mat4 transform = MtlPreviewCamDefaultRotation * glm::rotate(
+            glm::mat4(1.f),
+            glm::radians(static_cast<float>((GetRunningTime() - PreviewRotStart) * 45.f)),
+            glm::vec3(0.f, 1.f, 0.f)
+        );
+        cc->SetWorldTransform(transform * MtlPreviewCamOffset);
+    }
+    else
+    {
+        cc->SetWorldTransform(MtlPreviewCamDefaultRotation * MtlPreviewCamOffset);
+        PreviewRotStart = 0.f;
+    }
 
-	MeshProvider* meshProvider = MeshProvider::Get();
+    MeshProvider* meshProvider = MeshProvider::Get();
 
-	if (MtlPreviewScene.RenderList[0].RenderMeshId == 0)
-		MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath("!Cube");
+    if (MtlPreviewScene.RenderList[0].RenderMeshId == 0)
+        MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath("!Cube");
 
-	if (ImGui::IsItemClicked())
-		ImGui::OpenPopup("SelectPreviewShape");
+    if (ImGui::IsItemClicked())
+        ImGui::OpenPopup("SelectPreviewShape");
 
-	if (ImGui::BeginPopup("SelectPreviewShape"))
-	{
-		for (const char* const shapeName : { "Cube", "Sphere", "Quad" })
-		{
-			if (ImGui::MenuItem(shapeName))
-			{
-				std::string shapeId = "!" + std::string(shapeName);
-				MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath(shapeId);
-			}
-		}
+    if (ImGui::BeginPopup("SelectPreviewShape"))
+    {
+        for (const char* const shapeName : { "Cube", "Sphere", "Quad" })
+        {
+            if (ImGui::MenuItem(shapeName))
+            {
+                std::string shapeId = "!" + std::string(shapeName);
+                MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath(shapeId);
+            }
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	GpuFrameBuffer prevFbo = MtlPreviewRenderer->FrameBuffer;
-	MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
-	MtlPreviewRenderer->FrameBuffer.Bind();
+    GpuFrameBuffer prevFbo = MtlPreviewRenderer->FrameBuffer;
+    MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
+    MtlPreviewRenderer->FrameBuffer.Bind();
 
-	MtlEditorPreview.Bind();
-	glViewport(0, 0, 256, 256);
-	glClearColor(0.3f, 0.78f, 1.f, 1.f);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); // clear color as well because of the void
+    MtlEditorPreview.Bind();
+    glViewport(0, 0, 256, 256);
+    glClearColor(0.3f, 0.78f, 1.f, 1.f);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); // clear color as well because of the void
 
-	MtlPreviewScene.RenderList[0].MaterialId = static_cast<uint32_t>(MtlCurItem);
-	MtlPreviewScene.UsedShaders = { curItem.ShaderId };
+    MtlPreviewScene.RenderList[0].MaterialId = static_cast<uint32_t>(MtlCurItem);
+    MtlPreviewScene.UsedShaders = { curItem.ShaderId };
 
-	MtlPreviewRenderer->DrawScene(
-		MtlPreviewScene,
-		cc->GetRenderMatrix(1.f),
-		cc->GetWorldTransform(),
-		GetRunningTime()
-	);
+    MtlPreviewRenderer->DrawScene(
+        MtlPreviewScene,
+        cc->GetRenderMatrix(1.f),
+        cc->GetWorldTransform(),
+        GetRunningTime()
+    );
 
-	MtlEditorPreview.Unbind();
-	MtlPreviewRenderer->FrameBuffer = prevFbo;
-	MtlPreviewRenderer->FrameBuffer.Bind();
-	glViewport(0, 0, prevFbo.Width, prevFbo.Height);
+    MtlEditorPreview.Unbind();
+    MtlPreviewRenderer->FrameBuffer = prevFbo;
+    MtlPreviewRenderer->FrameBuffer.Bind();
+    glViewport(0, 0, prevFbo.Width, prevFbo.Height);
 
-	ImGui::Text("Shader:");
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x - 4.f);
-	ImGui::InputText("##Shader", MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
-	ImGui::SameLine();
+    ImGui::Text("Shader:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x - 4.f);
+    ImGui::InputText("##Shader", MtlShpBuf, MATERIAL_TEXTUREPATH_BUFSIZE);
+    ImGui::SameLine();
 
-	if (ImGui::Button("..."))
-		ImGui::OpenPopup("SelectShaderForMaterial");
+    if (ImGui::Button("..."))
+        ImGui::OpenPopup("SelectShaderForMaterial");
 
-	if (ImGui::BeginPopup("SelectShaderForMaterial"))
-	{
-		ShaderManager* shdManager = ShaderManager::Get();
-		std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
+    if (ImGui::BeginPopup("SelectShaderForMaterial"))
+    {
+        ShaderManager* shdManager = ShaderManager::Get();
+        std::vector<ShaderProgram>& shaders = shdManager->GetLoadedShaders();
 
-		for (const ShaderProgram& sp : shaders)
-		{
-			if (ImGui::MenuItem(sp.Name.c_str()))
-			{
-				memcpy(MtlShpBuf, sp.Name.data(), std::min(sp.Name.size(), (size_t)MATERIAL_TEXTUREPATH_BUFSIZE));
-				MtlShpBuf[std::min(sp.Name.size(), (size_t)MATERIAL_TEXTUREPATH_BUFSIZE - 1)] = '\0';
-			}
-		}
+        for (const ShaderProgram& sp : shaders)
+        {
+            if (ImGui::MenuItem(sp.Name.c_str()))
+            {
+                memcpy(MtlShpBuf, sp.Name.data(), std::min(sp.Name.size(), (size_t)MATERIAL_TEXTUREPATH_BUFSIZE));
+                MtlShpBuf[std::min(sp.Name.size(), (size_t)MATERIAL_TEXTUREPATH_BUFSIZE - 1)] = '\0';
+            }
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	int curPolyMode = static_cast<uint8_t>(curItem.PolygonMode);
-	ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point\0");
-	curItem.PolygonMode = static_cast<RenderMaterial::MaterialPolygonMode>(std::clamp(curPolyMode, 0, 2));
+    int curPolyMode = static_cast<uint8_t>(curItem.PolygonMode);
+    ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point\0");
+    curItem.PolygonMode = static_cast<RenderMaterial::MaterialPolygonMode>(std::clamp(curPolyMode, 0, 2));
 
-	glEnable(GL_FRAMEBUFFER_SRGB);
-	mtlEditorTexture("Color Map: ", &curItem.ColorMap, MtlDiffuseBuf, false);
-	mtlEditorTexture("Metallic-Roughness Map: ", &curItem.MetallicRoughnessMap, MtlSpecBuf, false);
-	mtlEditorTexture("Normal Map: ", &curItem.NormalMap, MtlNormalBuf);
-	mtlEditorTexture("Emission Map:", &curItem.EmissionMap, MtlEmissionBuf);
-	glDisable(GL_FRAMEBUFFER_SRGB);
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    mtlEditorTexture("Color Map: ", &curItem.ColorMap, MtlDiffuseBuf, false);
+    mtlEditorTexture("Metallic-Roughness Map: ", &curItem.MetallicRoughnessMap, MtlSpecBuf, false);
+    mtlEditorTexture("Normal Map: ", &curItem.NormalMap, MtlNormalBuf);
+    mtlEditorTexture("Emission Map:", &curItem.EmissionMap, MtlEmissionBuf);
+    glDisable(GL_FRAMEBUFFER_SRGB);
 
-	uniformsEditor(curItem.Uniforms, &SelectedUniformIdx, "Variables");
+    uniformsEditor(curItem.Uniforms, &SelectedUniformIdx, "Variables");
 
-	ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
-	ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
-	ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
+    ImGui::Checkbox("Has translucency", &curItem.HasTranslucency);
+    ImGui::InputFloat("Spec pow", &curItem.SpecExponent);
+    ImGui::InputFloat("Spec mul", &curItem.SpecMultiply);
 
-	ImGui::InputText("Save As", &s_SaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
-	ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
+    ImGui::InputText("Save As", &s_SaveNameBuf, MATERIAL_NEW_NAME_BUFSIZE);
+    ImGui::SetItemTooltip("By default, this will be the name of the material you are editing, thus overwriting it");
 
-	if (ImGui::Button("Save changes", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
-	{
-		curItem.ColorMap = texManager->LoadFromPath(MtlDiffuseBuf);
+    if (ImGui::Button("Save changes", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)))
+    {
+        curItem.ColorMap = texManager->LoadFromPath(MtlDiffuseBuf);
 
-		if (curItem.MetallicRoughnessMap != 0)
-			curItem.MetallicRoughnessMap = texManager->LoadFromPath(MtlSpecBuf);
+        if (curItem.MetallicRoughnessMap != 0)
+            curItem.MetallicRoughnessMap = texManager->LoadFromPath(MtlSpecBuf);
 
-		if (curItem.NormalMap != 0)
-			curItem.NormalMap = texManager->LoadFromPath(MtlNormalBuf);
+        if (curItem.NormalMap != 0)
+            curItem.NormalMap = texManager->LoadFromPath(MtlNormalBuf);
 
-		if (curItem.EmissionMap != 0)
-			curItem.EmissionMap = texManager->LoadFromPath(MtlEmissionBuf);
+        if (curItem.EmissionMap != 0)
+            curItem.EmissionMap = texManager->LoadFromPath(MtlEmissionBuf);
 
-		curItem.ShaderId = ShaderManager::Get()->LoadFromPath(MtlShpBuf);
+        curItem.ShaderId = ShaderManager::Get()->LoadFromPath(MtlShpBuf);
 
-		mtlManager->SaveToPath(curItem, s_SaveNameBuf);
-	}
+        mtlManager->SaveToPath(curItem, s_SaveNameBuf);
+    }
 
-	ImGui::End();
+    ImGui::End();
 }
 
 static std::vector<ObjectHandle> Selections;
@@ -1551,526 +1551,526 @@ static bool FocusRenameSelection = false;
 
 enum class ContextMenuAction : uint8_t
 {
-	Duplicate = 0,
-	Delete,
-	SaveToFile,
-	LoadFromFile,
-	Rename,
-	AutoReimport,
+    Duplicate = 0,
+    Delete,
+    SaveToFile,
+    LoadFromFile,
+    Rename,
+    AutoReimport,
 
-	__sectionSeparator
+    __sectionSeparator
 };
 static const bool ContextMenuActionRequiresSelection[] = {
-	true,
-	true,
-	true,
-	false,
-	true,
-	true,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
 };
 
 static std::vector<ContextMenuAction> ContextActionsForSelection;
 
 static const char* ContextMenuActionStrings[] = {
-	"Duplicate",
-	"Delete",
-	"Save to File",
-	"Insert from File",
-	"Rename",
-	"Auto Re-importable",
+    "Duplicate",
+    "Delete",
+    "Save to File",
+    "Insert from File",
+    "Rename",
+    "Auto Re-importable",
 };
 
 typedef void(*ContextActionMenuHandlerFunc)(void);
 
 static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
-	[]()
-	{
-		std::vector<ObjectHandle> newSelections;
-		newSelections.reserve(Selections.size());
+    []()
+    {
+        std::vector<ObjectHandle> newSelections;
+        newSelections.reserve(Selections.size());
 
-		for (const ObjectHandle& sel : Selections)
-			newSelections.push_back(sel->Duplicate());
+        for (const ObjectHandle& sel : Selections)
+            newSelections.push_back(sel->Duplicate());
 
-		Selections = newSelections;
-		ExplorerShouldSeekToCurrentSelection = true;
-	},
+        Selections = newSelections;
+        ExplorerShouldSeekToCurrentSelection = true;
+    },
 
-	[]()
-	{
-		for (const ObjectHandle& sel : Selections)
-			sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
+    []()
+    {
+        for (const ObjectHandle& sel : Selections)
+            sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
 
-		Selections.clear();
-	},
+        Selections.clear();
+    },
 
-	[]()
-	{
-		std::vector<GameObject*> sels;
-		std::string sceneName = "";
+    []()
+    {
+        std::vector<GameObject*> sels;
+        std::string sceneName = "";
 
-		for (const ObjectHandle& sel : Selections)
-		{
-			sels.push_back(sel.Dereference());
-			sceneName += sel->Name + "_";
-		}
+        for (const ObjectHandle& sel : Selections)
+        {
+            sels.push_back(sel.Dereference());
+            sceneName += sel->Name + "_";
+        }
 
-		sceneName = sceneName.substr(0, sceneName.size() - 1);
-		std::string ser = SceneFormat::Serialize(sels, "SaveToFileAction_" + sceneName);
-		const char* filter[] = { ".hxscene" };
+        sceneName = sceneName.substr(0, sceneName.size() - 1);
+        std::string ser = SceneFormat::Serialize(sels, "SaveToFileAction_" + sceneName);
+        const char* filter[] = { ".hxscene" };
 
-		const char* path = tinyfd_saveFileDialog(
-			"Save Objects",
-			getFileDirectory("resources/scenes/dummy.file").c_str(),
-			1,
-			filter,
-			"Scenes"
-		);
+        const char* path = tinyfd_saveFileDialog(
+            "Save Objects",
+            getFileDirectory("resources/scenes/dummy.file").c_str(),
+            1,
+            filter,
+            "Scenes"
+        );
 
-		if (path)
-		{
-			std::string error;
-			if (!FileRW::WriteFile(path, ser))
-				setErrorMessage(std::format("Failed to save to '{}', error: {}", path, error));
-		}
-		else
-			Log.Info("No save path select to save objects");
-	},
+        if (path)
+        {
+            std::string error;
+            if (!FileRW::WriteFile(path, ser))
+                setErrorMessage(std::format("Failed to save to '{}', error: {}", path, error));
+        }
+        else
+            Log.Info("No save path select to save objects");
+    },
 
-	[]()
-	{
-		const char* filter[] = { "*.hxscene" };
+    []()
+    {
+        const char* filter[] = { "*.hxscene" };
 
-		const char* path = tinyfd_openFileDialog(
-			"Insert Objects",
-			getFileDirectory("resources/scenes/dummy.file").c_str(),
-			1,
-			filter,
-			"Scenes",
-			false
-		);
+        const char* path = tinyfd_openFileDialog(
+            "Insert Objects",
+            getFileDirectory("resources/scenes/dummy.file").c_str(),
+            1,
+            filter,
+            "Scenes",
+            false
+        );
 
-		if (path)
-		{
-			std::string fullpath = path;
+        if (path)
+        {
+            std::string fullpath = path;
 
-			// windows SMELLS :( 18/02/2025
-			size_t off = fullpath.find_first_of("\\");
+            // windows SMELLS :( 18/02/2025
+            size_t off = fullpath.find_first_of("\\");
 
-			while (off != std::string::npos)
-				off = fullpath.replace(off, 1, "/").find_first_of("\\");
+            while (off != std::string::npos)
+                off = fullpath.replace(off, 1, "/").find_first_of("\\");
 
-			size_t resDirOffset = fullpath.find("resources/");
+            size_t resDirOffset = fullpath.find("resources/");
 
-			if (resDirOffset == std::string::npos)
-			{
-				setErrorMessage("Selection must be within the Project's `resources/` directory!");
-			}
-			else
-			{
-				bool readSuccess = false;
-				std::string contents = FileRW::ReadFile(fullpath, &readSuccess);
+            if (resDirOffset == std::string::npos)
+            {
+                setErrorMessage("Selection must be within the Project's `resources/` directory!");
+            }
+            else
+            {
+                bool readSuccess = false;
+                std::string contents = FileRW::ReadFile(fullpath, &readSuccess);
 
-				if (!readSuccess)
-				{
-					setErrorMessage("Couldn't read file " + fullpath);
-					return;
-				}
+                if (!readSuccess)
+                {
+                    setErrorMessage("Couldn't read file " + fullpath);
+                    return;
+                }
 
-				std::vector<ObjectHandle> roots = SceneFormat::Deserialize(contents, &readSuccess);
+                std::vector<ObjectHandle> roots = SceneFormat::Deserialize(contents, &readSuccess);
 
-				if (!readSuccess)
-				{
-					setErrorMessage(SceneFormat::GetLastErrorString());
-					return;
-				}
+                if (!readSuccess)
+                {
+                    setErrorMessage(SceneFormat::GetLastErrorString());
+                    return;
+                }
 
-				if (Selections.size() > 0)
-				{
-					for (const ObjectHandle& r : roots)
-						r->SetParent(Selections[0].Dereference());
-				}
-				else
-				{
-					for (const ObjectHandle& r : roots)
-						r->SetParent(ExplorerRoot);
-				}
-			}
-		}
-		else
-			Log.Info("No file selected to insert object from");
-	},
+                if (Selections.size() > 0)
+                {
+                    for (const ObjectHandle& r : roots)
+                        r->SetParent(Selections[0].Dereference());
+                }
+                else
+                {
+                    for (const ObjectHandle& r : roots)
+                        r->SetParent(ExplorerRoot);
+                }
+            }
+        }
+        else
+            Log.Info("No file selected to insert object from");
+    },
 
-	[]()
-	{
-		FocusRenameSelection = true;
-	}
+    []()
+    {
+        FocusRenameSelection = true;
+    }
 };
 
 static bool isInSelections(const ObjectHandle& obj)
 {
-	return std::find(Selections.begin(), Selections.end(), obj) != Selections.end();
+    return std::find(Selections.begin(), Selections.end(), obj) != Selections.end();
 }
 
 static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 {
-	std::vector<ContextMenuAction> actions;
-	actions.reserve(6);
+    std::vector<ContextMenuAction> actions;
+    actions.reserve(6);
 
-	if (Selections.size() > 0)
-	{
-		for (const ObjectHandle& sel : Selections)
-		{
-			if (sel->FindComponent<EcModel>())
-			{
-				actions.push_back(ContextMenuAction::AutoReimport);
-				break;
-			}
-		}
+    if (Selections.size() > 0)
+    {
+        for (const ObjectHandle& sel : Selections)
+        {
+            if (sel->FindComponent<EcModel>())
+            {
+                actions.push_back(ContextMenuAction::AutoReimport);
+                break;
+            }
+        }
 
-		actions.push_back(ContextMenuAction::Rename);
-		actions.push_back(ContextMenuAction::Duplicate);
-		actions.push_back(ContextMenuAction::Delete);
-		actions.push_back(ContextMenuAction::SaveToFile);
-		actions.push_back(ContextMenuAction::LoadFromFile);
-	}
+        actions.push_back(ContextMenuAction::Rename);
+        actions.push_back(ContextMenuAction::Duplicate);
+        actions.push_back(ContextMenuAction::Delete);
+        actions.push_back(ContextMenuAction::SaveToFile);
+        actions.push_back(ContextMenuAction::LoadFromFile);
+    }
 
-	return actions;
+    return actions;
 }
 
 static void onTreeItemClicked(const ObjectHandle& nodeClicked)
 {
-	if (IsPickingObject)
-	{
-		History::ScopedAction action = { "SetObjectPropertiesToExplorerClick" };
+    if (IsPickingObject)
+    {
+        History::ScopedAction action = { "SetObjectPropertiesToExplorerClick" };
 
-		try
-		{
-			for (const ObjectHandle& target : PickerTargets)
-				target->SetPropertyValue(PickerTargetPropName, nodeClicked->ToGenericValue());
-		}
-		catch (const std::runtime_error& Error)
-		{
-			setErrorMessage(Error.what());
-		}
+        try
+        {
+            for (const ObjectHandle& target : PickerTargets)
+                target->SetPropertyValue(PickerTargetPropName, nodeClicked->ToGenericValue());
+        }
+        catch (const std::runtime_error& Error)
+        {
+            setErrorMessage(Error.what());
+        }
 
-		// restore prev selections
-		Selections = PickerTargets;
-		ExplorerShouldSeekToCurrentSelection = true;
+        // restore prev selections
+        Selections = PickerTargets;
+        ExplorerShouldSeekToCurrentSelection = true;
 
-		IsPickingObject = false;
-		PickerTargets.clear();
-		PickerTargetPropName.clear();
+        IsPickingObject = false;
+        PickerTargets.clear();
+        PickerTargetPropName.clear();
 
-		return; // don't actually select this object
-	}
+        return; // don't actually select this object
+    }
 
-	if (ImGui::GetIO().KeyCtrl)
-	{
-		ObjectHandle tempNc = nodeClicked;
+    if (ImGui::GetIO().KeyCtrl)
+    {
+        ObjectHandle tempNc = nodeClicked;
 
-		if (const auto& it = std::find(Selections.begin(), Selections.end(), tempNc); it != Selections.end())
-			Selections.erase(it);
-		else
-			Selections.push_back(nodeClicked);
-	}
+        if (const auto& it = std::find(Selections.begin(), Selections.end(), tempNc); it != Selections.end())
+            Selections.erase(it);
+        else
+            Selections.push_back(nodeClicked);
+    }
 
-	else if (ImGui::GetIO().KeyShift)
-	{
-		if (LastSelected.Reference.Referred() && LastSelected.Dereference() != nodeClicked)
-		{
-			if (!isInSelections(nodeClicked))
-				Selections.push_back(nodeClicked);
+    else if (ImGui::GetIO().KeyShift)
+    {
+        if (LastSelected.Reference.Referred() && LastSelected.Dereference() != nodeClicked)
+        {
+            if (!isInSelections(nodeClicked))
+                Selections.push_back(nodeClicked);
 
-			auto start = std::find(VisibleTree.begin(), VisibleTree.end(), LastSelected);
-			auto end = std::find(VisibleTree.begin(), VisibleTree.end(), ObjectHandle(nodeClicked));
+            auto start = std::find(VisibleTree.begin(), VisibleTree.end(), LastSelected);
+            auto end = std::find(VisibleTree.begin(), VisibleTree.end(), ObjectHandle(nodeClicked));
 
-			if (start > end)
-			{
-				// doesn't seem to work unless it is copied fsr
-				std::vector<ObjectHandle>::iterator temp = end;
-				end = start;
-				start = temp;
-			}
+            if (start > end)
+            {
+                // doesn't seem to work unless it is copied fsr
+                std::vector<ObjectHandle>::iterator temp = end;
+                end = start;
+                start = temp;
+            }
 
-			// 25/01/2025 this feels weird, like surely there's a better way
-			// to iterate between `start` and `end`
-			for (const ObjectHandle& middle : std::span<ObjectHandle>(start, end))
-				if (!isInSelections(middle))
-					Selections.push_back(middle);
-		}
-		else
-		{
-			Selections = { nodeClicked };
-		}
-	}
-	else
-	{
-		Selections = { nodeClicked };
-	}
+            // 25/01/2025 this feels weird, like surely there's a better way
+            // to iterate between `start` and `end`
+            for (const ObjectHandle& middle : std::span<ObjectHandle>(start, end))
+                if (!isInSelections(middle))
+                    Selections.push_back(middle);
+        }
+        else
+        {
+            Selections = { nodeClicked };
+        }
+    }
+    else
+    {
+        Selections = { nodeClicked };
+    }
 
-	LastSelected = nodeClicked;
+    LastSelected = nodeClicked;
 }
 
 static Texture getIconForComponent(EntityComponent Ec)
 {
-	TextureManager* texManager = TextureManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
-	std::string componentName = std::string(s_EntityComponentNames[(size_t)Ec]);
-	if (Ec == EntityComponent::None)
-		componentName = "Empty";
+    std::string componentName = std::string(s_EntityComponentNames[(size_t)Ec]);
+    if (Ec == EntityComponent::None)
+        componentName = "Empty";
 
-	std::string classIconPath = "@editres/textures/editor-icons/" + componentName + ".png";
-	Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false));
+    std::string classIconPath = "@editres/textures/editor-icons/" + componentName + ".png";
+    Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false));
 
-	if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
-	{
-		const std::string& fallbackPath = "@editres/textures/editor-icons/fallback.png";
-		Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false));
-		texManager->Assign(fallback, classIconPath);
-		tex = fallback;
-	}
+    if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
+    {
+        const std::string& fallbackPath = "@editres/textures/editor-icons/fallback.png";
+        Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false));
+        texManager->Assign(fallback, classIconPath);
+        tex = fallback;
+    }
 
-	return tex;
+    return tex;
 }
 
 static std::string getDescriptionForComponent(EntityComponent Ec)
 {
-	static std::vector<std::string> Descriptions;
-	size_t index = (size_t)Ec;
+    static std::vector<std::string> Descriptions;
+    size_t index = (size_t)Ec;
 
-	if (Descriptions.size() < index + 1)
-		Descriptions.resize(index + 1);
+    if (Descriptions.size() < index + 1)
+        Descriptions.resize(index + 1);
 
-	if (Descriptions[index].size() == 0)
-	{
-		std::string desc = "";
+    if (Descriptions[index].size() == 0)
+    {
+        std::string desc = "";
 
-		if (const auto& it = ObjectDocCommentsJson["Components"].find(s_EntityComponentNames[index]);
-			(it != ObjectDocCommentsJson["Components"].end() && it.value().is_object())
-		)
-		{
-			const auto& descJson = it.value()["Description"];
-		
-			if (descJson.is_string())
-				desc = descJson;
-		
-			else if (descJson.is_array())
-			{
-				for (size_t i = 0; i < descJson.size(); i++)
-					desc += std::string(descJson[i]) + "\n";
-				
-				desc = desc.substr(0, desc.size() - 1);
-			}
-		}
+        if (const auto& it = ObjectDocCommentsJson["Components"].find(s_EntityComponentNames[index]);
+            (it != ObjectDocCommentsJson["Components"].end() && it.value().is_object())
+        )
+        {
+            const auto& descJson = it.value()["Description"];
+        
+            if (descJson.is_string())
+                desc = descJson;
+        
+            else if (descJson.is_array())
+            {
+                for (size_t i = 0; i < descJson.size(); i++)
+                    desc += std::string(descJson[i]) + "\n";
+                
+                desc = desc.substr(0, desc.size() - 1);
+            }
+        }
 
-		Descriptions[index] = desc;
-	}
+        Descriptions[index] = desc;
+    }
 
-	return Descriptions[index];
+    return Descriptions[index];
 }
 
 static ObjectHandle InsertObjectButtonHoveredOver = nullptr;
 
 static void recursiveIterateTree(const ObjectHandle& current)
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
+    ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	// https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
-	// 07/10/2024
-	ObjectHandle nodeClicked = nullptr;
+    // https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
+    // 07/10/2024
+    ObjectHandle nodeClicked = nullptr;
 
-	if (ExplorerShouldSeekToCurrentSelection && isInSelections(current))
-	{
-		ExplorerShouldSeekToCurrentSelection = false;
-		ImGui::SetScrollHereY();
-	}
+    if (ExplorerShouldSeekToCurrentSelection && isInSelections(current))
+    {
+        ExplorerShouldSeekToCurrentSelection = false;
+        ImGui::SetScrollHereY();
+    }
 
-	InsertObjectButtonHoveredOver = nullptr;
+    InsertObjectButtonHoveredOver = nullptr;
 
-	current->ForEachChild([&](const ObjectHandle& object)
-	{
-		ImGui::PushID((int)object->ObjectId);
+    current->ForEachChild([&](const ObjectHandle& object)
+    {
+        ImGui::PushID((int)object->ObjectId);
 
-		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
-			| ImGuiTreeNodeFlags_AllowOverlap
-			| ImGuiTreeNodeFlags_SpanAvailWidth
-			| ImGuiTreeNodeFlags_DrawLinesFull;
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
+            | ImGuiTreeNodeFlags_AllowOverlap
+            | ImGuiTreeNodeFlags_SpanAvailWidth
+            | ImGuiTreeNodeFlags_DrawLinesFull;
 
-		if (isInSelections(object))
-		{
-			// make the insert button have better contrast
-			if (object != InsertObjectButtonHoveredOver)
-				flags |= ImGuiTreeNodeFlags_Selected;
+        if (isInSelections(object))
+        {
+            // make the insert button have better contrast
+            if (object != InsertObjectButtonHoveredOver)
+                flags |= ImGuiTreeNodeFlags_Selected;
 
-			if (ExplorerShouldSeekToCurrentSelection)
-			{
-				if (!ExplorerShouldSeekToCurrentSelection_Frame)
-				{
-					ExplorerShouldSeekToCurrentSelection = false;
-					ImGui::SetScrollHereY();
-				}
-				else
-					ExplorerShouldSeekToCurrentSelection_Frame = false;
-			}
-		}
+            if (ExplorerShouldSeekToCurrentSelection)
+            {
+                if (!ExplorerShouldSeekToCurrentSelection_Frame)
+                {
+                    ExplorerShouldSeekToCurrentSelection = false;
+                    ImGui::SetScrollHereY();
+                }
+                else
+                    ExplorerShouldSeekToCurrentSelection_Frame = false;
+            }
+        }
 
-		if (object->Children.empty())
-			flags |= ImGuiTreeNodeFlags_Leaf;
+        if (object->Children.empty())
+            flags |= ImGuiTreeNodeFlags_Leaf;
 
-		ImGui::AlignTextToFramePadding();
+        ImGui::AlignTextToFramePadding();
 
-		ReflectorRef primaryComponent = object->Components.size() > 0 ? object->Components[0] : ReflectorRef();
-		if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
-			primaryComponent = object->Components[1];
+        ReflectorRef primaryComponent = object->Components.size() > 0 ? object->Components[0] : ReflectorRef();
+        if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
+            primaryComponent = object->Components[1];
 
-		if (ExplorerShouldSeekToCurrentSelection)
-		{
-			std::vector<ObjectHandle> descs = object->GetDescendants();
+        if (ExplorerShouldSeekToCurrentSelection)
+        {
+            std::vector<ObjectHandle> descs = object->GetDescendants();
 
-			for (const ObjectHandle& desc : descs)
-				if (isInSelections(desc))
-				{
-					ImGui::SetNextItemOpen(true);
-					flags |= ImGuiTreeNodeFlags_DefaultOpen;
-					break;
-				}
-		}
+            for (const ObjectHandle& desc : descs)
+                if (isInSelections(desc))
+                {
+                    ImGui::SetNextItemOpen(true);
+                    flags |= ImGuiTreeNodeFlags_DefaultOpen;
+                    break;
+                }
+        }
 
-		const ImGuiStyle& style = ImGui::GetStyle();
+        const ImGuiStyle& style = ImGui::GetStyle();
 
-		bool openInserter = false;
-		bool isHovered = false;
+        bool openInserter = false;
+        bool isHovered = false;
 
-		bool open = ImGui::TreeNodeEx(object->Name.c_str(), flags, "%s", "");
+        bool open = ImGui::TreeNodeEx(object->Name.c_str(), flags, "%s", "");
 
-		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
-		{
-			ImGui::SetDragDropPayload("Explorer_DragGameObject", &object->ObjectId, sizeof(uint32_t));
-			ImGui::Text("Moving %s", object->Name.c_str());
-			ImGui::EndDragDropSource();
-			nodeClicked = object;
-		}
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+        {
+            ImGui::SetDragDropPayload("Explorer_DragGameObject", &object->ObjectId, sizeof(uint32_t));
+            ImGui::Text("Moving %s", object->Name.c_str());
+            ImGui::EndDragDropSource();
+            nodeClicked = object;
+        }
 
-		if (ImGui::BeginDragDropTarget())
-		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
-			{
-				History::ScopedAction action = { "DragAndDropObject" };
-				uint32_t child = *(uint32_t*)payload->Data;
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
+            {
+                History::ScopedAction action = { "DragAndDropObject" };
+                uint32_t child = *(uint32_t*)payload->Data;
 
-				try
-				{
-					if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
-					{
-						dragging->SetParent(object);
-						if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
-						{
-							ExplorerShouldSeekToCurrentSelection = true;
-							ExplorerShouldSeekToCurrentSelection_Frame = true;
-						}
-					}
-					else
-						setErrorMessage("Object was deleted");
-				}
-				catch (const std::runtime_error& e)
-				{
-					setErrorMessage(e.what());
-				}
-			}
+                try
+                {
+                    if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
+                    {
+                        dragging->SetParent(object);
+                        if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
+                        {
+                            ExplorerShouldSeekToCurrentSelection = true;
+                            ExplorerShouldSeekToCurrentSelection_Frame = true;
+                        }
+                    }
+                    else
+                        setErrorMessage("Object was deleted");
+                }
+                catch (const std::runtime_error& e)
+                {
+                    setErrorMessage(e.what());
+                }
+            }
 
-			ImGui::EndDragDropTarget();
-		}
+            ImGui::EndDragDropTarget();
+        }
 
-		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
-		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
-		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
+        nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+        openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
+        isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
-		ImGui::SameLine();
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 1.5f);
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 1.5f);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
-		ImGui::ImageWithBg(
-			getIconForComponent(primaryComponent.Type).GpuId,
-			ImVec2(16.f, 16.f),
-			ImVec2(0.f, 0.f),
-			ImVec2(1.f, 1.f),
-			ImVec4(),
-			object->Enabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : ImVec4(.5f, .5f, .5f, 1.f)
-		);
-		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
-		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
-		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
+        ImGui::ImageWithBg(
+            getIconForComponent(primaryComponent.Type).GpuId,
+            ImVec2(16.f, 16.f),
+            ImVec2(0.f, 0.f),
+            ImVec2(1.f, 1.f),
+            ImVec4(),
+            object->Enabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : ImVec4(.5f, .5f, .5f, 1.f)
+        );
+        nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+        openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
+        isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
-		ImGui::SameLine();
-		ImGui::TextUnformatted(object->Name.c_str());
+        ImGui::SameLine();
+        ImGui::TextUnformatted(object->Name.c_str());
 
-		nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
-		openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
-		isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
+        nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+        openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
+        isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
-		VisibleTreeWip.push_back(object);
+        VisibleTreeWip.push_back(object);
 
-		if (openInserter || ImGui::IsItemClicked(ImGuiMouseButton_Right))
-		{
-			ImGui::OpenPopup(1979); // the mimic!!
+        if (openInserter || ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup(1979); // the mimic!!
 
-			if (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeyShift || !isInSelections(object))
-				// select/add to selections
-				onTreeItemClicked(object);
+            if (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeyShift || !isInSelections(object))
+                // select/add to selections
+                onTreeItemClicked(object);
 
-			ContextActionsForSelection = getPossibleActionsForSelections();
-		}
+            ContextActionsForSelection = getPossibleActionsForSelections();
+        }
 
-		if (isHovered || ImGui::IsItemHovered())
-		{
-			ImGui::SameLine();
+        if (isHovered || ImGui::IsItemHovered())
+        {
+            ImGui::SameLine();
 
-			ImVec2 defLabelSize = ImGui::CalcTextSize("+", NULL, true);
-			ImVec2 defaultSize = { defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };
+            ImVec2 defLabelSize = ImGui::CalcTextSize("+", NULL, true);
+            ImVec2 defaultSize = { defLabelSize.x + style.FramePadding.x * 2.f, defLabelSize.y + style.FramePadding.y * 2.f };
 
-			// make it the same size on both axes
-			ImGui::Button("+", ImVec2(defaultSize.y, defaultSize.y));
+            // make it the same size on both axes
+            ImGui::Button("+", ImVec2(defaultSize.y, defaultSize.y));
 
-			// the above call to `::Button` will always
-			// return false, ig this does something different
-			// with the ordering 15/12/2024
-			if (ImGui::IsItemClicked())
-			{
-				ObjectInsertionTarget = object;
-				ImGui::OpenPopup(45);
-			}
+            // the above call to `::Button` will always
+            // return false, ig this does something different
+            // with the ordering 15/12/2024
+            if (ImGui::IsItemClicked())
+            {
+                ObjectInsertionTarget = object;
+                ImGui::OpenPopup(45);
+            }
 
-			if (ImGui::IsItemHovered())
-			{
-				ImGui::SetItemTooltip("Insert new Object");
-				InsertObjectButtonHoveredOver = object;
-			}
-		}
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetItemTooltip("Insert new Object");
+                InsertObjectButtonHoveredOver = object;
+            }
+        }
 
-		if (open)
-		{
-			if (object->Children.size() > 0)
-				recursiveIterateTree(object);
-			ImGui::TreePop();
-		}
+        if (open)
+        {
+            if (object->Children.size() > 0)
+                recursiveIterateTree(object);
+            ImGui::TreePop();
+        }
 
-		ImGui::PopID();
-		return true;
-	});
+        ImGui::PopID();
+        return true;
+    });
 
-	if (nodeClicked)
-		onTreeItemClicked(nodeClicked);
+    if (nodeClicked)
+        onTreeItemClicked(nodeClicked);
 }
 
 static bool resetConflictedProperty(const char* /* PropName */, char* Buf = nullptr)
 {
-	char dbuf[2] = { 0 };
-	Buf = Buf ? Buf : dbuf;
+    char dbuf[2] = { 0 };
+    Buf = Buf ? Buf : dbuf;
 
-	bool reset = ImGui::InputText("##", Buf, 2);
-	ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
+    bool reset = ImGui::InputText("##", Buf, 2);
+    ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
 
-	return reset;
+    return reset;
 }
 
 static const ImVec4 ApiPropertyColor = ImVec4(.52f, .69f, 1.f, 1.f);
@@ -2087,926 +2087,926 @@ static std::string_view ForceRenderingTooltip = "";
 
 static void propertyTooltip(const std::string_view& PropName, EntityComponent Component, Reflection::ValueType Type)
 {
-	static std::unordered_map<std::string, std::string> PropTips;
+    static std::unordered_map<std::string, std::string> PropTips;
 
-	if (ForceRenderingTooltip.size() > 0 && PropName != ForceRenderingTooltip)
-		return;
+    if (ForceRenderingTooltip.size() > 0 && PropName != ForceRenderingTooltip)
+        return;
 
-	if (ImGui::IsItemHovered() || ForceRenderingTooltip.size() > 0)
-	{
-		std::string PropNameStr = std::string(PropName);
+    if (ImGui::IsItemHovered() || ForceRenderingTooltip.size() > 0)
+    {
+        std::string PropNameStr = std::string(PropName);
 
-		auto pcit = PropTips.find(PropNameStr);
+        auto pcit = PropTips.find(PropNameStr);
 
-		if (pcit == PropTips.end())
-		{
-			auto it = ObjectDocCommentsJson["Base"]["Properties"].find(PropNameStr);
-			bool found = it != ObjectDocCommentsJson["Base"]["Properties"].end();
+        if (pcit == PropTips.end())
+        {
+            auto it = ObjectDocCommentsJson["Base"]["Properties"].find(PropNameStr);
+            bool found = it != ObjectDocCommentsJson["Base"]["Properties"].end();
 
-			if (!found)
-			{
-				for (auto cit = ObjectDocCommentsJson["Components"].begin();
-					cit != ObjectDocCommentsJson["Components"].end();
-					cit++
-				)
-				{
-					it = cit.value()["Properties"].find(PropNameStr);
-				
-					if (it != cit.value()["Properties"].end())
-					{
-						found = true;
-						break;
-					}
-				}
-			}
+            if (!found)
+            {
+                for (auto cit = ObjectDocCommentsJson["Components"].begin();
+                    cit != ObjectDocCommentsJson["Components"].end();
+                    cit++
+                )
+                {
+                    it = cit.value()["Properties"].find(PropNameStr);
+                
+                    if (it != cit.value()["Properties"].end())
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
 
-			if (found)
-			{
-				std::string desc;
-				if (it.value().is_string())
-					desc = it.value();
-				else
-					desc = it.value().value("Description", "No description");
+            if (found)
+            {
+                std::string desc;
+                if (it.value().is_string())
+                    desc = it.value();
+                else
+                    desc = it.value().value("Description", "No description");
 
-				std::string tip = addLinebreaks(desc, 75);
+                std::string tip = addLinebreaks(desc, 75);
 
-				PropTips[PropNameStr] = tip;
-				pcit = PropTips.find(PropNameStr);
-			}
-		}
+                PropTips[PropNameStr] = tip;
+                pcit = PropTips.find(PropNameStr);
+            }
+        }
 
-		std::string fulltip = Reflection::TypeFits(Type, Reflection::ValueType::GameObject) ? "\n(CTRL+LClick to select, CTRL+RClick to set to nil)" : "";
-		
-		if (pcit != PropTips.end())
-			fulltip = pcit->second + fulltip;
+        std::string fulltip = Reflection::TypeFits(Type, Reflection::ValueType::GameObject) ? "\n(CTRL+LClick to select, CTRL+RClick to set to nil)" : "";
+        
+        if (pcit != PropTips.end())
+            fulltip = pcit->second + fulltip;
 
-		static ImVec2 PrevTooltipPos;
+        static ImVec2 PrevTooltipPos;
 
-		if (ImGui::IsKeyDown(ImGuiKey_LeftAlt))
-		{
-			ImGui::SetNextWindowPos(PrevTooltipPos);
-			ForceRenderingTooltip = PropName;
-		}
-		else
-			ForceRenderingTooltip = "";
+        if (ImGui::IsKeyDown(ImGuiKey_LeftAlt))
+        {
+            ImGui::SetNextWindowPos(PrevTooltipPos);
+            ForceRenderingTooltip = PropName;
+        }
+        else
+            ForceRenderingTooltip = "";
 
-		bool drawContent = false;
+        bool drawContent = false;
 
-		if (ForceRenderingTooltip.size() > 0)
-			drawContent = ImGui::Begin(
-				"TooltipWindow",
-				nullptr,
-				ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
-					| ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDocking
-			);
-		else
-			drawContent = ImGui::BeginTooltip();
+        if (ForceRenderingTooltip.size() > 0)
+            drawContent = ImGui::Begin(
+                "TooltipWindow",
+                nullptr,
+                ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
+                    | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDocking
+            );
+        else
+            drawContent = ImGui::BeginTooltip();
 
-		if (drawContent)
-		{
-			if (ImGui::TextLink(PropName.data()))
-			{
-				DeveloperTools::DocumentationShown = true;
-				DocumentationViewerSection = 0;
-				DocumentationViewerSubPage = (int)Component;
-			}
+        if (drawContent)
+        {
+            if (ImGui::TextLink(PropName.data()))
+            {
+                DeveloperTools::DocumentationShown = true;
+                DocumentationViewerSection = 0;
+                DocumentationViewerSubPage = (int)Component;
+            }
 
-			ImGui::SameLine();
+            ImGui::SameLine();
 
-			ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-			ImGui::TextUnformatted(Reflection::TypeAsString(Type).c_str());
-			ImGui::PopStyleColor();
+            ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+            ImGui::TextUnformatted(Reflection::TypeAsString(Type).c_str());
+            ImGui::PopStyleColor();
 
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.4f, .4f, .4f, 1.f));
-			ImGui::TextUnformatted(fulltip.data());
-			ImGui::PopStyleColor();
-		}
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.4f, .4f, .4f, 1.f));
+            ImGui::TextUnformatted(fulltip.data());
+            ImGui::PopStyleColor();
+        }
 
-		if (ForceRenderingTooltip.size() == 0)
-		{
-			if (drawContent)
-			{
-				PrevTooltipPos = ImGui::GetWindowPos();
-				ImGui::EndTooltip();
-			}
-		}
-		else
-			ImGui::End();
-	}
+        if (ForceRenderingTooltip.size() == 0)
+        {
+            if (drawContent)
+            {
+                PrevTooltipPos = ImGui::GetWindowPos();
+                ImGui::EndTooltip();
+            }
+        }
+        else
+            ImGui::End();
+    }
 }
 
 static void renderDescription(const nlohmann::json& DescriptionJson, size_t nCharsPerLine)
 {
-	if (DescriptionJson.is_string())
-	{
-		std::string desc = addLinebreaks(DescriptionJson, nCharsPerLine);
-		ImGui::Text("* %s", desc.c_str());
-	}
-	else if (DescriptionJson.is_object())
-	{
-		renderDescription(DescriptionJson["Description"], nCharsPerLine);
-	}
-	else if (DescriptionJson.is_array())
-	{
-		for (auto descit = DescriptionJson.begin(); descit != DescriptionJson.end(); descit++)
-		{
-			std::string desc = addLinebreaks(descit.value(), nCharsPerLine);
-			ImGui::Text("* %s", desc.c_str());
-		}
-	}
-	else if (DescriptionJson.is_null())
-		ImGui::Text("No description provided");
+    if (DescriptionJson.is_string())
+    {
+        std::string desc = addLinebreaks(DescriptionJson, nCharsPerLine);
+        ImGui::Text("* %s", desc.c_str());
+    }
+    else if (DescriptionJson.is_object())
+    {
+        renderDescription(DescriptionJson["Description"], nCharsPerLine);
+    }
+    else if (DescriptionJson.is_array())
+    {
+        for (auto descit = DescriptionJson.begin(); descit != DescriptionJson.end(); descit++)
+        {
+            std::string desc = addLinebreaks(descit.value(), nCharsPerLine);
+            ImGui::Text("* %s", desc.c_str());
+        }
+    }
+    else if (DescriptionJson.is_null())
+        ImGui::Text("No description provided");
 
-	else
-		ImGui::Text("Unexpected description type '%s'", DescriptionJson.type_name());
+    else
+        ImGui::Text("Unexpected description type '%s'", DescriptionJson.type_name());
 }
 
 static std::string funcArgumentDefsToString(const nlohmann::json& In)
 {
-	if (In.is_null())
-		return "";
+    if (In.is_null())
+        return "";
 
-	else if (In.is_string())
-		return (std::string)In;
+    else if (In.is_string())
+        return (std::string)In;
 
-	else
-	{
-		std::string str;
+    else
+    {
+        std::string str;
 
-		for (auto it = In.begin(); it != In.end(); it++)
-		{
-			if (it.value().is_string())
-				str.append(it.value());
-			else
-				str.append(std::format("{} [{}]", (std::string)it.value()[0], (std::string)it.value()[1]));
+        for (auto it = In.begin(); it != In.end(); it++)
+        {
+            if (it.value().is_string())
+                str.append(it.value());
+            else
+                str.append(std::format("{} [{}]", (std::string)it.value()[0], (std::string)it.value()[1]));
 
-			str.append(", ");
-		}
+            str.append(", ");
+        }
 
-		str = str.substr(0, str.size() - 2);
-		return str;
-	}
+        str = str.substr(0, str.size() - 2);
+        return str;
+    }
 }
 
 static void renderPropertySignature(const std::string& name, const std::string& type)
 {
-	ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
-	ImGui::Text("%s: ", name.c_str());
-	ImGui::PopStyleColor();
+    ImGui::PushStyleColor(ImGuiCol_Text, ApiPropertyColor);
+    ImGui::Text("%s: ", name.c_str());
+    ImGui::PopStyleColor();
 
-	ImGui::SameLine();
+    ImGui::SameLine();
 
-	ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-	ImGui::TextUnformatted(type.c_str());
-	ImGui::PopStyleColor();
+    ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+    ImGui::TextUnformatted(type.c_str());
+    ImGui::PopStyleColor();
 }
 
 static void renderFunctionSignature(const nlohmann::json::const_iterator& memberIt, const std::string& in, const std::string& out)
 {
-	ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-	ImGui::Text("%s(", memberIt.key().c_str());
-	ImGui::PopStyleColor();
-	
-	ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+    ImGui::Text("%s(", memberIt.key().c_str());
+    ImGui::PopStyleColor();
+    
+    ImGui::SameLine();
 
-	ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-	ImGui::TextUnformatted(funcArgumentDefsToString(in).c_str());
-	ImGui::PopStyleColor();
+    ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+    ImGui::TextUnformatted(funcArgumentDefsToString(in).c_str());
+    ImGui::PopStyleColor();
 
-	ImGui::SameLine();
+    ImGui::SameLine();
 
-	ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-	ImGui::TextUnformatted(")");
-	ImGui::PopStyleColor();
+    ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+    ImGui::TextUnformatted(")");
+    ImGui::PopStyleColor();
 
-	if (out.size() > 0)
-	{
-		ImGui::SameLine();
+    if (out.size() > 0)
+    {
+        ImGui::SameLine();
 
-		ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
-		ImGui::Text(": ");
-		ImGui::PopStyleColor();
+        ImGui::PushStyleColor(ImGuiCol_Text, ApiFunctionColor);
+        ImGui::Text(": ");
+        ImGui::PopStyleColor();
 
-		ImGui::SameLine();
+        ImGui::SameLine();
 
-		ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-		ImGui::TextUnformatted(out.c_str());
-		ImGui::PopStyleColor();
-	}
+        ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+        ImGui::TextUnformatted(out.c_str());
+        ImGui::PopStyleColor();
+    }
 }
 
 static void renderFunctionSignature(const nlohmann::json::const_iterator& memberIt)
 {
-	renderFunctionSignature(memberIt, funcArgumentDefsToString(memberIt.value().value("In", nlohmann::json())), memberIt.value().value("Out", ""));
+    renderFunctionSignature(memberIt, funcArgumentDefsToString(memberIt.value().value("In", nlohmann::json())), memberIt.value().value("Out", ""));
 }
 
 // events do not have a signature function, it's done directly inside `renderDocumentationViewer`
 
 static void renderApiMemberBulletpoint(const nlohmann::json::const_iterator& memberIt, const size_t nCharsPerLine)
 {
-	const nlohmann::json& member = memberIt.value();
+    const nlohmann::json& member = memberIt.value();
 
-	if (const auto& typeIt = member.find("Type"); typeIt != member.end())
-		renderPropertySignature(memberIt.key(), typeIt.value());
-	else
-		renderFunctionSignature(memberIt);
+    if (const auto& typeIt = member.find("Type"); typeIt != member.end())
+        renderPropertySignature(memberIt.key(), typeIt.value());
+    else
+        renderFunctionSignature(memberIt);
 
-	renderDescription(member.value("Description", nlohmann::json()), nCharsPerLine);
+    renderDescription(member.value("Description", nlohmann::json()), nCharsPerLine);
 }
 
 static void renderDocumentationViewer()
 {
-	if (!DeveloperTools::DocumentationShown)
-		return;
-
-	if (!ImGui::Begin("Documentation Viewer", &DeveloperTools::DocumentationShown))
-	{
-		ImGui::End();
-		return;
-	}
-
-	ImGui::BeginChild(1983, ImGui::GetContentRegionAvail() * ImVec2(0.2f, 1.f), ImGuiChildFlags_Borders);
-
-	if (DocumentationViewerJumpingToPage)
-		ImGui::SetWindowFocus();
-
-	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 0)
-	{
-		ImGui::SetNextItemOpen(true);
-		DocumentationViewerJumpingToPage = false;
-	}
-
-	const ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow;
-
-	bool sectionOpen = ImGui::TreeNodeEx("Game Object", (DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-	if (ImGui::IsItemClicked())
-	{
-		DocumentationViewerSection = 0;
-		DocumentationViewerSubPage = 0;
-	}
-
-	if (sectionOpen)
-	{
-		for (int i = 1; i < (int)EntityComponent::__count; i++)
-		{
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
-			flags |= (DocumentationViewerSection == 0 && DocumentationViewerSubPage == i) ? ImGuiTreeNodeFlags_Selected : 0;
-
-			float startX = ImGui::GetCursorPosX();
-			bool popen = ImGui::TreeNodeEx(s_EntityComponentNames[i].data(), flags, "                           ");
-
-			if (ImGui::IsItemClicked())
-			{
-				DocumentationViewerSection = 0;
-				DocumentationViewerSubPage = i;
-			}
-
-			ImGui::SameLine();
-			ImGui::SetCursorPosX(startX);
-
-			ImGui::Image(
-				getIconForComponent((EntityComponent)i).GpuId,
-				ImVec2(16, 16)
-			);
-
-			if (ImGui::IsItemClicked())
-			{
-				DocumentationViewerSection = 0;
-				DocumentationViewerSubPage = i;
-			}
-
-			ImGui::SameLine();
-
-			ImGui::TextUnformatted(s_EntityComponentNames[i].data());
-
-			if (ImGui::IsItemClicked())
-			{
-				DocumentationViewerSection = 0;
-				DocumentationViewerSubPage = i;
-			}
-
-			if (popen)
-				ImGui::TreePop();
-		}
-
-		ImGui::TreePop();
-	}
-
-	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 1)
-	{
-		ImGui::SetNextItemOpen(true);
-		DocumentationViewerJumpingToPage = false;
-	}
-
-	sectionOpen = ImGui::TreeNodeEx("Datatypes", (DocumentationViewerSection == 1 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-	if (ImGui::IsItemClicked())
-	{
-		DocumentationViewerSection = 1;
-		DocumentationViewerSubPageName = "";
-	}
-
-	const nlohmann::json& datatypesDoc = DocumentationJson["ScriptEnv"]["Datatypes"];
-
-	if (sectionOpen)
-	{
-		for (auto it = datatypesDoc.begin(); it != datatypesDoc.end(); it++)
-		{
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
-			flags |= (DocumentationViewerSection == 1 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
-
-			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
-
-			if (ImGui::IsItemClicked())
-			{
-				DocumentationViewerSection = 1;
-				DocumentationViewerSubPageName = it.key();
-			}
-
-			if (popen)
-				ImGui::TreePop();
-		}
-
-		ImGui::TreePop();
-	}
-
-	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 2)
-	{
-		ImGui::SetNextItemOpen(true);
-		DocumentationViewerJumpingToPage = false;
-	}
-
-	sectionOpen = ImGui::TreeNodeEx("Libraries", (DocumentationViewerSection == 2 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-	if (ImGui::IsItemClicked())
-	{
-		DocumentationViewerSection = 2;
-		DocumentationViewerSubPageName = "";
-	}
-
-	const nlohmann::json& librariesDoc = DocumentationJson["ScriptEnv"]["Libraries"];
-
-	if (sectionOpen)
-	{
-		for (auto it = librariesDoc.begin(); it != librariesDoc.end(); it++)
-		{
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
-			flags |= (DocumentationViewerSection == 2 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
-
-			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
-
-			if (ImGui::IsItemClicked())
-			{
-				DocumentationViewerSection = 2;
-				DocumentationViewerSubPageName = it.key();
-			}
-
-			if (popen)
-				ImGui::TreePop();
-		}
-
-		ImGui::TreePop();
-	}
-
-	sectionOpen = ImGui::TreeNodeEx("Globals", ImGuiTreeNodeFlags_Leaf | NodeFlags | (DocumentationViewerSection == 3 ? ImGuiTreeNodeFlags_Selected : 0));
-	if (ImGui::IsItemClicked())
-	{
-		DocumentationViewerSection = 3;
-		DocumentationViewerSubPage = 0;
-	}
-
-	if (sectionOpen)
-		ImGui::TreePop();
-
-	if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 4)
-	{
-		ImGui::SetNextItemOpen(true);
-		DocumentationViewerJumpingToPage = false;
-	}
-
-	sectionOpen = ImGui::TreeNodeEx("Enums", (DocumentationViewerSection == 4 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-	if (ImGui::IsItemClicked())
-	{
-		DocumentationViewerSection = 4;
-		DocumentationViewerSubPage = -1;
-		DocumentationViewerSubPageName = "";
-	}
-
-	const nlohmann::json& enumsDoc = DocumentationJson["ScriptEnv"]["Libraries"]["Enum"];
-
-	if (sectionOpen)
-	{
-		for (auto it = enumsDoc["Members"].begin(); it != enumsDoc["Members"].end(); it++)
-		{
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
-			flags |= (DocumentationViewerSection == 4 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
-
-			bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
-
-			if (ImGui::IsItemClicked())
-			{
-				DocumentationViewerSection = 4;
-				DocumentationViewerSubPageName = it.key();
-			}
-
-			if (popen)
-				ImGui::TreePop();
-		}
-
-		ImGui::TreePop();
-	}
-
-	ImGui::EndChild();
-
-	ImGui::SameLine();
-
-	ImGui::BeginChild(67, ImVec2(), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
-	ImVec2 space = ImGui::GetContentRegionAvail();
-	float charsize = ImGui::CalcTextSize("").y;
-	size_t nCharsPerLine = (size_t)std::floor(space.x * 1.65f / charsize);
-
-	switch (DocumentationViewerSection)
-	{
-
-	case 0:
-	{
-		std::string_view name = DocumentationViewerSubPage == 0 ? "GameObject" : s_EntityComponentNames[DocumentationViewerSubPage];
-
-		ImGui::SeparatorText(name.data());
-
-		const nlohmann::json& description = DocumentationViewerSubPage == 0
-												? DocumentationJson["ScriptEnv"]["Datatypes"]["GameObject"]["Description"]
-												: ObjectDocCommentsJson["Components"][name]["Description"];
-
-		renderDescription(description, nCharsPerLine);
-
-		const nlohmann::json& apiDocs = DocumentationViewerSubPage == 0 ? ObjectDocCommentsJson["Base"] : ObjectDocCommentsJson["Components"][name];
-		const nlohmann::json& api = DocumentationViewerSubPage == 0 ? ApiDumpJson["GameObject"]["Base"] : ApiDumpJson["GameObject"]["Components"][name];
-
-		if (const auto& props = api.find("Properties"); props != api.end())
-		{
-			ImGui::NewLine();
-			ImGui::SeparatorText("Properties");
-
-			for (auto ita = props.value().begin(); ita != props.value().end(); ita++)
-			{
-				renderPropertySignature(ita.key(), ita.value());
-				renderDescription(apiDocs["Properties"][ita.key()], nCharsPerLine);
-			}
-		}
-
-		if (const auto& methods = api.find("Methods"); methods != api.end())
-		{
-			ImGui::NewLine();
-			ImGui::SeparatorText("Methods");
-
-			for (auto ita = methods.value().begin(); ita != methods.value().end(); ita++)
-			{
-				std::string type = ita.value();
-				size_t iut = type.find_first_of("-"); // the `->` in, for example, `(Integer) -> (GameObject)`
-
-				std::string in = type.substr(1, iut - 3);
-				std::string out = type.substr(iut + 4, type.size() - (iut + 5));
-
-				renderFunctionSignature(ita, in, out);
-				renderDescription(apiDocs["Methods"][ita.key()], nCharsPerLine);
-			}
-		}
-
-		if (const auto& events = api.find("Events"); events != api.end())
-		{
-			ImGui::NewLine();
-			ImGui::SeparatorText("Events");
-
-			for (auto ita = events.value().begin(); ita != events.value().end(); ita++)
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiEventColor);
-				ImGui::Text("* %s", ita.key().c_str());
-				ImGui::PopStyleColor();
-				
-				ImGui::SameLine();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
-				ImGui::TextUnformatted(((std::string)ita.value()).c_str());
-				ImGui::PopStyleColor();
-
-				renderDescription(apiDocs["Events"][ita.key()], nCharsPerLine);
-			}
-		}
-
-		break;
-	}
-
-	case 1:
-	{
-		if (DocumentationViewerSubPageName == "")
-		{
-			ImGui::SeparatorText("Datatypes");
-			ImGui::TextUnformatted(DatatypesDocPrologue.c_str());
-
-			break;
-		}
-
-		const nlohmann::json& datatype = datatypesDoc[DocumentationViewerSubPageName];
-
-		ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
-		renderDescription(datatype["Description"], nCharsPerLine);
-		ImGui::NewLine();
-
-		if (const auto& library = datatype.find("Library"); library != datatype.end())
-		{
-			ImGui::SeparatorText("Library");
-
-			for (auto memberIt = library.value().begin(); memberIt != library.value().end(); memberIt++)
-				renderApiMemberBulletpoint(memberIt, nCharsPerLine);
-		}
-
-		ImGui::NewLine();
-
-		if (const auto& type = datatype.find("Members"); type != datatype.end())
-		{
-			ImGui::SeparatorText("Type");
-
-			for (auto memberIt = type.value().begin(); memberIt != type.value().end(); memberIt++)
-			{
-				if (type.key()[0] == '_' && type.key()[1] == '_')
-					continue; // metamethod, handled later
-
-				renderApiMemberBulletpoint(memberIt, nCharsPerLine);
-			}
-		}
-
-		break;
-	}
-
-	case 2:
-	{
-		if (DocumentationViewerSubPageName == "")
-		{
-			ImGui::SeparatorText("Libraries");
-			ImGui::TextUnformatted(LibrariesDocPrologue.c_str());
-
-			break;
-		}
-
-		const nlohmann::json& library = librariesDoc[DocumentationViewerSubPageName];
-
-		ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
-		renderDescription(library["Description"], nCharsPerLine);
-
-		ImGui::NewLine();
-		ImGui::SeparatorText("Members");
-
-		for (auto memberIt = library["Members"].begin(); memberIt != library["Members"].end(); memberIt++)
-			renderApiMemberBulletpoint(memberIt, nCharsPerLine);
-
-		break;
-	}
-
-	case 3:
-	{
-		const nlohmann::json& globals = DocumentationJson["ScriptEnv"]["Globals"];
-
-		ImGui::SeparatorText("Globals");
-		ImGui::TextUnformatted(GlobalsDocPrologue.c_str());
-
-		for (auto memberIt = globals.begin(); memberIt != globals.end(); memberIt++)
-		{
-			const nlohmann::json& member = memberIt.value();
-
-			if (const auto& dumpedType = ApiDumpJson["ScriptEnv"]["Globals"][memberIt.key()]; dumpedType != "function")
-				renderPropertySignature(memberIt.key(), dumpedType);
-
-			else
-				renderFunctionSignature(memberIt);
-
-			renderDescription(member["Description"], nCharsPerLine);
-		}
-
-		break;
-	}
-
-	case 4:
-	{
-		if (DocumentationViewerSubPageName.empty())
-		{
-			ImGui::SeparatorText("Enumerations");
-			renderDescription(enumsDoc["Description"], nCharsPerLine);
-		}
-		else
-		{
-			ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
-
-			const nlohmann::json& enuDoc = enumsDoc["Members"][DocumentationViewerSubPageName];
-			const nlohmann::json& enuApi = ApiDumpJson["ScriptEnv"]["Libraries"]["Enum"][DocumentationViewerSubPageName];
-			const nlohmann::json& items = enuDoc["Items"];
-			renderDescription(enuDoc["Description"], nCharsPerLine);
-			ImGui::NewLine();
-
-			if (ImGui::BeginTable("Enum", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
-			{
-				ImGui::TableSetupColumn("Name");
-				ImGui::TableSetupColumn("Description");
-				ImGui::TableSetupColumn("Value");
-				ImGui::TableHeadersRow();
-
-				for (auto it = items.begin(); it != items.end(); it++)
-				{
-					ImGui::TableNextRow();
-
-					ImGui::TableSetColumnIndex(0);
-					ImGui::TextUnformatted(it.key().c_str());
-
-					ImGui::TableSetColumnIndex(1);
-					ImGui::TextUnformatted(addLinebreaks((const std::string&)it.value(), nCharsPerLine / 3 - 4).c_str());
-
-					ImGui::TableSetColumnIndex(2);
-					ImGui::Text("%d", (int)enuApi[it.key()]);
-				}
-
-				ImGui::EndTable();
-			}
-		}
-
-		break;
-	}
-	
-	default:
-	{
-		ImGui::Text("Select a Section and Page from the left");
-		break;
-	}
-	}
-
-	ImGui::EndChild();
-	ImGui::End();
-
-	assert(!DocumentationViewerJumpingToPage);
-	DocumentationViewerJumpingToPage = false;
+    if (!DeveloperTools::DocumentationShown)
+        return;
+
+    if (!ImGui::Begin("Documentation Viewer", &DeveloperTools::DocumentationShown))
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::BeginChild(1983, ImGui::GetContentRegionAvail() * ImVec2(0.2f, 1.f), ImGuiChildFlags_Borders);
+
+    if (DocumentationViewerJumpingToPage)
+        ImGui::SetWindowFocus();
+
+    if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 0)
+    {
+        ImGui::SetNextItemOpen(true);
+        DocumentationViewerJumpingToPage = false;
+    }
+
+    const ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow;
+
+    bool sectionOpen = ImGui::TreeNodeEx("Game Object", (DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
+    if (ImGui::IsItemClicked())
+    {
+        DocumentationViewerSection = 0;
+        DocumentationViewerSubPage = 0;
+    }
+
+    if (sectionOpen)
+    {
+        for (int i = 1; i < (int)EntityComponent::__count; i++)
+        {
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
+            flags |= (DocumentationViewerSection == 0 && DocumentationViewerSubPage == i) ? ImGuiTreeNodeFlags_Selected : 0;
+
+            float startX = ImGui::GetCursorPosX();
+            bool popen = ImGui::TreeNodeEx(s_EntityComponentNames[i].data(), flags, "                           ");
+
+            if (ImGui::IsItemClicked())
+            {
+                DocumentationViewerSection = 0;
+                DocumentationViewerSubPage = i;
+            }
+
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(startX);
+
+            ImGui::Image(
+                getIconForComponent((EntityComponent)i).GpuId,
+                ImVec2(16, 16)
+            );
+
+            if (ImGui::IsItemClicked())
+            {
+                DocumentationViewerSection = 0;
+                DocumentationViewerSubPage = i;
+            }
+
+            ImGui::SameLine();
+
+            ImGui::TextUnformatted(s_EntityComponentNames[i].data());
+
+            if (ImGui::IsItemClicked())
+            {
+                DocumentationViewerSection = 0;
+                DocumentationViewerSubPage = i;
+            }
+
+            if (popen)
+                ImGui::TreePop();
+        }
+
+        ImGui::TreePop();
+    }
+
+    if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 1)
+    {
+        ImGui::SetNextItemOpen(true);
+        DocumentationViewerJumpingToPage = false;
+    }
+
+    sectionOpen = ImGui::TreeNodeEx("Datatypes", (DocumentationViewerSection == 1 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
+    if (ImGui::IsItemClicked())
+    {
+        DocumentationViewerSection = 1;
+        DocumentationViewerSubPageName = "";
+    }
+
+    const nlohmann::json& datatypesDoc = DocumentationJson["ScriptEnv"]["Datatypes"];
+
+    if (sectionOpen)
+    {
+        for (auto it = datatypesDoc.begin(); it != datatypesDoc.end(); it++)
+        {
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
+            flags |= (DocumentationViewerSection == 1 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
+
+            bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
+
+            if (ImGui::IsItemClicked())
+            {
+                DocumentationViewerSection = 1;
+                DocumentationViewerSubPageName = it.key();
+            }
+
+            if (popen)
+                ImGui::TreePop();
+        }
+
+        ImGui::TreePop();
+    }
+
+    if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 2)
+    {
+        ImGui::SetNextItemOpen(true);
+        DocumentationViewerJumpingToPage = false;
+    }
+
+    sectionOpen = ImGui::TreeNodeEx("Libraries", (DocumentationViewerSection == 2 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
+    if (ImGui::IsItemClicked())
+    {
+        DocumentationViewerSection = 2;
+        DocumentationViewerSubPageName = "";
+    }
+
+    const nlohmann::json& librariesDoc = DocumentationJson["ScriptEnv"]["Libraries"];
+
+    if (sectionOpen)
+    {
+        for (auto it = librariesDoc.begin(); it != librariesDoc.end(); it++)
+        {
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
+            flags |= (DocumentationViewerSection == 2 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
+
+            bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
+
+            if (ImGui::IsItemClicked())
+            {
+                DocumentationViewerSection = 2;
+                DocumentationViewerSubPageName = it.key();
+            }
+
+            if (popen)
+                ImGui::TreePop();
+        }
+
+        ImGui::TreePop();
+    }
+
+    sectionOpen = ImGui::TreeNodeEx("Globals", ImGuiTreeNodeFlags_Leaf | NodeFlags | (DocumentationViewerSection == 3 ? ImGuiTreeNodeFlags_Selected : 0));
+    if (ImGui::IsItemClicked())
+    {
+        DocumentationViewerSection = 3;
+        DocumentationViewerSubPage = 0;
+    }
+
+    if (sectionOpen)
+        ImGui::TreePop();
+
+    if (DocumentationViewerJumpingToPage && DocumentationViewerSection == 4)
+    {
+        ImGui::SetNextItemOpen(true);
+        DocumentationViewerJumpingToPage = false;
+    }
+
+    sectionOpen = ImGui::TreeNodeEx("Enums", (DocumentationViewerSection == 4 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
+    if (ImGui::IsItemClicked())
+    {
+        DocumentationViewerSection = 4;
+        DocumentationViewerSubPage = -1;
+        DocumentationViewerSubPageName = "";
+    }
+
+    const nlohmann::json& enumsDoc = DocumentationJson["ScriptEnv"]["Libraries"]["Enum"];
+
+    if (sectionOpen)
+    {
+        for (auto it = enumsDoc["Members"].begin(); it != enumsDoc["Members"].end(); it++)
+        {
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
+            flags |= (DocumentationViewerSection == 4 && DocumentationViewerSubPageName == it.key()) ? ImGuiTreeNodeFlags_Selected : 0;
+
+            bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
+
+            if (ImGui::IsItemClicked())
+            {
+                DocumentationViewerSection = 4;
+                DocumentationViewerSubPageName = it.key();
+            }
+
+            if (popen)
+                ImGui::TreePop();
+        }
+
+        ImGui::TreePop();
+    }
+
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    ImGui::BeginChild(67, ImVec2(), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+    ImVec2 space = ImGui::GetContentRegionAvail();
+    float charsize = ImGui::CalcTextSize("").y;
+    size_t nCharsPerLine = (size_t)std::floor(space.x * 1.65f / charsize);
+
+    switch (DocumentationViewerSection)
+    {
+
+    case 0:
+    {
+        std::string_view name = DocumentationViewerSubPage == 0 ? "GameObject" : s_EntityComponentNames[DocumentationViewerSubPage];
+
+        ImGui::SeparatorText(name.data());
+
+        const nlohmann::json& description = DocumentationViewerSubPage == 0
+                                                ? DocumentationJson["ScriptEnv"]["Datatypes"]["GameObject"]["Description"]
+                                                : ObjectDocCommentsJson["Components"][name]["Description"];
+
+        renderDescription(description, nCharsPerLine);
+
+        const nlohmann::json& apiDocs = DocumentationViewerSubPage == 0 ? ObjectDocCommentsJson["Base"] : ObjectDocCommentsJson["Components"][name];
+        const nlohmann::json& api = DocumentationViewerSubPage == 0 ? ApiDumpJson["GameObject"]["Base"] : ApiDumpJson["GameObject"]["Components"][name];
+
+        if (const auto& props = api.find("Properties"); props != api.end())
+        {
+            ImGui::NewLine();
+            ImGui::SeparatorText("Properties");
+
+            for (auto ita = props.value().begin(); ita != props.value().end(); ita++)
+            {
+                renderPropertySignature(ita.key(), ita.value());
+                renderDescription(apiDocs["Properties"][ita.key()], nCharsPerLine);
+            }
+        }
+
+        if (const auto& methods = api.find("Methods"); methods != api.end())
+        {
+            ImGui::NewLine();
+            ImGui::SeparatorText("Methods");
+
+            for (auto ita = methods.value().begin(); ita != methods.value().end(); ita++)
+            {
+                std::string type = ita.value();
+                size_t iut = type.find_first_of("-"); // the `->` in, for example, `(Integer) -> (GameObject)`
+
+                std::string in = type.substr(1, iut - 3);
+                std::string out = type.substr(iut + 4, type.size() - (iut + 5));
+
+                renderFunctionSignature(ita, in, out);
+                renderDescription(apiDocs["Methods"][ita.key()], nCharsPerLine);
+            }
+        }
+
+        if (const auto& events = api.find("Events"); events != api.end())
+        {
+            ImGui::NewLine();
+            ImGui::SeparatorText("Events");
+
+            for (auto ita = events.value().begin(); ita != events.value().end(); ita++)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ApiEventColor);
+                ImGui::Text("* %s", ita.key().c_str());
+                ImGui::PopStyleColor();
+                
+                ImGui::SameLine();
+
+                ImGui::PushStyleColor(ImGuiCol_Text, ApiTypeColor);
+                ImGui::TextUnformatted(((std::string)ita.value()).c_str());
+                ImGui::PopStyleColor();
+
+                renderDescription(apiDocs["Events"][ita.key()], nCharsPerLine);
+            }
+        }
+
+        break;
+    }
+
+    case 1:
+    {
+        if (DocumentationViewerSubPageName == "")
+        {
+            ImGui::SeparatorText("Datatypes");
+            ImGui::TextUnformatted(DatatypesDocPrologue.c_str());
+
+            break;
+        }
+
+        const nlohmann::json& datatype = datatypesDoc[DocumentationViewerSubPageName];
+
+        ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
+        renderDescription(datatype["Description"], nCharsPerLine);
+        ImGui::NewLine();
+
+        if (const auto& library = datatype.find("Library"); library != datatype.end())
+        {
+            ImGui::SeparatorText("Library");
+
+            for (auto memberIt = library.value().begin(); memberIt != library.value().end(); memberIt++)
+                renderApiMemberBulletpoint(memberIt, nCharsPerLine);
+        }
+
+        ImGui::NewLine();
+
+        if (const auto& type = datatype.find("Members"); type != datatype.end())
+        {
+            ImGui::SeparatorText("Type");
+
+            for (auto memberIt = type.value().begin(); memberIt != type.value().end(); memberIt++)
+            {
+                if (type.key()[0] == '_' && type.key()[1] == '_')
+                    continue; // metamethod, handled later
+
+                renderApiMemberBulletpoint(memberIt, nCharsPerLine);
+            }
+        }
+
+        break;
+    }
+
+    case 2:
+    {
+        if (DocumentationViewerSubPageName == "")
+        {
+            ImGui::SeparatorText("Libraries");
+            ImGui::TextUnformatted(LibrariesDocPrologue.c_str());
+
+            break;
+        }
+
+        const nlohmann::json& library = librariesDoc[DocumentationViewerSubPageName];
+
+        ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
+        renderDescription(library["Description"], nCharsPerLine);
+
+        ImGui::NewLine();
+        ImGui::SeparatorText("Members");
+
+        for (auto memberIt = library["Members"].begin(); memberIt != library["Members"].end(); memberIt++)
+            renderApiMemberBulletpoint(memberIt, nCharsPerLine);
+
+        break;
+    }
+
+    case 3:
+    {
+        const nlohmann::json& globals = DocumentationJson["ScriptEnv"]["Globals"];
+
+        ImGui::SeparatorText("Globals");
+        ImGui::TextUnformatted(GlobalsDocPrologue.c_str());
+
+        for (auto memberIt = globals.begin(); memberIt != globals.end(); memberIt++)
+        {
+            const nlohmann::json& member = memberIt.value();
+
+            if (const auto& dumpedType = ApiDumpJson["ScriptEnv"]["Globals"][memberIt.key()]; dumpedType != "function")
+                renderPropertySignature(memberIt.key(), dumpedType);
+
+            else
+                renderFunctionSignature(memberIt);
+
+            renderDescription(member["Description"], nCharsPerLine);
+        }
+
+        break;
+    }
+
+    case 4:
+    {
+        if (DocumentationViewerSubPageName.empty())
+        {
+            ImGui::SeparatorText("Enumerations");
+            renderDescription(enumsDoc["Description"], nCharsPerLine);
+        }
+        else
+        {
+            ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
+
+            const nlohmann::json& enuDoc = enumsDoc["Members"][DocumentationViewerSubPageName];
+            const nlohmann::json& enuApi = ApiDumpJson["ScriptEnv"]["Libraries"]["Enum"][DocumentationViewerSubPageName];
+            const nlohmann::json& items = enuDoc["Items"];
+            renderDescription(enuDoc["Description"], nCharsPerLine);
+            ImGui::NewLine();
+
+            if (ImGui::BeginTable("Enum", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+            {
+                ImGui::TableSetupColumn("Name");
+                ImGui::TableSetupColumn("Description");
+                ImGui::TableSetupColumn("Value");
+                ImGui::TableHeadersRow();
+
+                for (auto it = items.begin(); it != items.end(); it++)
+                {
+                    ImGui::TableNextRow();
+
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted(it.key().c_str());
+
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TextUnformatted(addLinebreaks((const std::string&)it.value(), nCharsPerLine / 3 - 4).c_str());
+
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::Text("%d", (int)enuApi[it.key()]);
+                }
+
+                ImGui::EndTable();
+            }
+        }
+
+        break;
+    }
+    
+    default:
+    {
+        ImGui::Text("Select a Section and Page from the left");
+        break;
+    }
+    }
+
+    ImGui::EndChild();
+    ImGui::End();
+
+    assert(!DocumentationViewerJumpingToPage);
+    DocumentationViewerJumpingToPage = false;
 }
 
 static void renderExplorer()
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	for (size_t i = 0; i < Selections.size(); i++)
-	{
-		ObjectHandle& handle = Selections[i];
-		if (!handle.HasValue() || !handle.Reference.Referred() || handle->IsDestructionPending)
-		{
-			Selections[i].Clear();
-			Selections[i] = Selections[Selections.size() - 1];
-			Selections.erase(Selections.end() - 1);
-			i--;
-		}
-	}
+    for (size_t i = 0; i < Selections.size(); i++)
+    {
+        ObjectHandle& handle = Selections[i];
+        if (!handle.HasValue() || !handle.Reference.Referred() || handle->IsDestructionPending)
+        {
+            Selections[i].Clear();
+            Selections[i] = Selections[Selections.size() - 1];
+            Selections.erase(Selections.end() - 1);
+            i--;
+        }
+    }
 
-	if (!DeveloperTools::ExplorerShown)
-		return;
+    if (!DeveloperTools::ExplorerShown)
+        return;
 
-	if (ExplorerShouldSeekToCurrentSelection && Selections.size() == 0)
-		ExplorerShouldSeekToCurrentSelection = false;
+    if (ExplorerShouldSeekToCurrentSelection && Selections.size() == 0)
+        ExplorerShouldSeekToCurrentSelection = false;
 
-	if (ExplorerShouldSeekToCurrentSelection)
-		ImGui::SetNextWindowFocus();
+    if (ExplorerShouldSeekToCurrentSelection)
+        ImGui::SetNextWindowFocus();
 
-	if (!ImGui::Begin("Explorer", &DeveloperTools::ExplorerShown))
-	{
-		ImGui::End();
-		return;
-	}
+    if (!ImGui::Begin("Explorer", &DeveloperTools::ExplorerShown))
+    {
+        ImGui::End();
+        return;
+    }
 
-	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-		ImGui::OpenPopup(1979); // the mimic!!;
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+        ImGui::OpenPopup(1979); // the mimic!!;
 
-	if (!ImGui::IsAnyItemActive())
-	{
-		if (ImGui::IsKeyDown(ImGuiKey_F2) && Selections.size() > 0)
-		{
-			DeveloperTools::PropertiesShown = true;
-			FocusRenameSelection = true;
-		}
+    if (!ImGui::IsAnyItemActive())
+    {
+        if (ImGui::IsKeyDown(ImGuiKey_F2) && Selections.size() > 0)
+        {
+            DeveloperTools::PropertiesShown = true;
+            FocusRenameSelection = true;
+        }
 
-		if (ImGui::IsKeyDown(ImGuiKey_Delete) && Selections.size() > 0)
-		{
-			History::ScopedAction action = { "Delete by hotkey" };
+        if (ImGui::IsKeyDown(ImGuiKey_Delete) && Selections.size() > 0)
+        {
+            History::ScopedAction action = { "Delete by hotkey" };
 
-			for (const ObjectHandle& sel : Selections)
-				sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
+            for (const ObjectHandle& sel : Selections)
+                sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
 
-			Selections.clear();
-			ImGui::SetWindowFocus();
-		}
-	}
+            Selections.clear();
+            ImGui::SetWindowFocus();
+        }
+    }
 
-	if (IsPickingObject)
-	{
-		ErrorTooltipMessage = "Pick Object\nRight-click to cancel";
-		ErrorTooltipTimeRemaining = 0.1f;
+    if (IsPickingObject)
+    {
+        ErrorTooltipMessage = "Pick Object\nRight-click to cancel";
+        ErrorTooltipTimeRemaining = 0.1f;
 
-		if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
-		{
-			Selections = PickerTargets;
-			ExplorerShouldSeekToCurrentSelection = true;
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
+        {
+            Selections = PickerTargets;
+            ExplorerShouldSeekToCurrentSelection = true;
 
-			IsPickingObject = false;
-			PickerTargets.clear();
-			PickerTargetPropName.clear();
-		}
-	}
+            IsPickingObject = false;
+            PickerTargets.clear();
+            PickerTargetPropName.clear();
+        }
+    }
 
-	VisibleTreeWip.clear();
-	recursiveIterateTree(ExplorerRoot.Dereference());
+    VisibleTreeWip.clear();
+    recursiveIterateTree(ExplorerRoot.Dereference());
 
-	ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
-	rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
+    ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
+    rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
 
-	ImGui::Dummy(rootDropTargetSize);
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
-		{
-			History::ScopedAction action = { "DragAndDropObject" };
-			uint32_t child = *(uint32_t*)payload->Data;
+    ImGui::Dummy(rootDropTargetSize);
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
+        {
+            History::ScopedAction action = { "DragAndDropObject" };
+            uint32_t child = *(uint32_t*)payload->Data;
 
-			try
-			{
-				if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
-				{
-					dragging->SetParent(ExplorerRoot);
-					if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
-							ExplorerShouldSeekToCurrentSelection = true;
-				}
-				else
-					setErrorMessage("Object was deleted");
-			}
-			catch (const std::runtime_error& e)
-			{
-				setErrorMessage(e.what());
-			}
-		}
+            try
+            {
+                if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
+                {
+                    dragging->SetParent(ExplorerRoot);
+                    if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
+                            ExplorerShouldSeekToCurrentSelection = true;
+                }
+                else
+                    setErrorMessage("Object was deleted");
+            }
+            catch (const std::runtime_error& e)
+            {
+                setErrorMessage(e.what());
+            }
+        }
 
-		ImGui::EndDragDropTarget();
-	}
+        ImGui::EndDragDropTarget();
+    }
 
-	VisibleTree = VisibleTreeWip;
+    VisibleTree = VisibleTreeWip;
 
-	if (ImGui::BeginPopupEx(45, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
-	{
-		ImGui::SeparatorText("Insert");
+    if (ImGui::BeginPopupEx(45, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+    {
+        ImGui::SeparatorText("Insert");
 
-		bool insertEmpty = ImGui::MenuItem("Empty Object");
-		ImGui::SetItemTooltip("An Object with no Components");
+        bool insertEmpty = ImGui::MenuItem("Empty Object");
+        ImGui::SetItemTooltip("An Object with no Components");
 
-		if (insertEmpty)
-		{
-			History::ScopedAction action = { "InsertEmptyObject" };
+        if (insertEmpty)
+        {
+            History::ScopedAction action = { "InsertEmptyObject" };
 
-			ObjectHandle newObject = GameObjectManager::Get()->Create();
-			newObject->SetParent(ObjectInsertionTarget);
-			Selections = { newObject };
-			ExplorerShouldSeekToCurrentSelection = true;
-		}
+            ObjectHandle newObject = GameObjectManager::Get()->Create();
+            newObject->SetParent(ObjectInsertionTarget);
+            Selections = { newObject };
+            ExplorerShouldSeekToCurrentSelection = true;
+        }
 
-		for (size_t i = 0; i < std::size(AddableComponents); i++)
-		{
-			std::string_view name = AddableComponents[i];
+        for (size_t i = 0; i < std::size(AddableComponents); i++)
+        {
+            std::string_view name = AddableComponents[i];
 
-			if (ImGui::MenuItem(name.data()))
-			{
-				History::ScopedAction action = { "InsertObject" };
+            if (ImGui::MenuItem(name.data()))
+            {
+                History::ScopedAction action = { "InsertObject" };
 
-				ObjectHandle newObject = GameObjectManager::s_Create(name);
+                ObjectHandle newObject = GameObjectManager::s_Create(name);
 
-				for(EntityComponent ecx : GetCommonDependenciesForComponent(FindComponentTypeByName(name)))
-					newObject->AddComponent(ecx);
+                for(EntityComponent ecx : GetCommonDependenciesForComponent(FindComponentTypeByName(name)))
+                    newObject->AddComponent(ecx);
 
-				newObject->SetParent(ObjectInsertionTarget);
-				Selections = { newObject };
-			
-				ExplorerShouldSeekToCurrentSelection = true;
-				ObjectInsertionTarget.Clear();
-			}
+                newObject->SetParent(ObjectInsertionTarget);
+                Selections = { newObject };
+            
+                ExplorerShouldSeekToCurrentSelection = true;
+                ObjectInsertionTarget.Clear();
+            }
 
-			if (ImGui::IsItemHovered())
-			{
-				static std::unordered_map<std::string_view, std::string> cachedDescriptions;
+            if (ImGui::IsItemHovered())
+            {
+                static std::unordered_map<std::string_view, std::string> cachedDescriptions;
 
-				std::string tooltip;
-				const auto& it = cachedDescriptions.find(name);
+                std::string tooltip;
+                const auto& it = cachedDescriptions.find(name);
 
-				if (it == cachedDescriptions.end())
-				{
-					tooltip = getDescriptionAsString(
-						ObjectDocCommentsJson.value("Components", nlohmann::json::object()).value(name, nlohmann::json::object())["Description"],
-						32
-					);
-					cachedDescriptions[name] = tooltip;
-				}
-				else
-					tooltip = it->second;
+                if (it == cachedDescriptions.end())
+                {
+                    tooltip = getDescriptionAsString(
+                        ObjectDocCommentsJson.value("Components", nlohmann::json::object()).value(name, nlohmann::json::object())["Description"],
+                        32
+                    );
+                    cachedDescriptions[name] = tooltip;
+                }
+                else
+                    tooltip = it->second;
 
-				if (tooltip.size() > 1)
-					ImGui::SetItemTooltip("%s", tooltip.data());
-			}
-		}
+                if (tooltip.size() > 1)
+                    ImGui::SetItemTooltip("%s", tooltip.data());
+            }
+        }
 
-		InsertObjectButtonHoveredOver = nullptr;
-		ImGui::EndPopup();
-	}
-	else
-		ObjectInsertionTarget.Clear();
+        InsertObjectButtonHoveredOver = nullptr;
+        ImGui::EndPopup();
+    }
+    else
+        ObjectInsertionTarget.Clear();
 
-	if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
-	{
-		for (ContextMenuAction action : ContextActionsForSelection)
-		{
-			if (action == ContextMenuAction::__sectionSeparator)
-				ImGui::Separator();
-			else
-			{
-				const char* name = ContextMenuActionStrings[(uint8_t)action];
+    if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+    {
+        for (ContextMenuAction action : ContextActionsForSelection)
+        {
+            if (action == ContextMenuAction::__sectionSeparator)
+                ImGui::Separator();
+            else
+            {
+                const char* name = ContextMenuActionStrings[(uint8_t)action];
 
-				if ((Selections.size() > 0 || !ContextMenuActionRequiresSelection[(uint8_t)action]))
-				{
-					History* history = History::Get();
+                if ((Selections.size() > 0 || !ContextMenuActionRequiresSelection[(uint8_t)action]))
+                {
+                    History* history = History::Get();
 
-					if (action != ContextMenuAction::AutoReimport && ImGui::MenuItem(name))
-					{
-						std::optional<size_t> id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : std::nullopt;
+                    if (action != ContextMenuAction::AutoReimport && ImGui::MenuItem(name))
+                    {
+                        std::optional<size_t> id = action != ContextMenuAction::Rename ? history->TryBeginAction(name) : std::nullopt;
 
-						ContextMenuActionHandlers[(uint8_t)action]();
+                        ContextMenuActionHandlers[(uint8_t)action]();
 
-						if (id)
-							history->FinishAction(id.value());
-					}
-					else if (action == ContextMenuAction::AutoReimport)
-					{
-						const std::string ReimportableStr = "Ed_ReimportableModel";
-						bool autoReimport = false;
+                        if (id)
+                            history->FinishAction(id.value());
+                    }
+                    else if (action == ContextMenuAction::AutoReimport)
+                    {
+                        const std::string ReimportableStr = "Ed_ReimportableModel";
+                        bool autoReimport = false;
 
-						for (const ObjectHandle& sel : Selections)
-						{
-							if (sel->HasTag(ReimportableStr))
-							{
-								autoReimport = true;
-								break;
-							}
-						}
+                        for (const ObjectHandle& sel : Selections)
+                        {
+                            if (sel->HasTag(ReimportableStr))
+                            {
+                                autoReimport = true;
+                                break;
+                            }
+                        }
 
-						if (ImGui::Checkbox(name, &autoReimport))
-						{
-							std::optional<size_t> id = history->TryBeginAction("Change auto re-import setting");
+                        if (ImGui::Checkbox(name, &autoReimport))
+                        {
+                            std::optional<size_t> id = history->TryBeginAction("Change auto re-import setting");
 
-							if (autoReimport)
-							{
-								for (const ObjectHandle& sel : Selections)
-									sel->AddTag(ReimportableStr);
-							}
-							else
-							{
-								for (const ObjectHandle& sel : Selections)
-									sel->RemoveTag(ReimportableStr);
-							}
+                            if (autoReimport)
+                            {
+                                for (const ObjectHandle& sel : Selections)
+                                    sel->AddTag(ReimportableStr);
+                            }
+                            else
+                            {
+                                for (const ObjectHandle& sel : Selections)
+                                    sel->RemoveTag(ReimportableStr);
+                            }
 
-							if (id)
-								history->FinishAction(id.value());
-						}
-					}
-				}
-			}
-		}
+                            if (id)
+                                history->FinishAction(id.value());
+                        }
+                    }
+                }
+            }
+        }
 
-		if (ImGui::BeginMenu("Insert service"))
-		{
-			for (const std::string_view& serv : s_DataModelServices)
-			{
-				EntityComponent ec = FindComponentTypeByName(serv);
+        if (ImGui::BeginMenu("Insert service"))
+        {
+            for (const std::string_view& serv : s_DataModelServices)
+            {
+                EntityComponent ec = FindComponentTypeByName(serv);
 
-				if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
-				{
-					History::ScopedAction action = { "InsertService" };
+                if (!ExplorerRoot->FindChildWithComponent(ec) && ImGui::MenuItem(serv.data()))
+                {
+                    History::ScopedAction action = { "InsertService" };
 
-					ObjectHandle newServ = GameObjectManager::s_Create(ec);
-					newServ->SetParent(ExplorerRoot);
-					Selections = { newServ };
-				}
-			}
+                    ObjectHandle newServ = GameObjectManager::s_Create(ec);
+                    newServ->SetParent(ExplorerRoot);
+                    Selections = { newServ };
+                }
+            }
 
-			ImGui::EndMenu();
-		}
+            ImGui::EndMenu();
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	ImGui::End();
+    ImGui::End();
 }
 
 struct FilesystemNode // Either a file or a directory
 {
-	std::map<std::string, FilesystemNode> DirectoryContents;
-	std::filesystem::path Path;
-	std::string Name;
-	bool IsDirectory = false;
-	bool IsSymlink = false;
+    std::map<std::string, FilesystemNode> DirectoryContents;
+    std::filesystem::path Path;
+    std::string Name;
+    bool IsDirectory = false;
+    bool IsSymlink = false;
 };
 
 static double FilesViewLastRefreshed = 0.0;
@@ -3018,491 +3018,491 @@ static bool RenameFocusFirstFrame = true;
 
 static void refreshFilesystemNode(FilesystemNode& Node)
 {
-	ZoneScoped;
-	Node.DirectoryContents.clear();
+    ZoneScoped;
+    Node.DirectoryContents.clear();
 
-	std::error_code ec;
-	for (const auto& it : std::filesystem::directory_iterator(Node.Path, ec))
-	{
-		const std::filesystem::path& childPath = it.path();
-		const std::filesystem::path& childName = childPath.filename();
+    std::error_code ec;
+    for (const auto& it : std::filesystem::directory_iterator(Node.Path, ec))
+    {
+        const std::filesystem::path& childPath = it.path();
+        const std::filesystem::path& childName = childPath.filename();
 
-		if (std::filesystem::is_regular_file(childPath))
-		{
-			if (childName.string() == Node.Name)
-				continue; // not sure
+        if (std::filesystem::is_regular_file(childPath))
+        {
+            if (childName.string() == Node.Name)
+                continue; // not sure
 
-			const std::string& childNameStr = childName.string();
-			bool isSupportedFileType = false;
+            const std::string& childNameStr = childName.string();
+            bool isSupportedFileType = false;
 
-			for (const char* const extension : { ".luau", ".json", ".frag", ".geom", ".vert", ".conf", ".editor", ".mtl", ".shp" })
-			{
-				if (childNameStr.ends_with(extension))
-				{
-					isSupportedFileType = true;
-					break;
-				}
-			}
+            for (const char* const extension : { ".luau", ".json", ".frag", ".geom", ".vert", ".conf", ".editor", ".mtl", ".shp" })
+            {
+                if (childNameStr.ends_with(extension))
+                {
+                    isSupportedFileType = true;
+                    break;
+                }
+            }
 
-			if (!isSupportedFileType)
-				continue;
+            if (!isSupportedFileType)
+                continue;
 
-			Node.DirectoryContents[childName.string()] = {
-				.Path = FileRW::ResolvePathNormalized(childPath.string()),
-				.Name = childName.string(),
-				.IsDirectory = false,
-				.IsSymlink = std::filesystem::is_symlink(childPath),
-			};
-		}
-		else if (std::filesystem::is_directory(it.path()))
-		{
-			FilesystemNode newNode = {
-				.Path = childPath,
-				.Name = childName.string(),
-				.IsDirectory = true,
-				.IsSymlink = std::filesystem::is_symlink(childPath),
-			};
+            Node.DirectoryContents[childName.string()] = {
+                .Path = FileRW::ResolvePathNormalized(childPath.string()),
+                .Name = childName.string(),
+                .IsDirectory = false,
+                .IsSymlink = std::filesystem::is_symlink(childPath),
+            };
+        }
+        else if (std::filesystem::is_directory(it.path()))
+        {
+            FilesystemNode newNode = {
+                .Path = childPath,
+                .Name = childName.string(),
+                .IsDirectory = true,
+                .IsSymlink = std::filesystem::is_symlink(childPath),
+            };
 
-			refreshFilesystemNode(newNode);
+            refreshFilesystemNode(newNode);
 
-			Node.DirectoryContents[childName.string()] = newNode;
-		}
-	}
+            Node.DirectoryContents[childName.string()] = newNode;
+        }
+    }
 
-	if (ec)
-	{
-		setErrorMessage(ec.message());
-		FilesViewerRoot = FilesystemNode{ .Path = "scripts/", .Name = "Scripts" };
-	}
+    if (ec)
+    {
+        setErrorMessage(ec.message());
+        FilesViewerRoot = FilesystemNode{ .Path = "scripts/", .Name = "Scripts" };
+    }
 }
 
 static void createFileOrDirectory(FilesystemNode Parent, bool Directory)
 {
-	int index = 1;
+    int index = 1;
 
-	while (true)
-	{
-		std::filesystem::path path = Parent.Path / std::vformat(Directory ? "Folder{}" : "Script{}.luau", std::make_format_args(index));
-		if (!(Directory ? std::filesystem::is_directory(path) : std::filesystem::is_regular_file(path)))
-		{
-			std::string errorMessage;
-			bool success = true;
+    while (true)
+    {
+        std::filesystem::path path = Parent.Path / std::vformat(Directory ? "Folder{}" : "Script{}.luau", std::make_format_args(index));
+        if (!(Directory ? std::filesystem::is_directory(path) : std::filesystem::is_regular_file(path)))
+        {
+            std::string errorMessage;
+            bool success = true;
 
-			if (Directory)
-			{
-				std::error_code ec;
-				std::filesystem::create_directory(path, ec);
+            if (Directory)
+            {
+                std::error_code ec;
+                std::filesystem::create_directory(path, ec);
 
-				if (ec)
-				{
-					success = false;
-					errorMessage = ec.message();
-				}
-			}
-			else
-			{
-				success = FileRW::WriteFile(path.string(), "print(\"Hello, World!\")\n", &errorMessage);
-			}
+                if (ec)
+                {
+                    success = false;
+                    errorMessage = ec.message();
+                }
+            }
+            else
+            {
+                success = FileRW::WriteFile(path.string(), "print(\"Hello, World!\")\n", &errorMessage);
+            }
 
-			if (!success)
-				setErrorMessage(std::format("Failed to create '{}': {}", path.string(), errorMessage));
+            if (!success)
+                setErrorMessage(std::format("Failed to create '{}': {}", path.string(), errorMessage));
 
-			else
-			{
-				RenameTarget = path;
-				RenameNewValue = path.filename().string();
-				RenameNewValue.reserve(32);
-				RenameFocusFirstFrame = true;
-			}
+            else
+            {
+                RenameTarget = path;
+                RenameNewValue = path.filename().string();
+                RenameNewValue.reserve(32);
+                RenameFocusFirstFrame = true;
+            }
 
-			break;
-		}
-		else
-			index++;
+            break;
+        }
+        else
+            index++;
 
-		if (index > 99)
-		{
-			setErrorMessage("Failed to create");
-			break;
-		}
-	}
+        if (index > 99)
+        {
+            setErrorMessage("Failed to create");
+            break;
+        }
+    }
 
-	FilesViewLastRefreshed = 0.0;
+    FilesViewLastRefreshed = 0.0;
 }
 
 static void recursiveRenderFilesystemNode(FilesystemNode& Node)
 {
-	TextureManager* texManager = TextureManager::Get();
-	static uint32_t ScriptIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Script.png", true, false);
-	static uint32_t FolderOpenIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Open.png", true, false);
-	static uint32_t FolderClosedIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Closed.png", true, false);
+    TextureManager* texManager = TextureManager::Get();
+    static uint32_t ScriptIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Script.png", true, false);
+    static uint32_t FolderOpenIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Open.png", true, false);
+    static uint32_t FolderClosedIconResource = texManager->LoadFromPath("./resources/textures/editor-icons/Folder_Closed.png", true, false);
 
-	ImGui::PushID(Node.Path.string().c_str());
+    ImGui::PushID(Node.Path.string().c_str());
 
-	const ImGuiStyle& style = ImGui::GetStyle();
+    const ImGuiStyle& style = ImGui::GetStyle();
 
-	static std::filesystem::path ContextMenuTarget;
+    static std::filesystem::path ContextMenuTarget;
 
-	ImGuiTreeNodeFlags flags = 0
-		| ImGuiTreeNodeFlags_OpenOnArrow
-		| ImGuiTreeNodeFlags_AllowOverlap
-		| ImGuiTreeNodeFlags_SpanAvailWidth
-		| ImGuiTreeNodeFlags_DrawLinesFull
-		| ImGuiTreeNodeFlags_FramePadding;
-	flags |= !Node.IsDirectory ? ImGuiTreeNodeFlags_Leaf : 0;
+    ImGuiTreeNodeFlags flags = 0
+        | ImGuiTreeNodeFlags_OpenOnArrow
+        | ImGuiTreeNodeFlags_AllowOverlap
+        | ImGuiTreeNodeFlags_SpanAvailWidth
+        | ImGuiTreeNodeFlags_DrawLinesFull
+        | ImGuiTreeNodeFlags_FramePadding;
+    flags |= !Node.IsDirectory ? ImGuiTreeNodeFlags_Leaf : 0;
 
-	if (ContextMenuTarget == Node.Path || RenameTarget == Node.Path)
-		flags |= ImGuiTreeNodeFlags_Selected;
+    if (ContextMenuTarget == Node.Path || RenameTarget == Node.Path)
+        flags |= ImGuiTreeNodeFlags_Selected;
 
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.f, 4.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.f, 4.f));
 
-	std::string displayedNodeName = RenameTarget != Node.Path ? Node.Name : " ";
+    std::string displayedNodeName = RenameTarget != Node.Path ? Node.Name : " ";
 
-	if (RenameTarget.parent_path() == Node.Path)
-		ImGui::SetNextItemOpen(true);
+    if (RenameTarget.parent_path() == Node.Path)
+        ImGui::SetNextItemOpen(true);
 
-	bool open = ImGui::TreeNodeEx((const void*)nullptr, flags, "   %s", displayedNodeName.c_str());
-	bool openScript = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
-	bool hovered = ImGui::IsItemHovered();
+    bool open = ImGui::TreeNodeEx((const void*)nullptr, flags, "   %s", displayedNodeName.c_str());
+    bool openScript = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
+    bool hovered = ImGui::IsItemHovered();
 
-	if (Node.IsSymlink)
-		ImGui::SetItemTooltip("This node is a symlink.\nYou cannot view or edit it unless you un-link it.");
+    if (Node.IsSymlink)
+        ImGui::SetItemTooltip("This node is a symlink.\nYou cannot view or edit it unless you un-link it.");
 
-	if (ImGui::BeginDragDropSource())
-	{
-		const std::string& path = Node.Path.string();
-		ImGui::SetDragDropPayload("FileViewer", path.data(), (int)path.size());
-		ImGui::Text("Moving %s", Node.Path.filename().string().c_str());
-		ImGui::EndDragDropSource();
-	}
+    if (ImGui::BeginDragDropSource())
+    {
+        const std::string& path = Node.Path.string();
+        ImGui::SetDragDropPayload("FileViewer", path.data(), (int)path.size());
+        ImGui::Text("Moving %s", Node.Path.filename().string().c_str());
+        ImGui::EndDragDropSource();
+    }
 
-	if (Node.IsDirectory && ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FileViewer"))
-		{
-			std::filesystem::path path = std::filesystem::path(std::string_view((const char*)payload->Data, payload->DataSize));
+    if (Node.IsDirectory && ImGui::BeginDragDropTarget())
+    {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FileViewer"))
+        {
+            std::filesystem::path path = std::filesystem::path(std::string_view((const char*)payload->Data, payload->DataSize));
 
-			std::error_code ec;
-			std::filesystem::rename(path, Node.Path / path.filename(), ec);
+            std::error_code ec;
+            std::filesystem::rename(path, Node.Path / path.filename(), ec);
 
-			if (ec)
-				setErrorMessage(ec.message());
-			else
-				FilesViewLastRefreshed = 0.f;
-		}
+            if (ec)
+                setErrorMessage(ec.message());
+            else
+                FilesViewLastRefreshed = 0.f;
+        }
 
-		ImGui::EndDragDropTarget();
-	}
+        ImGui::EndDragDropTarget();
+    }
 
-	ImGui::PopStyleVar();
+    ImGui::PopStyleVar();
 
-	ImGui::SameLine();
-	ImVec2 afterNodePos = ImGui::GetCursorPos();
+    ImGui::SameLine();
+    ImVec2 afterNodePos = ImGui::GetCursorPos();
 
-	if (RenameTarget == Node.Path)
-	{
-		openScript = false;
-		hovered = false;
+    if (RenameTarget == Node.Path)
+    {
+        openScript = false;
+        hovered = false;
 
-		ImGui::SetCursorPosX(afterNodePos.x - ImGui::CalcTextSize("  ").x);
+        ImGui::SetCursorPosX(afterNodePos.x - ImGui::CalcTextSize("  ").x);
 
-		if (RenameFocusFirstFrame)
-			ImGui::SetKeyboardFocusHere();
+        if (RenameFocusFirstFrame)
+            ImGui::SetKeyboardFocusHere();
 
-		ImGui::InputText("##", &RenameNewValue);
+        ImGui::InputText("##", &RenameNewValue);
 
-		if (!ImGui::IsItemActive() && !RenameFocusFirstFrame)
-		{
-			if (RenameNewValue.find('/') != std::string::npos || RenameNewValue.find('\\') != std::string::npos)
-				setErrorMessage("File name cannot have slashes");
-			else
-			{
-				std::filesystem::path renamed = Node.Path.parent_path() / RenameNewValue;
+        if (!ImGui::IsItemActive() && !RenameFocusFirstFrame)
+        {
+            if (RenameNewValue.find('/') != std::string::npos || RenameNewValue.find('\\') != std::string::npos)
+                setErrorMessage("File name cannot have slashes");
+            else
+            {
+                std::filesystem::path renamed = Node.Path.parent_path() / RenameNewValue;
 
-				if (renamed.filename() != Node.Path.filename() && std::filesystem::is_regular_file(renamed))
-					setErrorMessage("A file already exists in the folder with that name");
-				else
-				{
-					std::error_code ec;
-					std::filesystem::rename(Node.Path, renamed, ec);
+                if (renamed.filename() != Node.Path.filename() && std::filesystem::is_regular_file(renamed))
+                    setErrorMessage("A file already exists in the folder with that name");
+                else
+                {
+                    std::error_code ec;
+                    std::filesystem::rename(Node.Path, renamed, ec);
 
-					if (ec)
-						setErrorMessage(ec.message());
-				}
-			}
+                    if (ec)
+                        setErrorMessage(ec.message());
+                }
+            }
 
-			RenameTarget.clear();
-			FilesViewLastRefreshed = 0.0;
-		}
+            RenameTarget.clear();
+            FilesViewLastRefreshed = 0.0;
+        }
 
-		RenameFocusFirstFrame = false;
-		ImGui::SetCursorPos(afterNodePos);
-	}
+        RenameFocusFirstFrame = false;
+        ImGui::SetCursorPos(afterNodePos);
+    }
 
-	ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ImGui::CalcTextSize((" " + displayedNodeName).c_str()).x - style.IndentSpacing - 4.f);
-	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ImGui::CalcTextSize((" " + displayedNodeName).c_str()).x - style.IndentSpacing - 4.f);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
-	float tintScale = Node.IsSymlink ? 0.5f : 1.f;
+    float tintScale = Node.IsSymlink ? 0.5f : 1.f;
 
-	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
+    ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
 
-	ImGui::ImageWithBg(
-		texManager->GetTextureResource(Node.IsDirectory ? (open ? FolderOpenIconResource : FolderClosedIconResource) : ScriptIconResource).GpuId,
-		ImVec2(18.f, 16.f),
-		ImVec2(0.f, 0.f),
-		ImVec2(1.f, 1.f),
-		ImVec4(0.f, 0.f, 0.f, 0.f),
-		ImVec4(tintScale, tintScale, tintScale, 1.f)
-	);
+    ImGui::ImageWithBg(
+        texManager->GetTextureResource(Node.IsDirectory ? (open ? FolderOpenIconResource : FolderClosedIconResource) : ScriptIconResource).GpuId,
+        ImVec2(18.f, 16.f),
+        ImVec2(0.f, 0.f),
+        ImVec2(1.f, 1.f),
+        ImVec4(0.f, 0.f, 0.f, 0.f),
+        ImVec4(tintScale, tintScale, tintScale, 1.f)
+    );
 
-	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
+    ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
 
-	openScript = openScript || (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered());
-	hovered = hovered || ImGui::IsItemHovered();
+    openScript = openScript || (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered());
+    hovered = hovered || ImGui::IsItemHovered();
 
-	if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Right))
-	{
-		if (Node.IsSymlink)
-		{
-			// TODO: Doesn't work.
-			// ImGui::OpenPopup("SymlinkContextMenu");
-		}
-		else
-			ImGui::OpenPopup("FileContextMenu");
-	}
+    if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+    {
+        if (Node.IsSymlink)
+        {
+            // TODO: Doesn't work.
+            // ImGui::OpenPopup("SymlinkContextMenu");
+        }
+        else
+            ImGui::OpenPopup("FileContextMenu");
+    }
 
-	if (ImGui::BeginPopup("SymlinkContextMenu"))
-	{
-		if (ImGui::MenuItem("Unlink and create copy"))
-		{
-			std::error_code ec;
-			std::filesystem::path target = std::filesystem::read_symlink(Node.Path, ec);
+    if (ImGui::BeginPopup("SymlinkContextMenu"))
+    {
+        if (ImGui::MenuItem("Unlink and create copy"))
+        {
+            std::error_code ec;
+            std::filesystem::path target = std::filesystem::read_symlink(Node.Path, ec);
 
-			if (ec)
-			{
-				setErrorMessage("Error reading symlink: " + ec.message());
-			}
-			else
-			{
-				std::filesystem::remove(target, ec);
+            if (ec)
+            {
+                setErrorMessage("Error reading symlink: " + ec.message());
+            }
+            else
+            {
+                std::filesystem::remove(target, ec);
 
-				if (ec)
-				{
-					setErrorMessage("Error removing symlink: " + ec.message());
-				}
-				else
-				{
-					std::filesystem::copy(target, Node.Path.parent_path(), std::filesystem::copy_options::recursive, ec);
+                if (ec)
+                {
+                    setErrorMessage("Error removing symlink: " + ec.message());
+                }
+                else
+                {
+                    std::filesystem::copy(target, Node.Path.parent_path(), std::filesystem::copy_options::recursive, ec);
 
-					if (ec)
-					{
-						setErrorMessage("Error copying symlink target: " + ec.message());
-					}
-				}
-			}
+                    if (ec)
+                    {
+                        setErrorMessage("Error copying symlink target: " + ec.message());
+                    }
+                }
+            }
 
-			FilesViewLastRefreshed = 0.f;
-		}
+            FilesViewLastRefreshed = 0.f;
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	if (ImGui::BeginPopup("FileContextMenu"))
-	{
-		ContextMenuTarget = Node.Path;
+    if (ImGui::BeginPopup("FileContextMenu"))
+    {
+        ContextMenuTarget = Node.Path;
 
-		if (ImGui::MenuItem("Rename"))
-		{
-			RenameTarget = Node.Path;
-			RenameNewValue = Node.Name;
-			RenameNewValue.reserve(32);
-			RenameFocusFirstFrame = true;
-		}
+        if (ImGui::MenuItem("Rename"))
+        {
+            RenameTarget = Node.Path;
+            RenameNewValue = Node.Name;
+            RenameNewValue.reserve(32);
+            RenameFocusFirstFrame = true;
+        }
 
-		if (Node.IsDirectory)
-		{
-			if (ImGui::MenuItem("Focus"))
-			{
-				FilesViewerRootPath = Node.Path.string();
-				FilesViewLastRefreshed = 0.0;
-			}
-		}
+        if (Node.IsDirectory)
+        {
+            if (ImGui::MenuItem("Focus"))
+            {
+                FilesViewerRootPath = Node.Path.string();
+                FilesViewLastRefreshed = 0.0;
+            }
+        }
 
-		if (ImGui::MenuItem("Delete"))
-		{
-			if (!Node.IsDirectory)
-			{
-				for (size_t i = 0; i < s_TextEditors.size(); i++)
-				{
-					if (FileRW::ResolvePathNormalized(s_TextEditors[i].FilePath) == FileRW::ResolvePathNormalized(Node.Path.string()))
-					{
-						s_TextEditors.erase(s_TextEditors.begin() + i);
-						break;
-					}
-				}
-			}
+        if (ImGui::MenuItem("Delete"))
+        {
+            if (!Node.IsDirectory)
+            {
+                for (size_t i = 0; i < s_TextEditors.size(); i++)
+                {
+                    if (FileRW::ResolvePathNormalized(s_TextEditors[i].FilePath) == FileRW::ResolvePathNormalized(Node.Path.string()))
+                    {
+                        s_TextEditors.erase(s_TextEditors.begin() + i);
+                        break;
+                    }
+                }
+            }
 
-			std::error_code ec;
-			std::filesystem::remove_all(Node.Path, ec);
+            std::error_code ec;
+            std::filesystem::remove_all(Node.Path, ec);
 
-			if (ec)
-				setErrorMessage(ec.message());
+            if (ec)
+                setErrorMessage(ec.message());
 
-			FilesViewLastRefreshed = 0.0;
-		}
+            FilesViewLastRefreshed = 0.0;
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	if (Node.Path == ContextMenuTarget && !ImGui::IsPopupOpen("FileContextMenu"))
-		ContextMenuTarget.clear();
+    if (Node.Path == ContextMenuTarget && !ImGui::IsPopupOpen("FileContextMenu"))
+        ContextMenuTarget.clear();
 
-	if (!Node.IsDirectory && !Node.IsSymlink && openScript && ImGui::IsWindowFocused())
-		invokeTextEditor(Node.Path.string());
+    if (!Node.IsDirectory && !Node.IsSymlink && openScript && ImGui::IsWindowFocused())
+        invokeTextEditor(Node.Path.string());
 
-	ImGui::SetCursorPos(afterNodePos);
+    ImGui::SetCursorPos(afterNodePos);
 
-	if (Node.IsDirectory && hovered)
-	{
-		if (ImGui::Button("+", ImVec2(16.f, 16.f)) || (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)))
-		{
-			ImGui::OpenPopup("CreateFileOrDirectory");
-			ContextMenuTarget = Node.Path;
-		}
-	}
-	else
-		ImGui::Dummy({ 16.f, 16.f });
+    if (Node.IsDirectory && hovered)
+    {
+        if (ImGui::Button("+", ImVec2(16.f, 16.f)) || (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)))
+        {
+            ImGui::OpenPopup("CreateFileOrDirectory");
+            ContextMenuTarget = Node.Path;
+        }
+    }
+    else
+        ImGui::Dummy({ 16.f, 16.f });
 
-	bool wasCreatorOpen = false;
+    bool wasCreatorOpen = false;
 
-	if (ImGui::BeginPopup("CreateFileOrDirectory"))
-	{
-		wasCreatorOpen = true;
+    if (ImGui::BeginPopup("CreateFileOrDirectory"))
+    {
+        wasCreatorOpen = true;
 
-		if (ImGui::MenuItem("File"))
-		{
-			createFileOrDirectory(Node, false);
-			ContextMenuTarget.clear();
-		}
-		if (ImGui::MenuItem("Folder"))
-		{
-			createFileOrDirectory(Node, true);
-			ContextMenuTarget.clear();
-		}
+        if (ImGui::MenuItem("File"))
+        {
+            createFileOrDirectory(Node, false);
+            ContextMenuTarget.clear();
+        }
+        if (ImGui::MenuItem("Folder"))
+        {
+            createFileOrDirectory(Node, true);
+            ContextMenuTarget.clear();
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	if (wasCreatorOpen && !ImGui::IsPopupOpen("CreateFileOrDirectory"))
-		ContextMenuTarget.clear();
+    if (wasCreatorOpen && !ImGui::IsPopupOpen("CreateFileOrDirectory"))
+        ContextMenuTarget.clear();
 
-	if (open)
-	{
-		if (Node.IsDirectory)
-		{
-			for (auto& it : Node.DirectoryContents)
-				recursiveRenderFilesystemNode(it.second);
-		}
+    if (open)
+    {
+        if (Node.IsDirectory)
+        {
+            for (auto& it : Node.DirectoryContents)
+                recursiveRenderFilesystemNode(it.second);
+        }
 
-		ImGui::TreePop();
-	}
+        ImGui::TreePop();
+    }
 
-	ImGui::PopID();
+    ImGui::PopID();
 }
 
 static void renderFilesViewer()
 {
-	if (!DeveloperTools::ScriptsShown)
-		return;
+    if (!DeveloperTools::ScriptsShown)
+        return;
 
-	std::string name = FilesViewerRoot.Name;
-	name[0] = toupper(name[0]);
+    std::string name = FilesViewerRoot.Name;
+    name[0] = toupper(name[0]);
 
-	if (!ImGui::Begin(std::format("{}###FilesViewer", name).c_str(), &DeveloperTools::ScriptsShown))
-	{
-		ImGui::End();
-		return;
-	}
+    if (!ImGui::Begin(std::format("{}###FilesViewer", name).c_str(), &DeveloperTools::ScriptsShown))
+    {
+        ImGui::End();
+        return;
+    }
 
-	static std::string PreviousNonqualifiedRoot;
-	if (std::string newRoot = FileRW::ResolvePathNormalized("dummy"); newRoot != PreviousNonqualifiedRoot)
-	{
-		FilesViewLastRefreshed = 0.0;
-		FilesViewerRoot = FilesystemNode{ .Path = "scripts/", .Name = "Scripts" };
-		PreviousNonqualifiedRoot = newRoot;
-	}
+    static std::string PreviousNonqualifiedRoot;
+    if (std::string newRoot = FileRW::ResolvePathNormalized("dummy"); newRoot != PreviousNonqualifiedRoot)
+    {
+        FilesViewLastRefreshed = 0.0;
+        FilesViewerRoot = FilesystemNode{ .Path = "scripts/", .Name = "Scripts" };
+        PreviousNonqualifiedRoot = newRoot;
+    }
 
-	if (GetRunningTime() - FilesViewLastRefreshed > 2.f)
-	{
-		FilesViewerRoot.Path = std::filesystem::path(FileRW::ResolvePathNormalized(FilesViewerRootPath));
-		FilesViewerRoot.Name = FilesViewerRoot.Path.filename().string();
-		refreshFilesystemNode(FilesViewerRoot);
-		FilesViewLastRefreshed = GetRunningTime();
-	}
+    if (GetRunningTime() - FilesViewLastRefreshed > 2.f)
+    {
+        FilesViewerRoot.Path = std::filesystem::path(FileRW::ResolvePathNormalized(FilesViewerRootPath));
+        FilesViewerRoot.Name = FilesViewerRoot.Path.filename().string();
+        refreshFilesystemNode(FilesViewerRoot);
+        FilesViewLastRefreshed = GetRunningTime();
+    }
 
-	for (auto& nodeIt : FilesViewerRoot.DirectoryContents)
-		recursiveRenderFilesystemNode(nodeIt.second);
+    for (auto& nodeIt : FilesViewerRoot.DirectoryContents)
+        recursiveRenderFilesystemNode(nodeIt.second);
 
-	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.f);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.f);
 
-	ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
-	rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
+    ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
+    rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
 
-	ImGui::Dummy(rootDropTargetSize);
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FileViewer"))
-		{
-			std::filesystem::path path = std::filesystem::path(std::string_view((const char*)payload->Data, payload->DataSize));
+    ImGui::Dummy(rootDropTargetSize);
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FileViewer"))
+        {
+            std::filesystem::path path = std::filesystem::path(std::string_view((const char*)payload->Data, payload->DataSize));
 
-			std::error_code ec;
-			std::filesystem::rename(path, std::filesystem::path(FileRW::ResolvePathNormalized(FilesViewerRootPath)) / path.filename(), ec);
+            std::error_code ec;
+            std::filesystem::rename(path, std::filesystem::path(FileRW::ResolvePathNormalized(FilesViewerRootPath)) / path.filename(), ec);
 
-			if (ec)
-				setErrorMessage(ec.message());
-			else
-				FilesViewLastRefreshed = 0.f;
-		}
+            if (ec)
+                setErrorMessage(ec.message());
+            else
+                FilesViewLastRefreshed = 0.f;
+        }
 
-		ImGui::EndDragDropTarget();
-	}
+        ImGui::EndDragDropTarget();
+    }
 
-	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive())
-		ImGui::OpenPopup("ViewerContextMenu");
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive())
+        ImGui::OpenPopup("ViewerContextMenu");
 
-	if (ImGui::BeginPopup("ViewerContextMenu"))
-	{
-		if (ImGui::BeginMenu("New"))
-		{
-			if (ImGui::MenuItem("File"))
-				createFileOrDirectory(FilesViewerRoot, false);
+    if (ImGui::BeginPopup("ViewerContextMenu"))
+    {
+        if (ImGui::BeginMenu("New"))
+        {
+            if (ImGui::MenuItem("File"))
+                createFileOrDirectory(FilesViewerRoot, false);
 
-			if (ImGui::MenuItem("Folder"))
-				createFileOrDirectory(FilesViewerRoot, true);
+            if (ImGui::MenuItem("Folder"))
+                createFileOrDirectory(FilesViewerRoot, true);
 
-			ImGui::EndMenu();
-		}
+            ImGui::EndMenu();
+        }
 
-		if (ImGui::MenuItem("Focus parent"))
-		{
-			FilesViewerRootPath = std::filesystem::absolute(FileRW::ResolvePathNormalized(FilesViewerRootPath)).parent_path().string();
-			FilesViewLastRefreshed = 0.0;
-		}
+        if (ImGui::MenuItem("Focus parent"))
+        {
+            FilesViewerRootPath = std::filesystem::absolute(FileRW::ResolvePathNormalized(FilesViewerRootPath)).parent_path().string();
+            FilesViewLastRefreshed = 0.0;
+        }
 
-		ImGui::EndPopup();
-	}
+        ImGui::EndPopup();
+    }
 
-	ImGui::End();
+    ImGui::End();
 }
 
 static std::vector<ObjectHandle> PrevEditSelections;
 static const std::string_view AssetProperties[] = {
-	"MeshAsset",  // Mesh
-	"Material",   // Mesh
-	"Image",      // UIImage, ParticleEmitter
-	"ImportPath", // Model,
-	"SoundFile",  // Sound
-	"Skybox",     // Environment
+    "MeshAsset",  // Mesh
+    "Material",   // Mesh
+    "Image",      // UIImage, ParticleEmitter
+    "ImportPath", // Model,
+    "SoundFile",  // Sound
+    "Skybox",     // Environment
 };
 static const Reflection::PropertyDescriptor* AssetProperty = nullptr;
 static std::string AssetPropertyValue;
@@ -3510,122 +3510,122 @@ static const Reflection::PropertyDescriptor* EditingProperty = nullptr;
 
 static void setProperties(const std::string_view& PropertyName, const Reflection::GenericValue& Value)
 {
-	for (const ObjectHandle& sel : Selections)
-		{
-			if (sel->FindProperty(PropertyName))
-			{
-				try
-				{
-					sel->SetPropertyValue(PropertyName, Value);
-				}
-				catch (const std::runtime_error& err)
-				{
-					setErrorMessage(err.what());
-				}
-			}
-		}
+    for (const ObjectHandle& sel : Selections)
+        {
+            if (sel->FindProperty(PropertyName))
+            {
+                try
+                {
+                    sel->SetPropertyValue(PropertyName, Value);
+                }
+                catch (const std::runtime_error& err)
+                {
+                    setErrorMessage(err.what());
+                }
+            }
+        }
 }
 
 static bool openFileSelectorForAssetProp(const std::string_view& PropertyName)
 {
-	History::ScopedAction action = { "AssetSelector_FileDialog" };
+    History::ScopedAction action = { "AssetSelector_FileDialog" };
 
-	const char* defaultPath = "resources/";
-	const char* filters[10] = {};
-	int nFilterPatterns = 0;
-	const char* filterDescription = "Asset";
+    const char* defaultPath = "resources/";
+    const char* filters[10] = {};
+    int nFilterPatterns = 0;
+    const char* filterDescription = "Asset";
 
-	if (PropertyName == "MeshAsset")
-	{
-		defaultPath = "meshes/";
-		filters[0] = "*.hxmesh";
-		nFilterPatterns = 1;
-		filterDescription = "Meshes";
-	}
-	else if (PropertyName == "Material")
-	{
-		defaultPath = "materials/";
-		filters[0] = "*.mtl";
-		nFilterPatterns = 1;
-		filterDescription = "Materials";
-	}
-	else if (PropertyName == "Image" || PropertyName == "Skybox")
-	{
-		defaultPath = "textures/";
-		filters[0] = "*.png";
-		filters[1] = "*.jpeg";
-		filters[2] = "*.jpg";
-		filters[3] = "*.bmp";
-		filters[4] = "*.tga";
-		filters[5] = "*.gif";
-		filters[6] = "*.psd";
-		filters[7] = "*.pic";
-		filters[8] = "*.pnm";
-		filters[9] = "*.hdr";
-		nFilterPatterns = 10;
-		filterDescription = "Images";
-	}
-	else if (PropertyName == "SoundFile")
-	{
-		defaultPath = "sounds/";
-		filters[0] = "*.wav";
-		filters[1] = "*.mp3";
-		filters[2] = "*.ogg";
-		nFilterPatterns = 3;
-		filterDescription = "Sounds";
-	}
+    if (PropertyName == "MeshAsset")
+    {
+        defaultPath = "meshes/";
+        filters[0] = "*.hxmesh";
+        nFilterPatterns = 1;
+        filterDescription = "Meshes";
+    }
+    else if (PropertyName == "Material")
+    {
+        defaultPath = "materials/";
+        filters[0] = "*.mtl";
+        nFilterPatterns = 1;
+        filterDescription = "Materials";
+    }
+    else if (PropertyName == "Image" || PropertyName == "Skybox")
+    {
+        defaultPath = "textures/";
+        filters[0] = "*.png";
+        filters[1] = "*.jpeg";
+        filters[2] = "*.jpg";
+        filters[3] = "*.bmp";
+        filters[4] = "*.tga";
+        filters[5] = "*.gif";
+        filters[6] = "*.psd";
+        filters[7] = "*.pic";
+        filters[8] = "*.pnm";
+        filters[9] = "*.hdr";
+        nFilterPatterns = 10;
+        filterDescription = "Images";
+    }
+    else if (PropertyName == "SoundFile")
+    {
+        defaultPath = "sounds/";
+        filters[0] = "*.wav";
+        filters[1] = "*.mp3";
+        filters[2] = "*.ogg";
+        nFilterPatterns = 3;
+        filterDescription = "Sounds";
+    }
 
-	const char* selectionCStr = tinyfd_openFileDialog(
-		"Select asset",
-		FileRW::ResolvePathAbsolute(defaultPath).c_str(),
-		nFilterPatterns,
-		filters,
-		filterDescription,
-		false
-	);
+    const char* selectionCStr = tinyfd_openFileDialog(
+        "Select asset",
+        FileRW::ResolvePathAbsolute(defaultPath).c_str(),
+        nFilterPatterns,
+        filters,
+        filterDescription,
+        false
+    );
 
-	if (!selectionCStr)
-		return false;
+    if (!selectionCStr)
+        return false;
 
-	std::string_view selection = selectionCStr;
+    std::string selection = FileRW::ResolvePathNormalized(selectionCStr);
 
-	if (size_t resLoc = selection.find("resources/"); resLoc == std::string::npos)
-	{
-		setErrorMessage("Selection must be within the Resources directory");
-		return false;
-	}
-	else
-		selection = selection.substr(resLoc + strlen("resources/"));
+    if (size_t resLoc = selection.find("resources/"); resLoc == std::string::npos)
+    {
+        setErrorMessage("Selection must be within the Resources directory");
+        return false;
+    }
+    else
+        selection = selection.substr(resLoc + strlen("resources/"));
 
-	setProperties(PropertyName, selection);
-	return true;
+    setProperties(PropertyName, selection);
+    return true;
 }
 
 static std::string stringToLowerCase(std::string str)
 {
-	for (char& c : str)
-		c = std::tolower(c);
-	return str;
+    for (char& c : str)
+        c = std::tolower(c);
+    return str;
 }
 
 static void followAssetProperty(const std::string_view& PropertyName, const std::string_view& Value)
 {
-	if (PropertyName == "Material")
-	{
-		MaterialManager* mtlManager = MaterialManager::Get();
-		const std::vector<RenderMaterial>& materials = mtlManager->GetLoadedMaterials();
+    if (PropertyName == "Material")
+    {
+        MaterialManager* mtlManager = MaterialManager::Get();
+        const std::vector<RenderMaterial>& materials = mtlManager->GetLoadedMaterials();
 
-		for (int i = 0; i < materials.size(); i++)
-		{
-			const RenderMaterial& mtl = materials[i];
-			if (mtl.Name == Value)
-			{
-				MtlCurItem = i;
-				DeveloperTools::MaterialsShown = true;
-				break;
-			}
-		}
-	}
+        for (int i = 0; i < materials.size(); i++)
+        {
+            const RenderMaterial& mtl = materials[i];
+            if (mtl.Name == Value)
+            {
+                MtlCurItem = i;
+                DeveloperTools::MaterialsShown = true;
+                break;
+            }
+        }
+    }
 }
 
 static std::string AssetSearch;
@@ -3633,875 +3633,875 @@ static bool SearchFirstFrame = true;
 
 static bool propertyAssetSelectorList(const std::string_view& PropertyName, float FieldWidth)
 {
-	bool didSet = false;
+    bool didSet = false;
 
-	if (SearchFirstFrame)
-	{
-		ImGui::SetKeyboardFocusHere();
-		SearchFirstFrame = false;
-	}
+    if (SearchFirstFrame)
+    {
+        ImGui::SetKeyboardFocusHere();
+        SearchFirstFrame = false;
+    }
 
-	ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
 
-	float maxWidth = 0.f;
-	if (PropertyName == "MeshAsset")
-		maxWidth = FieldWidth;
-	else
-	{
-		for (const RenderMaterial& material : MaterialManager::Get()->GetLoadedMaterials())
-			maxWidth = std::max(maxWidth, ImGui::CalcTextSize(material.Name.c_str()).x);
-		maxWidth += style.FramePadding.x * 2.f + 8.f;
-	}
+    float maxWidth = 0.f;
+    if (PropertyName == "MeshAsset")
+        maxWidth = FieldWidth;
+    else
+    {
+        for (const RenderMaterial& material : MaterialManager::Get()->GetLoadedMaterials())
+            maxWidth = std::max(maxWidth, ImGui::CalcTextSize(material.Name.c_str()).x);
+        maxWidth += style.FramePadding.x * 2.f + 8.f;
+    }
 
-	float width = maxWidth - style.FramePadding.x * 2.f - 16.f;
-	float newPadding = (16.f - ImGui::CalcTextSize("").y) / 2.f + style.FramePadding.y;
-	float prevPadding = style.FramePadding.y;
+    float width = maxWidth - style.FramePadding.x * 2.f - 16.f;
+    float newPadding = (16.f - ImGui::CalcTextSize("").y) / 2.f + style.FramePadding.y;
+    float prevPadding = style.FramePadding.y;
 
-	style.FramePadding.y = newPadding;
-	ImGui::SetNextItemWidth(width);
-	ImGui::InputTextWithHint("##Search", PropertyName.data(), &AssetSearch);
-	style.FramePadding.y = prevPadding;
+    style.FramePadding.y = newPadding;
+    ImGui::SetNextItemWidth(width);
+    ImGui::InputTextWithHint("##Search", PropertyName.data(), &AssetSearch);
+    style.FramePadding.y = prevPadding;
 
-	static TextureManager* texManager = TextureManager::Get();
-	static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false);
+    static TextureManager* texManager = TextureManager::Get();
+    static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false);
 
-	ImGui::SameLine();
+    ImGui::SameLine();
 
-	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
+    ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);
 
-	bool openFile = ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f));
+    bool openFile = ImGui::ImageButton("##OpenFile", texManager->GetTextureResource(openIconId).GpuId, ImVec2(16.f, 16.f));
 
-	ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
+    ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
 
-	if (openFile)
-	{
-		ImGui::CloseCurrentPopup();
-		ImGui::EndPopup();
-		return openFileSelectorForAssetProp(PropertyName);
-	}
+    if (openFile)
+    {
+        ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+        return openFileSelectorForAssetProp(PropertyName);
+    }
 
-	std::string assetSearchLowercase = stringToLowerCase(AssetSearch);
+    std::string assetSearchLowercase = stringToLowerCase(AssetSearch);
 
-	if (PropertyName == "MeshAsset")
-	{
-		History::ScopedAction action = { "AssetSelector_Mesh" };
+    if (PropertyName == "MeshAsset")
+    {
+        History::ScopedAction action = { "AssetSelector_Mesh" };
 
-		if ((AssetSearch.size() == 0 || std::string_view("!cube").find(assetSearchLowercase) != std::string::npos) && ImGui::MenuItem("!Cube"))
-		{
-			setProperties(PropertyName, "!Cube");
-			didSet = true;
-		}
+        if ((AssetSearch.size() == 0 || std::string_view("!cube").find(assetSearchLowercase) != std::string::npos) && ImGui::MenuItem("!Cube"))
+        {
+            setProperties(PropertyName, "!Cube");
+            didSet = true;
+        }
 
-		if ((AssetSearch.size() == 0 || std::string_view("!sphere").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Sphere"))
-		{
-			setProperties(PropertyName, "!Sphere");
-			didSet = true;
-		}
+        if ((AssetSearch.size() == 0 || std::string_view("!sphere").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Sphere"))
+        {
+            setProperties(PropertyName, "!Sphere");
+            didSet = true;
+        }
 
-		if ((AssetSearch.size() == 0 || std::string_view("!quad").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Quad"))
-		{
-			setProperties(PropertyName, "!Quad");
-			didSet = true;
-		}
-	}
-	else if (PropertyName == "Material")
-	{
-		History::ScopedAction action = { "AssetSelector_Material" };
-		const std::vector<RenderMaterial>& materials = MaterialManager::Get()->GetLoadedMaterials();
+        if ((AssetSearch.size() == 0 || std::string_view("!quad").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Quad"))
+        {
+            setProperties(PropertyName, "!Quad");
+            didSet = true;
+        }
+    }
+    else if (PropertyName == "Material")
+    {
+        History::ScopedAction action = { "AssetSelector_Material" };
+        const std::vector<RenderMaterial>& materials = MaterialManager::Get()->GetLoadedMaterials();
 
-		for (int i = 0; i < (int)materials.size(); i++)
-		{
-			const RenderMaterial& material = materials[i];
+        for (int i = 0; i < (int)materials.size(); i++)
+        {
+            const RenderMaterial& material = materials[i];
 
-			bool visible = AssetSearch.size() == 0 || stringToLowerCase(material.Name).find(assetSearchLowercase) != std::string::npos;
+            bool visible = AssetSearch.size() == 0 || stringToLowerCase(material.Name).find(assetSearchLowercase) != std::string::npos;
 
-			if (visible)
-			{
-				if (ImGui::MenuItem(material.Name.c_str()))
-				{
-					setProperties(PropertyName, material.Name);
-					didSet = true;
-				}
+            if (visible)
+            {
+                if (ImGui::MenuItem(material.Name.c_str()))
+                {
+                    setProperties(PropertyName, material.Name);
+                    didSet = true;
+                }
 
-				if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-				{
-					DeveloperTools::MaterialsShown = true;
-					MtlCurItem = i;
-				}
+                if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+                {
+                    DeveloperTools::MaterialsShown = true;
+                    MtlCurItem = i;
+                }
 
-				ImGui::SetItemTooltip("'%s'\n\nRight-click for details.", material.Name.c_str());
-			}
-		}
-	}
+                ImGui::SetItemTooltip("'%s'\n\nRight-click for details.", material.Name.c_str());
+            }
+        }
+    }
 
-	ImGui::EndPopup();
-	return didSet;
+    ImGui::EndPopup();
+    return didSet;
 }
 
 static bool renderPropertyAssetSelector(const std::string_view& PropertyName, float FieldWidth)
 {
-	if (ImGui::Button("..."))
-	{
-		ImGui::ScrollToItem();
+    if (ImGui::Button("..."))
+    {
+        ImGui::ScrollToItem();
 
-		if (PropertyName != "MeshAsset" && PropertyName != "Material" && PropertyName != "Skybox")
-			return openFileSelectorForAssetProp(PropertyName);
+        if (PropertyName != "MeshAsset" && PropertyName != "Material" && PropertyName != "Skybox")
+            return openFileSelectorForAssetProp(PropertyName);
 
-		ImGui::OpenPopup("SelectAsset");
-		AssetSearch.clear();
-		AssetSearch.reserve(128);
-		SearchFirstFrame = true;
-	}
+        ImGui::OpenPopup("SelectAsset");
+        AssetSearch.clear();
+        AssetSearch.reserve(128);
+        SearchFirstFrame = true;
+    }
 
-	bool didSet = false;
+    bool didSet = false;
 
-	if (ImGui::BeginPopup("SelectAsset"))
-	{
-		assert(PropertyName == "MeshAsset" || PropertyName == "Material" || PropertyName == "Skybox");
+    if (ImGui::BeginPopup("SelectAsset"))
+    {
+        assert(PropertyName == "MeshAsset" || PropertyName == "Material" || PropertyName == "Skybox");
 
-		if (PropertyName == "Skybox")
-		{
-			if (ImGui::MenuItem("Single equirectangular"))
-			{
-				ImGui::EndPopup();
-				return openFileSelectorForAssetProp(PropertyName);
-			}
-			else if (ImGui::MenuItem("Cubemap directory"))
-			{
-				ImGui::EndPopup();
+        if (PropertyName == "Skybox")
+        {
+            if (ImGui::MenuItem("Single equirectangular"))
+            {
+                ImGui::EndPopup();
+                return openFileSelectorForAssetProp(PropertyName);
+            }
+            else if (ImGui::MenuItem("Cubemap directory"))
+            {
+                ImGui::EndPopup();
 
-				History::ScopedAction action = { "AssetSelector_FileDialog_SkyboxCubemapDirectory" };
+                History::ScopedAction action = { "AssetSelector_FileDialog_SkyboxCubemapDirectory" };
 
-				const char* selectionCStr = tinyfd_selectFolderDialog(
-					"Select skybox cubemap directory",
-					FileRW::ResolvePathAbsolute("textures/").c_str()
-				);
+                const char* selectionCStr = tinyfd_selectFolderDialog(
+                    "Select skybox cubemap directory",
+                    FileRW::ResolvePathAbsolute("textures/").c_str()
+                );
 
-				if (!selectionCStr)
-					return false;
+                if (!selectionCStr)
+                    return false;
 
-				std::string_view selection = selectionCStr;
+                std::string_view selection = selectionCStr;
 
-				if (size_t resLoc = selection.find("resources/"); resLoc == std::string::npos)
-				{
-					setErrorMessage("Selection must be within the Resources directory");
-					return false;
-				}
-				else
-					selection = selection.substr(resLoc + strlen("resources/"));
+                if (size_t resLoc = selection.find("resources/"); resLoc == std::string::npos)
+                {
+                    setErrorMessage("Selection must be within the Resources directory");
+                    return false;
+                }
+                else
+                    selection = selection.substr(resLoc + strlen("resources/"));
 
-				setProperties(PropertyName, selection);
-				return true;
-			}
+                setProperties(PropertyName, selection);
+                return true;
+            }
 
-			ImGui::EndPopup();
-		}
-		else
-			didSet = propertyAssetSelectorList(PropertyName, FieldWidth);
-	}
+            ImGui::EndPopup();
+        }
+        else
+            didSet = propertyAssetSelectorList(PropertyName, FieldWidth);
+    }
 
-	return didSet;
+    return didSet;
 }
 
 static void renderProperties()
 {
-	ZoneScoped;
-
-	if (!DeveloperTools::PropertiesShown)
-		return;
-
-	if (!ImGui::Begin("Properties", &DeveloperTools::PropertiesShown, ImGuiWindowFlags_HorizontalScrollbar))
-	{
-		ImGui::End();
-		return;
-	}
-
-	if (Selections.size() > 0)
-	{
-		if (ImGui::IsWindowHovered() && ImGui::IsKeyDown(ImGuiKey_F2))
-			FocusRenameSelection = true;
-
-		uint32_t idSum = 0;
-		for (const ObjectHandle& sel : Selections)
-			idSum += sel->ObjectId;
-
-		ImGui::PushID(idSum);
-
-		std::string sepStr = "Properties of " + std::to_string(Selections.size()) + " objects";
-		if (Selections.size() == 1)
-			sepStr = std::format(
-				"Properties of {}",
-				Selections[0]->Name
-			);
-
-		ImGui::SeparatorText(sepStr.c_str());
-
-		static bool ShowComponents = false;
-		if (ImGui::IsItemClicked())
-			ShowComponents = !ShowComponents;
-
-		ImGui::PushID(static_cast<uint32_t>(115111116109));
-
-		std::set<EntityComponent> components;
-
-		for (const ObjectHandle& sel : Selections)
-			for (const ReflectorRef& ref : sel->Components)
-				components.insert(ref.Type);
-
-		static EntityComponent RemoveComponentPopupTarget = EntityComponent::None;
-
-		for (EntityComponent ec : components)
-		{
-			Texture tex = getIconForComponent(ec);
-			ImGui::Image(tex.GpuId, ImVec2(16, 16));
-			ImGui::SetItemTooltip(
-				"%s\n%s",
-				s_EntityComponentNames[(size_t)ec].data(),
-				getDescriptionForComponent(ec).c_str()
-			);
-
-			if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-			{
-				RemoveComponentPopupTarget = ec;
-				ImGui::OpenPopup("RemoveComponent");
-			}
-			else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
-			{
-				DeveloperTools::DocumentationShown = true;
-				DocumentationViewerSection = 0;
-				DocumentationViewerSubPage = (int)ec;
-				DocumentationViewerJumpingToPage = true;
-			}
-
-			ImGui::SameLine();
-		}
-
-		if (ImGui::Button("+", ImVec2(16, 16)))
-			ImGui::OpenPopup("AddComponent");
-
-		if (ImGui::BeginPopup("AddComponent"))
-		{
-			for (const std::string_view& comp : AddableComponents)
-			{
-				if (ImGui::MenuItem(comp.data()))
-				{
-					History::ScopedAction action = { "AddComponent" };
-
-					EntityComponent ec = FindComponentTypeByName(comp);
-					assert(ec != EntityComponent::None);
-
-					for (const ObjectHandle& obj : Selections)
-					{
-						if (!obj->FindComponentByType(ec))
-							obj->AddComponent(ec);
-					}
-				}
-
-				std::string tooltip = getDescriptionAsString(
-					ObjectDocCommentsJson["Components"][comp]["Description"],
-					32
-				);
-				if (tooltip.size() > 1)
-					ImGui::SetItemTooltip("%s", tooltip.c_str());
-			}
-
-			ImGui::EndPopup();
-		}
-
-		if (ImGui::BeginPopup("RemoveComponent"))
-		{
-			ImGui::SeparatorText(s_EntityComponentNames[(size_t)RemoveComponentPopupTarget].data());
-
-			if (ImGui::MenuItem("Info"))
-			{
-				DeveloperTools::DocumentationShown = true;
-				DocumentationViewerSection = 0;
-				DocumentationViewerSubPage = (int)RemoveComponentPopupTarget;
-				DocumentationViewerJumpingToPage = true;
-			}
-
-			if (ImGui::MenuItem("Remove"))
-			{
-				History::ScopedAction action = { "RemoveComponent" };
-
-				for (const ObjectHandle& obj : Selections)
-					if (obj->FindComponentByType(RemoveComponentPopupTarget))
-						obj->RemoveComponent(RemoveComponentPopupTarget);
-			}
-			
-			ImGui::EndPopup();
-		}
-
-		ImGui::PopID();
-
-		std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
-		std::unordered_map<std::string_view, bool> conflictingProps;
-		std::unordered_map<std::string_view, EntityComponent> propToComponent;
-		std::set<std::string_view> tags;
-
-		for (const ObjectHandle& sel : Selections)
-		{
-			for (const auto& prop : sel->GetProperties())
-			{
-				const std::string_view& pname = prop.first;
-				const auto& it = props.find(pname);
-
-				Reflection::GenericValue myVal;
-
-				if (prop.second->Get)
-					myVal = sel->GetPropertyValue(pname);
-				else
-					myVal = "<CANNOT_READ>";
-				
-				props.insert(std::pair(pname, std::pair(prop.second, myVal)));
-
-				if (it != props.end())
-				{
-					const auto& cit = conflictingProps.find(prop.first);
-					// avoid changing this to false if it was already true
-					if (cit != conflictingProps.end())
-						if (cit->second)
-							continue;
-
-					const auto& prevVal = it->second;
-					if (prevVal.second != myVal)
-						conflictingProps.insert(std::pair(prop.first, true));
-					else
-						conflictingProps.insert(std::pair(prop.first, false));
-				}
-				else
-					propToComponent[pname] = sel->MemberToComponentMap[pname].Type;
-			}
-
-			for (uint16_t tag : sel->Tags)
-				tags.insert(GameObjectManager::Get()->Collections[tag].Name);
-		}
-
-		using PropsIteratorType = std::pair<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>>;
-
-		std::vector<PropsIteratorType> propsOrdered = std::vector<PropsIteratorType>(props.begin(), props.end());
-		std::sort(propsOrdered.begin(), propsOrdered.end(), [](const auto& a, const auto& b)
-			{
-				return a.first < b.first;
-			});
-
-		float cavailX = ImGui::GetContentRegionAvail().x;
-		float halfWidth = cavailX / 2.f;
-
-		ImGui::Separator();
-
-		for (size_t propIndex = 0; propIndex < propsOrdered.size(); propIndex++)
-		{
-			const PropsIteratorType& propIt = propsOrdered[propIndex];
-			const std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue> propItem = propIt.second;
-
-			const std::string_view& propName = propIt.first;
-			const Reflection::PropertyDescriptor* propDesc = propItem.first;
-			const Reflection::GenericValue& curVal = propItem.second;
-
-			ImGui::PushID(propItem.first);
-
-			const char* propNameCStr = propName.data();
-			bool doConflict = conflictingProps[propName];
-
-			if (!propDesc->Set)
-			{
-				// no setter (read-only property, such as Class or ObjectId)
-				// 07/07/2024
-
-				if (doConflict)
-				{
-					ImGui::TextUnformatted(propNameCStr);
-					ImGui::SameLine();
-					propertyTooltip(propName, propToComponent[propName], propDesc->Type);
-
-					ImGui::SetCursorPosX(halfWidth);
-					ImGui::TextUnformatted("<DIFFERENT>");
-				}
-				else
-				{
-					std::string curValStr = curVal.ToString();
-
-					if (curVal.Type == Reflection::ValueType::Matrix)
-					{
-						ImGui::Text("%s: ", propNameCStr);
-
-						ImGui::Indent();
-
-						curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
-						ImGui::TextUnformatted(curValStr.c_str());
-
-						ImGui::Unindent();
-
-						if (ImGui::BeginItemTooltip())
-						{
-							ImGui::TextUnformatted(curValStr.c_str());
-							ImGui::EndTooltip();
-						}
-					}
-					else
-					{
-						ImGui::TextUnformatted(propNameCStr);
-						ImGui::SameLine();
-						propertyTooltip(propName, propToComponent[propName], propDesc->Type);
-
-						ImGui::SetCursorPosX(halfWidth);
-						ImGui::TextUnformatted(curValStr.c_str());
-						ImGui::SetItemTooltip("%s", curValStr.c_str());
-					}
-				}
-
-				ImGui::Separator();
-				ImGui::PopID();
-				continue;
-			}
-
-			Reflection::GenericValue newVal = curVal;
-			bool canChangeValue = true;
-			bool valueWasEditedManual = false;
-			bool deactivatedAfterEdit = false;
-			bool isAssetProp = false;
-			bool assetPropHasSelector = false;
-
-			ImGui::TextUnformatted(propNameCStr);
-
-			if (!doConflict)
-				propertyTooltip(propName, propToComponent[propName], propDesc->Type);
-
-			ImGui::SameLine();
-
-			ImVec2 cursorStart = ImGui::GetCursorPos();
-			ImGui::SetCursorPosX(halfWidth);
-
-			if ((propDesc->Type & ~Reflection::ValueType::Null) != Reflection::ValueType::Matrix)
-				ImGui::SetNextItemWidth(halfWidth);
-
-			switch (propDesc->Type & ~Reflection::ValueType::Null)
-			{
-
-			case Reflection::ValueType::String:
-			{
-				for (const std::string_view& ap : AssetProperties)
-				{
-					if (propName == ap)
-					{
-						isAssetProp = true;
-						if (propName != "ImportPath")
-							assetPropHasSelector = true;
-
-						break;
-					}
-				}
-
-				if (assetPropHasSelector)
-					ImGui::SetNextItemWidth(halfWidth - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 4.f);
-
-				std::string_view str = (isAssetProp && AssetProperty == propDesc) ? AssetPropertyValue : curVal.AsStringView();
-
-				const uint32_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
-				uint32_t allocSize = (uint32_t)str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
-
-				char* buf = bufferInitialize(
-					allocSize,
-					"<Initial Value 29/09/2024 Hey guys How we doing today>"
-				);
-				copyStringToBuffer(buf, allocSize, doConflict ? "" : str);
-
-				bool focused = false;
-				if (FocusRenameSelection && propName == "Name")
-				{
-					FocusRenameSelection = false;
-					ImGui::SetKeyboardFocusHere();
-					focused = true;
-				}
-
-				bool pushedStyleCol = false;
-
-				if (ImGui::IsPopupOpen("SelectAsset"))
-				{
-					ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(56.f/255.f, 142.f/255.f, 1.f, 1.f));
-					pushedStyleCol = true;
-				}
-
-				ImGui::InputText("##", buf, allocSize);
-
-				if (pushedStyleCol)
-					ImGui::PopStyleColor();
-
-				if (isAssetProp)
-				{
-					if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-						followAssetProperty(propName, str);
-
-					if (ImGui::IsItemActive())
-					{
-						EditingProperty = propDesc;
-
-						if (!AssetProperty)
-						{
-							AssetProperty = propDesc;
-							AssetPropertyValue = curVal.AsString();
-						}
-
-						if (AssetProperty == propDesc)
-							AssetPropertyValue = buf;
-					}
-
-					if (AssetProperty == propDesc)
-						valueWasEditedManual = true;
-
-					if (assetPropHasSelector)
-					{
-						ImGui::SameLine();
-						if (renderPropertyAssetSelector(propName, halfWidth))
-							AssetProperty = nullptr;
-					}
-				}
-
-				if (focused)
-					ImGui::SetScrollX(0.f);
-
-				newVal = buf;
-				Memory::Free(buf);
-				break;
-			}
-
-			case Reflection::ValueType::Boolean:
-			{
-				if (doConflict)
-				{
-					if (resetConflictedProperty(propNameCStr))
-						newVal = false;
-				}
-				else
-					ImGui::Checkbox("##", &newVal.Val.Bool);
-
-				break;
-			}
-
-			case Reflection::ValueType::Double:
-			{
-				if (doConflict)
-				{
-					if (char buf[2] = {0}; resetConflictedProperty(propNameCStr, buf))
-						newVal = atof(buf);
-				}
-				else
-					ImGui::InputDouble("##", &newVal.Val.Double);
-
-				break;
-			}
-
-			case Reflection::ValueType::Integer:
-			{
-				if (doConflict)
-				{
-					if (char buf[2] = {0}; resetConflictedProperty(propNameCStr))
-						newVal = (int64_t)atoi(buf);
-				}
-				else
-				{
-					int32_t i = static_cast<int32_t>(newVal.Val.Int);
-					ImGui::InputInt("##", &i);
-					newVal.Val.Int = i;
-				}
-
-				break;
-			}
-
-			case Reflection::ValueType::GameObject:
-			{
-				if (doConflict)
-				{
-					bool pick = ImGui::Button(" ");
-
-					if (pick)
-					{
-						IsPickingObject = true;
-						PickerTargets = Selections;
-						PickerTargetPropName = propName;
-
-						Selections.clear();
-
-						canChangeValue = false;
-					}
-				}
-				else
-				{
-					GameObject* referenced = GameObjectManager::Get()->FromGenericValue(newVal);
-					std::string str = "";
-
-					if (referenced)
-						str = referenced->Name;
-
-					ImGui::InputText("##", &str);
-
-					if (ImGui::IsItemActivated() && ImGui::IsWindowFocused())
-					{
-						if (ImGui::GetIO().KeyCtrl)
-						{
-							if (referenced)
-							{
-								GameObject* target = GameObjectManager::Get()->FromGenericValue(newVal);
-								Selections = { target };
-								ExplorerShouldSeekToCurrentSelection = true;
-								DeveloperTools::ExplorerShown = true;
-							}
-							else
-								Selections.clear();
-						}
-						else
-						{
-							IsPickingObject = true;
-							PickerTargets = Selections;
-							PickerTargetPropName = propName;
-
-							Selections.clear();
-						}
-					}
-					else if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-					{
-						if (ImGui::GetIO().KeyCtrl)
-						{
-							History::ScopedAction action = { "SetObjectPropertyToNil" };
-
-							for (const ObjectHandle& object : Selections)
-								object->SetPropertyValue(propName, Reflection::GenericValue::Null());
-						}
-					}
-				}
-
-				break;
-			}
-
-			case Reflection::ValueType::Color:
-			{
-				if (doConflict)
-				{
-					if (resetConflictedProperty(propNameCStr))
-						newVal = Color(0.f, 0.f, 0.f).ToGenericValue();
-				}
-				else
-					ImGui::ColorEdit3("##", &newVal.Val.Vec3.x);
-
-				break;
-			}
-
-			case Reflection::ValueType::Vector2:
-			{
-				if (doConflict)
-				{
-					if (resetConflictedProperty(propNameCStr))
-						newVal = glm::vec2(0.f);
-				}
-				else
-					ImGui::InputFloat2("##", &newVal.Val.Vec2.x);
-
-				break;
-			}
-
-			case Reflection::ValueType::Vector3:
-			{
-				if (doConflict)
-				{
-					if (resetConflictedProperty(propNameCStr))
-						newVal = glm::vec3(0.f);
-				}
-				else
-					ImGui::InputFloat3("##", &newVal.Val.Vec3.x);
-
-				break;
-			}
-
-			case Reflection::ValueType::Matrix:
-			{
-				if (!doConflict)
-				{
-					ImGui::SetCursorPos(cursorStart);
-					ImGui::NewLine(); // need to put this on a new line to prevent UI overlapping
-
-					glm::mat4 mat = curVal.AsMatrix();
-
-					float pos[3] = {
-						mat[3][0],
-						mat[3][1],
-						mat[3][2]
-					};
-
-					// PLEASE GOD JUST WORK ALREADY
-					// 21/09/2024
-					glm::vec3 rotrads;
-
-					glm::extractEulerAngleYXZ(mat, rotrads.y, rotrads.x, rotrads.z);
-
-					//mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
-					//mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
-					//mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
-
-					float rotdegs[3] = {
-						glm::degrees(rotrads.x),
-						glm::degrees(rotrads.y),
-						glm::degrees(rotrads.z)
-					};
-
-					if (pos[0] != pos[0] || pos[1] != pos[1] || pos[2] != pos[2] || rotdegs[0] != rotdegs[0] || rotdegs[1] != rotdegs[1] || rotdegs[2] != rotdegs[2])
-					{
-						newVal = glm::mat4(1.f);
-						valueWasEditedManual = true;
-						break;
-					}
-
-					ImGui::Indent();
-
-					ImGui::InputFloat3("Position", pos);
-					valueWasEditedManual |= ImGui::IsItemEdited();
-					deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
-
-					ImGui::InputFloat3("Rotation", rotdegs);
-					ImGui::Unindent();
-
-					mat = glm::mat4(1.f);
-
-					mat[3][0] = pos[0];
-					mat[3][1] = pos[1];
-					mat[3][2] = pos[2];
-
-					mat *= glm::eulerAngleYXZ(glm::radians(rotdegs[1]), glm::radians(rotdegs[0]), glm::radians(rotdegs[2]));
-
-					newVal = mat;
-				}
-				else
-					if (resetConflictedProperty(propNameCStr))
-						newVal = glm::mat4(1.f);
-
-				break;
-			}
-
-			default:
-			{
-				int typeId = static_cast<int>(curVal.Type);
-				std::string typeName = Reflection::TypeAsString(curVal.Type);
-
-				ImGui::Text(
-					"%s: <Editing of ID:%i ('%s') types not supported>",
-					propName.data(), typeId, typeName.c_str()
-				);
-
-				break;
-			}
-
-			}
-
-			static std::optional<size_t> BeganPropertyEditingAction;
-			History* history = History::Get();
-
-			bool maybeFinishingAction = ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit || !ImGui::IsAnyItemActive();
-
-			if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue && (!isAssetProp || maybeFinishingAction))
-			{
-				if (!BeganPropertyEditingAction)
-					BeganPropertyEditingAction = history->TryBeginAction("EditProperty");
-
-				try
-				{
-					for (const ObjectHandle& sel : Selections)
-						sel->SetPropertyValue(propName, newVal);
-				}
-				catch (const std::runtime_error& Err)
-				{
-					setErrorMessage(Err.what());
-				}
-
-				EditingProperty = propDesc;
-			}
-
-			if (maybeFinishingAction && EditingProperty)
-			{
-				if (BeganPropertyEditingAction)
-					history->FinishAction(BeganPropertyEditingAction.value());
-				BeganPropertyEditingAction = std::nullopt;
-
-				EditingProperty = nullptr;
-				AssetProperty = nullptr;
-				AssetPropertyValue.clear();
-			}
-
-			ImGui::Separator();
-			ImGui::PopID();
-		}
-
-		ImGui::TextUnformatted("Tags");
-		ImGui::SameLine();
-		ImGui::SetCursorPosX(halfWidth);
-
-		for (const std::string_view& tag : tags)
-		{
-			ImGui::SetCursorPosX(halfWidth);
-			ImGui::PushID(tag.data());
-
-			if (ImGui::Button("X", ImVec2(16.f, 16.f)))
-			{
-				History::ScopedAction action = { "RemoveTag" };
-
-				for (const ObjectHandle& sel : Selections)
-					sel->RemoveTag(std::string(tag));
-			}
-
-			ImGui::PopID();
-			ImGui::SameLine();
-			ImGui::TextUnformatted(tag.data());
-		}
-
-		ImGui::SetCursorPosX(halfWidth);
-		if (ImGui::Button("+"))
-			ImGui::OpenPopup("AddTags");
-
-		if (ImGui::BeginPopup("AddTags"))
-		{
-			static char EntryBuffer[64] = { 0 };
-
-			if (ImGui::IsWindowAppearing())
-				ImGui::SetKeyboardFocusHere();
-
-			ImGui::InputText("##", EntryBuffer, 64);
-
-			if (ImGui::IsItemDeactivatedAfterEdit() && strlen(EntryBuffer) > 0)
-			{
-				History::ScopedAction action = { "AddEnteredTag" };
-
-				for (const ObjectHandle& sel : Selections)
-					sel->AddTag(std::string(EntryBuffer));
-
-				ImGui::CloseCurrentPopup();
-			}
-
-			std::vector<std::string_view> collectionNames;
-			collectionNames.reserve(GameObjectManager::Get()->Collections.size());
-			for (const GameObjectManager::Collection& collection : GameObjectManager::Get()->Collections)
-				collectionNames.emplace_back(collection.Name);
-
-			std::sort(collectionNames.begin(), collectionNames.end());
-
-			for (const std::string_view& name : collectionNames)
-			{
-				if (ImGui::MenuItem(name.data()))
-				{
-					History::ScopedAction action = { "AddEnteredTagFromList" };
-
-					for (const ObjectHandle& sel : Selections)
-						sel->AddTag(std::string(name));
-
-					ImGui::CloseCurrentPopup();
-				}
-			}
-
-			ImGui::EndPopup();
-		}
-
-		ImGui::PopID();
-	}
-
-	ImGui::End();
+    ZoneScoped;
+
+    if (!DeveloperTools::PropertiesShown)
+        return;
+
+    if (!ImGui::Begin("Properties", &DeveloperTools::PropertiesShown, ImGuiWindowFlags_HorizontalScrollbar))
+    {
+        ImGui::End();
+        return;
+    }
+
+    if (Selections.size() > 0)
+    {
+        if (ImGui::IsWindowHovered() && ImGui::IsKeyDown(ImGuiKey_F2))
+            FocusRenameSelection = true;
+
+        uint32_t idSum = 0;
+        for (const ObjectHandle& sel : Selections)
+            idSum += sel->ObjectId;
+
+        ImGui::PushID(idSum);
+
+        std::string sepStr = "Properties of " + std::to_string(Selections.size()) + " objects";
+        if (Selections.size() == 1)
+            sepStr = std::format(
+                "Properties of {}",
+                Selections[0]->Name
+            );
+
+        ImGui::SeparatorText(sepStr.c_str());
+
+        static bool ShowComponents = false;
+        if (ImGui::IsItemClicked())
+            ShowComponents = !ShowComponents;
+
+        ImGui::PushID(static_cast<uint32_t>(115111116109));
+
+        std::set<EntityComponent> components;
+
+        for (const ObjectHandle& sel : Selections)
+            for (const ReflectorRef& ref : sel->Components)
+                components.insert(ref.Type);
+
+        static EntityComponent RemoveComponentPopupTarget = EntityComponent::None;
+
+        for (EntityComponent ec : components)
+        {
+            Texture tex = getIconForComponent(ec);
+            ImGui::Image(tex.GpuId, ImVec2(16, 16));
+            ImGui::SetItemTooltip(
+                "%s\n%s",
+                s_EntityComponentNames[(size_t)ec].data(),
+                getDescriptionForComponent(ec).c_str()
+            );
+
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            {
+                RemoveComponentPopupTarget = ec;
+                ImGui::OpenPopup("RemoveComponent");
+            }
+            else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+            {
+                DeveloperTools::DocumentationShown = true;
+                DocumentationViewerSection = 0;
+                DocumentationViewerSubPage = (int)ec;
+                DocumentationViewerJumpingToPage = true;
+            }
+
+            ImGui::SameLine();
+        }
+
+        if (ImGui::Button("+", ImVec2(16, 16)))
+            ImGui::OpenPopup("AddComponent");
+
+        if (ImGui::BeginPopup("AddComponent"))
+        {
+            for (const std::string_view& comp : AddableComponents)
+            {
+                if (ImGui::MenuItem(comp.data()))
+                {
+                    History::ScopedAction action = { "AddComponent" };
+
+                    EntityComponent ec = FindComponentTypeByName(comp);
+                    assert(ec != EntityComponent::None);
+
+                    for (const ObjectHandle& obj : Selections)
+                    {
+                        if (!obj->FindComponentByType(ec))
+                            obj->AddComponent(ec);
+                    }
+                }
+
+                std::string tooltip = getDescriptionAsString(
+                    ObjectDocCommentsJson["Components"][comp]["Description"],
+                    32
+                );
+                if (tooltip.size() > 1)
+                    ImGui::SetItemTooltip("%s", tooltip.c_str());
+            }
+
+            ImGui::EndPopup();
+        }
+
+        if (ImGui::BeginPopup("RemoveComponent"))
+        {
+            ImGui::SeparatorText(s_EntityComponentNames[(size_t)RemoveComponentPopupTarget].data());
+
+            if (ImGui::MenuItem("Info"))
+            {
+                DeveloperTools::DocumentationShown = true;
+                DocumentationViewerSection = 0;
+                DocumentationViewerSubPage = (int)RemoveComponentPopupTarget;
+                DocumentationViewerJumpingToPage = true;
+            }
+
+            if (ImGui::MenuItem("Remove"))
+            {
+                History::ScopedAction action = { "RemoveComponent" };
+
+                for (const ObjectHandle& obj : Selections)
+                    if (obj->FindComponentByType(RemoveComponentPopupTarget))
+                        obj->RemoveComponent(RemoveComponentPopupTarget);
+            }
+            
+            ImGui::EndPopup();
+        }
+
+        ImGui::PopID();
+
+        std::unordered_map<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>> props;
+        std::unordered_map<std::string_view, bool> conflictingProps;
+        std::unordered_map<std::string_view, EntityComponent> propToComponent;
+        std::set<std::string_view> tags;
+
+        for (const ObjectHandle& sel : Selections)
+        {
+            for (const auto& prop : sel->GetProperties())
+            {
+                const std::string_view& pname = prop.first;
+                const auto& it = props.find(pname);
+
+                Reflection::GenericValue myVal;
+
+                if (prop.second->Get)
+                    myVal = sel->GetPropertyValue(pname);
+                else
+                    myVal = "<CANNOT_READ>";
+                
+                props.insert(std::pair(pname, std::pair(prop.second, myVal)));
+
+                if (it != props.end())
+                {
+                    const auto& cit = conflictingProps.find(prop.first);
+                    // avoid changing this to false if it was already true
+                    if (cit != conflictingProps.end())
+                        if (cit->second)
+                            continue;
+
+                    const auto& prevVal = it->second;
+                    if (prevVal.second != myVal)
+                        conflictingProps.insert(std::pair(prop.first, true));
+                    else
+                        conflictingProps.insert(std::pair(prop.first, false));
+                }
+                else
+                    propToComponent[pname] = sel->MemberToComponentMap[pname].Type;
+            }
+
+            for (uint16_t tag : sel->Tags)
+                tags.insert(GameObjectManager::Get()->Collections[tag].Name);
+        }
+
+        using PropsIteratorType = std::pair<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>>;
+
+        std::vector<PropsIteratorType> propsOrdered = std::vector<PropsIteratorType>(props.begin(), props.end());
+        std::sort(propsOrdered.begin(), propsOrdered.end(), [](const auto& a, const auto& b)
+            {
+                return a.first < b.first;
+            });
+
+        float cavailX = ImGui::GetContentRegionAvail().x;
+        float halfWidth = cavailX / 2.f;
+
+        ImGui::Separator();
+
+        for (size_t propIndex = 0; propIndex < propsOrdered.size(); propIndex++)
+        {
+            const PropsIteratorType& propIt = propsOrdered[propIndex];
+            const std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue> propItem = propIt.second;
+
+            const std::string_view& propName = propIt.first;
+            const Reflection::PropertyDescriptor* propDesc = propItem.first;
+            const Reflection::GenericValue& curVal = propItem.second;
+
+            ImGui::PushID(propItem.first);
+
+            const char* propNameCStr = propName.data();
+            bool doConflict = conflictingProps[propName];
+
+            if (!propDesc->Set)
+            {
+                // no setter (read-only property, such as Class or ObjectId)
+                // 07/07/2024
+
+                if (doConflict)
+                {
+                    ImGui::TextUnformatted(propNameCStr);
+                    ImGui::SameLine();
+                    propertyTooltip(propName, propToComponent[propName], propDesc->Type);
+
+                    ImGui::SetCursorPosX(halfWidth);
+                    ImGui::TextUnformatted("<DIFFERENT>");
+                }
+                else
+                {
+                    std::string curValStr = curVal.ToString();
+
+                    if (curVal.Type == Reflection::ValueType::Matrix)
+                    {
+                        ImGui::Text("%s: ", propNameCStr);
+
+                        ImGui::Indent();
+
+                        curValStr.insert(curValStr.begin() + curValStr.find_first_of("Ang"), '\n');
+                        ImGui::TextUnformatted(curValStr.c_str());
+
+                        ImGui::Unindent();
+
+                        if (ImGui::BeginItemTooltip())
+                        {
+                            ImGui::TextUnformatted(curValStr.c_str());
+                            ImGui::EndTooltip();
+                        }
+                    }
+                    else
+                    {
+                        ImGui::TextUnformatted(propNameCStr);
+                        ImGui::SameLine();
+                        propertyTooltip(propName, propToComponent[propName], propDesc->Type);
+
+                        ImGui::SetCursorPosX(halfWidth);
+                        ImGui::TextUnformatted(curValStr.c_str());
+                        ImGui::SetItemTooltip("%s", curValStr.c_str());
+                    }
+                }
+
+                ImGui::Separator();
+                ImGui::PopID();
+                continue;
+            }
+
+            Reflection::GenericValue newVal = curVal;
+            bool canChangeValue = true;
+            bool valueWasEditedManual = false;
+            bool deactivatedAfterEdit = false;
+            bool isAssetProp = false;
+            bool assetPropHasSelector = false;
+
+            ImGui::TextUnformatted(propNameCStr);
+
+            if (!doConflict)
+                propertyTooltip(propName, propToComponent[propName], propDesc->Type);
+
+            ImGui::SameLine();
+
+            ImVec2 cursorStart = ImGui::GetCursorPos();
+            ImGui::SetCursorPosX(halfWidth);
+
+            if ((propDesc->Type & ~Reflection::ValueType::Null) != Reflection::ValueType::Matrix)
+                ImGui::SetNextItemWidth(halfWidth);
+
+            switch (propDesc->Type & ~Reflection::ValueType::Null)
+            {
+
+            case Reflection::ValueType::String:
+            {
+                for (const std::string_view& ap : AssetProperties)
+                {
+                    if (propName == ap)
+                    {
+                        isAssetProp = true;
+                        if (propName != "ImportPath")
+                            assetPropHasSelector = true;
+
+                        break;
+                    }
+                }
+
+                if (assetPropHasSelector)
+                    ImGui::SetNextItemWidth(halfWidth - ImGui::CalcTextSize("...").x - ImGui::GetStyle().FramePadding.x * 4.f);
+
+                std::string_view str = (isAssetProp && AssetProperty == propDesc) ? AssetPropertyValue : curVal.AsStringView();
+
+                const uint32_t INPUT_TEXT_BUFFER_ADDITIONAL = 64;
+                uint32_t allocSize = (uint32_t)str.size() + INPUT_TEXT_BUFFER_ADDITIONAL;
+
+                char* buf = bufferInitialize(
+                    allocSize,
+                    "<Initial Value 29/09/2024 Hey guys How we doing today>"
+                );
+                copyStringToBuffer(buf, allocSize, doConflict ? "" : str);
+
+                bool focused = false;
+                if (FocusRenameSelection && propName == "Name")
+                {
+                    FocusRenameSelection = false;
+                    ImGui::SetKeyboardFocusHere();
+                    focused = true;
+                }
+
+                bool pushedStyleCol = false;
+
+                if (ImGui::IsPopupOpen("SelectAsset"))
+                {
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(56.f/255.f, 142.f/255.f, 1.f, 1.f));
+                    pushedStyleCol = true;
+                }
+
+                ImGui::InputText("##", buf, allocSize);
+
+                if (pushedStyleCol)
+                    ImGui::PopStyleColor();
+
+                if (isAssetProp)
+                {
+                    if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+                        followAssetProperty(propName, str);
+
+                    if (ImGui::IsItemActive())
+                    {
+                        EditingProperty = propDesc;
+
+                        if (!AssetProperty)
+                        {
+                            AssetProperty = propDesc;
+                            AssetPropertyValue = curVal.AsString();
+                        }
+
+                        if (AssetProperty == propDesc)
+                            AssetPropertyValue = buf;
+                    }
+
+                    if (AssetProperty == propDesc)
+                        valueWasEditedManual = true;
+
+                    if (assetPropHasSelector)
+                    {
+                        ImGui::SameLine();
+                        if (renderPropertyAssetSelector(propName, halfWidth))
+                            AssetProperty = nullptr;
+                    }
+                }
+
+                if (focused)
+                    ImGui::SetScrollX(0.f);
+
+                newVal = buf;
+                Memory::Free(buf);
+                break;
+            }
+
+            case Reflection::ValueType::Boolean:
+            {
+                if (doConflict)
+                {
+                    if (resetConflictedProperty(propNameCStr))
+                        newVal = false;
+                }
+                else
+                    ImGui::Checkbox("##", &newVal.Val.Bool);
+
+                break;
+            }
+
+            case Reflection::ValueType::Double:
+            {
+                if (doConflict)
+                {
+                    if (char buf[2] = {0}; resetConflictedProperty(propNameCStr, buf))
+                        newVal = atof(buf);
+                }
+                else
+                    ImGui::InputDouble("##", &newVal.Val.Double);
+
+                break;
+            }
+
+            case Reflection::ValueType::Integer:
+            {
+                if (doConflict)
+                {
+                    if (char buf[2] = {0}; resetConflictedProperty(propNameCStr))
+                        newVal = (int64_t)atoi(buf);
+                }
+                else
+                {
+                    int32_t i = static_cast<int32_t>(newVal.Val.Int);
+                    ImGui::InputInt("##", &i);
+                    newVal.Val.Int = i;
+                }
+
+                break;
+            }
+
+            case Reflection::ValueType::GameObject:
+            {
+                if (doConflict)
+                {
+                    bool pick = ImGui::Button(" ");
+
+                    if (pick)
+                    {
+                        IsPickingObject = true;
+                        PickerTargets = Selections;
+                        PickerTargetPropName = propName;
+
+                        Selections.clear();
+
+                        canChangeValue = false;
+                    }
+                }
+                else
+                {
+                    GameObject* referenced = GameObjectManager::Get()->FromGenericValue(newVal);
+                    std::string str = "";
+
+                    if (referenced)
+                        str = referenced->Name;
+
+                    ImGui::InputText("##", &str);
+
+                    if (ImGui::IsItemActivated() && ImGui::IsWindowFocused())
+                    {
+                        if (ImGui::GetIO().KeyCtrl)
+                        {
+                            if (referenced)
+                            {
+                                GameObject* target = GameObjectManager::Get()->FromGenericValue(newVal);
+                                Selections = { target };
+                                ExplorerShouldSeekToCurrentSelection = true;
+                                DeveloperTools::ExplorerShown = true;
+                            }
+                            else
+                                Selections.clear();
+                        }
+                        else
+                        {
+                            IsPickingObject = true;
+                            PickerTargets = Selections;
+                            PickerTargetPropName = propName;
+
+                            Selections.clear();
+                        }
+                    }
+                    else if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+                    {
+                        if (ImGui::GetIO().KeyCtrl)
+                        {
+                            History::ScopedAction action = { "SetObjectPropertyToNil" };
+
+                            for (const ObjectHandle& object : Selections)
+                                object->SetPropertyValue(propName, Reflection::GenericValue::Null());
+                        }
+                    }
+                }
+
+                break;
+            }
+
+            case Reflection::ValueType::Color:
+            {
+                if (doConflict)
+                {
+                    if (resetConflictedProperty(propNameCStr))
+                        newVal = Color(0.f, 0.f, 0.f).ToGenericValue();
+                }
+                else
+                    ImGui::ColorEdit3("##", &newVal.Val.Vec3.x);
+
+                break;
+            }
+
+            case Reflection::ValueType::Vector2:
+            {
+                if (doConflict)
+                {
+                    if (resetConflictedProperty(propNameCStr))
+                        newVal = glm::vec2(0.f);
+                }
+                else
+                    ImGui::InputFloat2("##", &newVal.Val.Vec2.x);
+
+                break;
+            }
+
+            case Reflection::ValueType::Vector3:
+            {
+                if (doConflict)
+                {
+                    if (resetConflictedProperty(propNameCStr))
+                        newVal = glm::vec3(0.f);
+                }
+                else
+                    ImGui::InputFloat3("##", &newVal.Val.Vec3.x);
+
+                break;
+            }
+
+            case Reflection::ValueType::Matrix:
+            {
+                if (!doConflict)
+                {
+                    ImGui::SetCursorPos(cursorStart);
+                    ImGui::NewLine(); // need to put this on a new line to prevent UI overlapping
+
+                    glm::mat4 mat = curVal.AsMatrix();
+
+                    float pos[3] = {
+                        mat[3][0],
+                        mat[3][1],
+                        mat[3][2]
+                    };
+
+                    // PLEASE GOD JUST WORK ALREADY
+                    // 21/09/2024
+                    glm::vec3 rotrads;
+
+                    glm::extractEulerAngleYXZ(mat, rotrads.y, rotrads.x, rotrads.z);
+
+                    //mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
+                    //mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
+                    //mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+
+                    float rotdegs[3] = {
+                        glm::degrees(rotrads.x),
+                        glm::degrees(rotrads.y),
+                        glm::degrees(rotrads.z)
+                    };
+
+                    if (pos[0] != pos[0] || pos[1] != pos[1] || pos[2] != pos[2] || rotdegs[0] != rotdegs[0] || rotdegs[1] != rotdegs[1] || rotdegs[2] != rotdegs[2])
+                    {
+                        newVal = glm::mat4(1.f);
+                        valueWasEditedManual = true;
+                        break;
+                    }
+
+                    ImGui::Indent();
+
+                    ImGui::InputFloat3("Position", pos);
+                    valueWasEditedManual |= ImGui::IsItemEdited();
+                    deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
+
+                    ImGui::InputFloat3("Rotation", rotdegs);
+                    ImGui::Unindent();
+
+                    mat = glm::mat4(1.f);
+
+                    mat[3][0] = pos[0];
+                    mat[3][1] = pos[1];
+                    mat[3][2] = pos[2];
+
+                    mat *= glm::eulerAngleYXZ(glm::radians(rotdegs[1]), glm::radians(rotdegs[0]), glm::radians(rotdegs[2]));
+
+                    newVal = mat;
+                }
+                else
+                    if (resetConflictedProperty(propNameCStr))
+                        newVal = glm::mat4(1.f);
+
+                break;
+            }
+
+            default:
+            {
+                int typeId = static_cast<int>(curVal.Type);
+                std::string typeName = Reflection::TypeAsString(curVal.Type);
+
+                ImGui::Text(
+                    "%s: <Editing of ID:%i ('%s') types not supported>",
+                    propName.data(), typeId, typeName.c_str()
+                );
+
+                break;
+            }
+
+            }
+
+            static std::optional<size_t> BeganPropertyEditingAction;
+            History* history = History::Get();
+
+            bool maybeFinishingAction = ImGui::IsItemDeactivatedAfterEdit() || deactivatedAfterEdit || !ImGui::IsAnyItemActive();
+
+            if ((ImGui::IsItemEdited() || valueWasEditedManual) && canChangeValue && (!isAssetProp || maybeFinishingAction))
+            {
+                if (!BeganPropertyEditingAction)
+                    BeganPropertyEditingAction = history->TryBeginAction("EditProperty");
+
+                try
+                {
+                    for (const ObjectHandle& sel : Selections)
+                        sel->SetPropertyValue(propName, newVal);
+                }
+                catch (const std::runtime_error& Err)
+                {
+                    setErrorMessage(Err.what());
+                }
+
+                EditingProperty = propDesc;
+            }
+
+            if (maybeFinishingAction && EditingProperty)
+            {
+                if (BeganPropertyEditingAction)
+                    history->FinishAction(BeganPropertyEditingAction.value());
+                BeganPropertyEditingAction = std::nullopt;
+
+                EditingProperty = nullptr;
+                AssetProperty = nullptr;
+                AssetPropertyValue.clear();
+            }
+
+            ImGui::Separator();
+            ImGui::PopID();
+        }
+
+        ImGui::TextUnformatted("Tags");
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(halfWidth);
+
+        for (const std::string_view& tag : tags)
+        {
+            ImGui::SetCursorPosX(halfWidth);
+            ImGui::PushID(tag.data());
+
+            if (ImGui::Button("X", ImVec2(16.f, 16.f)))
+            {
+                History::ScopedAction action = { "RemoveTag" };
+
+                for (const ObjectHandle& sel : Selections)
+                    sel->RemoveTag(std::string(tag));
+            }
+
+            ImGui::PopID();
+            ImGui::SameLine();
+            ImGui::TextUnformatted(tag.data());
+        }
+
+        ImGui::SetCursorPosX(halfWidth);
+        if (ImGui::Button("+"))
+            ImGui::OpenPopup("AddTags");
+
+        if (ImGui::BeginPopup("AddTags"))
+        {
+            static char EntryBuffer[64] = { 0 };
+
+            if (ImGui::IsWindowAppearing())
+                ImGui::SetKeyboardFocusHere();
+
+            ImGui::InputText("##", EntryBuffer, 64);
+
+            if (ImGui::IsItemDeactivatedAfterEdit() && strlen(EntryBuffer) > 0)
+            {
+                History::ScopedAction action = { "AddEnteredTag" };
+
+                for (const ObjectHandle& sel : Selections)
+                    sel->AddTag(std::string(EntryBuffer));
+
+                ImGui::CloseCurrentPopup();
+            }
+
+            std::vector<std::string_view> collectionNames;
+            collectionNames.reserve(GameObjectManager::Get()->Collections.size());
+            for (const GameObjectManager::Collection& collection : GameObjectManager::Get()->Collections)
+                collectionNames.emplace_back(collection.Name);
+
+            std::sort(collectionNames.begin(), collectionNames.end());
+
+            for (const std::string_view& name : collectionNames)
+            {
+                if (ImGui::MenuItem(name.data()))
+                {
+                    History::ScopedAction action = { "AddEnteredTagFromList" };
+
+                    for (const ObjectHandle& sel : Selections)
+                        sel->AddTag(std::string(name));
+
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::End();
 }
 
 #ifdef _WIN32
@@ -4527,18 +4527,18 @@ static bool WasTracyLaunched = false;
 // 13/01/2025: https://stackoverflow.com/a/478960
 static std::string exec(const char* cmd)
 {
-	std::array<char, 128> buffer{ 0 };
-	std::string result;
-	FILE* pipe = popen(cmd, "r");
+    std::array<char, 128> buffer{ 0 };
+    std::string result;
+    FILE* pipe = popen(cmd, "r");
 
-	if (!pipe)
-		RAISE_RT("popen() failed!");
+    if (!pipe)
+        RAISE_RT("popen() failed!");
 
-	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
-		result += buffer.data();
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
+        result += buffer.data();
 
-	pclose(pipe);
-	return result;
+    pclose(pipe);
+    return result;
 }
 
 #endif
@@ -4546,437 +4546,437 @@ static std::string exec(const char* cmd)
 void DeveloperTools::LaunchTracy()
 {
 #ifdef TRACY_ENABLE
-	if (!std::filesystem::is_regular_file(TRACY_PATH))
-	{
-		tinyfd_messageBox(
-			"Tracy Integration",
-			"The Tracy Profiler was not found in the expected location ('" TRACY_PATH "')"
-				" and cannot be launched.\nIt may have not been built or may have been misconfigured.",
-			"ok",
-			"error",
-			1
-		);
-		return;
-	}
+    if (!std::filesystem::is_regular_file(TRACY_PATH))
+    {
+        tinyfd_messageBox(
+            "Tracy Integration",
+            "The Tracy Profiler was not found in the expected location ('" TRACY_PATH "')"
+                " and cannot be launched.\nIt may have not been built or may have been misconfigured.",
+            "ok",
+            "error",
+            1
+        );
+        return;
+    }
 
-	if (WasTracyLaunched)
-		RAISE_RT("Tried to launch Tracy twice in one session");
-	WasTracyLaunched = true;
+    if (WasTracyLaunched)
+        RAISE_RT("Tried to launch Tracy twice in one session");
+    WasTracyLaunched = true;
 
-	std::thread(
-		[]()
-		{
-			exec(LAUNCH_TRACY_CMD);
-		}
-	).detach();
+    std::thread(
+        []()
+        {
+            exec(LAUNCH_TRACY_CMD);
+        }
+    ).detach();
 
 #else
 
-	tinyfd_messageBox(
-		"Tracy Integration",
-		"Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro definition.",
-		"ok",
-		"info",
-		1
-	);
+    tinyfd_messageBox(
+        "Tracy Integration",
+        "Instrumentation was disabled for this build. You need to use a build with the `TRACY_ENABLE` macro definition.",
+        "ok",
+        "info",
+        1
+    );
 
 #endif
 }
 
 static void renderInfo(double DeltaTime)
 {
-	ZoneScopedC(tracy::Color::DarkOliveGreen);
+    ZoneScopedC(tracy::Color::DarkOliveGreen);
 
-	Engine* engine = Engine::Get();
+    Engine* engine = Engine::Get();
 
-	// We need to keep track of two different states,
-	// Whether we called `ImGui::Begin`, and whether the developer closed the window
-	// `ImGui::End` always needs to be called when `beganInfo` is `true`, even if
-	// `infoOpen` becomes `false`
-	bool beganInfo = DeveloperTools::InfoShown;
-	bool infoOpen = beganInfo;
+    // We need to keep track of two different states,
+    // Whether we called `ImGui::Begin`, and whether the developer closed the window
+    // `ImGui::End` always needs to be called when `beganInfo` is `true`, even if
+    // `infoOpen` becomes `false`
+    bool beganInfo = DeveloperTools::InfoShown;
+    bool infoOpen = beganInfo;
 
-	if (beganInfo && ImGui::Begin("Info", &infoOpen))
-	{
-		constexpr size_t GraphDatapoints = 512;
+    if (beganInfo && ImGui::Begin("Info", &infoOpen))
+    {
+        constexpr size_t GraphDatapoints = 512;
 
-		static std::array<double[255], GraphDatapoints> TimersHist;
-		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapUsageHist;
-		static std::array<decltype(Memory::Counters), GraphDatapoints> HeapActivityHist;
-		static size_t GraphPointer = 0;
+        static std::array<double[255], GraphDatapoints> TimersHist;
+        static std::array<decltype(Memory::Counters), GraphDatapoints> HeapUsageHist;
+        static std::array<decltype(Memory::Counters), GraphDatapoints> HeapActivityHist;
+        static size_t GraphPointer = 0;
 
-		const double* times = Timing::FinalFrameTimes;
-		const std::array<std::atomic_size_t, (size_t)Memory::Category::__count>& memcounts = Memory::Counters;
+        const double* times = Timing::FinalFrameTimes;
+        const std::array<std::atomic_size_t, (size_t)Memory::Category::__count>& memcounts = Memory::Counters;
 
-		uint8_t numTimers = Timing::StaticMagicTimerThing::s_NumTimers;
+        uint8_t numTimers = Timing::StaticMagicTimerThing::s_NumTimers;
 
-		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork, ...
-		assert(strcmp(Timing::TimerNames[2], "FrameWork") == 0);
-		size_t frameTime = static_cast<size_t>(times[1] * 1000);
+        // 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork, ...
+        assert(strcmp(Timing::TimerNames[2], "FrameWork") == 0);
+        size_t frameTime = static_cast<size_t>(times[1] * 1000);
 
-		static bool IsSamplingStats = false;
-		static std::string SampledCsv;
+        static bool IsSamplingStats = false;
+        static std::string SampledCsv;
 
-		ImGui::Text("FPS: %d", engine->FramesPerSecond);
-		ImGui::Text("Frame time: %zims", frameTime);
-		ImGui::Text("Draw calls: %u", engine->RendererContext.AccumulatedDrawCallCount);
+        ImGui::Text("FPS: %d", engine->FramesPerSecond);
+        ImGui::Text("Frame time: %zims", frameTime);
+        ImGui::Text("Draw calls: %u", engine->RendererContext.AccumulatedDrawCallCount);
 
-		if (IsSamplingStats)
-			SampledCsv.append(std::format(
-				"{},{},{},",
-				engine->FramesPerSecond,
-				frameTime,
-				engine->RendererContext.AccumulatedDrawCallCount
-			));
+        if (IsSamplingStats)
+            SampledCsv.append(std::format(
+                "{},{},{},",
+                engine->FramesPerSecond,
+                frameTime,
+                engine->RendererContext.AccumulatedDrawCallCount
+            ));
 
 #ifdef TRACY_ENABLE
-		// 13/01/2025 hi hihihi hihiihii
-		if (!WasTracyLaunched && ImGui::Button("Open Profiler"))
-			DeveloperTools::LaunchTracy();
+        // 13/01/2025 hi hihihi hihiihii
+        if (!WasTracyLaunched && ImGui::Button("Open Profiler"))
+            DeveloperTools::LaunchTracy();
 #endif
 
-		static bool AreGraphsPaused = false;
+        static bool AreGraphsPaused = false;
 
-		ImGui::BeginChild("Graphs", ImVec2(), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("Graphs", ImVec2(), ImGuiChildFlags_Borders);
 
-		ImGuiStyle style = ImGui::GetStyle();
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
+        ImGuiStyle style = ImGui::GetStyle();
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
 
-		if (AreGraphsPaused)
-		{
-			if (ImGui::Button("Resume"))
-				AreGraphsPaused = false;
-		}
-		else if (ImGui::Button("Pause"))
-				AreGraphsPaused = true;
+        if (AreGraphsPaused)
+        {
+            if (ImGui::Button("Resume"))
+                AreGraphsPaused = false;
+        }
+        else if (ImGui::Button("Pause"))
+                AreGraphsPaused = true;
 
-		ImGui::SameLine();
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
+        ImGui::SameLine();
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - style.FramePadding.y);
 
-		ImGui::Text("graphs");
+        ImGui::Text("graphs");
 
-		if (!AreGraphsPaused)
-		{
-			memcpy(TimersHist[GraphPointer], times, sizeof(double) * 255);
+        if (!AreGraphsPaused)
+        {
+            memcpy(TimersHist[GraphPointer], times, sizeof(double) * 255);
 
-			for (size_t i = 0; i < HeapUsageHist[GraphPointer].size(); i++)
-			{
-				HeapUsageHist[GraphPointer][i] = Memory::Counters[i].load();
-				HeapActivityHist[GraphPointer][i] = Memory::Activity[i].load();
-			}
+            for (size_t i = 0; i < HeapUsageHist[GraphPointer].size(); i++)
+            {
+                HeapUsageHist[GraphPointer][i] = Memory::Counters[i].load();
+                HeapActivityHist[GraphPointer][i] = Memory::Activity[i].load();
+            }
 
-			GraphPointer = (GraphPointer + 1) % GraphDatapoints;
-		}
+            GraphPointer = (GraphPointer + 1) % GraphDatapoints;
+        }
 
-		ImGui::SeparatorText("Timers");
-		ImGui::PushID("Timers");
+        ImGui::SeparatorText("Timers");
+        ImGui::PushID("Timers");
 
-		for (int i = 0; i < numTimers; i++)
-		{
-			bool open = ImGui::TreeNodeEx(
-				(void*)(int64_t)i,
-				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
-				"%s: %zims",
-				Timing::TimerNames[i],
-				static_cast<size_t>(times[i] * 1000)
-			);
+        for (int i = 0; i < numTimers; i++)
+        {
+            bool open = ImGui::TreeNodeEx(
+                (void*)(int64_t)i,
+                ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
+                "%s: %zims",
+                Timing::TimerNames[i],
+                static_cast<size_t>(times[i] * 1000)
+            );
 
-			if (open)
-			{
-				float usageValues[GraphDatapoints] = { 0 };
+            if (open)
+            {
+                float usageValues[GraphDatapoints] = { 0 };
 
-				for (size_t hi = 0; hi < GraphDatapoints; hi++)
-					usageValues[hi] = (float)TimersHist[hi][i] * 1000.f;
+                for (size_t hi = 0; hi < GraphDatapoints; hi++)
+                    usageValues[hi] = (float)TimersHist[hi][i] * 1000.f;
 
-				ImGui::PlotLines("##", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+                ImGui::PlotLines("##", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
 
-				ImGui::TreePop(); // ocornut why do you do this to me
-			}
-		}
+                ImGui::TreePop(); // ocornut why do you do this to me
+            }
+        }
 
-		if (IsSamplingStats)
-			for (int i = 0; i < numTimers; i++)
-				SampledCsv.append(std::to_string(times[i]) + ",");
+        if (IsSamplingStats)
+            for (int i = 0; i < numTimers; i++)
+                SampledCsv.append(std::to_string(times[i]) + ",");
 
-		ImGui::PopID();
-		ImGui::SeparatorText("Heap");
-		ImGui::PushID("Heap");
+        ImGui::PopID();
+        ImGui::SeparatorText("Heap");
+        ImGui::PushID("Heap");
 
-		for (int i = 0; i < (int)Memory::Category::__count; i++)
-		{
-			bool open = ImGui::TreeNodeEx(
-				(void*)(int64_t)i,
-				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
-				"%s: %.2f KB",
-				Memory::CategoryNames[i],
-				(float)memcounts[i].load() / 1000.f
-			);
+        for (int i = 0; i < (int)Memory::Category::__count; i++)
+        {
+            bool open = ImGui::TreeNodeEx(
+                (void*)(int64_t)i,
+                ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
+                "%s: %.2f KB",
+                Memory::CategoryNames[i],
+                (float)memcounts[i].load() / 1000.f
+            );
 
-			if (open)
-			{
-				float usageValues[GraphDatapoints] = { 0 };
-				float activityValues[GraphDatapoints] = { 0 };
+            if (open)
+            {
+                float usageValues[GraphDatapoints] = { 0 };
+                float activityValues[GraphDatapoints] = { 0 };
 
-				for (size_t hi = 0; hi < GraphDatapoints; hi++)
-				{
-					usageValues[hi] = (float)HeapUsageHist[hi][i];
-					activityValues[hi] = (float)HeapActivityHist[hi][i];
-				}
+                for (size_t hi = 0; hi < GraphDatapoints; hi++)
+                {
+                    usageValues[hi] = (float)HeapUsageHist[hi][i];
+                    activityValues[hi] = (float)HeapActivityHist[hi][i];
+                }
 
-				ImGui::PlotLines("Usage", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
-				ImGui::PlotLines("Activity", activityValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+                ImGui::PlotLines("Usage", usageValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+                ImGui::PlotLines("Activity", activityValues, GraphDatapoints, 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 100));
 
-				ImGui::TreePop(); // ocornut why do you do this to me
-			}
-		}
+                ImGui::TreePop(); // ocornut why do you do this to me
+            }
+        }
 
-		if (IsSamplingStats)
-			for (int i = 0; i < (int)Memory::Category::__count; i++)
-				SampledCsv += std::to_string(memcounts[i]) + ",";
+        if (IsSamplingStats)
+            for (int i = 0; i < (int)Memory::Category::__count; i++)
+                SampledCsv += std::to_string(memcounts[i]) + ",";
 
-		ImGui::PopID();
-		ImGui::EndChild();
+        ImGui::PopID();
+        ImGui::EndChild();
 
-		ImGui::SeparatorText("Sampling");
+        ImGui::SeparatorText("Sampling");
 
-		static double NumSecondsSampled = 0.f;
-		static size_t NumFramesSampled = 0;
+        static double NumSecondsSampled = 0.f;
+        static size_t NumFramesSampled = 0;
 
-		if (IsSamplingStats)
-		{
-			NumSecondsSampled += DeltaTime;
-			NumFramesSampled++;
+        if (IsSamplingStats)
+        {
+            NumSecondsSampled += DeltaTime;
+            NumFramesSampled++;
 
-			ImGui::Text("Sampled %zi frames over %.1f seconds", NumFramesSampled, NumSecondsSampled);
-			ImGui::Text("Total size: %zi bytes (%zi bytes memory)", SampledCsv.size(), SampledCsv.capacity());
+            ImGui::Text("Sampled %zi frames over %.1f seconds", NumFramesSampled, NumSecondsSampled);
+            ImGui::Text("Total size: %zi bytes (%zi bytes memory)", SampledCsv.size(), SampledCsv.capacity());
 
-			if (ImGui::Button("End sampling & save to CSV"))
-			{
-				const char* filters[] = { ".csv" };
+            if (ImGui::Button("End sampling & save to CSV"))
+            {
+                const char* filters[] = { ".csv" };
 
-				const char* path = tinyfd_saveFileDialog(
-					"Save Stats CSV",
-					std::filesystem::current_path().string().c_str(),
-					1,
-					filters,
-					"Comma-Separated Value files"
-				);
+                const char* path = tinyfd_saveFileDialog(
+                    "Save Stats CSV",
+                    std::filesystem::current_path().string().c_str(),
+                    1,
+                    filters,
+                    "Comma-Separated Value files"
+                );
 
-				if (path)
-				{
-					std::string err;
-					if (FileRW::WriteFile(path, SampledCsv, &err))
-					{
-						IsSamplingStats = false;
-					}
-					else
-					{
-						tinyfd_messageBox(
-							"Failed to save",
-							std::format("Couldn't save the CSV file to '{}': {}", path, err).c_str(),
-							"ok",
-							"error",
-							1
-						);
-					}
-				}
-				else
-				{
-					Log.Info("User did not select a save file path for the stats CSV");
-					IsSamplingStats = false;
-				}
-			}
+                if (path)
+                {
+                    std::string err;
+                    if (FileRW::WriteFile(path, SampledCsv, &err))
+                    {
+                        IsSamplingStats = false;
+                    }
+                    else
+                    {
+                        tinyfd_messageBox(
+                            "Failed to save",
+                            std::format("Couldn't save the CSV file to '{}': {}", path, err).c_str(),
+                            "ok",
+                            "error",
+                            1
+                        );
+                    }
+                }
+                else
+                {
+                    Log.Info("User did not select a save file path for the stats CSV");
+                    IsSamplingStats = false;
+                }
+            }
 
-			SampledCsv += "\n";
-		}
-		else
-			if (ImGui::Button("Begin sampling"))
-			{
-				IsSamplingStats = true;
-				SampledCsv = "FPS,Frame Time,Draw Calls,";
-				NumSecondsSampled = 0.f;
-				NumFramesSampled = 0;
+            SampledCsv += "\n";
+        }
+        else
+            if (ImGui::Button("Begin sampling"))
+            {
+                IsSamplingStats = true;
+                SampledCsv = "FPS,Frame Time,Draw Calls,";
+                NumSecondsSampled = 0.f;
+                NumFramesSampled = 0;
 
-				for (int i = 0; i < numTimers; i++)
-					SampledCsv += Timing::TimerNames[i] + std::string(",");
-				for (int i = 0; i < (int)Memory::Category::__count; i++)
-					SampledCsv += Memory::CategoryNames[i] + std::string(",");
+                for (int i = 0; i < numTimers; i++)
+                    SampledCsv += Timing::TimerNames[i] + std::string(",");
+                for (int i = 0; i < (int)Memory::Category::__count; i++)
+                    SampledCsv += Memory::CategoryNames[i] + std::string(",");
 
-				SampledCsv += "\n";
-			}
-	}
-	if (beganInfo)
-		ImGui::End();
+                SampledCsv += "\n";
+            }
+    }
+    if (beganInfo)
+        ImGui::End();
 
-	if (!infoOpen)
-		DeveloperTools::InfoShown = false;
+    if (!infoOpen)
+        DeveloperTools::InfoShown = false;
 }
 
 static void renderRendererSettings()
 {
-	ZoneScopedC(tracy::Color::DarkOliveGreen);
-	Engine* engine = Engine::Get();
+    ZoneScopedC(tracy::Color::DarkOliveGreen);
+    Engine* engine = Engine::Get();
 
-	bool beganSettings = DeveloperTools::RendererShown != false;
-	bool settingsOpen = beganSettings;
+    bool beganSettings = DeveloperTools::RendererShown != false;
+    bool settingsOpen = beganSettings;
 
-	if (beganSettings && ImGui::Begin("Renderer", &settingsOpen))
-	{
-		ImGui::Checkbox("VSync", &engine->VSync);
+    if (beganSettings && ImGui::Begin("Renderer", &settingsOpen))
+    {
+        ImGui::Checkbox("VSync", &engine->VSync);
 
-		bool fullscreen = engine->IsFullscreen;
-		ImGui::Checkbox("Fullscreen", &fullscreen);
+        bool fullscreen = engine->IsFullscreen;
+        ImGui::Checkbox("Fullscreen", &fullscreen);
 
-		if (engine->IsFullscreen != fullscreen)
-			engine->SetIsFullscreen(fullscreen);
+        if (engine->IsFullscreen != fullscreen)
+            engine->SetIsFullscreen(fullscreen);
 
-		if (!engine->VSync)
-			ImGui::InputInt("FPS limit", &engine->FpsCap, 1, 30);
+        if (!engine->VSync)
+            ImGui::InputInt("FPS limit", &engine->FpsCap, 1, 30);
 
-		bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
+        bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
 
-		ImGui::Checkbox("Post-Processing", &postFxEnabled);
+        ImGui::Checkbox("Post-Processing", &postFxEnabled);
 
-		EngineJsonConfig["postfx_enabled"] = postFxEnabled;
+        EngineJsonConfig["postfx_enabled"] = postFxEnabled;
 
-		if (postFxEnabled)
-		{
-			float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
+        if (postFxEnabled)
+        {
+            float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
 
-			ImGui::InputFloat("Gamma", &gammaCorrection);
+            ImGui::InputFloat("Gamma", &gammaCorrection);
 
-			EngineJsonConfig["postfx_gamma"] = gammaCorrection;
+            EngineJsonConfig["postfx_gamma"] = gammaCorrection;
 
-			bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
-			bool distortion = EngineJsonConfig.value("postfx_distortion", false);
+            bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
+            bool distortion = EngineJsonConfig.value("postfx_distortion", false);
 
-			ImGui::Checkbox("Blur vignette", &blurVignette);
-			ImGui::Checkbox("Distortion", &distortion);
+            ImGui::Checkbox("Blur vignette", &blurVignette);
+            ImGui::Checkbox("Distortion", &distortion);
 
-			EngineJsonConfig["postfx_blurvignette"] = blurVignette;
-			EngineJsonConfig["postfx_distortion"] = distortion;
+            EngineJsonConfig["postfx_blurvignette"] = blurVignette;
+            EngineJsonConfig["postfx_distortion"] = distortion;
 
-			if (EngineJsonConfig["postfx_blurvignette"])
-			{
-				float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
-				float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
-				float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
-				float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
+            if (EngineJsonConfig["postfx_blurvignette"])
+            {
+                float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
+                float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
+                float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
+                float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
 
-				ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
-				ImGui::InputFloat("Vignette weight exponent", &weightExponent);
-				ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
-				ImGui::InputFloat("Vignette sample radius", &sampleRadius);
+                ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
+                ImGui::InputFloat("Vignette weight exponent", &weightExponent);
+                ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
+                ImGui::InputFloat("Vignette sample radius", &sampleRadius);
 
-				EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
-				EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
-				EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
-				EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
-			}
-		}
+                EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
+                EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
+                EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
+                EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
+            }
+        }
 
-		if (ImGui::Button("Save Post FX settings"))
-		{
-			PHX_CHECK(FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2)));
-			Log.Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
-		}
+        if (ImGui::Button("Save Post FX settings"))
+        {
+            PHX_CHECK(FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2)));
+            Log.Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
+        }
 
-		ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
-		ImGui::Checkbox("Debug Collision AABBs", &Physics::Get()->DebugCollisionAabbs);
-		ImGui::Checkbox("Debug Spatial Heat", &Physics::Get()->DebugSpatialHeat);
-		ImGui::Checkbox("Debug Contact Points", &Physics::Get()->DebugContactPoints);
-	}
-	if (beganSettings)
-		ImGui::End();
+        ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
+        ImGui::Checkbox("Debug Collision AABBs", &Physics::Get()->DebugCollisionAabbs);
+        ImGui::Checkbox("Debug Spatial Heat", &Physics::Get()->DebugSpatialHeat);
+        ImGui::Checkbox("Debug Contact Points", &Physics::Get()->DebugContactPoints);
+    }
+    if (beganSettings)
+        ImGui::End();
 
-	if (!settingsOpen)
-		DeveloperTools::RendererShown = false;
+    if (!settingsOpen)
+        DeveloperTools::RendererShown = false;
 }
 
 void DeveloperTools::Frame(double DeltaTime)
 {
-	ZoneScopedC(tracy::Color::DarkSeaGreen);
+    ZoneScopedC(tracy::Color::DarkSeaGreen);
 
-	if (!ExplorerRoot.Reference.Referred())
-		ExplorerRoot = GameObjectManager::Get()->FindById(GameObjectManager::Get()->DataModel);
+    if (!ExplorerRoot.Reference.Referred())
+        ExplorerRoot = GameObjectManager::Get()->FindById(GameObjectManager::Get()->DataModel);
 
-	// Right after a dialog, dt will be large
-	if (DeltaTime < 0.5f)
-		ErrorTooltipTimeRemaining -= DeltaTime;
+    // Right after a dialog, dt will be large
+    if (DeltaTime < 0.5f)
+        ErrorTooltipTimeRemaining -= DeltaTime;
 
-	if (ErrorTooltipTimeRemaining > 0.f)
-		ImGui::SetTooltip("%s", ErrorTooltipMessage.c_str());
+    if (ErrorTooltipTimeRemaining > 0.f)
+        ImGui::SetTooltip("%s", ErrorTooltipMessage.c_str());
 
-	renderTextEditors();
-	renderShaderPipelinesEditor();
-	renderMaterialEditor();
-	renderExplorer();
-	renderFilesViewer();
-	renderProperties();
-	renderDocumentationViewer();
-	renderInfo(DeltaTime);
-	renderRendererSettings();
+    renderTextEditors();
+    renderShaderPipelinesEditor();
+    renderMaterialEditor();
+    renderExplorer();
+    renderFilesViewer();
+    renderProperties();
+    renderDocumentationViewer();
+    renderInfo(DeltaTime);
+    renderRendererSettings();
 }
 
 void DeveloperTools::SetExplorerRoot(const ObjectHandle NewRoot)
 {
-	ExplorerRoot = NewRoot;
+    ExplorerRoot = NewRoot;
 }
 
 void DeveloperTools::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
 {
-	Selections = NewSelections;
-	ExplorerShouldSeekToCurrentSelection = true;
-	DeveloperTools::ExplorerShown = true;
+    Selections = NewSelections;
+    ExplorerShouldSeekToCurrentSelection = true;
+    DeveloperTools::ExplorerShown = true;
 }
 
 const std::vector<ObjectHandle>& DeveloperTools::GetExplorerSelections()
 {
-	for (size_t i = 0; i < Selections.size(); i++)
-	{
-		ObjectHandle& handle = Selections[i];
-		if (!handle.HasValue() || !handle.Reference.Referred() || handle->IsDestructionPending)
-		{
-			Selections[i].Clear();
-			Selections[i] = Selections[Selections.size() - 1];
-			Selections.erase(Selections.end() - 1);
-			i--;
-		}
-	}
+    for (size_t i = 0; i < Selections.size(); i++)
+    {
+        ObjectHandle& handle = Selections[i];
+        if (!handle.HasValue() || !handle.Reference.Referred() || handle->IsDestructionPending)
+        {
+            Selections[i].Clear();
+            Selections[i] = Selections[Selections.size() - 1];
+            Selections.erase(Selections.end() - 1);
+            i--;
+        }
+    }
 
-	return Selections;
+    return Selections;
 }
 
 void DeveloperTools::OpenTextDocument(const std::string& Path, int Line)
 {
-	TextEditorTab& tab = invokeTextEditor(Path);
-	tab.JumpToLine = Line;
+    TextEditorTab& tab = invokeTextEditor(Path);
+    tab.JumpToLine = Line;
 }
 
 void DeveloperTools::Shutdown()
 {
-	MtlPreviewCamera.Clear();
-	ExplorerRoot.Clear();
-	LastSelected.Clear();
-	ObjectInsertionTarget.Clear();
-	PrevEditSelections.clear();
-	Selections.clear();
-	VisibleTree.clear();
-	VisibleTreeWip.clear();
-	PickerTargets.clear();
-	
-	for (TextEditorTab& tab : s_TextEditors)
-	{
-		textEditorSaveFile(tab);
-		if (tab.FileStream)
-		{
-			tab.FileStream->close();
-			delete tab.FileStream;
-			tab.FileStream = nullptr;
-		}
-	}
+    MtlPreviewCamera.Clear();
+    ExplorerRoot.Clear();
+    LastSelected.Clear();
+    ObjectInsertionTarget.Clear();
+    PrevEditSelections.clear();
+    Selections.clear();
+    VisibleTree.clear();
+    VisibleTreeWip.clear();
+    PickerTargets.clear();
+    
+    for (TextEditorTab& tab : s_TextEditors)
+    {
+        textEditorSaveFile(tab);
+        if (tab.FileStream)
+        {
+            tab.FileStream->close();
+            delete tab.FileStream;
+            tab.FileStream = nullptr;
+        }
+    }
 
-	s_TextEditors.clear();
+    s_TextEditors.clear();
 }
 
 #include <imgui/backends/imgui_impl_opengl3.h>
@@ -4988,274 +4988,274 @@ void DeveloperTools::Shutdown()
 
 struct LuauStatusDisplayInfo
 {
-	const char* Id = nullptr;
-	const char* Description = nullptr;
-	ImVec4 Color;
+    const char* Id = nullptr;
+    const char* Description = nullptr;
+    ImVec4 Color;
 };
 
 struct LuauCoroutineStatusDisplayInfo
 {
-	const char* Id = nullptr;
-	const char* Description = nullptr;
-	ImVec4 Color;
+    const char* Id = nullptr;
+    const char* Description = nullptr;
+    ImVec4 Color;
 };
 
 const LuauStatusDisplayInfo LuauStatuses[] = {
-	{ "OK",   "OK\nOK",                      ImVec4(0.f, 1.f, 0.f, 1.f) },
-	{ "YD",   "YD\nYielded",                 ImVec4(1.f, .7f, 0.f, 1.f) },
-	{ "ER",   "ER\nError while running",     ImVec4(1.f, 0.f, 0.f, 1.f) },
-	{ "ES",   "ES\nSyntax error (legacy)",   ImVec4(1.f, 0.f, 0.f, 1.f) },
-	{ "EM",   "EM\nMemory error",            ImVec4(1.f, 0.f, 0.f, 1.f) },
-	{ "EE",   "EE\nUnknown error",           ImVec4(1.f, 0.f, 0.f, 1.f) },
-	{ "BR",   "BR\nBroke into debugger",     ImVec4(.8f, .4f, 0.f, 1.f) }
+    { "OK",   "OK\nOK",                      ImVec4(0.f, 1.f, 0.f, 1.f) },
+    { "YD",   "YD\nYielded",                 ImVec4(1.f, .7f, 0.f, 1.f) },
+    { "ER",   "ER\nError while running",     ImVec4(1.f, 0.f, 0.f, 1.f) },
+    { "ES",   "ES\nSyntax error (legacy)",   ImVec4(1.f, 0.f, 0.f, 1.f) },
+    { "EM",   "EM\nMemory error",            ImVec4(1.f, 0.f, 0.f, 1.f) },
+    { "EE",   "EE\nUnknown error",           ImVec4(1.f, 0.f, 0.f, 1.f) },
+    { "BR",   "BR\nBroke into debugger",     ImVec4(.8f, .4f, 0.f, 1.f) }
 };
 
 // descriptions courtesy of `luau/VM/include/lua.h`
 const LuauCoroutineStatusDisplayInfo LuauCoroutineStatuses[] = {
-	{ "RUN",   "RUN\nRunning",                                   ImVec4(0.f, 0.f, 1.f, 1.f) },
-	{ "SUS",   "SUS\nSuspended",                                 ImVec4(1.f, .7f, 0.f, 1.f) },
-	{ "NOR",   "NOR\n'Normal' (it resumed another coroutine)",   ImVec4(0.f, 1.f, 0.f, 1.f) },
-	{ "FIN",   "FIN\nFinished",                                  ImVec4(0.f, .5f, 0.f, 1.f) },
-	{ "ERR",   "ERR\nFinished with error",                       ImVec4(1.f, 0.f, 0.f, 1.f) }
+    { "RUN",   "RUN\nRunning",                                   ImVec4(0.f, 0.f, 1.f, 1.f) },
+    { "SUS",   "SUS\nSuspended",                                 ImVec4(1.f, .7f, 0.f, 1.f) },
+    { "NOR",   "NOR\n'Normal' (it resumed another coroutine)",   ImVec4(0.f, 1.f, 0.f, 1.f) },
+    { "FIN",   "FIN\nFinished",                                  ImVec4(0.f, .5f, 0.f, 1.f) },
+    { "ERR",   "ERR\nFinished with error",                       ImVec4(1.f, 0.f, 0.f, 1.f) }
 };
 
 static bool debugVariable(lua_State* L, bool CanEdit = true)
 {
-	ZoneScoped;
-	luaL_checkstack(L, 2, "debugVariable");
+    ZoneScoped;
+    luaL_checkstack(L, 2, "debugVariable");
 
-	std::string varname;
-	switch (lua_type(L, -2))
-	{
-	case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
-	{
-		varname = std::format("[{}]", luaL_tolstring(L, -2, nullptr));
-		lua_pop(L, 1);
-		break;
-	}
-	case LUA_TSTRING:
-	{
-		varname = lua_tostring(L, -2);
-		break;
-	}
-	default:
-	{
-		const char* ktn = luaL_typename(L, -2);
-		varname = std::format("[{} ({})]", luaL_tolstring(L, -2, nullptr), ktn);
-		lua_pop(L, 1);
-	}
-	}
+    std::string varname;
+    switch (lua_type(L, -2))
+    {
+    case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
+    {
+        varname = std::format("[{}]", luaL_tolstring(L, -2, nullptr));
+        lua_pop(L, 1);
+        break;
+    }
+    case LUA_TSTRING:
+    {
+        varname = lua_tostring(L, -2);
+        break;
+    }
+    default:
+    {
+        const char* ktn = luaL_typename(L, -2);
+        varname = std::format("[{} ({})]", luaL_tolstring(L, -2, nullptr), ktn);
+        lua_pop(L, 1);
+    }
+    }
 
-	const char* vtn = luaL_typename(L, -1);
-	constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesFull;
-	bool changed = false;
+    const char* vtn = luaL_typename(L, -1);
+    constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesFull;
+    bool changed = false;
 
-	switch (lua_type(L, -1))
-	{
-	case LUA_TFUNCTION:
-	{
-		lua_Debug ar = {};
-		lua_getinfo(L, -1, "sluan", &ar);
-		ar.name = ar.name ? ar.name : "<anonymous>";
+    switch (lua_type(L, -1))
+    {
+    case LUA_TFUNCTION:
+    {
+        lua_Debug ar = {};
+        lua_getinfo(L, -1, "sluan", &ar);
+        ar.name = ar.name ? ar.name : "<anonymous>";
 
-		std::string reassigned = ar.name != varname ? std::format("{} ", ar.name) : "";
+        std::string reassigned = ar.name != varname ? std::format("{} ", ar.name) : "";
 
-		if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: %s(function)", varname.c_str(), reassigned.c_str()))
-		{
-			ImGui::Text("%s function '%s'", ar.what[0] == 'C' ? "C" : "Luau", ar.name ? ar.name : "<anonymous>");
+        if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: %s(function)", varname.c_str(), reassigned.c_str()))
+        {
+            ImGui::Text("%s function '%s'", ar.what[0] == 'C' ? "C" : "Luau", ar.name ? ar.name : "<anonymous>");
 
-			if (ar.linedefined != -1 || strcmp(ar.short_src, "[C]") != 0 || !ar.isvararg || ar.nupvals != 0)
-			{
-				ImGui::Text("Defined %s:%i", ar.short_src, ar.linedefined);
+            if (ar.linedefined != -1 || strcmp(ar.short_src, "[C]") != 0 || !ar.isvararg || ar.nupvals != 0)
+            {
+                ImGui::Text("Defined %s:%i", ar.short_src, ar.linedefined);
 
-				if (ar.isvararg)
-					ImGui::TextUnformatted("# Parameters: Variadic");
-				else
-					ImGui::Text("# Parameters: %i", ar.nparams);
-				
-				ImGui::Text("# Upvalues: %i", ar.nupvals);
-			}
+                if (ar.isvararg)
+                    ImGui::TextUnformatted("# Parameters: Variadic");
+                else
+                    ImGui::Text("# Parameters: %i", ar.nparams);
+                
+                ImGui::Text("# Upvalues: %i", ar.nupvals);
+            }
 
-			ImGui::TreePop();
-		}
+            ImGui::TreePop();
+        }
 
-		break;
-	}
+        break;
+    }
 
-	case LUA_TTABLE:
-	{
-		if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: (table)", varname.c_str()))
-		{
-			if (lua_getmetatable(L, -1))
-			{
-				lua_pushstring(L, "(metatable)");
-				lua_pushvalue(L, -2);
-				debugVariable(L);
-				
-				lua_pop(L, 3);
-			}
+    case LUA_TTABLE:
+    {
+        if (ImGui::TreeNodeEx(varname.c_str(), NodeFlags, "%s: (table)", varname.c_str()))
+        {
+            if (lua_getmetatable(L, -1))
+            {
+                lua_pushstring(L, "(metatable)");
+                lua_pushvalue(L, -2);
+                debugVariable(L);
+                
+                lua_pop(L, 3);
+            }
 
-			int tableIndex = lua_gettop(L);
-			bool isReadOnly = lua_getreadonly(L, -1);
+            int tableIndex = lua_gettop(L);
+            bool isReadOnly = lua_getreadonly(L, -1);
 
-			lua_pushnil(L);
-			while (lua_next(L, -2))
-			{
-				if (debugVariable(L, !isReadOnly))
-				{
-					lua_pushvalue(L, -2);
-					lua_pushvalue(L, -2);
-					lua_settable(L, tableIndex);
-				}
-				lua_pop(L, 1);
-			}
+            lua_pushnil(L);
+            while (lua_next(L, -2))
+            {
+                if (debugVariable(L, !isReadOnly))
+                {
+                    lua_pushvalue(L, -2);
+                    lua_pushvalue(L, -2);
+                    lua_settable(L, tableIndex);
+                }
+                lua_pop(L, 1);
+            }
 
-			ImGui::TreePop();
-		}
+            ImGui::TreePop();
+        }
 
-		break;
-	}
+        break;
+    }
 
-	case LUA_TLIGHTUSERDATA:
-	{
-		ImGui::Text("%s: (light userdata)", varname.c_str());
-		break;
-	}
+    case LUA_TLIGHTUSERDATA:
+    {
+        ImGui::Text("%s: (light userdata)", varname.c_str());
+        break;
+    }
 
-	default:
-	{
-		std::string valueString;
-		bool editableValue = false;
+    default:
+    {
+        std::string valueString;
+        bool editableValue = false;
 
-		switch (lua_type(L, -1))
-		{
-		case LUA_TNIL: // for Stack view only
-		{
-			valueString = "nil";
-			break;
-		}
-		case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TSTRING: case LUA_TVECTOR:
-		{
-			if (!CanEdit)
-			{
-				switch (lua_type(L, -1))
-				{
-				case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
-				{
-					valueString = luaL_tolstring(L, -1, nullptr);
-					lua_pop(L, 1);
-					break;
-				}
-				default:
-				{
-					assert(lua_type(L, -1) == LUA_TSTRING);
-					valueString = std::format("\"{}\"", lua_tostring(L, -1));
-				}
-				}
-			}
-			else
-			{
-				editableValue = true;
-			}
+        switch (lua_type(L, -1))
+        {
+        case LUA_TNIL: // for Stack view only
+        {
+            valueString = "nil";
+            break;
+        }
+        case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TSTRING: case LUA_TVECTOR:
+        {
+            if (!CanEdit)
+            {
+                switch (lua_type(L, -1))
+                {
+                case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
+                {
+                    valueString = luaL_tolstring(L, -1, nullptr);
+                    lua_pop(L, 1);
+                    break;
+                }
+                default:
+                {
+                    assert(lua_type(L, -1) == LUA_TSTRING);
+                    valueString = std::format("\"{}\"", lua_tostring(L, -1));
+                }
+                }
+            }
+            else
+            {
+                editableValue = true;
+            }
 
-			break;
-		}
-		default:
-		{
-			int top = lua_gettop(L);
-			size_t len = 0;
-			const char* str = lua_tolstring(L, -1, nullptr);
-			valueString = std::format("{} ({})", std::string_view(str, len), vtn);
-			lua_settop(L, top);
-		}
-		}
+            break;
+        }
+        default:
+        {
+            int top = lua_gettop(L);
+            size_t len = 0;
+            const char* str = lua_tolstring(L, -1, nullptr);
+            valueString = std::format("{} ({})", std::string_view(str, len), vtn);
+            lua_settop(L, top);
+        }
+        }
 
-		ImGui::PushID(varname.c_str());
+        ImGui::PushID(varname.c_str());
 
-		if (ImGui::TreeNodeEx(
-			varname.c_str(),
-			NodeFlags | ImGuiTreeNodeFlags_Leaf,
-			"%s: %s",
-			varname.c_str(), valueString.c_str()
-		))
-			ImGui::TreePop();
+        if (ImGui::TreeNodeEx(
+            varname.c_str(),
+            NodeFlags | ImGuiTreeNodeFlags_Leaf,
+            "%s: %s",
+            varname.c_str(), valueString.c_str()
+        ))
+            ImGui::TreePop();
 
-		if (editableValue)
-		{
-			ImGui::SameLine();
+        if (editableValue)
+        {
+            ImGui::SameLine();
 
-			switch (lua_type(L, -1))
-			{
-			case LUA_TBOOLEAN:
-			{
-				bool value = lua_toboolean(L, -1);
+            switch (lua_type(L, -1))
+            {
+            case LUA_TBOOLEAN:
+            {
+                bool value = lua_toboolean(L, -1);
 
-				if (ImGui::Checkbox("##", &value))
-				{
-					lua_pop(L, 1);
-					lua_pushboolean(L, value);
-					changed = true;
-				}
-				break;
-			}
-			case LUA_TNUMBER:
-			{
-				double value = lua_tonumber(L, -1);
+                if (ImGui::Checkbox("##", &value))
+                {
+                    lua_pop(L, 1);
+                    lua_pushboolean(L, value);
+                    changed = true;
+                }
+                break;
+            }
+            case LUA_TNUMBER:
+            {
+                double value = lua_tonumber(L, -1);
 
-				if (ImGui::InputDouble("##", &value))
-				{
-					lua_pop(L, 1);
-					lua_pushnumber(L, value);
-					changed = true;
-				}
-				break;
-			}
-			case LUA_TSTRING:
-			{
-				int top = lua_gettop(L);
-				size_t len = 0;
-				const char* str = lua_tolstring(L, -1, &len);
-				lua_settop(L, top);
+                if (ImGui::InputDouble("##", &value))
+                {
+                    lua_pop(L, 1);
+                    lua_pushnumber(L, value);
+                    changed = true;
+                }
+                break;
+            }
+            case LUA_TSTRING:
+            {
+                int top = lua_gettop(L);
+                size_t len = 0;
+                const char* str = lua_tolstring(L, -1, &len);
+                lua_settop(L, top);
 
-				char* buf = new char[len + 64];
-				memcpy(buf, str, len);
-				buf[len + 63] = 0;
-				buf[len] = 0;
+                char* buf = new char[len + 64];
+                memcpy(buf, str, len);
+                buf[len + 63] = 0;
+                buf[len] = 0;
 
-				if (ImGui::InputText("##", buf, len + 64))
-				{
-					lua_pop(L, 1);
-					lua_pushstring(L, buf);
-					changed = true;
-				}
+                if (ImGui::InputText("##", buf, len + 64))
+                {
+                    lua_pop(L, 1);
+                    lua_pushstring(L, buf);
+                    changed = true;
+                }
 
-				delete[] buf;
-				break;
-			}
-			case LUA_TVECTOR:
-			{
-				const float* vec = lua_tovector(L, -1);
-				float buf[3] = {};
-				memcpy(buf, vec, sizeof(float) * 3);
+                delete[] buf;
+                break;
+            }
+            case LUA_TVECTOR:
+            {
+                const float* vec = lua_tovector(L, -1);
+                float buf[3] = {};
+                memcpy(buf, vec, sizeof(float) * 3);
 
-				if (ImGui::InputFloat3("##", buf))
-				{
-					lua_pop(L, 1);
-					lua_pushvector(L, buf[0], buf[1], buf[2]);
-					changed = true;
-				}
-				break;
-			}
-			default: assert(false);
-			}
-		}
+                if (ImGui::InputFloat3("##", buf))
+                {
+                    lua_pop(L, 1);
+                    lua_pushvector(L, buf[0], buf[1], buf[2]);
+                    changed = true;
+                }
+                break;
+            }
+            default: assert(false);
+            }
+        }
 
-		ImGui::PopID();
-	}
-	}
+        ImGui::PopID();
+    }
+    }
 
-	assert(!changed || CanEdit);
-	return changed;
+    assert(!changed || CanEdit);
+    return changed;
 }
 
 static bool InDebugger = false;
@@ -5286,723 +5286,723 @@ static void resetScriptTimeouts()
 
 static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBreakReason Reason)
 {
-	using namespace ScriptEngine::L;
-	ZoneScoped;
-	resetScriptTimeouts();
-
-	if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt)
-	{
-		lua_State* co = (lua_State*)ar->userdata;
-		assert(co);
-
-		lua_resume(co, nullptr, 0);
-	}
-
-	Engine* engine = Engine::Get();
-
-	luaL_checkstack(L, 20, "debugger");
-
-	std::string_view breakReason;
-	std::string errorMessage;
-
-	const std::string_view BreakReasons[] = {
-		"Broke into Debugger",
-		"Breakpoint hit",
-		"Coroutine interrupted",
-		"Error occurred",
-		"Debug step"
-	};
-
-	const std::string_view BreakExplanations[] = {
-		"Something caused the coroutine to enter a `BREAK` state, such as `debug.breakpoint()`",
-		"The coroutine reached a breakpoint while running, such as one set by `debug.breakpoint(line)`",
-		"The coroutine was interrupted by resuming another coroutine that entered a `BREAK` state",
-		"Error occurred (this should have been replaced with the actual error message)",
-		"You are stepping through the code"
-	};
-
-	breakReason = BreakReasons[Reason];
-
-	if (Reason == DebugBreakReason::Error)
-	{
-		int top = lua_gettop(L);
-		const char* err = lua_tostring(L, -1);
-		errorMessage = err ? err : "unknown error";
-		lua_settop(L, top); // in case `lua_tostring` pushed a value onto the stack
-		// we can't use `luaL_tolstring` because it'll do a metatable check that might throw another exception in an error state
-	}
-	else
-		errorMessage = BreakExplanations[Reason];
-
-	ScriptEngine::L::StateUserdata* corUd = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
-	s_QueuedDebuggerAction.reset();
-
-	if (!InDebugger)
-	{
-		prevContext = ImGui::GetCurrentContext();
-		debuggerContext = ImGui::CreateContext();
-
-		ImGuiIO& debuggerGuiIO = ImGui::GetIO(debuggerContext);
-		debuggerGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		debuggerGuiIO.IniFilename = "debugger-layout.ini";
-
-		ImGui_ImplGlfw_Shutdown();
-
-		ImGui::SetCurrentContext(debuggerContext);
-
-		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger init");
-		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL on Debugger init");
-
-		prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
-		glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-		engine->RendererContext.FrameBuffer.Unbind();
-		glDisable(GL_FRAMEBUFFER_SRGB);
-	}
-	else
-	{
-		ImGui::SetCurrentContext(debuggerContext);
-	}
-
-	InDebugger = true;
-
-	double debuggerLastSecond = GetRunningTime();
-	double debuggerLastFrame = GetRunningTime();
-	int framesPerSecond = 0;
-	int framesInSecond = 0;
-	bool develUI = false;
-	bool quietBg = true;
-	bool running = true;
-
-	int li = 0;
-	bool getInfoSuccess = lua_getinfo(L, li, "slnfu", ar);
-
-	bool firstFrame = true;
-
-	while (!ar->short_src || (strcmp(ar->short_src, "[C]") == 0))
-	{
-		if (getInfoSuccess)
-			lua_pop(L, 1);
-		li++;
-
-		if (!lua_getinfo(L, li, "slnfu", ar))
-		{
-			getInfoSuccess = lua_getinfo(L, 0, "slnfu", ar);
-			ar->short_src = "Failed to find function at call frame";
-			break;
-		}
-		else
-			getInfoSuccess = true;
-	}
-
-	int currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
-	TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
-	for (TextEditorTab& otherTab : s_TextEditors)
-	{
-		otherTab.DebuggerCurrentLine = 0;
-		otherTab.JumpToLine = 0;
-		otherTab.SetUIFocus = false;
-	}
-
-	tab.DebuggerCurrentLine = ar->currentline;
-	tab.JumpToLine = ar->currentline;
-	tab.SetUIFocus = true;
-
-	static bool s_CallstackJumpToCurrentThread = false;
-	s_CallstackJumpToCurrentThread = true;
-
-	static int CurrentVMIndex = 0;
-
-	int cvii = 0;
-	for (auto it = ScriptEngine::VMs.begin(); it != ScriptEngine::VMs.end(); it++)
-	{
-		if (it->first == corUd->VM)
-		{
-			CurrentVMIndex = cvii;
-			break;
-		}
-		cvii++;
-	}
-
-	while (!glfwWindowShouldClose(engine->Window) && running)
-	{
-		ZoneScopedN("DebuggerFrame");
-		double dt = GetRunningTime() - debuggerLastFrame;
-		debuggerLastFrame = GetRunningTime();
-
-		glfwPollEvents();
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-		ImGui::DockSpaceOverViewport();
-		resetScriptTimeouts();
-
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		if (ImGui::Begin("Debugger"))
-		{
-			ImGui::TextUnformatted(breakReason.data());
-
-			ImGui::Text("Script: %s", ar->short_src);
-			ImGui::Text("Line: %i", ar->currentline);
-			ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
-			ImGui::TextUnformatted(errorMessage.c_str());
-			ImGui::SetItemTooltip("%s", errorMessage.c_str());
-			ImGui::Text("VM: %s", corUd->VM.c_str());
-
-			if (s_QueuedDebuggerAction == TextEditor::DebugAction::Continue || s_QueuedDebuggerAction == TextEditor::DebugAction::Stop || ImGui::IsKeyDown(ImGuiKey_F5))
-			{
-				s_QueuedDebuggerAction.reset();
-				lua_callbacks(L)->debugstep = nullptr;
-				running = false;
-			}
-
-			static bool s_WasF7Down = false;
-			static bool s_WasF8Down = false;
-			bool isF7Down = ImGui::IsKeyDown(ImGuiKey_F7) && running;
-			bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8) && running;
-
-			if (isF8Down)
-			{
-				if (s_WasF8Down)
-					isF8Down = false;
-
-				s_WasF8Down = true;
-			}
-			else
-				s_WasF8Down = false;
-
-			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down)))
-			{
-				ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
-				s_QueuedDebuggerAction.reset();
-
-				if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
-				{
-					running = false;
-					ImGui::End();
-					ImGui::EndFrame();
-
-					assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-					if (currfuncindex != 0)
-						lua_pop(L, 1); // pop our function from `lua_getinfo`
-
-					ImGui::SetCurrentContext(prevContext);
-
-					s_WasF7Down = true;
-					return;
-				}
-				else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
-				{
-					lua_breakpoint(L, -1, ar->currentline, false); // please
-				}
-
-				static int s_PrevLine = 0;
-				s_PrevLine = ar->currentline;
-
-				lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
-					{
-						if (ar->currentline > s_PrevLine)
-						{
-							s_PrevLine = ar->currentline;
-							debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
-						}
-					};
-
-				lua_singlestep(L, true);
-				lua_break(L);
-				running = false;
-			}
-
-			s_WasF7Down = isF7Down;
-
-			if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
-			{
-				ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
-				s_QueuedDebuggerAction.reset();
-
-				if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
-				{
-					running = false;
-					ImGui::End();
-					ImGui::EndFrame();
-
-					assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-					if (currfuncindex != 0)
-						lua_pop(L, 1); // pop our function from `lua_getinfo`
-
-					ImGui::SetCurrentContext(prevContext);
-
-					return;
-				}
-				else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
-				{
-					lua_breakpoint(L, -1, ar->currentline, false); // please
-				}
-
-				static int s_PrevLine = 0;
-				s_PrevLine = ar->currentline;
-
-				lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
-					{
-						if (ar->currentline != s_PrevLine)
-						{
-							s_PrevLine = ar->currentline;
-							debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
-						}
-					};
-
-				lua_singlestep(L, true);
-				lua_break(L);
-				running = false;
-			}
-
-			ImGui::Checkbox("All Developer UIs", &develUI);
-			ImGui::Checkbox("Quiet Background", &quietBg);
-			ImGui::Text("Debugger %i FPS / %.2fms", framesPerSecond, dt);
-
-			if (ScriptEngine::L::DebugBreak)
-			{
-				if (ImGui::Button("Detach Debugger for this VM and all VMs created in the future"))
-				{
-					lua_Callbacks* cb = lua_callbacks(L);
-					ScriptEngine::L::DebugBreak = nullptr;
-
-					cb->debugbreak = nullptr;
-					cb->debugprotectederror = nullptr;
-					cb->debugstep = nullptr;
-					cb->debuginterrupt = [](lua_State*, lua_Debug* ar)
-						{
-							lua_resume((lua_State*)ar->userdata, nullptr, 0);
-						};
-				}
-			}
-			else
-			{
-				ImGui::Text("The Debugger has been detached for VM %s and all future VMs.", corUd->VM.c_str());
-			}
-		}
-		ImGui::End();
-
-		if (ImGui::Begin("Watch"))
-		{
-			static int Section = 0;
-			ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
-
-			ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
-			//int initialStatus = lua_status(L);
-			// L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
-			
-			switch (Section)
-			{
-			case 0:
-			{
-				for (int l = 0; l < lua_stackdepth(L); l++)
-				{
-					ImGui::Text("---LEVEL %i---", l);
-					ImGui::PushID(l);
-
-					for (int i = 1; i < 256; i++)
-					{
-						luaL_checkstack(L, 3, "get local");
-						const char* name = lua_getlocal(L, l, i);
-
-						if (!name)
-							break; // TODO are they contiguous?
-
-						lua_pushstring(L, name);
-						lua_pushvalue(L, -2);
-
-						if (debugVariable(L) && lua_setlocal(L, l, i))
-							lua_pop(L, 1);
-						else
-							lua_pop(L, 2);
-
-						lua_pop(L, 1);
-					};
-
-					ImGui::PopID();
-				}
-
-				break;
-			}
-			case 1:
-			{
-				for (int i = 1; i < ar->nupvals; i++)
-				{
-					const char* nameCstr = lua_getupvalue(L, currfuncindex, i);
-
-					if (!nameCstr)
-						break;
-
-					std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[upvalue{}]", i);
-
-					lua_pushstring(L, name.c_str());
-					lua_pushvalue(L, -2);
-
-					if (debugVariable(L) && lua_setupvalue(L, currfuncindex, i))
-						lua_pop(L, 1);
-					else
-						lua_pop(L, 2);
-
-					lua_pop(L, 1);
-				}
-
-				break;
-			}
-			case 2:
-			{
-				lua_pushstring(L, "Environment");
-				lua_pushvalue(L, LUA_ENVIRONINDEX);
-				debugVariable(L);
-
-				lua_pop(L, 2);
-				break;
-			}
-			case 3:
-			{
-				lua_pushstring(L, "Registry");
-				lua_pushvalue(L, LUA_REGISTRYINDEX);
-				debugVariable(L);
-
-				lua_pop(L, 2);
-				break;
-			}
-			case 4:
-			{
-				for (int i = 1; i <= lua_gettop(L); i++)
-				{
-					lua_pushinteger(L, i);
-					lua_pushvalue(L, i);
-					if (debugVariable(L))
-					{
-						lua_remove(L, -2);
-						lua_remove(L, -2);
-					}
-
-					lua_pop(L, 2);
-				}
-
-				break;
-			}
-			[[unlikely]] default: { assert(false); }
-
-			}
-			//L->status = initialStatus;
-			ImGui::EndChild();
-		}
-		ImGui::End();
-
-		if (ImGui::Begin("Callstack"))
-		{
-			std::vector<std::string_view> vmNames;
-			vmNames.reserve(ScriptEngine::VMs.size());
-
-			for (auto& [ name, _ ] : ScriptEngine::VMs)
-				vmNames.emplace_back(name);
-
-			if (CurrentVMIndex >= (int)vmNames.size())
-				CurrentVMIndex = 0;
-
-			ImGui::Combo("##", &CurrentVMIndex, [](void* vmsPtr, int index) -> const char*
-				{
-					const auto vms = (std::vector<std::string_view>*)vmsPtr;
-					return vms->at(index).data();
-				}, &vmNames, (int)vmNames.size());
-
-			const ScriptEngine::LuauVM& vm = ScriptEngine::VMs[std::string(vmNames[CurrentVMIndex])];
-
-			size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
-			if (numCoroutineIdChars < 3)
-				numCoroutineIdChars = 3;
-
-			const auto renderCoroutine = [&L, ar, vm, vmNames, &currfuncindex, numCoroutineIdChars](lua_State* coroutine)
-			{
-				ImGui::PushID(coroutine);
-
-				lua_Debug car = {};
-
-				int li = 0;
-				bool getInfoSuccess = lua_getinfo(coroutine, li, "slnfu", &car);
-
-				while (!car.short_src || (strcmp(car.short_src, "[C]") == 0))
-				{
-					if (getInfoSuccess)
-						lua_pop(coroutine, 1);
-					li++;
-
-					if (!lua_getinfo(coroutine, li, "slnfu", &car))
-					{
-						getInfoSuccess = lua_getinfo(coroutine, 0, "slnfu", &car);
-						car.short_src = nullptr;
-						break;
-					}
-					else
-						getInfoSuccess = true;
-				}
-
-				const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
-				std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
-				std::string targetFile = car.short_src ? car.short_src : "";
-				int targetLine = ar->currentline;
-
-				if (targetFile.size() == 0)
-				{
-					if (size_t pathBegin = identifier.find('.'); pathBegin != std::string::npos)
-					{
-						std::string_view fromPathOnwards = { identifier.begin() + pathBegin, identifier.end() };
-
-						if (size_t pathEnd = fromPathOnwards.find(".luau"); pathEnd != std::string::npos)
-						{
-							targetFile = std::string(identifier.begin() + pathBegin, identifier.begin() + pathBegin + pathEnd + strlen(".luau"));
-
-							if (size_t lineBegin = fromPathOnwards.find(':'); lineBegin != std::string::npos)
-							{
-								std::string_view fromLineOnwards = { fromPathOnwards.begin() + lineBegin, fromPathOnwards.end() };
-
-								if (size_t lineEnd = fromLineOnwards.find('\n'); lineEnd != std::string::npos)
-									targetLine = std::stoi(std::string(fromLineOnwards.begin() + 1, fromLineOnwards.begin() + lineEnd));
-							}
-						}
-					}
-				}
-
-				bool noSourceInformation = false;
-
-				if (identifier.size() == 2) // ":0"
-				{
-					identifier = "<coroutine>";
-					noSourceInformation = true;
-				}
-
-				if (size_t pathStartLoc = identifier.find("scripts/"); pathStartLoc != std::string::npos)
-					identifier = { identifier.begin() + pathStartLoc, identifier.end() };
-
-				if (size_t newlLoc = identifier.find('\n'); newlLoc != std::string::npos && newlLoc != 0)
-					identifier = { identifier.begin(), identifier.begin() + newlLoc };
-
-				if (!car.short_src && ud) // means we are showing the spawn trace and not the actual current call frame
-					identifier = "Spawned from " + identifier;
-
-				if (coroutine == L)
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
-				else if (coroutine == vm.MainThread || noSourceInformation)
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5, 0.5, 0.5, 1.f));
-				else
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.75f, 0.75f, 1.f));
-
-				std::string treeNodeIdentifier = identifier;
-				if (treeNodeIdentifier.size() > numCoroutineIdChars)
-					treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
-
-				if (s_CallstackJumpToCurrentThread && coroutine == L)
-					ImGui::SetNextItemOpen(true);
-
-				bool open = ImGui::TreeNodeEx(coroutine, ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow, "%s", treeNodeIdentifier.c_str());
-				ImGui::PopStyleColor();
-				ImGui::SetItemTooltip("%s", identifier.c_str());
-
-				ImGui::SameLine();
-
-				ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
-
-				const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
-				const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(lua_mainthread(coroutine), coroutine)];
-
-				ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
-				ImGui::TextUnformatted(lsdi.Id);
-				ImGui::PopStyleColor();
-				ImGui::SetItemTooltip("%s", lsdi.Description);
-
-				ImGui::SameLine();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
-				ImGui::TextUnformatted(lcsdi.Id);
-				ImGui::PopStyleColor();
-				ImGui::SetItemTooltip("%s", lcsdi.Description);
-
-				if (s_CallstackJumpToCurrentThread && coroutine == L)
-				{
-					ImGui::SetScrollHereY();
-					s_CallstackJumpToCurrentThread = false;
-				}
-
-				if (ImGui::IsItemClicked())
-				{
-					assert(currfuncindex == 0 || lua_type(L, -1) == LUA_TFUNCTION);
-					if (currfuncindex != 0)
-						lua_remove(L, currfuncindex);
-
-					L = coroutine;
-					currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
-					assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
-					memcpy(ar, &car, sizeof(lua_Debug));
-
-					TextEditorTab* tab = nullptr;
-
-					if (ud)
-					{
-						tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
-							"!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
-							ud->VM, ud->SpawnTrace
-						));
-					}
-					else
-					{
-						tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vmNames[CurrentVMIndex]));
-					}
-
-					tab->DebuggerCurrentLine = targetLine;
-					tab->JumpToLine = targetLine;
-				}
-				else
-				{
-					if (getInfoSuccess)
-						lua_pop(coroutine, 1); // pop our current function off to leave the stack balanced
-				}
-
-				if (open)
-				{
-					lua_Debug car = {};
-					int i = 0;
-
-					if (!lua_getinfo(coroutine, 0, "sln", &car))
-						i = 1;
-
-					for (i = 0; lua_getinfo(coroutine, i, "sln", &car); i++)
-					{
-						ImGui::PushID(i);
-
-						if (car.currentline > 0)
-						{
-							std::string_view srcShortened = car.short_src;
-							if (size_t loc = srcShortened.find("scripts/"); loc != std::string::npos)
-								srcShortened = std::string_view(srcShortened.begin() + loc, srcShortened.end());
-
-							ImGui::PushStyleColor(
-								ImGuiCol_TextLink,
-								ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
-							);
-
-							if (ImGui::TextLink(std::format(
-								"{}:{} in {}",
-								srcShortened, car.currentline, car.name ? car.name : "<anonmyous>"
-							).c_str()))
-							{
-								invokeTextEditor(car.short_src).JumpToLine = car.currentline;
-								lua_getinfo(coroutine, i, "sln", ar);
-							}
-
-							ImGui::SetItemTooltip("View source");
-							ImGui::PopStyleColor();
-						}
-						else
-						{
-							ImGui::Text("%s in %s", car.short_src, car.name);
-							ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
-						}
-
-						ImGui::PopID();
-					}
-
-					if (lua_getthreaddata(coroutine))
-					{
-						const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
-						if (ud->SpawnTrace.size() > 0)
-						{
-							ImGui::SeparatorText("Spawn trace");
-							ImGui::TextUnformatted(ud->SpawnTrace.c_str());
-						}
-					}
-
-					ImGui::TreePop();
-				}
-
-				ImGui::PopID();
-			};
-
-			renderCoroutine(vm.MainThread);
-			for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread))->Coroutines)
-				renderCoroutine(coroutine);
-		}
-		ImGui::End();
-
-		if (develUI)
-			engine->OnFrameRenderGui.Fire(dt);
-		else
-			renderTextEditors();
-
-		if (!quietBg)
-		{
-			EcCamera* sceneCam = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
-
-			engine->RendererContext.DrawScene(
-				engine->CurrentScene,
-				sceneCam->GetRenderMatrix((float)engine->WindowSizeX / engine->WindowSizeY),
-				sceneCam->GetWorldTransform(),
-				GetRunningTime(),
-				engine->DebugWireframeRendering
-			);
-		}
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		// there's this really obnoxious single-frame flash that occurs when single stepping :(
-		if (!firstFrame)
-			engine->RendererContext.SwapBuffers();
-		else
-			firstFrame = false;
-
-		framesInSecond++;
-		if (GetRunningTime() - debuggerLastSecond >= 1.f)
-		{
-			debuggerLastSecond = GetRunningTime();
-			framesPerSecond = framesInSecond;
-			framesInSecond = 0;
-		}
-
-		std::this_thread::sleep_for(std::chrono::duration<double>(std::clamp(0.01 - dt, 0.0, 0.01)));
-		Memory::FrameFinish();
-	}
-
-	assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-	if (currfuncindex != 0)
-		lua_pop(L, 1); // pop our function from `lua_getinfo`
-
-	ImGui::SetCurrentContext(prevContext);
-
-	if (glfwWindowShouldClose(engine->Window))
-		ScriptEngine::L::DebugBreak = nullptr;
+    using namespace ScriptEngine::L;
+    ZoneScoped;
+    resetScriptTimeouts();
+
+    if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt)
+    {
+        lua_State* co = (lua_State*)ar->userdata;
+        assert(co);
+
+        lua_resume(co, nullptr, 0);
+    }
+
+    Engine* engine = Engine::Get();
+
+    luaL_checkstack(L, 20, "debugger");
+
+    std::string_view breakReason;
+    std::string errorMessage;
+
+    const std::string_view BreakReasons[] = {
+        "Broke into Debugger",
+        "Breakpoint hit",
+        "Coroutine interrupted",
+        "Error occurred",
+        "Debug step"
+    };
+
+    const std::string_view BreakExplanations[] = {
+        "Something caused the coroutine to enter a `BREAK` state, such as `debug.breakpoint()`",
+        "The coroutine reached a breakpoint while running, such as one set by `debug.breakpoint(line)`",
+        "The coroutine was interrupted by resuming another coroutine that entered a `BREAK` state",
+        "Error occurred (this should have been replaced with the actual error message)",
+        "You are stepping through the code"
+    };
+
+    breakReason = BreakReasons[Reason];
+
+    if (Reason == DebugBreakReason::Error)
+    {
+        int top = lua_gettop(L);
+        const char* err = lua_tostring(L, -1);
+        errorMessage = err ? err : "unknown error";
+        lua_settop(L, top); // in case `lua_tostring` pushed a value onto the stack
+        // we can't use `luaL_tolstring` because it'll do a metatable check that might throw another exception in an error state
+    }
+    else
+        errorMessage = BreakExplanations[Reason];
+
+    ScriptEngine::L::StateUserdata* corUd = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
+    s_QueuedDebuggerAction.reset();
+
+    if (!InDebugger)
+    {
+        prevContext = ImGui::GetCurrentContext();
+        debuggerContext = ImGui::CreateContext();
+
+        ImGuiIO& debuggerGuiIO = ImGui::GetIO(debuggerContext);
+        debuggerGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        debuggerGuiIO.IniFilename = "debugger-layout.ini";
+
+        ImGui_ImplGlfw_Shutdown();
+
+        ImGui::SetCurrentContext(debuggerContext);
+
+        PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger init");
+        PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL on Debugger init");
+
+        prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
+        glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        engine->RendererContext.FrameBuffer.Unbind();
+        glDisable(GL_FRAMEBUFFER_SRGB);
+    }
+    else
+    {
+        ImGui::SetCurrentContext(debuggerContext);
+    }
+
+    InDebugger = true;
+
+    double debuggerLastSecond = GetRunningTime();
+    double debuggerLastFrame = GetRunningTime();
+    int framesPerSecond = 0;
+    int framesInSecond = 0;
+    bool develUI = false;
+    bool quietBg = true;
+    bool running = true;
+
+    int li = 0;
+    bool getInfoSuccess = lua_getinfo(L, li, "slnfu", ar);
+
+    bool firstFrame = true;
+
+    while (!ar->short_src || (strcmp(ar->short_src, "[C]") == 0))
+    {
+        if (getInfoSuccess)
+            lua_pop(L, 1);
+        li++;
+
+        if (!lua_getinfo(L, li, "slnfu", ar))
+        {
+            getInfoSuccess = lua_getinfo(L, 0, "slnfu", ar);
+            ar->short_src = "Failed to find function at call frame";
+            break;
+        }
+        else
+            getInfoSuccess = true;
+    }
+
+    int currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
+    TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
+    for (TextEditorTab& otherTab : s_TextEditors)
+    {
+        otherTab.DebuggerCurrentLine = 0;
+        otherTab.JumpToLine = 0;
+        otherTab.SetUIFocus = false;
+    }
+
+    tab.DebuggerCurrentLine = ar->currentline;
+    tab.JumpToLine = ar->currentline;
+    tab.SetUIFocus = true;
+
+    static bool s_CallstackJumpToCurrentThread = false;
+    s_CallstackJumpToCurrentThread = true;
+
+    static int CurrentVMIndex = 0;
+
+    int cvii = 0;
+    for (auto it = ScriptEngine::VMs.begin(); it != ScriptEngine::VMs.end(); it++)
+    {
+        if (it->first == corUd->VM)
+        {
+            CurrentVMIndex = cvii;
+            break;
+        }
+        cvii++;
+    }
+
+    while (!glfwWindowShouldClose(engine->Window) && running)
+    {
+        ZoneScopedN("DebuggerFrame");
+        double dt = GetRunningTime() - debuggerLastFrame;
+        debuggerLastFrame = GetRunningTime();
+
+        glfwPollEvents();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::DockSpaceOverViewport();
+        resetScriptTimeouts();
+
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        if (ImGui::Begin("Debugger"))
+        {
+            ImGui::TextUnformatted(breakReason.data());
+
+            ImGui::Text("Script: %s", ar->short_src);
+            ImGui::Text("Line: %i", ar->currentline);
+            ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
+            ImGui::TextUnformatted(errorMessage.c_str());
+            ImGui::SetItemTooltip("%s", errorMessage.c_str());
+            ImGui::Text("VM: %s", corUd->VM.c_str());
+
+            if (s_QueuedDebuggerAction == TextEditor::DebugAction::Continue || s_QueuedDebuggerAction == TextEditor::DebugAction::Stop || ImGui::IsKeyDown(ImGuiKey_F5))
+            {
+                s_QueuedDebuggerAction.reset();
+                lua_callbacks(L)->debugstep = nullptr;
+                running = false;
+            }
+
+            static bool s_WasF7Down = false;
+            static bool s_WasF8Down = false;
+            bool isF7Down = ImGui::IsKeyDown(ImGuiKey_F7) && running;
+            bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8) && running;
+
+            if (isF8Down)
+            {
+                if (s_WasF8Down)
+                    isF8Down = false;
+
+                s_WasF8Down = true;
+            }
+            else
+                s_WasF8Down = false;
+
+            if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down)))
+            {
+                ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
+                s_QueuedDebuggerAction.reset();
+
+                if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
+                {
+                    running = false;
+                    ImGui::End();
+                    ImGui::EndFrame();
+
+                    assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+                    if (currfuncindex != 0)
+                        lua_pop(L, 1); // pop our function from `lua_getinfo`
+
+                    ImGui::SetCurrentContext(prevContext);
+
+                    s_WasF7Down = true;
+                    return;
+                }
+                else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
+                {
+                    lua_breakpoint(L, -1, ar->currentline, false); // please
+                }
+
+                static int s_PrevLine = 0;
+                s_PrevLine = ar->currentline;
+
+                lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
+                    {
+                        if (ar->currentline > s_PrevLine)
+                        {
+                            s_PrevLine = ar->currentline;
+                            debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
+                        }
+                    };
+
+                lua_singlestep(L, true);
+                lua_break(L);
+                running = false;
+            }
+
+            s_WasF7Down = isF7Down;
+
+            if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
+            {
+                ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
+                s_QueuedDebuggerAction.reset();
+
+                if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
+                {
+                    running = false;
+                    ImGui::End();
+                    ImGui::EndFrame();
+
+                    assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+                    if (currfuncindex != 0)
+                        lua_pop(L, 1); // pop our function from `lua_getinfo`
+
+                    ImGui::SetCurrentContext(prevContext);
+
+                    return;
+                }
+                else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
+                {
+                    lua_breakpoint(L, -1, ar->currentline, false); // please
+                }
+
+                static int s_PrevLine = 0;
+                s_PrevLine = ar->currentline;
+
+                lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
+                    {
+                        if (ar->currentline != s_PrevLine)
+                        {
+                            s_PrevLine = ar->currentline;
+                            debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
+                        }
+                    };
+
+                lua_singlestep(L, true);
+                lua_break(L);
+                running = false;
+            }
+
+            ImGui::Checkbox("All Developer UIs", &develUI);
+            ImGui::Checkbox("Quiet Background", &quietBg);
+            ImGui::Text("Debugger %i FPS / %.2fms", framesPerSecond, dt);
+
+            if (ScriptEngine::L::DebugBreak)
+            {
+                if (ImGui::Button("Detach Debugger for this VM and all VMs created in the future"))
+                {
+                    lua_Callbacks* cb = lua_callbacks(L);
+                    ScriptEngine::L::DebugBreak = nullptr;
+
+                    cb->debugbreak = nullptr;
+                    cb->debugprotectederror = nullptr;
+                    cb->debugstep = nullptr;
+                    cb->debuginterrupt = [](lua_State*, lua_Debug* ar)
+                        {
+                            lua_resume((lua_State*)ar->userdata, nullptr, 0);
+                        };
+                }
+            }
+            else
+            {
+                ImGui::Text("The Debugger has been detached for VM %s and all future VMs.", corUd->VM.c_str());
+            }
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("Watch"))
+        {
+            static int Section = 0;
+            ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
+
+            ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
+            //int initialStatus = lua_status(L);
+            // L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
+            
+            switch (Section)
+            {
+            case 0:
+            {
+                for (int l = 0; l < lua_stackdepth(L); l++)
+                {
+                    ImGui::Text("---LEVEL %i---", l);
+                    ImGui::PushID(l);
+
+                    for (int i = 1; i < 256; i++)
+                    {
+                        luaL_checkstack(L, 3, "get local");
+                        const char* name = lua_getlocal(L, l, i);
+
+                        if (!name)
+                            break; // TODO are they contiguous?
+
+                        lua_pushstring(L, name);
+                        lua_pushvalue(L, -2);
+
+                        if (debugVariable(L) && lua_setlocal(L, l, i))
+                            lua_pop(L, 1);
+                        else
+                            lua_pop(L, 2);
+
+                        lua_pop(L, 1);
+                    };
+
+                    ImGui::PopID();
+                }
+
+                break;
+            }
+            case 1:
+            {
+                for (int i = 1; i < ar->nupvals; i++)
+                {
+                    const char* nameCstr = lua_getupvalue(L, currfuncindex, i);
+
+                    if (!nameCstr)
+                        break;
+
+                    std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[upvalue{}]", i);
+
+                    lua_pushstring(L, name.c_str());
+                    lua_pushvalue(L, -2);
+
+                    if (debugVariable(L) && lua_setupvalue(L, currfuncindex, i))
+                        lua_pop(L, 1);
+                    else
+                        lua_pop(L, 2);
+
+                    lua_pop(L, 1);
+                }
+
+                break;
+            }
+            case 2:
+            {
+                lua_pushstring(L, "Environment");
+                lua_pushvalue(L, LUA_ENVIRONINDEX);
+                debugVariable(L);
+
+                lua_pop(L, 2);
+                break;
+            }
+            case 3:
+            {
+                lua_pushstring(L, "Registry");
+                lua_pushvalue(L, LUA_REGISTRYINDEX);
+                debugVariable(L);
+
+                lua_pop(L, 2);
+                break;
+            }
+            case 4:
+            {
+                for (int i = 1; i <= lua_gettop(L); i++)
+                {
+                    lua_pushinteger(L, i);
+                    lua_pushvalue(L, i);
+                    if (debugVariable(L))
+                    {
+                        lua_remove(L, -2);
+                        lua_remove(L, -2);
+                    }
+
+                    lua_pop(L, 2);
+                }
+
+                break;
+            }
+            [[unlikely]] default: { assert(false); }
+
+            }
+            //L->status = initialStatus;
+            ImGui::EndChild();
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("Callstack"))
+        {
+            std::vector<std::string_view> vmNames;
+            vmNames.reserve(ScriptEngine::VMs.size());
+
+            for (auto& [ name, _ ] : ScriptEngine::VMs)
+                vmNames.emplace_back(name);
+
+            if (CurrentVMIndex >= (int)vmNames.size())
+                CurrentVMIndex = 0;
+
+            ImGui::Combo("##", &CurrentVMIndex, [](void* vmsPtr, int index) -> const char*
+                {
+                    const auto vms = (std::vector<std::string_view>*)vmsPtr;
+                    return vms->at(index).data();
+                }, &vmNames, (int)vmNames.size());
+
+            const ScriptEngine::LuauVM& vm = ScriptEngine::VMs[std::string(vmNames[CurrentVMIndex])];
+
+            size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
+            if (numCoroutineIdChars < 3)
+                numCoroutineIdChars = 3;
+
+            const auto renderCoroutine = [&L, ar, vm, vmNames, &currfuncindex, numCoroutineIdChars](lua_State* coroutine)
+            {
+                ImGui::PushID(coroutine);
+
+                lua_Debug car = {};
+
+                int li = 0;
+                bool getInfoSuccess = lua_getinfo(coroutine, li, "slnfu", &car);
+
+                while (!car.short_src || (strcmp(car.short_src, "[C]") == 0))
+                {
+                    if (getInfoSuccess)
+                        lua_pop(coroutine, 1);
+                    li++;
+
+                    if (!lua_getinfo(coroutine, li, "slnfu", &car))
+                    {
+                        getInfoSuccess = lua_getinfo(coroutine, 0, "slnfu", &car);
+                        car.short_src = nullptr;
+                        break;
+                    }
+                    else
+                        getInfoSuccess = true;
+                }
+
+                const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
+                std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
+                std::string targetFile = car.short_src ? car.short_src : "";
+                int targetLine = ar->currentline;
+
+                if (targetFile.size() == 0)
+                {
+                    if (size_t pathBegin = identifier.find('.'); pathBegin != std::string::npos)
+                    {
+                        std::string_view fromPathOnwards = { identifier.begin() + pathBegin, identifier.end() };
+
+                        if (size_t pathEnd = fromPathOnwards.find(".luau"); pathEnd != std::string::npos)
+                        {
+                            targetFile = std::string(identifier.begin() + pathBegin, identifier.begin() + pathBegin + pathEnd + strlen(".luau"));
+
+                            if (size_t lineBegin = fromPathOnwards.find(':'); lineBegin != std::string::npos)
+                            {
+                                std::string_view fromLineOnwards = { fromPathOnwards.begin() + lineBegin, fromPathOnwards.end() };
+
+                                if (size_t lineEnd = fromLineOnwards.find('\n'); lineEnd != std::string::npos)
+                                    targetLine = std::stoi(std::string(fromLineOnwards.begin() + 1, fromLineOnwards.begin() + lineEnd));
+                            }
+                        }
+                    }
+                }
+
+                bool noSourceInformation = false;
+
+                if (identifier.size() == 2) // ":0"
+                {
+                    identifier = "<coroutine>";
+                    noSourceInformation = true;
+                }
+
+                if (size_t pathStartLoc = identifier.find("scripts/"); pathStartLoc != std::string::npos)
+                    identifier = { identifier.begin() + pathStartLoc, identifier.end() };
+
+                if (size_t newlLoc = identifier.find('\n'); newlLoc != std::string::npos && newlLoc != 0)
+                    identifier = { identifier.begin(), identifier.begin() + newlLoc };
+
+                if (!car.short_src && ud) // means we are showing the spawn trace and not the actual current call frame
+                    identifier = "Spawned from " + identifier;
+
+                if (coroutine == L)
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
+                else if (coroutine == vm.MainThread || noSourceInformation)
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5, 0.5, 0.5, 1.f));
+                else
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.75f, 0.75f, 1.f));
+
+                std::string treeNodeIdentifier = identifier;
+                if (treeNodeIdentifier.size() > numCoroutineIdChars)
+                    treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
+
+                if (s_CallstackJumpToCurrentThread && coroutine == L)
+                    ImGui::SetNextItemOpen(true);
+
+                bool open = ImGui::TreeNodeEx(coroutine, ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow, "%s", treeNodeIdentifier.c_str());
+                ImGui::PopStyleColor();
+                ImGui::SetItemTooltip("%s", identifier.c_str());
+
+                ImGui::SameLine();
+
+                ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
+
+                const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
+                const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(lua_mainthread(coroutine), coroutine)];
+
+                ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
+                ImGui::TextUnformatted(lsdi.Id);
+                ImGui::PopStyleColor();
+                ImGui::SetItemTooltip("%s", lsdi.Description);
+
+                ImGui::SameLine();
+
+                ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
+                ImGui::TextUnformatted(lcsdi.Id);
+                ImGui::PopStyleColor();
+                ImGui::SetItemTooltip("%s", lcsdi.Description);
+
+                if (s_CallstackJumpToCurrentThread && coroutine == L)
+                {
+                    ImGui::SetScrollHereY();
+                    s_CallstackJumpToCurrentThread = false;
+                }
+
+                if (ImGui::IsItemClicked())
+                {
+                    assert(currfuncindex == 0 || lua_type(L, -1) == LUA_TFUNCTION);
+                    if (currfuncindex != 0)
+                        lua_remove(L, currfuncindex);
+
+                    L = coroutine;
+                    currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
+                    assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
+                    memcpy(ar, &car, sizeof(lua_Debug));
+
+                    TextEditorTab* tab = nullptr;
+
+                    if (ud)
+                    {
+                        tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
+                            "!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
+                            ud->VM, ud->SpawnTrace
+                        ));
+                    }
+                    else
+                    {
+                        tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vmNames[CurrentVMIndex]));
+                    }
+
+                    tab->DebuggerCurrentLine = targetLine;
+                    tab->JumpToLine = targetLine;
+                }
+                else
+                {
+                    if (getInfoSuccess)
+                        lua_pop(coroutine, 1); // pop our current function off to leave the stack balanced
+                }
+
+                if (open)
+                {
+                    lua_Debug car = {};
+                    int i = 0;
+
+                    if (!lua_getinfo(coroutine, 0, "sln", &car))
+                        i = 1;
+
+                    for (i = 0; lua_getinfo(coroutine, i, "sln", &car); i++)
+                    {
+                        ImGui::PushID(i);
+
+                        if (car.currentline > 0)
+                        {
+                            std::string_view srcShortened = car.short_src;
+                            if (size_t loc = srcShortened.find("scripts/"); loc != std::string::npos)
+                                srcShortened = std::string_view(srcShortened.begin() + loc, srcShortened.end());
+
+                            ImGui::PushStyleColor(
+                                ImGuiCol_TextLink,
+                                ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
+                            );
+
+                            if (ImGui::TextLink(std::format(
+                                "{}:{} in {}",
+                                srcShortened, car.currentline, car.name ? car.name : "<anonmyous>"
+                            ).c_str()))
+                            {
+                                invokeTextEditor(car.short_src).JumpToLine = car.currentline;
+                                lua_getinfo(coroutine, i, "sln", ar);
+                            }
+
+                            ImGui::SetItemTooltip("View source");
+                            ImGui::PopStyleColor();
+                        }
+                        else
+                        {
+                            ImGui::Text("%s in %s", car.short_src, car.name);
+                            ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
+                        }
+
+                        ImGui::PopID();
+                    }
+
+                    if (lua_getthreaddata(coroutine))
+                    {
+                        const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
+                        if (ud->SpawnTrace.size() > 0)
+                        {
+                            ImGui::SeparatorText("Spawn trace");
+                            ImGui::TextUnformatted(ud->SpawnTrace.c_str());
+                        }
+                    }
+
+                    ImGui::TreePop();
+                }
+
+                ImGui::PopID();
+            };
+
+            renderCoroutine(vm.MainThread);
+            for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread))->Coroutines)
+                renderCoroutine(coroutine);
+        }
+        ImGui::End();
+
+        if (develUI)
+            engine->OnFrameRenderGui.Fire(dt);
+        else
+            renderTextEditors();
+
+        if (!quietBg)
+        {
+            EcCamera* sceneCam = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
+
+            engine->RendererContext.DrawScene(
+                engine->CurrentScene,
+                sceneCam->GetRenderMatrix((float)engine->WindowSizeX / engine->WindowSizeY),
+                sceneCam->GetWorldTransform(),
+                GetRunningTime(),
+                engine->DebugWireframeRendering
+            );
+        }
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // there's this really obnoxious single-frame flash that occurs when single stepping :(
+        if (!firstFrame)
+            engine->RendererContext.SwapBuffers();
+        else
+            firstFrame = false;
+
+        framesInSecond++;
+        if (GetRunningTime() - debuggerLastSecond >= 1.f)
+        {
+            debuggerLastSecond = GetRunningTime();
+            framesPerSecond = framesInSecond;
+            framesInSecond = 0;
+        }
+
+        std::this_thread::sleep_for(std::chrono::duration<double>(std::clamp(0.01 - dt, 0.0, 0.01)));
+        Memory::FrameFinish();
+    }
+
+    assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+    if (currfuncindex != 0)
+        lua_pop(L, 1); // pop our function from `lua_getinfo`
+
+    ImGui::SetCurrentContext(prevContext);
+
+    if (glfwWindowShouldClose(engine->Window))
+        ScriptEngine::L::DebugBreak = nullptr;
 }
 
 static void debuggerLeaveCallback()
 {
-	if (!InDebugger)
-		return;
+    if (!InDebugger)
+        return;
 
-	ImGui::SetCurrentContext(debuggerContext);
+    ImGui::SetCurrentContext(debuggerContext);
 
-	Engine* engine = Engine::Get();
+    Engine* engine = Engine::Get();
 
-	for (TextEditorTab& tab : s_TextEditors)
-		tab.DebuggerCurrentLine = 0;
-	glfwSetInputMode(engine->Window, GLFW_CURSOR, prevCursorMode);
+    for (TextEditorTab& tab : s_TextEditors)
+        tab.DebuggerCurrentLine = 0;
+    glfwSetInputMode(engine->Window, GLFW_CURSOR, prevCursorMode);
 
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::SetCurrentContext(prevContext);
-	ImGui::DestroyContext(debuggerContext);
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::SetCurrentContext(prevContext);
+    ImGui::DestroyContext(debuggerContext);
 
-	debuggerContext = nullptr;
-	prevContext = nullptr;
+    debuggerContext = nullptr;
+    prevContext = nullptr;
 
-	PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger shutdown");
-	glEnable(GL_FRAMEBUFFER_SRGB);
+    PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger shutdown");
+    glEnable(GL_FRAMEBUFFER_SRGB);
 
-	for (TextEditorTab& tab : s_TextEditors)
-		tab.Editor.SetCurrentLineIndicator(0);
+    for (TextEditorTab& tab : s_TextEditors)
+        tab.Editor.SetCurrentLineIndicator(0);
 
-	s_QueuedDebuggerAction.reset();
-	InDebugger = false;
+    s_QueuedDebuggerAction.reset();
+    InDebugger = false;
 }

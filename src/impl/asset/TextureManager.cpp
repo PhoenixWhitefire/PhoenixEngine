@@ -221,7 +221,7 @@ void TextureManager::Shutdown()
 
 	glDeleteTextures(static_cast<int32_t>(m_Textures.size()), textureGpuIds.data());
 	glDeleteSamplers(1, &m_NearestNeighbourTextureSampler);
-	glDeleteSamplers(2, &m_LinearTextureSampler);
+	glDeleteSamplers(1, &m_LinearTextureSampler);
 
 	m_NearestNeighbourTextureSampler = UINT32_MAX;
 	m_LinearTextureSampler = UINT32_MAX;

@@ -12,63 +12,71 @@
 
 static const std::string_view SkyboxFaces[6] = {
     "right",
-	"left",
-	"top",
-	"bottom",
-	"front",
-	"back"
+    "left",
+    "top",
+    "bottom",
+    "front",
+    "back"
 };
 
 static std::unordered_map<std::string, uint32_t> CachedSkyboxCubemaps;
 
 static uint32_t startLoadingSkyboxCubemap(EcEnvironmentService* env)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	if (Engine::Get()->IsHeadlessMode)
-		return 0;
+    if (Engine::Get()->IsHeadlessMode)
+        return 0;
 
     if (const auto& it = CachedSkyboxCubemaps.find(env->Skybox); it != CachedSkyboxCubemaps.end())
         return it->second;
 
+    TextureManager* texManager = TextureManager::Get();
+
     GLuint skyboxCubemap = 0;
-	glGenTextures(1, &skyboxCubemap);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glGenTextures(1, &skyboxCubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemap);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     CachedSkyboxCubemaps[env->Skybox] = skyboxCubemap;
 
-	for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
-	{
-		const std::string_view& face = SkyboxFaces[faceIndex];
+    for (uint8_t faceIndex = 0; faceIndex < 6; faceIndex++)
+    {
+        const std::string_view& face = SkyboxFaces[faceIndex];
 
-		uint32_t tex = TextureManager::Get()->LoadFromPath(std::format("{}/{}.jpg", env->Skybox, face));
-		env->SkyboxFacesBeingLoaded.push_back(tex);
+        uint32_t tex = texManager->LoadFromPath(std::format("{}/{}.jpg", env->Skybox, face));
+        env->SkyboxFacesBeingLoaded.push_back(tex);
 
-		glTexImage2D(
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
-			0,
-			GL_SRGB,
-			1,
-			1,
-			0,
-			GL_RED,
-			GL_UNSIGNED_BYTE,
-			TextureManager::Get()->GetTextureResource(tex).TMP_ImageByteData
-		);
-	}
+        glTexImage2D(
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
+            0,
+            GL_SRGB,
+            1,
+            1,
+            0,
+            GL_RED,
+            GL_UNSIGNED_BYTE,
+            texManager->GetTextureResource(texManager->LoadFromPath("!White")).TMP_ImageByteData
+        );
+    }
 
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-	return skyboxCubemap;
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    return skyboxCubemap;
 }
 
 void EcEnvironmentService::ChangeSkybox(const std::string_view& pathStr)
 {
-    std::filesystem::path path = FileRW::ResolvePathNormalized(std::string(pathStr));
+    std::string pathNorm = FileRW::ResolvePathNormalized(std::string(pathStr));
+    Skybox = pathStr;
+
+    if (Engine::Get()->IsHeadlessMode)
+        return;
+
+    std::filesystem::path path = std::filesystem::path(pathNorm);
     if (pathStr[0] != '!' && std::filesystem::is_directory(path))
     {
         // Check mirrors the one in `TextureManager::m_UploadTextureToGpu`
@@ -85,13 +93,11 @@ void EcEnvironmentService::ChangeSkybox(const std::string_view& pathStr)
         }
 
         SkyboxIsEquirectangularImage = false;
-        Skybox = pathStr;
         SkyboxTextureGpuId = startLoadingSkyboxCubemap(this);
     }
     else if (pathStr[0] == '!' || std::filesystem::is_regular_file(path))
     {
         SkyboxIsEquirectangularImage = true;
-        EcEnvironmentService::Skybox = pathStr;
 
         TextureManager* texManager = TextureManager::Get();
         uint32_t textureResourceId = texManager->LoadFromPath(path.string());

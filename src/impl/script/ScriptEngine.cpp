@@ -17,45 +17,45 @@
 
 // depends on the ordering of `Reflection::ValueType`!!
 static const lua_Type s_ValueTypeToLuauType[] = {
-	LUA_TNIL,
+    LUA_TNIL,
 
-	LUA_TBOOLEAN,
-	LUA_TNUMBER, // Integer
-	LUA_TNUMBER, // Double
-	LUA_TSTRING,
-	LUA_TBUFFER,
+    LUA_TBOOLEAN,
+    LUA_TNUMBER, // Integer
+    LUA_TNUMBER, // Double
+    LUA_TSTRING,
+    LUA_TBUFFER,
 
-	LUA_TUSERDATA, // Color
-	LUA_TVECTOR,   // Vector2
-	LUA_TVECTOR,   // Vector3
-	LUA_TUSERDATA, // Matrix
-	LUA_TUSERDATA, // GameObject
+    LUA_TUSERDATA, // Color
+    LUA_TVECTOR,   // Vector2
+    LUA_TVECTOR,   // Vector3
+    LUA_TUSERDATA, // Matrix
+    LUA_TUSERDATA, // GameObject
 
-	LUA_TFUNCTION,
+    LUA_TFUNCTION,
 
-	LUA_TTABLE, // Array
-	LUA_TTABLE, // Map,
+    LUA_TTABLE, // Array
+    LUA_TTABLE, // Map,
 
-	LUA_TUSERDATA, // EventSignal
-	LUA_TUSERDATA, // InputEvent
-	LUA_TUSERDATA, // NumberGradient
-	LUA_TUSERDATA, // VectorGradient
-	LUA_TUSERDATA, // ColorGradient
+    LUA_TUSERDATA, // EventSignal
+    LUA_TUSERDATA, // InputEvent
+    LUA_TUSERDATA, // NumberGradient
+    LUA_TUSERDATA, // VectorGradient
+    LUA_TUSERDATA, // ColorGradient
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
-	assert(false);
-	RAISE_RT("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
+    assert(false);
+    RAISE_RT("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
 }
 
 void ScriptEngine::Initialize()
 {
-	RegisterNewVM(ROOT_LVM_NAME);
+    RegisterNewVM(ROOT_LVM_NAME);
 
-	// changing a reference to a static function variable
-	Luau::assertHandler() = luauAssertHandler;
+    // changing a reference to a static function variable
+    Luau::assertHandler() = luauAssertHandler;
 }
 
 void ScriptEngine::Shutdown()
@@ -132,8 +132,8 @@ lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
 }
 
 static int shouldResume_Wait(
-	ScriptEngine::YieldedCoroutine& CorInfo,
-	lua_State* L
+    ScriptEngine::YieldedCoroutine& CorInfo,
+    lua_State* L
 )
 {
     if (double curTime = GetRunningTime(); curTime >= CorInfo.RmWait.ResumeAt)
@@ -146,8 +146,8 @@ static int shouldResume_Wait(
 }
 
 static int shouldResume_Deferred(
-	ScriptEngine::YieldedCoroutine& CorInfo,
-	lua_State* L
+    ScriptEngine::YieldedCoroutine& CorInfo,
+    lua_State* L
 )
 {
     if (double curTime = GetRunningTime(); curTime >= CorInfo.RmDeferred.ResumeAt)
@@ -264,55 +264,57 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
     else
         yieldedCoros = &YieldedCoroutines;
 
-    for (auto it = yieldedCoros->begin(); it < yieldedCoros->end(); it++)
+    for (auto it = yieldedCoros->begin(); it != yieldedCoros->end(); it)
     {
         if (it->Dead)
             it = yieldedCoros->erase(it);
+        else
+            it++;
     }
 
-	std::deque<YieldedCoroutine*> processing;
-	processing.resize(yieldedCoros->size());
+    std::deque<YieldedCoroutine*> processing;
+    processing.resize(yieldedCoros->size());
 
-	for (size_t i = 0; i < yieldedCoros->size(); i++)
-		processing[i] = &(*yieldedCoros)[i];
+    for (size_t i = 0; i < yieldedCoros->size(); i++)
+        processing[i] = &(*yieldedCoros)[i];
 
     L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
     bool isSynchronized = !vmud->PVM || !vmud->PVM->Desynchronized;
 
-	double stepStarted = GetRunningTime();
+    double stepStarted = GetRunningTime();
 
-	for (YieldedCoroutine* yc : processing)
-	{
-		if (yieldedCoros->size() > 1000 && GetRunningTime() - stepStarted > 1.0)
-		{
-			Log.ErrorF("Scheduler is stalling! {} coroutines (throttling after 1 second)", yieldedCoros->size());
-			break;
-		}
+    for (YieldedCoroutine* yc : processing)
+    {
+        if (yieldedCoros->size() > 1000 && GetRunningTime() - stepStarted > 1.0)
+        {
+            Log.ErrorF("Scheduler is stalling! {} coroutines (throttling after 1 second)", yieldedCoros->size());
+            break;
+        }
 
-		if (yc->Dead)
-			continue;
+        if (yc->Dead)
+            continue;
 
-		// make sure the datamodel still exists
-		GameObject* dm = yc->DataModel.Referred();
-		if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
-		{
-			yc->Dead = true;
-			continue;
-		}
+        // make sure the datamodel still exists
+        GameObject* dm = yc->DataModel.Referred();
+        if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
+        {
+            yc->Dead = true;
+            continue;
+        }
 
-		lua_State* coroutine = yc->Coroutine;
-		int corRef = yc->CoroutineReference;
+        lua_State* coroutine = yc->Coroutine;
+        int corRef = yc->CoroutineReference;
 
-		const ResumptionModeHandler handler = s_ResumptionModeHandlers[yc->Mode];
-		assert(handler);
+        const ResumptionModeHandler handler = s_ResumptionModeHandlers[yc->Mode];
+        assert(handler);
 
-		int nretvals = handler(*yc, coroutine);
+        int nretvals = handler(*yc, coroutine);
 
-		if (nretvals >= 0)
-		{
-			ZoneScopedN("Resume");
-			ZoneText(yc->DebugString.data(), yc->DebugString.size());
-			yc->Dead = true;
+        if (nretvals >= 0)
+        {
+            ZoneScopedN("Resume");
+            ZoneText(yc->DebugString.data(), yc->DebugString.size());
+            yc->Dead = true;
 
             // TODO parallel debugger
             int resumeStatus = -1;
@@ -324,23 +326,23 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
                 resumeStatus = lua_resume(coroutine, nullptr, nretvals);
             }
 
-			if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
-			{
-				int top = lua_gettop(coroutine);
-				const char* err = lua_tostring(coroutine, -1); // can't use `luaL_tolstring` because it might do a metatable check and trigger another exception
+            if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
+            {
+                int top = lua_gettop(coroutine);
+                const char* err = lua_tostring(coroutine, -1); // can't use `luaL_tolstring` because it might do a metatable check and trigger another exception
 
-				Log.ErrorF(
-					"Script resumption: {}",
-					err ? err : "unknown error"
-				);
-				lua_settop(coroutine, top);
+                Log.ErrorF(
+                    "Script resumption: {}",
+                    err ? err : "unknown error"
+                );
+                lua_settop(coroutine, top);
 
-				L::DumpStacktrace(coroutine);
-			}
+                L::DumpStacktrace(coroutine);
+            }
 
-			lua_unref(coroutine, corRef);
-		}
-	}
+            lua_unref(coroutine, corRef);
+        }
+    }
 }
 
 void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
@@ -412,275 +414,275 @@ void ScriptEngine::StepVMs()
 
 void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
 {
-	switch (v.type())
-	{
-	case nlohmann::json::value_t::null:
-	{
-		lua_pushnil(L);
-		break;
-	}
+    switch (v.type())
+    {
+    case nlohmann::json::value_t::null:
+    {
+        lua_pushnil(L);
+        break;
+    }
 
-	case nlohmann::json::value_t::boolean:
-	{
-		lua_pushboolean(L, (bool)v);
-		break;
-	}
-	case nlohmann::json::value_t::number_integer:
-	{
-		lua_pushinteger(L, (int)v);
-		break;
-	}
-	case nlohmann::json::value_t::number_unsigned:
-	{
-		lua_pushnumber(L, (double)((uint32_t)v));
-		break;
-	}
-	case nlohmann::json::value_t::number_float:
-	{
-		lua_pushnumber(L, (float)v);
-		break;
-	}
-	case nlohmann::json::value_t::string:
-	{
-		const std::string& str = v;
-		lua_pushlstring(L, str.data(), str.size());
-		break;
-	}
-	case nlohmann::json::value_t::array:
-	{
-		lua_newtable(L);
+    case nlohmann::json::value_t::boolean:
+    {
+        lua_pushboolean(L, (bool)v);
+        break;
+    }
+    case nlohmann::json::value_t::number_integer:
+    {
+        lua_pushinteger(L, (int)v);
+        break;
+    }
+    case nlohmann::json::value_t::number_unsigned:
+    {
+        lua_pushnumber(L, (double)((uint32_t)v));
+        break;
+    }
+    case nlohmann::json::value_t::number_float:
+    {
+        lua_pushnumber(L, (float)v);
+        break;
+    }
+    case nlohmann::json::value_t::string:
+    {
+        const std::string& str = v;
+        lua_pushlstring(L, str.data(), str.size());
+        break;
+    }
+    case nlohmann::json::value_t::array:
+    {
+        lua_newtable(L);
 
-		for (int i = 0; static_cast<size_t>(i) < v.size(); i++)
-		{
-			lua_pushinteger(L, i + 1);
-			PushJson(L, v[i]);
-			lua_settable(L, -3);
-		}
-		
-		break;
-	}
-	case nlohmann::json::value_t::object:
-	{
-		lua_newtable(L);
+        for (int i = 0; static_cast<size_t>(i) < v.size(); i++)
+        {
+            lua_pushinteger(L, i + 1);
+            PushJson(L, v[i]);
+            lua_settable(L, -3);
+        }
+        
+        break;
+    }
+    case nlohmann::json::value_t::object:
+    {
+        lua_newtable(L);
 
-		for (auto it = v.begin(); it != v.end(); ++it)
-		{
-			std::string key = it.key();
-			const nlohmann::json& data = it.value();
+        for (auto it = v.begin(); it != v.end(); ++it)
+        {
+            std::string key = it.key();
+            const nlohmann::json& data = it.value();
 
-			if (key == JSON_ENCODED_DATA_TAG)
-			{
-				const std::string& type = data["type"];
-				const nlohmann::json& encoded = data["data"];
+            if (key == JSON_ENCODED_DATA_TAG)
+            {
+                const std::string& type = data["type"];
+                const nlohmann::json& encoded = data["data"];
 
-				if (type == "vector")
-				{
-					lua_pop(L, 1);
-					lua_pushvector(L, encoded[0], encoded[1], encoded[2]);
-					return;
-				}
-				else
-					luaL_error(L, "Unknown encoded datatype '%s'", type.c_str());
-			}
-			else
-				PushJson(L, data);
+                if (type == "vector")
+                {
+                    lua_pop(L, 1);
+                    lua_pushvector(L, encoded[0], encoded[1], encoded[2]);
+                    return;
+                }
+                else
+                    luaL_error(L, "Unknown encoded datatype '%s'", type.c_str());
+            }
+            else
+                PushJson(L, data);
 
-			lua_setfield(L, -2, key.c_str());
-		}
+            lua_setfield(L, -2, key.c_str());
+        }
 
-		break;
-	}
-	default:
-	{
-		assert(false);
-		lua_pushfstring(L, "< JSON Value : %s >", v.type_name());
-	}
-	}
+        break;
+    }
+    default:
+    {
+        assert(false);
+        lua_pushfstring(L, "< JSON Value : %s >", v.type_name());
+    }
+    }
 }
 
 #define ERROR_CONTEXTUALIZED_NVARARGS(e) { \
 if (Context.size() > 0) \
-	luaL_error(L, e " (serializing %s)", Context.c_str()); \
+    luaL_error(L, e " (serializing %s)", Context.c_str()); \
 else \
-	luaL_error(L, e); } \
+    luaL_error(L, e); } \
 
 #define ERROR_CONTEXTUALIZED(e, ...) { \
 if (Context.size() > 0) \
-	luaL_error(L, e " in %s", __VA_ARGS__, Context.c_str()); \
+    luaL_error(L, e " in %s", __VA_ARGS__, Context.c_str()); \
 else \
-	luaL_error(L, e, __VA_ARGS__); } \
+    luaL_error(L, e, __VA_ARGS__); } \
 
 nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string Context)
 {
-	switch (lua_type(L, StackIndex))
-	{
-	case LUA_TNIL:
-	{
-		return {};
-	}
-	case LUA_TBOOLEAN:
-	{
-		return (bool)lua_toboolean(L, StackIndex);
-	}
-	case LUA_TNUMBER:
-	{
-		double n = lua_tonumber(L, StackIndex);
+    switch (lua_type(L, StackIndex))
+    {
+    case LUA_TNIL:
+    {
+        return {};
+    }
+    case LUA_TBOOLEAN:
+    {
+        return (bool)lua_toboolean(L, StackIndex);
+    }
+    case LUA_TNUMBER:
+    {
+        double n = lua_tonumber(L, StackIndex);
 
-		if (std::floor(n) == n)
-		{
-			if (n >= 0)
-				return (uint32_t)n;
-			else
-				return (int32_t)n;
-		}
+        if (std::floor(n) == n)
+        {
+            if (n >= 0)
+                return (uint32_t)n;
+            else
+                return (int32_t)n;
+        }
 
-		return n;
-	}
-	case LUA_TSTRING:
-	{
-		nlohmann::json str = luaL_tolstring(L, StackIndex, nullptr);
-		lua_pop(L, 1);
-		return str;
-	}
-	case LUA_TTABLE:
-	{
-		nlohmann::json t = nlohmann::json::object();
-		int keytype = LUA_TNIL;
+        return n;
+    }
+    case LUA_TSTRING:
+    {
+        nlohmann::json str = luaL_tolstring(L, StackIndex, nullptr);
+        lua_pop(L, 1);
+        return str;
+    }
+    case LUA_TTABLE:
+    {
+        nlohmann::json t = nlohmann::json::object();
+        int keytype = LUA_TNIL;
 
-		luaL_checkstack(L, 5, "JSON encode");
-		lua_pushvalue(L, StackIndex);
-		lua_pushnil(L);
+        luaL_checkstack(L, 5, "JSON encode");
+        lua_pushvalue(L, StackIndex);
+        lua_pushnil(L);
 
-		while (lua_next(L, -2) != 0)
-		{
-			if (lua_type(L, -2) != keytype && keytype != LUA_TNIL)
-			{
-				// C++ does not specify the order of evaluation of function arguments,
-				// and `luaL_tolstring` will produce side-effects (pushing string on stack)
-				const char* ktname = luaL_typename(L, -2);
+        while (lua_next(L, -2) != 0)
+        {
+            if (lua_type(L, -2) != keytype && keytype != LUA_TNIL)
+            {
+                // C++ does not specify the order of evaluation of function arguments,
+                // and `luaL_tolstring` will produce side-effects (pushing string on stack)
+                const char* ktname = luaL_typename(L, -2);
 
-				ERROR_CONTEXTUALIZED(
-					"All keys must have the same type. Previous type: %s, Current type: %s ('%s')",
-					lua_typename(L, keytype), ktname, luaL_tolstring(L, -2, nullptr)
-				);
-			}
+                ERROR_CONTEXTUALIZED(
+                    "All keys must have the same type. Previous type: %s, Current type: %s ('%s')",
+                    lua_typename(L, keytype), ktname, luaL_tolstring(L, -2, nullptr)
+                );
+            }
 
-			if (keytype == LUA_TNIL)
-			{
-				keytype = lua_type(L, -2);
+            if (keytype == LUA_TNIL)
+            {
+                keytype = lua_type(L, -2);
 
-				if (keytype != LUA_TSTRING && keytype != LUA_TNUMBER)
-				{
-					const char* ktname = luaL_typename(L, -2);
+                if (keytype != LUA_TSTRING && keytype != LUA_TNUMBER)
+                {
+                    const char* ktname = luaL_typename(L, -2);
 
-					ERROR_CONTEXTUALIZED(
-						"Table keys expected to be string or number, got '%s' (%s)",
-						luaL_tolstring(L, -2, nullptr), ktname
-					); // `luaL_tolstring` always pushes the string onto the stack,
-					// which is why the succeeding arguments are offset by -1
-				}
+                    ERROR_CONTEXTUALIZED(
+                        "Table keys expected to be string or number, got '%s' (%s)",
+                        luaL_tolstring(L, -2, nullptr), ktname
+                    ); // `luaL_tolstring` always pushes the string onto the stack,
+                    // which is why the succeeding arguments are offset by -1
+                }
 
-				if (keytype == LUA_TNUMBER)
-					t = nlohmann::json::array();
-			}
+                if (keytype == LUA_TNUMBER)
+                    t = nlohmann::json::array();
+            }
 
-			if (lua_type(L, -2) == LUA_TNUMBER)
-			{
-				int index = lua_tointeger(L, -2);
+            if (lua_type(L, -2) == LUA_TNUMBER)
+            {
+                int index = lua_tointeger(L, -2);
 
-				if (index == 0)
-				{
-					const char* vtname = luaL_typename(L, -1);
+                if (index == 0)
+                {
+                    const char* vtname = luaL_typename(L, -1);
 
-					ERROR_CONTEXTUALIZED(
-						"Tables cannot be zero-indexed. Value: '%s' (%s)",
-						luaL_tolstring(L, -1, nullptr), vtname
-					);
-				}
+                    ERROR_CONTEXTUALIZED(
+                        "Tables cannot be zero-indexed. Value: '%s' (%s)",
+                        luaL_tolstring(L, -1, nullptr), vtname
+                    );
+                }
 
-				if (index < 0)
-				{
-					const char* vtname = luaL_typename(L, -1);
+                if (index < 0)
+                {
+                    const char* vtname = luaL_typename(L, -1);
 
-					ERROR_CONTEXTUALIZED(
-						"Tables cannot have negative indices. Index: %i, Value: '%s' (%s)",
-						index, luaL_tolstring(L, -1, nullptr), vtname
-					);
-				}
+                    ERROR_CONTEXTUALIZED(
+                        "Tables cannot have negative indices. Index: %i, Value: '%s' (%s)",
+                        index, luaL_tolstring(L, -1, nullptr), vtname
+                    );
+                }
 
-				if (Context.size() == 0)
-					Context = "Array";
+                if (Context.size() == 0)
+                    Context = "Array";
 
-				t[index - 1] = L::ToJson(L, -1, Context + "[" + std::to_string(index) + "]");
-			}
-			else
-			{
-				assert(lua_type(L, -2) == LUA_TSTRING);
-				const char* key = luaL_checkstring(L, -2);
+                t[index - 1] = L::ToJson(L, -1, Context + "[" + std::to_string(index) + "]");
+            }
+            else
+            {
+                assert(lua_type(L, -2) == LUA_TSTRING);
+                const char* key = luaL_checkstring(L, -2);
 
-				if (strcmp(key, JSON_ENCODED_DATA_TAG) == 0)
-					ERROR_CONTEXTUALIZED_NVARARGS("The table key '" JSON_ENCODED_DATA_TAG "' is reserved");
+                if (strcmp(key, JSON_ENCODED_DATA_TAG) == 0)
+                    ERROR_CONTEXTUALIZED_NVARARGS("The table key '" JSON_ENCODED_DATA_TAG "' is reserved");
 
-				if (Context.size() == 0)
-					Context = "Dictionary";
+                if (Context.size() == 0)
+                    Context = "Dictionary";
 
-				t[key] = L::ToJson(L, -1, Context + "." + key);
-			}
+                t[key] = L::ToJson(L, -1, Context + "." + key);
+            }
 
-			lua_pop(L, 1);
-		}
-		lua_pop(L, 1);
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
 
-		return t;
-	}
+        return t;
+    }
 
-	case LUA_TVECTOR:
-	{
-		const float* vec = luaL_checkvector(L, StackIndex);
+    case LUA_TVECTOR:
+    {
+        const float* vec = luaL_checkvector(L, StackIndex);
 
-		nlohmann::json value;
-		nlohmann::json& data = value[JSON_ENCODED_DATA_TAG];
-		data["type"] = "vector";
-		data["data"][0] = vec[0];
-		data["data"][1] = vec[1];
-		data["data"][2] = vec[2];
+        nlohmann::json value;
+        nlohmann::json& data = value[JSON_ENCODED_DATA_TAG];
+        data["type"] = "vector";
+        data["data"][0] = vec[0];
+        data["data"][1] = vec[1];
+        data["data"][2] = vec[2];
 
-		return value;
-	}
+        return value;
+    }
 
-	[[unlikely]] default:
-	{
-		const char* vtname = luaL_typename(L, StackIndex);
-		const char* vstr = luaL_tolstring(L, StackIndex, nullptr);
+    [[unlikely]] default:
+    {
+        const char* vtname = luaL_typename(L, StackIndex);
+        const char* vstr = luaL_tolstring(L, StackIndex, nullptr);
 
-		ERROR_CONTEXTUALIZED(
-			"Cannot serialize '%s' (%s) to a JSON value",
-			vstr, vtname
-		);
-	}
-	}
+        ERROR_CONTEXTUALIZED(
+            "Cannot serialize '%s' (%s) to a JSON value",
+            vstr, vtname
+        );
+    }
+    }
 }
 #undef ERROR_CONTEXTUALIZED
 
 std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode, int OptimizationLevel, int DebugLevel)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	// Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
-	// will cause them to be treated as constants and only invoke their `__index` functions
-	// once and cache the result
-	const char* mutableGlobals[] = {
-		"game", "workspace",
-		NULL
-	};
+    // Tell Luau that these are mutable. Otherwise, GETIMPORT optimizations
+    // will cause them to be treated as constants and only invoke their `__index` functions
+    // once and cache the result
+    const char* mutableGlobals[] = {
+        "game", "workspace",
+        NULL
+    };
 
-	Luau::CompileOptions compileOptions;
-	compileOptions.optimizationLevel = OptimizationLevel != -1 ? OptimizationLevel : (L::DebugBreak ? 1 : 2);
-	compileOptions.debugLevel = DebugLevel != -1 ? DebugLevel : (L::DebugBreak ? 2 : 1);
-	compileOptions.mutableGlobals = mutableGlobals;
+    Luau::CompileOptions compileOptions;
+    compileOptions.optimizationLevel = OptimizationLevel != -1 ? OptimizationLevel : (L::DebugBreak ? 1 : 2);
+    compileOptions.debugLevel = DebugLevel != -1 ? DebugLevel : (L::DebugBreak ? 2 : 1);
+    compileOptions.mutableGlobals = mutableGlobals;
 
-	std::string bytecode = Luau::compile(std::string(SourceCode), compileOptions);
-	return bytecode;
+    std::string bytecode = Luau::compile(std::string(SourceCode), compileOptions);
+    return bytecode;
 }
 
 static constexpr std::string_view CodeGenStatuses[] = {
@@ -709,8 +711,8 @@ static bool isCodeGenResultErroneous(Luau::CodeGen::CodeGenCompilationResult res
 
 int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, const std::string& ChunkName)
 {
-	ZoneScoped;
-	ZoneText(ChunkName.data(), ChunkName.size());
+    ZoneScoped;
+    ZoneText(ChunkName.data(), ChunkName.size());
 
     int status = luau_load(L, ChunkName.c_str(), Bytecode.data(), Bytecode.size(), 0);
 
@@ -737,18 +739,18 @@ int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, c
         }
     }
 
-	return status;
+    return status;
 }
 
 int ScriptEngine::CompileAndLoad(lua_State* L, const std::string_view& SourceCode, const std::string& ChunkName)
 {
-	ZoneScoped;
-	ZoneText(ChunkName.data(), ChunkName.size());
+    ZoneScoped;
+    ZoneText(ChunkName.data(), ChunkName.size());
 
-	std::string bytecode = CompileBytecode(SourceCode);
-	int result = LoadBytecode(L, bytecode, ChunkName);
+    std::string bytecode = CompileBytecode(SourceCode);
+    int result = LoadBytecode(L, bytecode, ChunkName);
 
-	return result;
+    return result;
 }
 
 #define SEENTABLES "ToGenericValueTemp_SeenTables"
@@ -756,575 +758,575 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string_view& SourceCod
 
 static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int Depth)
 {
-	using namespace ScriptEngine;
-	using namespace ScriptEngine::L;
+    using namespace ScriptEngine;
+    using namespace ScriptEngine::L;
 
-	if (Depth > MAXDEPTH)
-		return "[depth exceeded]";
+    if (Depth > MAXDEPTH)
+        return "[depth exceeded]";
 
-	luaL_checkstack(L, 5, "toGenericValue");
+    luaL_checkstack(L, 5, "toGenericValue");
 
-	switch (lua_type(L, StackIndex))
-	{
-	case LUA_TNIL:
-	{
-		return Reflection::GenericValue();
-	}
-	case LUA_TBOOLEAN:
-	{
-		return (bool)lua_toboolean(L, StackIndex);
-	}
-	case LUA_TNUMBER:
-	{
-		return lua_tonumber(L, StackIndex);
-	}
-	case LUA_TSTRING:
-	{
-		size_t len = 0;
-		const char* str = luaL_tolstring(L, StackIndex, &len);
-		Reflection::GenericValue val = std::string_view(str, len);
+    switch (lua_type(L, StackIndex))
+    {
+    case LUA_TNIL:
+    {
+        return Reflection::GenericValue();
+    }
+    case LUA_TBOOLEAN:
+    {
+        return (bool)lua_toboolean(L, StackIndex);
+    }
+    case LUA_TNUMBER:
+    {
+        return lua_tonumber(L, StackIndex);
+    }
+    case LUA_TSTRING:
+    {
+        size_t len = 0;
+        const char* str = luaL_tolstring(L, StackIndex, &len);
+        Reflection::GenericValue val = std::string_view(str, len);
 
-		lua_pop(L, 1);
-		return val;
-	}
-	case LUA_TBUFFER:
-	{
-		size_t len = 0;
-		void* p = lua_tobuffer(L, StackIndex, &len);
-		Reflection::GenericValue val = std::string_view((char*)p, len);
-		val.Type = Reflection::ValueType::Buffer;
+        lua_pop(L, 1);
+        return val;
+    }
+    case LUA_TBUFFER:
+    {
+        size_t len = 0;
+        void* p = lua_tobuffer(L, StackIndex, &len);
+        Reflection::GenericValue val = std::string_view((char*)p, len);
+        val.Type = Reflection::ValueType::Buffer;
 
-		return val;
-	}
-	case LUA_TVECTOR:
-	{
-		return glm::make_vec3(luaL_checkvector(L, StackIndex));
-	}
-	case LUA_TUSERDATA:
-	{
-		const char* tname = luaL_typename(L, StackIndex);
+        return val;
+    }
+    case LUA_TVECTOR:
+    {
+        return glm::make_vec3(luaL_checkvector(L, StackIndex));
+    }
+    case LUA_TUSERDATA:
+    {
+        const char* tname = luaL_typename(L, StackIndex);
 
-		if (strcmp(tname, "Color") == 0)
-		{
-			Color col = *(Color*)lua_touserdata(L, StackIndex);
-			return col.ToGenericValue();
-		}
-		else if (strcmp(tname, "Matrix") == 0)
-		{
-			return *(glm::mat4*)lua_touserdata(L, StackIndex);
-		}
-		else if (strcmp(tname, "GameObject") == 0)
-		{
-			uint32_t id = *(uint32_t*)lua_touserdata(L, StackIndex);
-			Reflection::GenericValue gv = id;
-			gv.Type = Reflection::ValueType::GameObject;
+        if (strcmp(tname, "Color") == 0)
+        {
+            Color col = *(Color*)lua_touserdata(L, StackIndex);
+            return col.ToGenericValue();
+        }
+        else if (strcmp(tname, "Matrix") == 0)
+        {
+            return *(glm::mat4*)lua_touserdata(L, StackIndex);
+        }
+        else if (strcmp(tname, "GameObject") == 0)
+        {
+            uint32_t id = *(uint32_t*)lua_touserdata(L, StackIndex);
+            Reflection::GenericValue gv = id;
+            gv.Type = Reflection::ValueType::GameObject;
 
-			if (id != PHX_GAMEOBJECT_NULL_ID)
-			{
-				// TODO GVOBJECT decremented in destructor of GenericValue
-				GameObjectManager::Get()->FindById(id)->IncrementHardRefs();
-			}
+            if (id != PHX_GAMEOBJECT_NULL_ID)
+            {
+                // TODO GVOBJECT decremented in destructor of GenericValue
+                GameObjectManager::Get()->FindById(id)->IncrementHardRefs();
+            }
 
-			return gv;
-		}
-		else
-			luaL_error(L, "Couldn't convert a '%s' userdata to a GenericValue (unrecognized)", tname);
-	}
-	case LUA_TFUNCTION:
-	{
-		Reflection::GenericValue gv;
-		gv.Type = Reflection::ValueType::Function;
+            return gv;
+        }
+        else
+            luaL_error(L, "Couldn't convert a '%s' userdata to a GenericValue (unrecognized)", tname);
+    }
+    case LUA_TFUNCTION:
+    {
+        Reflection::GenericValue gv;
+        gv.Type = Reflection::ValueType::Function;
 
-		lua_State* CL = lua_newthread(L);
-		int ref = lua_ref(L, -1);
-		lua_pushvalue(L, StackIndex);
-		lua_xmove(L, CL, 1);
+        lua_State* CL = lua_newthread(L);
+        int ref = lua_ref(L, -1);
+        lua_pushvalue(L, StackIndex);
+        lua_xmove(L, CL, 1);
 
-		std::string fndbinfo;
-		lua_Debug ar;
-		lua_getinfo(L, 0, "n", &ar);
-		std::string fnname = ar.name;
-		if (fnname == "__namecall")
-			fnname = lua_namecallatom(L, nullptr);
+        std::string fndbinfo;
+        lua_Debug ar;
+        lua_getinfo(L, 0, "n", &ar);
+        std::string fnname = ar.name;
+        if (fnname == "__namecall")
+            fnname = lua_namecallatom(L, nullptr);
 
-		lua_getinfo(L, 1, "sln", &ar);
-		fndbinfo = std::format(
-			"{}:{} to {} in {}",
-			ar.short_src, ar.currentline, fnname, ar.name ? ar.name : "<anonymous>"
-		);
+        lua_getinfo(L, 1, "sln", &ar);
+        fndbinfo = std::format(
+            "{}:{} to {} in {}",
+            ar.short_src, ar.currentline, fnname, ar.name ? ar.name : "<anonymous>"
+        );
 
-		gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
-			-> std::vector<Reflection::GenericValue>
-			{
-				lua_pushvalue(CL, -1); // keep the function value
+        gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
+            -> std::vector<Reflection::GenericValue>
+            {
+                lua_pushvalue(CL, -1); // keep the function value
 
-				for (const Reflection::GenericValue& i : Inputs)
-					PushGenericValue(CL, i);
+                for (const Reflection::GenericValue& i : Inputs)
+                    PushGenericValue(CL, i);
 
-				StateUserdata* ud = (StateUserdata*)lua_getthreaddata(CL);
-				ud->YieldBlockers.push_back(fndbinfo.c_str());
+                StateUserdata* ud = (StateUserdata*)lua_getthreaddata(CL);
+                ud->YieldBlockers.push_back(fndbinfo.c_str());
 
-				int status = L::ProtectedCall(CL, (int)Inputs.size(), -1, 0);
+                int status = L::ProtectedCall(CL, (int)Inputs.size(), -1, 0);
 
-				ud->YieldBlockers.pop_back();
+                ud->YieldBlockers.pop_back();
 
-				if (status == LUA_OK)
-				{
-					std::vector<Reflection::GenericValue> retvals;
-					for (int i = 2; i < lua_gettop(CL); i++)
-						retvals.push_back(ToGeneric(CL, i));
+                if (status == LUA_OK)
+                {
+                    std::vector<Reflection::GenericValue> retvals;
+                    for (int i = 2; i < lua_gettop(CL); i++)
+                        retvals.push_back(ToGeneric(CL, i));
 
-					return retvals;
-				}
+                    return retvals;
+                }
 
-				RAISE_RT_NF(luaL_checkstring(CL, -1));
-			});
+                RAISE_RT_NF(luaL_checkstring(CL, -1));
+            });
 
-		gv.Val.Func.Cleanup = new std::function([CL, ref]()
-		{
-			lua_unref(CL, ref);
-		});
+        gv.Val.Func.Cleanup = new std::function([CL, ref]()
+        {
+            lua_unref(CL, ref);
+        });
 
-		lua_pop(L, 1);
-		return gv;
-	}
-	case LUA_TTABLE:
-	{
-		if (Depth >= MAXDEPTH)
-			return "[depth exceeded - table]";
+        lua_pop(L, 1);
+        return gv;
+    }
+    case LUA_TTABLE:
+    {
+        if (Depth >= MAXDEPTH)
+            return "[depth exceeded - table]";
 
-		lua_getfield(L, LUA_REGISTRYINDEX, SEENTABLES);
-		int seenTablesIndex = lua_gettop(L);
+        lua_getfield(L, LUA_REGISTRYINDEX, SEENTABLES);
+        int seenTablesIndex = lua_gettop(L);
 
-		std::vector<Reflection::GenericValue> items;
-		bool isArray = true;
-		int lastIndex = 0;
+        std::vector<Reflection::GenericValue> items;
+        bool isArray = true;
+        int lastIndex = 0;
 
-		lua_pushvalue(L, StackIndex < 0 ? StackIndex - 1 : StackIndex);
+        lua_pushvalue(L, StackIndex < 0 ? StackIndex - 1 : StackIndex);
 
-		// https://www.lua.org/manual/5.1/manual.html#lua_next
-		lua_pushnil(L);
+        // https://www.lua.org/manual/5.1/manual.html#lua_next
+        lua_pushnil(L);
 
-		while (lua_next(L, -2) != 0)
-		{
-			if (lua_type(L, -2) == LUA_TTABLE)
-			{
-				luaL_tolstring(L, -2, nullptr);
-				lua_pushvalue(L, -3);
-				lua_remove(L, -4);
-				lua_remove(L, -4);
-				isArray = false;
-			}
+        while (lua_next(L, -2) != 0)
+        {
+            if (lua_type(L, -2) == LUA_TTABLE)
+            {
+                luaL_tolstring(L, -2, nullptr);
+                lua_pushvalue(L, -3);
+                lua_remove(L, -4);
+                lua_remove(L, -4);
+                isArray = false;
+            }
 
-			if (lua_type(L, -1) == LUA_TTABLE)
-			{
-				lua_pushvalue(L, -1);
-				if (lua_gettable(L, seenTablesIndex) != LUA_TNIL)
-				{
-					lua_pop(L, 2);
-					lua_pushliteral(L, "[cycle]");
-					isArray = false;
-				}
-				else
-				{
-					lua_pop(L, 1);
+            if (lua_type(L, -1) == LUA_TTABLE)
+            {
+                lua_pushvalue(L, -1);
+                if (lua_gettable(L, seenTablesIndex) != LUA_TNIL)
+                {
+                    lua_pop(L, 2);
+                    lua_pushliteral(L, "[cycle]");
+                    isArray = false;
+                }
+                else
+                {
+                    lua_pop(L, 1);
 
-					if (lua_gettop(L) > 50)
-					{
-						lua_pop(L, 1);
-						lua_pushliteral(L, "[stack limit exceeded]");
-					}
-					else
-					{
-						luaL_checkstack(L, 5, "table depth");
+                    if (lua_gettop(L) > 50)
+                    {
+                        lua_pop(L, 1);
+                        lua_pushliteral(L, "[stack limit exceeded]");
+                    }
+                    else
+                    {
+                        luaL_checkstack(L, 5, "table depth");
 
-						lua_pushvalue(L, -1);
-						lua_pushboolean(L, true);
-						lua_settable(L, seenTablesIndex);
-					}
-				}
-			}
+                        lua_pushvalue(L, -1);
+                        lua_pushboolean(L, true);
+                        lua_settable(L, seenTablesIndex);
+                    }
+                }
+            }
 
-			int kt = lua_type(L, -2);
+            int kt = lua_type(L, -2);
 
-			if (isArray)
-			{
-				if (kt != LUA_TNUMBER)
-					isArray = false;
-				else
-				{
-					int index = lua_tointeger(L, -2);
+            if (isArray)
+            {
+                if (kt != LUA_TNUMBER)
+                    isArray = false;
+                else
+                {
+                    int index = lua_tointeger(L, -2);
 
-					bool isNonIntegerIndex = lua_tonumber(L, -2) != (double)index;
-					bool isOutOfOrderIndex = isNonIntegerIndex || (index < 1 || index != lastIndex + 1);
+                    bool isNonIntegerIndex = lua_tonumber(L, -2) != (double)index;
+                    bool isOutOfOrderIndex = isNonIntegerIndex || (index < 1 || index != lastIndex + 1);
 
-					if (isNonIntegerIndex || isOutOfOrderIndex)
-						isArray = false;
-				}
+                    if (isNonIntegerIndex || isOutOfOrderIndex)
+                        isArray = false;
+                }
 
-				if (isArray)
-					lastIndex = lua_tointeger(L, -2);
-			}
+                if (isArray)
+                    lastIndex = lua_tointeger(L, -2);
+            }
 
-			items.push_back(toGenericValue(L, -2, Depth + 1));
-			items.push_back(toGenericValue(L, -1, Depth + 1));
+            items.push_back(toGenericValue(L, -2, Depth + 1));
+            items.push_back(toGenericValue(L, -1, Depth + 1));
 
-			if (lua_type(L, -1) == LUA_TTABLE)
-			{
-				lua_pushvalue(L, -1);
-				lua_pushnil(L);
-				lua_settable(L, seenTablesIndex);
-			}
+            if (lua_type(L, -1) == LUA_TTABLE)
+            {
+                lua_pushvalue(L, -1);
+                lua_pushnil(L);
+                lua_settable(L, seenTablesIndex);
+            }
 
-			if (Depth >= MAXDEPTH)
-				break;
+            if (Depth >= MAXDEPTH)
+                break;
 
-			lua_pop(L, 1);
-		}
-		lua_pop(L, 1);
-		lua_pop(L, 1); // SeenTables
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+        lua_pop(L, 1); // SeenTables
 
-		if (isArray)
-		{
-			std::vector<Reflection::GenericValue> array;
-			array.reserve(items.size() / 2);
+        if (isArray)
+        {
+            std::vector<Reflection::GenericValue> array;
+            array.reserve(items.size() / 2);
 
-			for (uint32_t i = 1; i < items.size(); i += 2)
-			{
-				assert(items[i-1].Type == Reflection::ValueType::Double && items[i-1].AsDouble() == ((double)i + 1.0) / 2.0);
-				array.push_back(items[i]);
-			}
+            for (uint32_t i = 1; i < items.size(); i += 2)
+            {
+                assert(items[i-1].Type == Reflection::ValueType::Double && items[i-1].AsDouble() == ((double)i + 1.0) / 2.0);
+                array.push_back(items[i]);
+            }
 
-			return array;
-		}
-		else
-		{
-			Reflection::GenericValue map = items;
-			map.Type = Reflection::ValueType::Map;
+            return array;
+        }
+        else
+        {
+            Reflection::GenericValue map = items;
+            map.Type = Reflection::ValueType::Map;
 
-			return map;
-		}
-	}
-	default:
-	{
-		const char* tname = luaL_typename(L, StackIndex);
-		//luaL_error(L, "Could not convert type '%s' to a GenericValue (no conversion case)", tname);
-		return tname;
-	}
-	}
+            return map;
+        }
+    }
+    default:
+    {
+        const char* tname = luaL_typename(L, StackIndex);
+        //luaL_error(L, "Could not convert type '%s' to a GenericValue (no conversion case)", tname);
+        return tname;
+    }
+    }
 }
 
 Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex)
 {
-	lua_newtable(L);
-	lua_setfield(L, LUA_REGISTRYINDEX, SEENTABLES);
+    lua_newtable(L);
+    lua_setfield(L, LUA_REGISTRYINDEX, SEENTABLES);
 
-	Reflection::GenericValue gv = toGenericValue(L, StackIndex, 0);
+    Reflection::GenericValue gv = toGenericValue(L, StackIndex, 0);
 
-	lua_pushnil(L);
-	lua_setfield(L, LUA_REGISTRYINDEX, SEENTABLES);
+    lua_pushnil(L);
+    lua_setfield(L, LUA_REGISTRYINDEX, SEENTABLES);
 
-	return gv;
+    return gv;
 }
 
 void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int StackIndex)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	if (Type == Reflection::ValueType::Any)
-		return; // Nothing to check
+    if (Type == Reflection::ValueType::Any)
+        return; // Nothing to check
 
-	bool isOptional = Type & Reflection::ValueType::Null;
-	int givenType = lua_type(L, StackIndex);
+    bool isOptional = Type & Reflection::ValueType::Null;
+    int givenType = lua_type(L, StackIndex);
 
-	if (!isOptional || givenType != LUA_TNIL)
-	{
-		lua_Type lty = ReflectionTypeToLuauType(Type);
+    if (!isOptional || givenType != LUA_TNIL)
+    {
+        lua_Type lty = ReflectionTypeToLuauType(Type);
 
-		// the literal `if` check inside this function likes to take 190 microseconds sometimes in Debug mode for some reason
-		// probably some cache bullshit
-		// fuck
-		luaL_checktype(L, StackIndex, lty);
+        // the literal `if` check inside this function likes to take 190 microseconds sometimes in Debug mode for some reason
+        // probably some cache bullshit
+        // fuck
+        luaL_checktype(L, StackIndex, lty);
 
-		if (lty == LUA_TUSERDATA)
-		{
-			// dont want the type name to end with `?`
-			// it needs to match with the metatable's `__type`
-			Reflection::ValueType baseTy = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
-			luaL_checkudata(L, StackIndex, Reflection::TypeAsString(baseTy).c_str());
-		}
-		else if (lty == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
-		{
-			luaL_argcheck(L, luaL_checkvector(L, StackIndex)[2] == 0.f, StackIndex, "Z component must be 0");
-		}
-	}
+        if (lty == LUA_TUSERDATA)
+        {
+            // dont want the type name to end with `?`
+            // it needs to match with the metatable's `__type`
+            Reflection::ValueType baseTy = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
+            luaL_checkudata(L, StackIndex, Reflection::TypeAsString(baseTy).c_str());
+        }
+        else if (lty == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
+        {
+            luaL_argcheck(L, luaL_checkvector(L, StackIndex)[2] == 0.f, StackIndex, "Z component must be 0");
+        }
+    }
 }
 
 void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
-	luaL_checkstack(L, 1, "::PushGenericValue");
+    luaL_checkstack(L, 1, "::PushGenericValue");
 
-	switch (gv.Type)
-	{
-	case Reflection::ValueType::Null:
-	{
-		lua_pushnil(L);
-		break;
-	}
-	case Reflection::ValueType::Boolean:
-	{
-		lua_pushboolean(L, gv.AsBoolean());
-		break;
-	}
-	case Reflection::ValueType::Integer:
-	{
-		lua_pushinteger(L, static_cast<int32_t>(gv.AsInteger()));
-		break;
-	}
-	case Reflection::ValueType::Double:
-	{
-		lua_pushnumber(L, gv.AsDouble());
-		break;
-	}
-	case Reflection::ValueType::String:
-	{
-		lua_pushlstring(L, gv.AsStringView().data(), gv.AsStringView().size());
-		break;
-	}
-	case Reflection::ValueType::Buffer:
-	{
-		void* p = lua_newbuffer(L, gv.Size);
-		memcpy(p, gv.Val.Str, gv.Size);
+    switch (gv.Type)
+    {
+    case Reflection::ValueType::Null:
+    {
+        lua_pushnil(L);
+        break;
+    }
+    case Reflection::ValueType::Boolean:
+    {
+        lua_pushboolean(L, gv.AsBoolean());
+        break;
+    }
+    case Reflection::ValueType::Integer:
+    {
+        lua_pushinteger(L, static_cast<int32_t>(gv.AsInteger()));
+        break;
+    }
+    case Reflection::ValueType::Double:
+    {
+        lua_pushnumber(L, gv.AsDouble());
+        break;
+    }
+    case Reflection::ValueType::String:
+    {
+        lua_pushlstring(L, gv.AsStringView().data(), gv.AsStringView().size());
+        break;
+    }
+    case Reflection::ValueType::Buffer:
+    {
+        void* p = lua_newbuffer(L, gv.Size);
+        memcpy(p, gv.Val.Str, gv.Size);
 
-		break;
-	}
-	case Reflection::ValueType::Vector2:
-	{
-		luhx_pushvector3(L, glm::vec3(gv.AsVector2(), 0.f));
-		break;
-	}
-	case Reflection::ValueType::Vector3:
-	{
-		luhx_pushvector3(L, gv.AsVector3());
-		break;
-	}
-	case Reflection::ValueType::Color:
-	{
-		luhx_pushcolor(L, gv);
-		break;
-	}
-	case Reflection::ValueType::Matrix:
-	{
-		luhx_pushmatrix(L, gv.AsMatrix());
-		break;
-	}
-	case Reflection::ValueType::GameObject:
-	{
-		luhx_pushgameobject(L, GameObjectManager::Get()->FromGenericValue(gv));
-		break;
-	}
-	case Reflection::ValueType::Array:
-	{
-		std::span<Reflection::GenericValue> array = gv.AsArray();
-		luaL_checkstack(L, 6, "::PushGenericValue of type Array");
-		lua_newtable(L);
+        break;
+    }
+    case Reflection::ValueType::Vector2:
+    {
+        luhx_pushvector3(L, glm::vec3(gv.AsVector2(), 0.f));
+        break;
+    }
+    case Reflection::ValueType::Vector3:
+    {
+        luhx_pushvector3(L, gv.AsVector3());
+        break;
+    }
+    case Reflection::ValueType::Color:
+    {
+        luhx_pushcolor(L, gv);
+        break;
+    }
+    case Reflection::ValueType::Matrix:
+    {
+        luhx_pushmatrix(L, gv.AsMatrix());
+        break;
+    }
+    case Reflection::ValueType::GameObject:
+    {
+        luhx_pushgameobject(L, GameObjectManager::Get()->FromGenericValue(gv));
+        break;
+    }
+    case Reflection::ValueType::Array:
+    {
+        std::span<Reflection::GenericValue> array = gv.AsArray();
+        luaL_checkstack(L, 6, "::PushGenericValue of type Array");
+        lua_newtable(L);
 
-		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
-		{
-			lua_pushinteger(L, index + 1);
-			L::PushGenericValue(L, array[index]);
-			lua_settable(L, -3);
-		}
+        for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
+        {
+            lua_pushinteger(L, index + 1);
+            L::PushGenericValue(L, array[index]);
+            lua_settable(L, -3);
+        }
 
-		break;
-	}
-	case Reflection::ValueType::Map:
-	{
-		// NOTE Using `::AsArray` will throw an exception because Type != Array!!
-		std::span<Reflection::GenericValue> array = { gv.Val.Array, gv.Size };
+        break;
+    }
+    case Reflection::ValueType::Map:
+    {
+        // NOTE Using `::AsArray` will throw an exception because Type != Array!!
+        std::span<Reflection::GenericValue> array = { gv.Val.Array, gv.Size };
 
-		if (array.size() % 2 != 0)
-			RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
+        if (array.size() % 2 != 0)
+            RAISE_RT("GenericValue type was Map, but it does not have an even number of elements!");
 
-		lua_createtable(L, 0, (uint32_t)array.size() / 2);
+        lua_createtable(L, 0, (uint32_t)array.size() / 2);
 
-		for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
-		{
-			L::PushGenericValue(L, array[index]);
+        for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
+        {
+            L::PushGenericValue(L, array[index]);
 
-			if ((index + 1) % 2 == 0)
-				lua_settable(L, -3);
-		}
+            if ((index + 1) % 2 == 0)
+                lua_settable(L, -3);
+        }
 
-		break;
-	}
-	case Reflection::ValueType::EventSignal:
-	{
-		luhx_pushsignal(
-			L,
-			gv.Val.Event.Descriptor,
-			gv.Val.Event.Reflector,
-			gv.Val.Event.Name
-		);
+        break;
+    }
+    case Reflection::ValueType::EventSignal:
+    {
+        luhx_pushsignal(
+            L,
+            gv.Val.Event.Descriptor,
+            gv.Val.Event.Reflector,
+            gv.Val.Event.Name
+        );
 
-		break;
-	}
-	case Reflection::ValueType::InputEvent:
-	{
-		luhx_pushinputevent(L, gv.Val.Input);
-		break;
-	}
-	case Reflection::ValueType::Function:
-	{
-		lua_pushliteral(L, "[function]");
-		break;
-	}
-	default:
-	{
-		std::string typeName = Reflection::TypeAsString(gv.Type);
-		luaL_error(L, "Cannot reflect values of type '%s'", typeName.data());
-	}
-	}
+        break;
+    }
+    case Reflection::ValueType::InputEvent:
+    {
+        luhx_pushinputevent(L, gv.Val.Input);
+        break;
+    }
+    case Reflection::ValueType::Function:
+    {
+        lua_pushliteral(L, "[function]");
+        break;
+    }
+    default:
+    {
+        std::string typeName = Reflection::TypeAsString(gv.Type);
+        luaL_error(L, "Cannot reflect values of type '%s'", typeName.data());
+    }
+    }
 }
 
 int ScriptEngine::L::HandleMethodCall(
-	lua_State* L,
-	const Reflection::MethodDescriptor* func,
-	ReflectorRef Reflector
+    lua_State* L,
+    const Reflection::MethodDescriptor* func,
+    ReflectorRef Reflector
 )
 {
-	lua_Debug ar = {};
-	lua_getinfo(L, 1, "sl", &ar);
-	Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
+    lua_Debug ar = {};
+    lua_getinfo(L, 1, "sl", &ar);
+    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
 
-	const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
-	int numArgs = lua_gettop(L) - 1;
-	assert(numArgs >= 0);
-	// missing parameter declarations?
-	assert(paramTypes.size() >= static_cast<size_t>(numArgs));
+    const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
+    int numArgs = lua_gettop(L) - 1;
+    assert(numArgs >= 0);
+    // missing parameter declarations?
+    assert(paramTypes.size() >= static_cast<size_t>(numArgs));
 
-	int numParams = static_cast<int32_t>(paramTypes.size());
-	int minArgs = 0;
+    int numParams = static_cast<int32_t>(paramTypes.size());
+    int minArgs = 0;
 
-	for (int i = 0; i < numParams; i++)
-	{
-		const Reflection::ValueType& param = paramTypes[i];
+    for (int i = 0; i < numParams; i++)
+    {
+        const Reflection::ValueType& param = paramTypes[i];
 
-		if (!(param & Reflection::ValueType::Null))
-			minArgs++;
-		else
-			break;
-	}
+        if (!(param & Reflection::ValueType::Null))
+            minArgs++;
+        else
+            break;
+    }
 
-	if (numArgs < minArgs)
-	{
-		std::string argsString = ": ( ";
+    if (numArgs < minArgs)
+    {
+        std::string argsString = ": ( ";
 
-		if (numArgs > 0)
-		{
-			for (int arg = 1; arg < numArgs + 1; arg++)
-				argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
-			
-			// trailing `, `
-			argsString = argsString.substr(0, argsString.size() - 2);
+        if (numArgs > 0)
+        {
+            for (int arg = 1; arg < numArgs + 1; arg++)
+                argsString += std::string(luaL_typename(L, -(numArgs + 1 - arg))) + ", ";
+            
+            // trailing `, `
+            argsString = argsString.substr(0, argsString.size() - 2);
 
-			argsString += " )";
-		}
-		else
-			argsString.clear();
+            argsString += " )";
+        }
+        else
+            argsString.clear();
 
-		luaL_error(L,
-			"Function expects at least %i arguments, got %i instead%s", 
-			numParams, numArgs, argsString.c_str()
-		);
+        luaL_error(L,
+            "Function expects at least %i arguments, got %i instead%s", 
+            numParams, numArgs, argsString.c_str()
+        );
 
-		return 0;
-	}
-	else if (numArgs > minArgs)
-	{
-		int clip = numArgs;
+        return 0;
+    }
+    else if (numArgs > minArgs)
+    {
+        int clip = numArgs;
 
-		for (int arg = numArgs; arg > 0; arg--)
-		{
-			if (lua_isnil(L, arg + 1))
-				clip = arg - 1;
-			else
-				break;
-		}
+        for (int arg = numArgs; arg > 0; arg--)
+        {
+            if (lua_isnil(L, arg + 1))
+                clip = arg - 1;
+            else
+                break;
+        }
 
-		numArgs = clip;
-	}
-	else if (numArgs > numParams)
-	{
-		Log.WarningF(
-			"Function received {} more arguments than necessary",
-			numArgs - numParams
-		);
-	}
+        numArgs = clip;
+    }
+    else if (numArgs > numParams)
+    {
+        Log.WarningF(
+            "Function received {} more arguments than necessary",
+            numArgs - numParams
+        );
+    }
 
-	assert(luaL_checkudata(L, 1, "GameObject"));
-	std::vector<Reflection::GenericValue> inputs;
+    assert(luaL_checkudata(L, 1, "GameObject"));
+    std::vector<Reflection::GenericValue> inputs;
 
-	for (int index = 1; index <= numArgs; index++)
-	{
-		Reflection::ValueType paramType = paramTypes[index - 1];
+    for (int index = 1; index <= numArgs; index++)
+    {
+        Reflection::ValueType paramType = paramTypes[index - 1];
 
-		ScriptEngine::L::CheckType(L, paramType, index + 1);
-		inputs.push_back(L::ToGeneric(L, index + 1));
+        ScriptEngine::L::CheckType(L, paramType, index + 1);
+        inputs.push_back(L::ToGeneric(L, index + 1));
 
-		if (paramType == Reflection::ValueType::Vector2)
-			inputs.back().Type = Reflection::ValueType::Vector2; // no native Vector2 type, but `vector` still works fine
-	}
+        if (paramType == Reflection::ValueType::Vector2)
+            inputs.back().Type = Reflection::ValueType::Vector2; // no native Vector2 type, but `vector` still works fine
+    }
 
-	if (func->Yields)
-	{
-		return ScriptEngine::L::Yield(
-			L,
-			func->Outputs.size(),
-			[func, inputs, Reflector](YieldedCoroutine& yc)
-			{
-				std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs);
-				yc.Mode = YieldedCoroutine::ResumptionMode::Promise;
-				yc.RmPromise = sf;
-				yc.RmPromise_Future = sf->get_future().share();
-			}
-		);
-	}
+    if (func->Yields)
+    {
+        return ScriptEngine::L::Yield(
+            L,
+            func->Outputs.size(),
+            [func, inputs, Reflector](YieldedCoroutine& yc)
+            {
+                std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs);
+                yc.Mode = YieldedCoroutine::ResumptionMode::Promise;
+                yc.RmPromise = sf;
+                yc.RmPromise_Future = sf->get_future().share();
+            }
+        );
+    }
 
-	// Now, onto the *REAL* business...
-	std::vector<Reflection::GenericValue> outputs;
+    // Now, onto the *REAL* business...
+    std::vector<Reflection::GenericValue> outputs;
 
-	try
-	{
-		outputs = func->Func(Reflector.Referred(), inputs);
-	}
-	catch (const std::runtime_error& err)
-	{
-		luaL_error(L, "%s", err.what());
-	}
+    try
+    {
+        outputs = func->Func(Reflector.Referred(), inputs);
+    }
+    catch (const std::runtime_error& err)
+    {
+        luaL_error(L, "%s", err.what());
+    }
 
-	assert(outputs.size() == func->Outputs.size());
+    assert(outputs.size() == func->Outputs.size());
 
-	for (size_t i = 0; i < outputs.size(); i++)
-	{
-		const Reflection::GenericValue& output = outputs[i];
-		assert(Reflection::TypeFits(func->Outputs[i], output.Type));
+    for (size_t i = 0; i < outputs.size(); i++)
+    {
+        const Reflection::GenericValue& output = outputs[i];
+        assert(Reflection::TypeFits(func->Outputs[i], output.Type));
 
-		L::PushGenericValue(L, output);
-	}
+        L::PushGenericValue(L, output);
+    }
 
-	StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-	vmud->LastResumed = GetRunningTime(); // don't count external methods like `Engine:ShowMessageBox`
+    StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    vmud->LastResumed = GetRunningTime(); // don't count external methods like `Engine:ShowMessageBox`
 
-	return (int)func->Outputs.size();
+    return (int)func->Outputs.size();
 
-	// ... kinda expected more, but ngl i feel SOOOO gigabrain for
-	// giving ::GenericValue an Array, like, it all just clicks in now!
-	// And then Maps just being Arrays, except odd elements are the keys
-	// and even elements are the values?! Call me Einstein already on god-
-	// (Me writing this as Rendering is completely busted and I have no clue
-	// why oh no
-	// 15/08/2024
+    // ... kinda expected more, but ngl i feel SOOOO gigabrain for
+    // giving ::GenericValue an Array, like, it all just clicks in now!
+    // And then Maps just being Arrays, except odd elements are the keys
+    // and even elements are the values?! Call me Einstein already on god-
+    // (Me writing this as Rendering is completely busted and I have no clue
+    // why oh no
+    // 15/08/2024
 }
 
 #ifdef __GNUG__
@@ -1340,72 +1342,72 @@ int ScriptEngine::L::HandleMethodCall(
 
 int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure, std::deque<YieldedCoroutine>* YieldedCorosOverride)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	if (ImGuiContext* ctx = ImGui::GetCurrentContext(); ctx && ctx->CurrentWindowStack.Size > 1)
-	{
-		lua_Debug ar;
-		lua_getinfo(L, 0, "n", &ar);
-		RAISE_RT(
-			"Cannot yield with '{}' while in Dear ImGui section",
-			ar.name ? ar.name : "<unknown>"
-		);	
-	}
+    if (ImGuiContext* ctx = ImGui::GetCurrentContext(); ctx && ctx->CurrentWindowStack.Size > 1)
+    {
+        lua_Debug ar;
+        lua_getinfo(L, 0, "n", &ar);
+        RAISE_RT(
+            "Cannot yield with '{}' while in Dear ImGui section",
+            ar.name ? ar.name : "<unknown>"
+        );	
+    }
 
-	lua_Debug ar = {};
-	lua_getinfo(L, 1, "sln", &ar);
+    lua_Debug ar = {};
+    lua_getinfo(L, 1, "sln", &ar);
 
-	StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+    StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
 
-	if (ud->YieldBlockers.size() > 0)
-	{
-		std::string blockers;
+    if (ud->YieldBlockers.size() > 0)
+    {
+        std::string blockers;
 
-		for (size_t i = ud->YieldBlockers.size(); i != 0; i--)
-		{
-			blockers.append(ud->YieldBlockers[i - 1]);
-			blockers.append("\n");
-		}
+        for (size_t i = ud->YieldBlockers.size(); i != 0; i--)
+        {
+            blockers.append(ud->YieldBlockers[i - 1]);
+            blockers.append("\n");
+        }
 
-		lua_Debug yieldar = {};
-		lua_getinfo(L, 0, "n", &yieldar);
+        lua_Debug yieldar = {};
+        lua_getinfo(L, 0, "n", &yieldar);
 
-		RAISE_RT(
-			"{}:{} in {}: Cannot yield right now with '{}', blocked by the following functions:\n{}",
-			ar.short_src, ar.currentline, ar.name ? ar.name : "<anonymous>", yieldar.name ? yieldar.name : "<unknown>", blockers.c_str()
-		);
-	}
+        RAISE_RT(
+            "{}:{} in {}: Cannot yield right now with '{}', blocked by the following functions:\n{}",
+            ar.short_src, ar.currentline, ar.name ? ar.name : "<anonymous>", yieldar.name ? yieldar.name : "<unknown>", blockers.c_str()
+        );
+    }
 
-	if (!lua_isyieldable(L))
-	{
-		// if a `lua_Exception` is thrown by `lua_yield`, we hit an assertion in
-		// `ldo.cpp` line 137
-		// LUAU_ASSERT(e.getThread() == L)
-		lua_Debug yieldar = {};
-		lua_getinfo(L, 0, "n", &yieldar);
-		RAISE_RT("Cannot yield with '{}' right now (across metamethod/C-call boundary)", ar.name ? ar.name : "<unknown>");
-	}
+    if (!lua_isyieldable(L))
+    {
+        // if a `lua_Exception` is thrown by `lua_yield`, we hit an assertion in
+        // `ldo.cpp` line 137
+        // LUAU_ASSERT(e.getThread() == L)
+        lua_Debug yieldar = {};
+        lua_getinfo(L, 0, "n", &yieldar);
+        RAISE_RT("Cannot yield with '{}' right now (across metamethod/C-call boundary)", ar.name ? ar.name : "<unknown>");
+    }
 
-	// TODO a kind of hack to get what datamodel we're in
-	lua_getglobal(L, "game");
-	Reflection::GenericValue datamodelVal = ScriptEngine::L::ToGeneric(L, -1);
-	GameObject* dmObject = GameObjectManager::Get()->FromGenericValue(datamodelVal);
-	assert(dmObject);
-	// need to do that before `lua_yield` because of thread chicanery idk how it works
+    // TODO a kind of hack to get what datamodel we're in
+    lua_getglobal(L, "game");
+    Reflection::GenericValue datamodelVal = ScriptEngine::L::ToGeneric(L, -1);
+    GameObject* dmObject = GameObjectManager::Get()->FromGenericValue(datamodelVal);
+    assert(dmObject);
+    // need to do that before `lua_yield` because of thread chicanery idk how it works
 
-	lua_yield(L, NumResults);
-	lua_pushthread(L);
+    lua_yield(L, NumResults);
+    lua_pushthread(L);
 
-	YieldedCoroutine yc = YieldedCoroutine{
-		.Coroutine = L,
-		.CoroutineReference = lua_ref(L, -1),
-		.DataModel = dmObject,
-		.Mode = YieldedCoroutine::ResumptionMode::INVALID
-	};
-	L::DumpStacktrace(L, &yc.DebugString);
+    YieldedCoroutine yc = YieldedCoroutine{
+        .Coroutine = L,
+        .CoroutineReference = lua_ref(L, -1),
+        .DataModel = dmObject,
+        .Mode = YieldedCoroutine::ResumptionMode::INVALID
+    };
+    L::DumpStacktrace(L, &yc.DebugString);
 
-	Configure(yc);
-	assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
+    Configure(yc);
+    assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
 
     if (!YieldedCorosOverride)
     {
@@ -1426,57 +1428,57 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 
 void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
 {
-	// if we dont do this then comparison will not work
-	// ex: `game.Close == game.Close`
+    // if we dont do this then comparison will not work
+    // ex: `game.Close == game.Close`
 
-	lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
-	lua_rawget(L, LUA_ENVIRONINDEX);
+    lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
+    lua_rawget(L, LUA_ENVIRONINDEX);
 
-	if (lua_isnil(L, -1))
-	{
-		lua_pop(L, 1); // remove `nil`, stack empty
+    if (lua_isnil(L, -1))
+    {
+        lua_pop(L, 1); // remove `nil`, stack empty
 
-		static_assert(sizeof(Reflector) <= sizeof(void*));
-		void* data = nullptr;
-		memcpy(&data, &Reflector, sizeof(Reflector));
+        static_assert(sizeof(Reflector) <= sizeof(void*));
+        void* data = nullptr;
+        memcpy(&data, &Reflector, sizeof(Reflector));
 
-		lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
-		lua_pushlightuserdata(L, data);
+        lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
+        lua_pushlightuserdata(L, data);
 
-		lua_pushcclosure(
-			L,
-			[](lua_State* L)
-			{
-				Reflection::MethodDescriptor* fn =
-					static_cast<Reflection::MethodDescriptor*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
-				ReflectorRef& fc = *static_cast<ReflectorRef*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
+        lua_pushcclosure(
+            L,
+            [](lua_State* L)
+            {
+                Reflection::MethodDescriptor* fn =
+                    static_cast<Reflection::MethodDescriptor*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
+                ReflectorRef& fc = *static_cast<ReflectorRef*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
 
-				return ScriptEngine::L::HandleMethodCall(
-					L,
-					fn,
-					fc
-				);
-			},
+                return ScriptEngine::L::HandleMethodCall(
+                    L,
+                    fn,
+                    fc
+                );
+            },
 
-			"PushMethodThunk",
-			1
-		); // stack is now just closure
+            "PushMethodThunk",
+            1
+        ); // stack is now just closure
 
-		lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));  // stack: closure, lud
-		lua_pushvalue(L, -2);                                                 // stack: closure, lud, closure
-		lua_settable(L, LUA_ENVIRONINDEX);                                    // map closure (value) to lud (key)
+        lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));  // stack: closure, lud
+        lua_pushvalue(L, -2);                                                 // stack: closure, lud, closure
+        lua_settable(L, LUA_ENVIRONINDEX);                                    // map closure (value) to lud (key)
 
-		// stack is now just closure
-	}
-	// value we fetch from `_ENVIRON` will be closure that was pushed earlier
+        // stack is now just closure
+    }
+    // value we fetch from `_ENVIRON` will be closure that was pushed earlier
 }
 
 // modified version of `db_traceback` from `VM/src/ldblib.cpp`
 void ScriptEngine::L::DumpStacktrace(
-	lua_State* L,
-	std::string* Into,
-	int Level,
-	const char* Message
+    lua_State* L,
+    std::string* Into,
+    int Level,
+    const char* Message
 )
 {
   if   (Into)
@@ -1484,110 +1486,110 @@ void ScriptEngine::L::DumpStacktrace(
 
     lua_Debug ar;
 
-	if (Message)
-	{
-		if (Into)
-		{
-			Into->append(Message);
-			Into->append("\n");
-		}
-		else
-			Log.Append(Message);
-	}
+    if (Message)
+    {
+        if (Into)
+        {
+            Into->append(Message);
+            Into->append("\n");
+        }
+        else
+            Log.Append(Message);
+    }
 
-	for (int i = Level; lua_getinfo(L, i, "sln", &ar); i++)
-	{
-		std::string line = "from ";
+    for (int i = Level; lua_getinfo(L, i, "sln", &ar); i++)
+    {
+        std::string line = "from ";
 
-		if (ar.source)
-			line.append(ar.short_src);
-		
-		if (ar.currentline > 0)
-		{
-			line.append(":");
-			line.append(std::to_string(ar.currentline));
-		}
+        if (ar.source)
+            line.append(ar.short_src);
+        
+        if (ar.currentline > 0)
+        {
+            line.append(":");
+            line.append(std::to_string(ar.currentline));
+        }
 
-		if (ar.name)
-		{
-			line.append(" in ");
+        if (ar.name)
+        {
+            line.append(" in ");
 
-			if (i == 0 && strcmp(ar.name, "__namecall") == 0)
-				line.append(lua_namecallatom(L, nullptr));
-			else
-				line.append(ar.name);
-		}
+            if (i == 0 && strcmp(ar.name, "__namecall") == 0)
+                line.append(lua_namecallatom(L, nullptr));
+            else
+                line.append(ar.name);
+        }
 
-		if (!Into)
-			Log.Append(line);
-		else
-		{
-			Into->append(line);
-			Into->append("\n");
-		}
-	}
+        if (!Into)
+            Log.Append(line);
+        else
+        {
+            Into->append(line);
+            Into->append("\n");
+        }
+    }
 
-	if (StateUserdata* corUd = (StateUserdata*)lua_getthreaddata(L); corUd && corUd->SpawnTrace.size() > 0)
-	{
-		if (Into)
-		{
-			Into->append("-- Spawning trace --\n");
-			Into->append(corUd->SpawnTrace);
-		}
-		else
-		{
-			Log.AppendF("-- Spawning trace --\n{}", corUd->SpawnTrace);
-		}
-	}
+    if (StateUserdata* corUd = (StateUserdata*)lua_getthreaddata(L); corUd && corUd->SpawnTrace.size() > 0)
+    {
+        if (Into)
+        {
+            Into->append("-- Spawning trace --\n");
+            Into->append(corUd->SpawnTrace);
+        }
+        else
+        {
+            Log.AppendF("-- Spawning trace --\n{}", corUd->SpawnTrace);
+        }
+    }
 
-	if (Into)
-		Into->shrink_to_fit();
+    if (Into)
+        Into->shrink_to_fit();
 }
 
 static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
 {
-	assert(nsize <= UINT32_MAX);
+    assert(nsize <= UINT32_MAX);
 
-	if (nsize == 0)
-	{
-		Memory::Free(ptr);
-		return NULL;
-	}
-	else
-		return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
+    if (nsize == 0)
+    {
+        Memory::Free(ptr);
+        return NULL;
+    }
+    else
+        return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
 static void initRequireConfig(luarequire_Configuration* config)
 {
-	config->is_require_allowed = [](lua_State*, void*, const char*)
-		{
-			return true;
-		};
-	config->reset = [](lua_State*, void* ctx, const char* chname)
-		{
-			// chunkname is prefixed with @
-			assert(chname[0] == '@');
-			((std::filesystem::path*)ctx)->assign(FileRW::ResolvePathNormalized(chname + 1));
-			return NAVIGATE_SUCCESS;
-		};
-	config->jump_to_alias = [](lua_State*, void*, const char*)
-		{
-			return NAVIGATE_NOT_FOUND;
-		};
-	config->to_parent = [](lua_State*, void* ctx)
-		{
-			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+    config->is_require_allowed = [](lua_State*, void*, const char*)
+        {
+            return true;
+        };
+    config->reset = [](lua_State*, void* ctx, const char* chname)
+        {
+            // chunkname is prefixed with @
+            assert(chname[0] == '@');
+            ((std::filesystem::path*)ctx)->assign(FileRW::ResolvePathNormalized(chname + 1));
+            return NAVIGATE_SUCCESS;
+        };
+    config->jump_to_alias = [](lua_State*, void*, const char*)
+        {
+            return NAVIGATE_NOT_FOUND;
+        };
+    config->to_parent = [](lua_State*, void* ctx)
+        {
+            std::filesystem::path* curpath = (std::filesystem::path*)ctx;
 
-			if (curpath->has_parent_path())
-			{
-				*curpath = curpath->parent_path();
-				return NAVIGATE_SUCCESS;
-			}
-			else
-				return NAVIGATE_NOT_FOUND;
-		};
-	config->to_child = [](lua_State*, void* ctx, const char* name)
-		{
+            if (curpath->has_parent_path())
+            {
+                *curpath = curpath->parent_path();
+                return NAVIGATE_SUCCESS;
+            }
+            else
+                return NAVIGATE_NOT_FOUND;
+        };
+    config->to_child = [](lua_State*, void* ctx, const char* name)
+        {
             std::filesystem::path* curpath = (std::filesystem::path*)ctx;
             std::filesystem::path child = *curpath / name;
 
@@ -1611,13 +1613,13 @@ static void initRequireConfig(luarequire_Configuration* config)
                     if ((hasChildCompiled && hasSpecCompliantModule) || (hasSpecCompliantModule && hasdDirectModuleBytecode) || (hasChildCompiled && hasdDirectModuleBytecode))
                         return NAVIGATE_AMBIGUOUS;
 
-					child = hasChildCompiled ? childCompiled : (hasSpecCompliantModule ? specCompliantModule : bytecode);
+                    child = hasChildCompiled ? childCompiled : (hasSpecCompliantModule ? specCompliantModule : bytecode);
                 }
             }
 
             *curpath = child;
             return NAVIGATE_SUCCESS;
-		};
+        };
     config->is_module_present = [](lua_State*, void* ctx)
         {
             std::filesystem::path* curpath = (std::filesystem::path*)ctx;
@@ -1626,61 +1628,61 @@ static void initRequireConfig(luarequire_Configuration* config)
                     || std::filesystem::is_regular_file(*curpath / "init.luau")
                     || std::filesystem::is_regular_file(*curpath / "init.luauc");
         };
-	config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
-		{
-			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-			std::string strpath = curpath->string();
-			*outSize = strpath.size() + 1;
+    config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
+        {
+            std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+            std::string strpath = curpath->string();
+            *outSize = strpath.size() + 1;
 
-			if (bufferSize < strpath.size() + 1)
-				return WRITE_BUFFER_TOO_SMALL;
-			else
-			{
-				memcpy(buffer + 1, strpath.data(), strpath.size());
-				buffer[0] = '@';
-				return WRITE_SUCCESS;
-			}
-		};
-	config->get_loadname = config->get_chunkname; // TODO what's a loadname
-	config->get_cache_key = config->get_chunkname;
-	config->get_config_status = [](lua_State*, void* ctx)
-		{
-			bool hasConfigScript = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".config.luau");
-			bool hasLuauRc = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".luaurc");
-			
-			if (hasConfigScript && hasLuauRc)
-				return CONFIG_AMBIGUOUS;
-			if (!hasConfigScript && !hasLuauRc)
-				return CONFIG_ABSENT;
-			
-			return hasConfigScript ? CONFIG_PRESENT_LUAU : CONFIG_PRESENT_JSON;
-		};
-	config->get_config = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
-		{
-			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-			const std::string& configPath = (std::filesystem::is_regular_file(*curpath / ".config.luau")
-										? *curpath / ".config.luau"
-										: *curpath / ".luaurc").string();
+            if (bufferSize < strpath.size() + 1)
+                return WRITE_BUFFER_TOO_SMALL;
+            else
+            {
+                memcpy(buffer + 1, strpath.data(), strpath.size());
+                buffer[0] = '@';
+                return WRITE_SUCCESS;
+            }
+        };
+    config->get_loadname = config->get_chunkname; // TODO what's a loadname
+    config->get_cache_key = config->get_chunkname;
+    config->get_config_status = [](lua_State*, void* ctx)
+        {
+            bool hasConfigScript = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".config.luau");
+            bool hasLuauRc = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".luaurc");
+            
+            if (hasConfigScript && hasLuauRc)
+                return CONFIG_AMBIGUOUS;
+            if (!hasConfigScript && !hasLuauRc)
+                return CONFIG_ABSENT;
+            
+            return hasConfigScript ? CONFIG_PRESENT_LUAU : CONFIG_PRESENT_JSON;
+        };
+    config->get_config = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
+        {
+            std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+            const std::string& configPath = (std::filesystem::is_regular_file(*curpath / ".config.luau")
+                                        ? *curpath / ".config.luau"
+                                        : *curpath / ".luaurc").string();
 
-			bool success = true;
-			std::string contents = FileRW::ReadFile(configPath, &success);
-			*outSize = contents.size();
+            bool success = true;
+            std::string contents = FileRW::ReadFile(configPath, &success);
+            *outSize = contents.size();
 
-			if (bufferSize < contents.size())
-				return WRITE_BUFFER_TOO_SMALL;
-			
-			memcpy(buffer, contents.data(), contents.size());
-			return success ? WRITE_SUCCESS : WRITE_FAILURE;
-		};
-	config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)
-		{
-			std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-			std::string modulePath;
+            if (bufferSize < contents.size())
+                return WRITE_BUFFER_TOO_SMALL;
+            
+            memcpy(buffer, contents.data(), contents.size());
+            return success ? WRITE_SUCCESS : WRITE_FAILURE;
+        };
+    config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)
+        {
+            std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+            std::string modulePath;
 
-			if (std::filesystem::is_regular_file(*curpath))
-				modulePath = curpath->string();
-			else
-			{
+            if (std::filesystem::is_regular_file(*curpath))
+                modulePath = curpath->string();
+            else
+            {
                 std::filesystem::path initSource = *curpath / "init.luau";
                 std::filesystem::path initCompiled = *curpath / "init.luauc";
 
@@ -1690,79 +1692,79 @@ static void initRequireConfig(luarequire_Configuration* config)
                     modulePath = initCompiled.string();
                 else
                     RAISE_RT("Could not find module, got path '{}'", curpath->string());
-			}
+            }
 
-			// from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025
+            // from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025
 
-			// module needs to run in a new thread, isolated from the rest
-			// note: we create ML on main thread so that it doesn't inherit environment of L
-			lua_State* GL = lua_mainthread(L);
-			lua_State* ML = lua_newthread(GL);
-			lua_xmove(GL, L, 1);
+            // module needs to run in a new thread, isolated from the rest
+            // note: we create ML on main thread so that it doesn't inherit environment of L
+            lua_State* GL = lua_mainthread(L);
+            lua_State* ML = lua_newthread(GL);
+            lua_xmove(GL, L, 1);
 
-			// new thread needs to have the globals sandboxed
-			luaL_sandboxthread(ML);
-			ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
+            // new thread needs to have the globals sandboxed
+            luaL_sandboxthread(ML);
+            ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
 
-			bool isAotBytecode = modulePath.find(".luauc") != std::string::npos;
-			std::string bytecode;
+            bool isAotBytecode = modulePath.find(".luauc") != std::string::npos;
+            std::string bytecode;
 
-			bool readSuccess = true;
-			std::string sourceCodeOrBytecode = FileRW::ReadFile(modulePath, &readSuccess);
+            bool readSuccess = true;
+            std::string sourceCodeOrBytecode = FileRW::ReadFile(modulePath, &readSuccess);
 
-			if (!readSuccess)
-			{
-				lua_pop(GL, 1);
-				// `sourceCodeOrBytecode` or error message from `FileRW::ReadFile`
-				luaL_error(L, "%s", sourceCodeOrBytecode.c_str());
-				return 1;
-			}
+            if (!readSuccess)
+            {
+                lua_pop(GL, 1);
+                // `sourceCodeOrBytecode` or error message from `FileRW::ReadFile`
+                luaL_error(L, "%s", sourceCodeOrBytecode.c_str());
+                return 1;
+            }
 
-			if (isAotBytecode)
-				bytecode = sourceCodeOrBytecode;
-			else
-				bytecode = ScriptEngine::CompileBytecode(sourceCodeOrBytecode);
+            if (isAotBytecode)
+                bytecode = sourceCodeOrBytecode;
+            else
+                bytecode = ScriptEngine::CompileBytecode(sourceCodeOrBytecode);
 
-			if (ScriptEngine::LoadBytecode(ML, bytecode, chname) == 0)
-			{
-				lua_pushstring(ML, ldname);
-				lua_setglobal(ML, "_LOADNAME");
+            if (ScriptEngine::LoadBytecode(ML, bytecode, chname) == 0)
+            {
+                lua_pushstring(ML, ldname);
+                lua_setglobal(ML, "_LOADNAME");
 
-				int status = ScriptEngine::L::Resume(ML, L, 0);
+                int status = ScriptEngine::L::Resume(ML, L, 0);
 
-				if (status == LUA_OK)
-				{
-					if (lua_gettop(ML) == 0)
-						lua_pushstring(ML, "module must return a value");
-				}
-				else if (status == LUA_YIELD)
-					lua_pushstring(ML, "module can not yield");
+                if (status == LUA_OK)
+                {
+                    if (lua_gettop(ML) == 0)
+                        lua_pushstring(ML, "module must return a value");
+                }
+                else if (status == LUA_YIELD)
+                    lua_pushstring(ML, "module can not yield");
 
-				else if (!lua_isstring(ML, -1))
-					lua_pushstring(ML, "unknown error while running module");
-			}
-			
-			// add ML result to L stack
-    		lua_xmove(ML, L, 1);
-			if (lua_status(ML) != LUA_OK)
-    		    lua_error(L);
+                else if (!lua_isstring(ML, -1))
+                    lua_pushstring(ML, "unknown error while running module");
+            }
+            
+            // add ML result to L stack
+            lua_xmove(ML, L, 1);
+            if (lua_status(ML) != LUA_OK)
+                lua_error(L);
 
-    		// remove ML thread from L stack
-    		lua_remove(L, -2);
+            // remove ML thread from L stack
+            lua_remove(L, -2);
 
-    		// added one value to L stack: module result
-			return 1;
-		};
+            // added one value to L stack: module result
+            return 1;
+        };
 
-	assert(!config->get_alias);
+    assert(!config->get_alias);
 }
 
 lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
 {
-	ZoneScopedC(tracy::Color::LightSkyBlue);
+    ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(VmName.data(), VmName.size());
 
-	lua_State* state = lua_newstate(l_alloc, nullptr);
+    lua_State* state = lua_newstate(l_alloc, nullptr);
 
     if (Luau::CodeGen::isSupported())
         Luau::CodeGen::create(state);
@@ -1772,75 +1774,75 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     // Load runtime-specific libraries
     luhx_openlibs(state);
 
-	std::filesystem::path* requirePath = new std::filesystem::path;
-	luaopen_require(
-		state,
-		initRequireConfig,
-		requirePath
-	);
+    std::filesystem::path* requirePath = new std::filesystem::path;
+    luaopen_require(
+        state,
+        initRequireConfig,
+        requirePath
+    );
 
-	lua_pushinteger(state, 67);
-	lua_pushlightuserdatatagged(state, requirePath, 67);
-	lua_settable(state, LUA_ENVIRONINDEX);
+    lua_pushinteger(state, 67);
+    lua_pushlightuserdatatagged(state, requirePath, 67);
+    lua_settable(state, LUA_ENVIRONINDEX);
 
-	GameObjectManager* ObjectManager = GameObjectManager::Get();
+    GameObjectManager* ObjectManager = GameObjectManager::Get();
 
-	luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel));
-	lua_setglobal(state, "game");
+    luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel));
+    lua_setglobal(state, "game");
 
-	luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel)->FindChild("Workspace"));
-	lua_setglobal(state, "workspace");
+    luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel)->FindChild("Workspace"));
+    lua_setglobal(state, "workspace");
 
-	lua_pushlstring(state, VmName.data(), VmName.size());
-	lua_setglobal(state, "_VMNAME");
+    lua_pushlstring(state, VmName.data(), VmName.size());
+    lua_setglobal(state, "_VMNAME");
 
-	lua_Callbacks* cb = lua_callbacks(state);
+    lua_Callbacks* cb = lua_callbacks(state);
 
-	if (L::DebugBreak)
-	{
-		cb->debugbreak = [](lua_State* L, lua_Debug* ar)
-			{
-				if (L::DebugBreak)
-					L::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
-			};
-		cb->debuginterrupt = [](lua_State* L, lua_Debug* ar)
-			{
-				if (L::DebugBreak)
-					L::DebugBreak(L, ar, DebugBreakReason::Interrupt);
-			};
-	}
+    if (L::DebugBreak)
+    {
+        cb->debugbreak = [](lua_State* L, lua_Debug* ar)
+            {
+                if (L::DebugBreak)
+                    L::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
+            };
+        cb->debuginterrupt = [](lua_State* L, lua_Debug* ar)
+            {
+                if (L::DebugBreak)
+                    L::DebugBreak(L, ar, DebugBreakReason::Interrupt);
+            };
+    }
 
-	cb->userthread = [](lua_State* LP, lua_State* L)
-		{
-			if (LP)
-			{
-				StateUserdata* ud = new StateUserdata;
-				DumpStacktrace(LP, &ud->SpawnTrace);
-				lua_setthreaddata(L, ud);
+    cb->userthread = [](lua_State* LP, lua_State* L)
+        {
+            if (LP)
+            {
+                StateUserdata* ud = new StateUserdata;
+                DumpStacktrace(LP, &ud->SpawnTrace);
+                lua_setthreaddata(L, ud);
 
-				StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-				vmud->Coroutines.push_back(L);
+                StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+                vmud->Coroutines.push_back(L);
                 ud->PVM = vmud->PVM;
-				ud->VM = vmud->VM;
-			}
-			else
-			{
-				StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-				vmud->Coroutines.erase(std::find(vmud->Coroutines.begin(), vmud->Coroutines.end(), L));
+                ud->VM = vmud->VM;
+            }
+            else
+            {
+                StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+                vmud->Coroutines.erase(std::find(vmud->Coroutines.begin(), vmud->Coroutines.end(), L));
 
-				StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
-				for (EventConnectionData* ec : ud->EventConnections)
-				{
-					assert(ec->ConnectionId != UINT32_MAX);
+                StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+                for (EventConnectionData* ec : ud->EventConnections)
+                {
+                    assert(ec->ConnectionId != UINT32_MAX);
 
-					if (void* referred = ec->Reflector.Referred())
-						ec->Event->Disconnect(referred, ec->ConnectionId);
-				}
+                    if (void* referred = ec->Reflector.Referred())
+                        ec->Event->Disconnect(referred, ec->ConnectionId);
+                }
 
-				ud->EventConnections.clear();
-				delete (StateUserdata*)lua_getthreaddata(L);
-			}
-		};
+                ud->EventConnections.clear();
+                delete (StateUserdata*)lua_getthreaddata(L);
+            }
+        };
 
     cb->interrupt = [](lua_State* L, int GcState)
         {
@@ -1895,39 +1897,39 @@ void ScriptEngine::LuauVM::Close()
     lua_close(L);
     delete vmud; // delete after closing VM due to `userthread` callback
 
-	VMs.erase(Name);
+    VMs.erase(Name);
 }
 
 static void breakHere(lua_State* L, ScriptEngine::L::DebugBreakReason Reason)
 {
-	using namespace ScriptEngine;
+    using namespace ScriptEngine;
 
-	if (L::DebugBreak)
-	{
-		lua_Debug ar = {};
-		lua_getinfo(L, 1, "sln", &ar);
-		L::DebugBreak(L, &ar, Reason);
-	}
+    if (L::DebugBreak)
+    {
+        lua_Debug ar = {};
+        lua_getinfo(L, 1, "sln", &ar);
+        L::DebugBreak(L, &ar, Reason);
+    }
 }
 
 static lua_Status finishCoroutine(lua_State* L, int status)
 {
-	using namespace ScriptEngine;
-	using namespace L;
+    using namespace ScriptEngine;
+    using namespace L;
 
-	while (status == LUA_BREAK)
-	{
-		breakHere(L, DebugBreakReason::BrokeIntoDebugger);
-		status = lua_resume(L, nullptr, 0);
-	}
+    while (status == LUA_BREAK)
+    {
+        breakHere(L, DebugBreakReason::BrokeIntoDebugger);
+        status = lua_resume(L, nullptr, 0);
+    }
 
-	if (status == LUA_ERRRUN)
-		breakHere(L, DebugBreakReason::Error);
+    if (status == LUA_ERRRUN)
+        breakHere(L, DebugBreakReason::Error);
 
-	if (LeaveDebugger)
-		LeaveDebugger();
+    if (LeaveDebugger)
+        LeaveDebugger();
 
-	return (lua_Status)status;
+    return (lua_Status)status;
 }
 
 lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
@@ -1950,156 +1952,156 @@ lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int 
 
 nlohmann::json ScriptEngine::DumpApiToJson()
 {
-	ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
-	ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
-	tempwp->SetParent(tempdm);
-	GameObjectManager::Get()->DataModel = tempdm->ObjectId;
+    ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
+    ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
+    tempwp->SetParent(tempdm);
+    GameObjectManager::Get()->DataModel = tempdm->ObjectId;
 
-	lua_State* base = lua_newstate(l_alloc, nullptr);
+    lua_State* base = lua_newstate(l_alloc, nullptr);
     // don't have to worry about re-allocs here
     LuauVM& luhxVM = RegisterNewVM("ApiDump");
-	lua_State* luhx = luhxVM.MainThread;
-	// Load Standard Library ('print' etc)
-	luaL_openlibs(base);
-	lua_pushinteger(base, 0);
-	lua_setglobal(base, "require");
+    lua_State* luhx = luhxVM.MainThread;
+    // Load Standard Library ('print' etc)
+    luaL_openlibs(base);
+    lua_pushinteger(base, 0);
+    lua_setglobal(base, "require");
 
-	// Compare the environment of our extended environment ("Luhx")
-	// with the standard Luau environment to figure out what got added
-	nlohmann::json json;
+    // Compare the environment of our extended environment ("Luhx")
+    // with the standard Luau environment to figure out what got added
+    nlohmann::json json;
 
-	lua_getglobal(luhx, "_G");
-	lua_pushnil(luhx);
-	while (lua_next(luhx, -2))
-	{
-		if (lua_islightuserdata(luhx, -1))
-		{
-			// 67
-			lua_pop(luhx, 1);
-			continue;
-		}
+    lua_getglobal(luhx, "_G");
+    lua_pushnil(luhx);
+    while (lua_next(luhx, -2))
+    {
+        if (lua_islightuserdata(luhx, -1))
+        {
+            // 67
+            lua_pop(luhx, 1);
+            continue;
+        }
 
-		bool skip = false;
-		std::vector<std::string> librarySpecificMembers;
+        bool skip = false;
+        std::vector<std::string> librarySpecificMembers;
 
-		std::string k = luaL_checkstring(luhx, -2);
-		if (int ty = lua_getglobal(base, k.c_str()); ty != LUA_TNIL)
-		{
-			skip = true;
+        std::string k = luaL_checkstring(luhx, -2);
+        if (int ty = lua_getglobal(base, k.c_str()); ty != LUA_TNIL)
+        {
+            skip = true;
 
-			if (ty == LUA_TTABLE && k != "_G")
-			{
-				lua_pushnil(luhx);
-				while (lua_next(luhx, -2))
-				{
-					if (lua_type(luhx, -2) != LUA_TSTRING)
-					{
-						lua_pop(luhx, 1);
-						continue;
-					}
+            if (ty == LUA_TTABLE && k != "_G")
+            {
+                lua_pushnil(luhx);
+                while (lua_next(luhx, -2))
+                {
+                    if (lua_type(luhx, -2) != LUA_TSTRING)
+                    {
+                        lua_pop(luhx, 1);
+                        continue;
+                    }
 
-					int vty = lua_getfield(base, -1, lua_tostring(luhx, -2));
-					if (vty == LUA_TNIL)
-					{
-						skip = false;
-						librarySpecificMembers.push_back(lua_tostring(luhx, -2));
-					}
-					lua_pop(base, 1);
+                    int vty = lua_getfield(base, -1, lua_tostring(luhx, -2));
+                    if (vty == LUA_TNIL)
+                    {
+                        skip = false;
+                        librarySpecificMembers.push_back(lua_tostring(luhx, -2));
+                    }
+                    lua_pop(base, 1);
 
-					lua_pop(luhx, 1);
-				}
-			}
-		}
+                    lua_pop(luhx, 1);
+                }
+            }
+        }
 
-		if (!skip)
-		{
-			if (!lua_istable(luhx, -1))
-			{
-				const char* tn = luaL_typename(luhx, -1);
+        if (!skip)
+        {
+            if (!lua_istable(luhx, -1))
+            {
+                const char* tn = luaL_typename(luhx, -1);
 
-				if (strcmp(tn, "GameObject") == 0)
-				{
-					std::string type = tn;
+                if (strcmp(tn, "GameObject") == 0)
+                {
+                    std::string type = tn;
 
-					GameObject* obj = GameObjectManager::Get()->FromGenericValue(L::ToGeneric(luhx, -1));
+                    GameObject* obj = GameObjectManager::Get()->FromGenericValue(L::ToGeneric(luhx, -1));
 
-					for (const ReflectorRef& ref : obj->Components)
-					{
-						type.append(" & Ec");
-						type.append(s_EntityComponentNames[(uint8_t)ref.Type]);
-					}
+                    for (const ReflectorRef& ref : obj->Components)
+                    {
+                        type.append(" & Ec");
+                        type.append(s_EntityComponentNames[(uint8_t)ref.Type]);
+                    }
 
-					json["Globals"][k] = type;
-				}
-				else
-					json["Globals"][k] = tn;
-			}
-			else
-			{
-				nlohmann::json lib;
+                    json["Globals"][k] = type;
+                }
+                else
+                    json["Globals"][k] = tn;
+            }
+            else
+            {
+                nlohmann::json lib;
 
-				lua_pushnil(luhx);
-				while (lua_next(luhx, -2))
-				{
-					if ((librarySpecificMembers.size() > 0
-							&& std::find(librarySpecificMembers.begin(), librarySpecificMembers.end(), lua_tostring(luhx, -2)) != librarySpecificMembers.end()
-						) || librarySpecificMembers.size() == 0
-					)
-					{
-						if (k == "Enum")
-						{
-							nlohmann::json enu;
+                lua_pushnil(luhx);
+                while (lua_next(luhx, -2))
+                {
+                    if ((librarySpecificMembers.size() > 0
+                            && std::find(librarySpecificMembers.begin(), librarySpecificMembers.end(), lua_tostring(luhx, -2)) != librarySpecificMembers.end()
+                        ) || librarySpecificMembers.size() == 0
+                    )
+                    {
+                        if (k == "Enum")
+                        {
+                            nlohmann::json enu;
 
-							lua_pushnil(luhx);
-							while (lua_next(luhx, -2))
-							{
-								enu[luaL_checkstring(luhx, -2)] = lua_tointeger(luhx, -1);
-								lua_pop(luhx, 1);
-							}
+                            lua_pushnil(luhx);
+                            while (lua_next(luhx, -2))
+                            {
+                                enu[luaL_checkstring(luhx, -2)] = lua_tointeger(luhx, -1);
+                                lua_pop(luhx, 1);
+                            }
 
-							lib[luaL_checkstring(luhx, -2)] = enu;
-						}
-						else
-						{
-							lib[luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
-						}
-					}
+                            lib[luaL_checkstring(luhx, -2)] = enu;
+                        }
+                        else
+                        {
+                            lib[luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+                        }
+                    }
 
-					lua_pop(luhx, 1);
-				}
+                    lua_pop(luhx, 1);
+                }
 
-				if (luaL_getmetatable(luhx, k.c_str()) == LUA_TTABLE)
-				{
-					json["Datatypes"][k]["Library"] = lib;
+                if (luaL_getmetatable(luhx, k.c_str()) == LUA_TTABLE)
+                {
+                    json["Datatypes"][k]["Library"] = lib;
 
-					lua_pushnil(luhx);
-					while (lua_next(luhx, -2))
-					{
-						json["Datatypes"][k]["Metatable"][luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
-						lua_pop(luhx, 1);
-					}
-				}
-				else
-					json["Libraries"][k] = lib;
+                    lua_pushnil(luhx);
+                    while (lua_next(luhx, -2))
+                    {
+                        json["Datatypes"][k]["Metatable"][luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+                        lua_pop(luhx, 1);
+                    }
+                }
+                else
+                    json["Libraries"][k] = lib;
 
-				lua_pop(luhx, 1);
-			}
-		}
+                lua_pop(luhx, 1);
+            }
+        }
 
-		lua_pop(base, 1);
-		lua_pop(luhx, 1);
-	}
+        lua_pop(base, 1);
+        lua_pop(luhx, 1);
+    }
 
-	nlohmann::json& eventSignal = json["Datatypes"]["EventSignal"];
-	eventSignal = nlohmann::json::object();
-	nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
-	eventConnection = nlohmann::json::object();
+    nlohmann::json& eventSignal = json["Datatypes"]["EventSignal"];
+    eventSignal = nlohmann::json::object();
+    nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
+    eventConnection = nlohmann::json::object();
 
-	lua_close(base);
+    lua_close(base);
     luhxVM.Close();
 
-	GameObjectManager::Get()->DataModel = PHX_GAMEOBJECT_NULL_ID;
-	tempdm->Destroy();
+    GameObjectManager::Get()->DataModel = PHX_GAMEOBJECT_NULL_ID;
+    tempdm->Destroy();
 
-	return json;
+    return json;
 }

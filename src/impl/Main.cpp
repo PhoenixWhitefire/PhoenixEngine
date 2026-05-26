@@ -503,9 +503,8 @@ int main(int argc, char** argv)
     Logging::Initialize();
     Log.Info("Application startup");
 	
-    Log.InfoF("Phoenix Engine");
-    Log.AppendF(
-        "\tVersion: {}"
+    Log.InfoF("Phoenix Engine"
+        "\n\tVersion: {}"
         "\n\tCommit: {}"
         "\n\tTag: {}"
         "\n\tTarget platform: " PHX_TARGET_PLATFORM
