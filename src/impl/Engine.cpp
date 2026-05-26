@@ -270,10 +270,6 @@ void Engine::m_InitializeVideo()
 #if !PHX_HEADLESS_BUILD
 
 	ZoneScoped;
-
-	if (PHX_HEADLESS_BUILD || readFromConfiguration("Headless", false))
-		this->IsHeadlessMode = true;
-
 	if (IsHeadlessMode)
 		return;
 
@@ -404,6 +400,10 @@ Engine::Engine()
     EngineInstance = this;
 
     this->LoadConfiguration();
+
+	if (PHX_HEADLESS_BUILD || readFromConfiguration("Headless", false))
+		this->IsHeadlessMode = true;
+
     m_InitializeVideo();
 
     FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
@@ -967,6 +967,7 @@ void Engine::Start()
     Log.Info("Final initializations...");
 
     ScriptEngine::Initialize(); // can only do this after datamodel is bound
+	ComponentManagers.Sound.IsHeadless = IsHeadlessMode;
 
     double RunningTime = GetRunningTime();
     double LastFrame = RunningTime;

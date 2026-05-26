@@ -61,6 +61,6 @@ public:
     void UpdateListener(const glm::mat4& CameraTransform);
     void Shutdown() override;
 
-    ma_engine AudioEngine;
+    ma_engine AudioEngine = {};
     bool IsHeadless = false;
 };

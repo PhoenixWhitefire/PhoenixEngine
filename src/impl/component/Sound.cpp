@@ -170,31 +170,38 @@ const Reflection::StaticEventMap& SoundComponentManager::GetEvents()
 #pragma GCC diagnostic pop
 #endif
 
+static bool s_DidSoundInitialize = false;
+
+static void initializeSound(SoundComponentManager* SoundManager)
+{
+	s_DidSoundInitialize = true;
+
+	if (SoundManager->IsHeadless)
+		return;
+
+	ma_engine_config config = {};
+	config.allocationCallbacks.onMalloc = [](size_t Size, void*)
+		{
+			assert(Size <= UINT32_MAX);
+			return Memory::Alloc((uint32_t)Size, MEMCAT(Sound));
+		};
+	config.allocationCallbacks.onRealloc = [](void* Pointer, size_t Size, void*)
+		{
+			assert(Size <= UINT32_MAX);
+			return Memory::ReAlloc(Pointer, (uint32_t)Size, MEMCAT(Sound));
+		};
+	config.allocationCallbacks.onFree = [](void* P, void*)
+		{
+			Memory::Free(P);
+		};
+
+	if (ma_result initResult = ma_engine_init(&config, &SoundManager->AudioEngine); initResult != MA_SUCCESS)
+		RAISE_RT("Audio Engine init failed, error code: {}", (int)initResult);
+}
+
 SoundComponentManager::SoundComponentManager()
 {
-	ZoneScoped;
-	if (!IsHeadless)
-	{
-		ma_engine_config config = {};
-		config.allocationCallbacks.onMalloc = [](size_t Size, void*)
-			{
-				assert(Size <= UINT32_MAX);
-				return Memory::Alloc((uint32_t)Size, MEMCAT(Sound));
-			};
-		config.allocationCallbacks.onRealloc = [](void* Pointer, size_t Size, void*)
-			{
-				assert(Size <= UINT32_MAX);
-				return Memory::ReAlloc(Pointer, (uint32_t)Size, MEMCAT(Sound));
-			};
-		config.allocationCallbacks.onFree = [](void* P, void*)
-			{
-				Memory::Free(P);
-			};
-
-		if (ma_result initResult = ma_engine_init(&config, &AudioEngine); initResult != MA_SUCCESS)
-			RAISE_RT("Audio Engine init failed, error code: {}", (int)initResult);
-	}
-
+    ZoneScoped;
 	m_Components.reserve(16);
 }
 
@@ -221,10 +228,15 @@ void SoundComponentManager::Shutdown()
 void EcSound::Reload()
 {
 	ZoneScoped;
-	std::string filePath = FileRW::ResolvePathNormalized(SoundFile);
 
-	if (((SoundComponentManager*)SoundComponentManager::Get())->IsHeadless)
-		return;
+    SoundComponentManager* soundManager = (SoundComponentManager*)SoundComponentManager::Get();
+    if (!s_DidSoundInitialize)
+        initializeSound(soundManager);
+
+    if (soundManager->IsHeadless)
+        return;
+
+	std::string filePath = FileRW::ResolvePathNormalized(SoundFile);
 
 	if (SoundInstance)
 	{
