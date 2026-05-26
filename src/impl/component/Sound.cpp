@@ -236,7 +236,7 @@ void EcSound::Reload()
     if (soundManager->IsHeadless)
         return;
 
-	std::string filePath = FileRW::ResolvePathNormalized(SoundFile);
+    std::string filePath = FileRW::ResolvePathNormalized(SoundFile);
 
 	if (SoundInstance)
 	{
