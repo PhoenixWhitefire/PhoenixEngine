@@ -1,5 +1,5 @@
 // 21/01/2025
-// i dont think this is worth doing for the engine at it's current stage
+// i dont think this is worth doing for the engine at its current stage
 // going to work on animations now
 
 #pragma once

@@ -4509,7 +4509,7 @@ static void renderProperties()
 #define popen _popen
 #define pclose _pclose
 
-// 13/01/2025 windows and it's quirkyness
+// 13/01/2025 windows and its quirkyness
 #define TRACY_PATH "Vendor\\tracy\\profiler\\build\\Release\\tracy-profiler.exe"
 #define LAUNCH_TRACY_CMD "\"" TRACY_PATH "\" -a 127.0.0.1 -p 8086"
 

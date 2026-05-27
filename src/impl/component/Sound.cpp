@@ -174,7 +174,9 @@ static bool s_DidSoundInitialize = false;
 
 static void initializeSound(SoundComponentManager* SoundManager)
 {
-	s_DidSoundInitialize = true;
+    ZoneScoped;
+
+    s_DidSoundInitialize = true;
 
 	if (SoundManager->IsHeadless)
 		return;

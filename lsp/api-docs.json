@@ -771,7 +771,7 @@
     "documentation": "* Creates an Object with only the specified Components"
   },
   "@phoenix/global/GameObject.fromId": {
-    "documentation": "* Finds an Object by it's internal ID. Do not rely on the ID"
+    "documentation": "* Finds an Object by its internal ID. Do not rely on the ID"
   },
   "@phoenix/global/GameObject.new": {
     "documentation": "* Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)"
@@ -1872,10 +1872,10 @@
     "documentation": "How far light is emitted"
   },
   "@phoenix/globaltype/Transform.LocalSize": {
-    "documentation": "The Object's scale factor, relative to it's parent Transform ancestor or the world origin"
+    "documentation": "The Object's scale factor, relative to its parent Transform ancestor or the world origin"
   },
   "@phoenix/globaltype/Transform.LocalTransform": {
-    "documentation": "The Object's transformation, relative to it's parent Transform ancestor or the world origin"
+    "documentation": "The Object's transformation, relative to its parent Transform ancestor or the world origin"
   },
   "@phoenix/globaltype/Transform.Size": {
     "documentation": "The Object's world-space scale factor"

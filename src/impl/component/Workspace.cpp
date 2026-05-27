@@ -494,7 +494,7 @@ ObjectHandle EcWorkspace::GetSceneCamera() const
 
 	if (sceneCam && !sceneCam->FindComponent<EcCamera>())
 	{
-		Log.Warning("Scene Camera lost it's Camera component!");
+		Log.Warning("Scene Camera lost its Camera component!");
 		sceneCam = nullptr;
 	}
 

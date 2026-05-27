@@ -11,6 +11,7 @@
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
 #include "datatype/ComponentDependencies.hpp"
+#include "datatype/JsonGenerics.hpp"
 #include "component/Transform.hpp"
 #include "component/RigidBody.hpp"
 #include "component/Light.hpp"
@@ -361,7 +362,7 @@ static ObjectHandle createObjectFromJsonItem(const nlohmann::json& Item, uint32_
 
 		if (classNameJson == Item.end())
 		{
-			SF_WARN("Object #{} was missing it's '$_class' key, skipping", ItemIndex);
+			SF_WARN("Object #{} was missing its '$_class' key, skipping", ItemIndex);
 
 			return nullptr;
 		}
@@ -381,7 +382,7 @@ static ObjectHandle createObjectFromJsonItem(const nlohmann::json& Item, uint32_
 
 		if (components == Item.end())
 		{
-			SF_WARN("Object #{} was missing it's '$_components' key, skipping", ItemIndex);
+			SF_WARN("Object #{} was missing its '$_components' key, skipping", ItemIndex);
 
 			return nullptr;
 		}
@@ -420,6 +421,62 @@ static ObjectHandle createObjectFromJsonItem(const nlohmann::json& Item, uint32_
 
 		return object;
 	}
+}
+
+static Reflection::GenericValue castJsonToGeneric(const std::string_view& propName, Reflection::ValueType propType, const nlohmann::json& memberValue)
+{
+    switch (propType)
+    {
+    case Reflection::ValueType::String:
+        return (std::string)memberValue;
+
+    case Reflection::ValueType::Boolean:
+        return (bool)memberValue;
+
+    case Reflection::ValueType::Double:
+        return (double)memberValue;
+
+    case Reflection::ValueType::Integer:
+        return (int)memberValue;
+
+    case Reflection::ValueType::Color:
+        return getColorFromJson(memberValue).ToGenericValue();
+
+    case Reflection::ValueType::Vector2:
+        return getVector2FromJson(memberValue);
+
+    case Reflection::ValueType::Vector3:
+        return getVector3FromJson(memberValue);
+
+    case Reflection::ValueType::Matrix:
+        return getMatrixFromJson(memberValue);
+
+    case Reflection::ValueType::Array:
+    {
+        std::vector<Reflection::GenericValue> array;
+        array.resize(memberValue.size());
+
+        for (size_t i = 0; i < array.size(); i++)
+            array[i] = JsonToGeneric(memberValue[i]);
+
+        return array;
+    }
+
+    case Reflection::ValueType::Any:
+        return JsonToGeneric(memberValue);
+
+    [[unlikely]] default:
+    {
+        SF_WARN(
+            "Property '{}' cannot be deserialized because its type ({}) is not supported",
+            propName,
+            Reflection::TypeAsString(propType)
+        );
+
+        return Reflection::GenericValue::Null();
+    }
+
+    }
 }
 
 static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, float Version, bool* Success)
@@ -476,7 +533,7 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 
 		if (item.find("$_objectId") == item.end())
-			SF_WARN("Object #{} was missing it's '$_objectId' key", itemIndex);
+			SF_WARN("Object #{} was missing its '$_objectId' key", itemIndex);
 		else
 		{
 			uint32_t itemObjectId = item["$_objectId"];
@@ -539,104 +596,29 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 			Reflection::ValueType propType = prop->Type;
 			propType = Reflection::ValueType(propType & ~Reflection::ValueType::Null);
 
-			Reflection::GenericValue assignment;
+            if (propType == Reflection::ValueType::GameObject)
+            {
+                objectProps[newObject->ObjectId].insert(std::pair(
+                    propName,
+                    memberValue.is_null() ? PHX_GAMEOBJECT_NULL_ID : (uint32_t)memberValue
+                ));
+            }
+            else
+            {
+                Reflection::GenericValue assignment = castJsonToGeneric(propName, propType, memberValue);
 
-			switch (propType)
-			{
-
-			case Reflection::ValueType::String:
-			{
-				assignment = (std::string)memberValue;
-
-				break;
-			}
-
-			case Reflection::ValueType::Boolean:
-			{
-				assignment = (bool)memberValue;
-
-				break;
-			}
-
-			case Reflection::ValueType::Double:
-			{
-				assignment = (double)memberValue;
-
-				break;
-			}
-
-			case Reflection::ValueType::Integer:
-			{
-				assignment = (int)memberValue;
-
-				break;
-			}
-
-			case Reflection::ValueType::Color:
-			{
-				assignment = getColorFromJson(memberValue).ToGenericValue();
-
-				break;
-			}
-
-			case Reflection::ValueType::Vector2:
-			{
-				assignment = getVector2FromJson(memberValue);
-				
-				break;
-			}
-
-			case Reflection::ValueType::Vector3:
-			{
-				assignment = getVector3FromJson(memberValue);
-
-				break;
-			}
-
-			case Reflection::ValueType::Matrix:
-			{
-				assignment = getMatrixFromJson(memberValue);
-
-				break;
-			}
-
-			case Reflection::ValueType::GameObject:
-			{
-				objectProps[newObject->ObjectId].insert(std::pair(
-					propName,
-					memberValue.is_null() ? PHX_GAMEOBJECT_NULL_ID : (uint32_t)memberValue
-				));
-
-				break;
-			}
-
-			default:
-			{
-				SF_WARN(
-					"Property '{}' cannot be deserialized because it's type ({}) is not supported",
-					propName,
-					Reflection::TypeAsString(propType)
-				);
-
-				break;
-			}
-
-			}
-
-			if (assignment.Type != Reflection::ValueType::Null)
-			{
-				try
-				{
-					newObject->SetPropertyValue(propName, assignment);
-				}
-				catch (const std::runtime_error& err)
-				{
-					SF_WARN(
-						"Failed to set {} Property '{}' of '{}' to '{}': {}",
-						Reflection::TypeAsString(propType), propName, name, assignment.ToString(), err.what()
-					);
-				}
-			}
+                try
+                {
+                    newObject->SetPropertyValue(propName, assignment);
+                }
+                catch (const std::runtime_error& err)
+                {
+                    SF_WARN(
+                        "Failed to set {} Property '{}' of '{}' to '{}': {}",
+                        Reflection::TypeAsString(propType), propName, name, assignment.ToString(), err.what()
+                    );
+                }
+            }
 		}
 	}
 
@@ -737,6 +719,88 @@ std::vector<ObjectHandle> SceneFormat::Deserialize(
 	return objects;
 }
 
+static nlohmann::json castGenericToJson(const ObjectRef& Object, const std::string_view& propName, const Reflection::GenericValue& value)
+{
+    switch (value.Type)
+    {
+    case Reflection::ValueType::Boolean:
+        return value.AsBoolean();
+
+    case Reflection::ValueType::Integer:
+        return value.AsInteger();
+
+    case Reflection::ValueType::Double:
+        return value.AsDouble();
+
+    case Reflection::ValueType::String:
+        return value.AsStringView();
+
+    case Reflection::ValueType::Color:
+    {
+        Color col = Color(value);
+        return { col.R, col.G, col.B };
+    }
+
+    case Reflection::ValueType::Vector2:
+    {
+        const glm::vec2 vec = value.AsVector2();
+        return { vec.x, vec.y };
+    }
+
+    case Reflection::ValueType::Vector3:
+    {
+        glm::vec3& vec = value.AsVector3();
+        return { vec.x, vec.y, vec.z };
+    }
+
+    case Reflection::ValueType::Matrix:
+    {
+        const glm::mat4& mat = value.AsMatrix();
+        nlohmann::json matJ = nlohmann::json::array();
+
+        for (int col = 0; col < 4; col++)
+        {
+            matJ[col] = nlohmann::json::array();
+
+            for (int row = 0; row < 4; row++)
+                matJ[col][row] = mat[col][row];
+        }
+
+        return matJ;
+	}
+
+    case Reflection::ValueType::Array:
+    {
+        const std::span<Reflection::GenericValue>& gvArray = value.AsArray();
+        nlohmann::json array = nlohmann::json::array();
+
+        for (size_t i = 0; i < gvArray.size(); i++)
+        {
+            std::string propIndexedName = std::format("{}[{}]", propName, i);
+            array[i] = castGenericToJson(Object, propIndexedName, gvArray[i]);
+        }
+
+        return array;
+    }
+
+    case Reflection::ValueType::Null:
+        return nlohmann::json();
+
+    [[unlikely]] default:
+    {
+        assert(false);
+        Log.ErrorF(
+            "Cannot serialize property '{}' of {} because it has unserializable type {}",
+            propName,
+            Object->GetFullName(),
+            Reflection::TypeAsString(value.Type)
+        );
+
+        return nlohmann::json();
+    }
+    }
+}
+
 struct Serializer
 {
 	void SerializeObject(GameObject* Object, bool IsRootNode = false);
@@ -748,155 +812,84 @@ struct Serializer
 
 void Serializer::SerializeObject(GameObject* Object, bool IsRootNode)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	nlohmann::json item;
-	item["$_components"] = nlohmann::json::array();
-	item["$_objectId"] = IdCounter;
-	RealIdToSceneId[Object->ObjectId] = IdCounter;
+    nlohmann::json item = nlohmann::json::object();
+    item["$_components"] = nlohmann::json::array();
+    item["$_objectId"] = IdCounter;
+    RealIdToSceneId[Object->ObjectId] = IdCounter;
 
-	if (const auto& it = PendingIdReplacement.find(Object->ObjectId); it != PendingIdReplacement.end())
-	{
-		for (const std::pair<uint32_t, std::string_view>& replacement : it->second)
-			Items[replacement.first][replacement.second] = IdCounter;
-	}
+    if (const auto& it = PendingIdReplacement.find(Object->ObjectId); it != PendingIdReplacement.end())
+    {
+        for (const std::pair<uint32_t, std::string_view>& replacement : it->second)
+            Items[replacement.first][replacement.second] = IdCounter;
+    }
 
-	IdCounter++;
+    IdCounter++;
 
-	for (const ReflectorRef& handle : Object->Components)
-		item["$_components"].push_back(s_EntityComponentNames[(size_t)handle.Type]);
+    for (const ReflectorRef& handle : Object->Components)
+        item["$_components"].push_back(s_EntityComponentNames[(size_t)handle.Type]);
 
-	for (const auto& prop : Object->GetProperties())
-	{
-		const std::string_view& propName = prop.first;
-		const Reflection::PropertyDescriptor* propInfo = prop.second;
+    for (const auto& prop : Object->GetProperties())
+    {
+        const std::string_view& propName = prop.first;
+        const Reflection::PropertyDescriptor* propInfo = prop.second;
 
-		if (!propInfo->Serializes)
-			continue;
+        if (!propInfo->Serializes)
+            continue;
 
-		if (!propInfo->Set)
-			continue;
+        if (!propInfo->Set)
+            continue;
 
-		// !! IMPORTANT !!
-		// The `Parent` key *should not* be set for Root Nodes as their parent
-		// *is not part of the scene!*
-		// 04/09/2024
-		if (IsRootNode && propName == "Parent")
-			continue;
+        // !! IMPORTANT !!
+        // The `Parent` key *should not* be set for Root Nodes as their parent
+        // *is not part of the scene!*
+        // 04/09/2024
+        if (IsRootNode && propName == "Parent")
+            continue;
 
-		Reflection::GenericValue value = Object->GetPropertyValue(propName);
+        Reflection::GenericValue value = Object->GetPropertyValue(propName);
 
-		if (Object->GetDefaultPropertyValue(propName) == value)
-			continue; // don't serialize properties that haven't changed
+        if (Object->GetDefaultPropertyValue(propName) == value)
+            continue; // don't serialize properties that haven't changed
 
-		switch (value.Type)
-		{
-		
-		case Reflection::ValueType::Boolean:
-		{
-			item[propName] = value.AsBoolean();
-			break;
-		}
-		case Reflection::ValueType::Integer:
-		{
-			item[propName] = value.AsInteger();
-			break;
-		}
-		case Reflection::ValueType::Double:
-		{
-			item[propName] = value.AsDouble();
-			break;
-		}
-		case Reflection::ValueType::String:
-		{
-			item[propName] = value.AsStringView();
-			break;
-		}
-		
-		case Reflection::ValueType::Color:
-		{
-			Color col = Color(value);
-			item[propName] = { col.R, col.G, col.B };
-			break;
-		}
-		case Reflection::ValueType::Vector2:
-		{
-			const glm::vec2 vec = value.AsVector2();
-			item[propName] = { vec.x, vec.y };
-			break;
-		}
-		case Reflection::ValueType::Vector3:
-		{
-			glm::vec3& vec = value.AsVector3();
-			item[propName] = { vec.x, vec.y, vec.z };
-			break;
-		}
-		case Reflection::ValueType::Matrix:
-		{
-			glm::mat4 mat = value.AsMatrix();
-			item[propName] = nlohmann::json::array();
+        nlohmann::json ser;
 
-			for (int col = 0; col < 4; col++)
-			{
-				item[propName][col] = nlohmann::json::array();
+        if (value.Type == Reflection::ValueType::GameObject)
+        {
+            GameObject* target = GameObjectManager::Get()->FromGenericValue(value);
 
-				for (int row = 0; row < 4; row++)
-					item[propName][col][row] = mat[col][row];
-			}
-				
-			break;
-		}
+            if (target && !target->IsDestructionPending)
+            {
+                const auto& it = RealIdToSceneId.find(target->ObjectId);
+                if (it != RealIdToSceneId.end())
+                    ser = it->second;
+                else
+                {
+                    ser = PHX_GAMEOBJECT_NULL_ID;
+                    std::vector<std::pair<uint32_t, std::string_view>>& replacements = PendingIdReplacement[target->ObjectId];
+                    replacements.push_back(std::pair((uint32_t)Items.size(), propName));
+                }
+            }
+            else
+                ser = PHX_GAMEOBJECT_NULL_ID;
+        }
+        else
+        {
+            ser = castGenericToJson(Object, propName, value);
+        }
 
-		case Reflection::ValueType::GameObject:
-		{
-			GameObject* target = GameObjectManager::Get()->FromGenericValue(value);
+        item[propName] = ser;
+    }
 
-			if (target && !target->IsDestructionPending)
-			{
-				const auto& it = RealIdToSceneId.find(target->ObjectId);
-				if (it != RealIdToSceneId.end())
-					item[propName] = it->second;
-				else
-				{
-					item[propName] = PHX_GAMEOBJECT_NULL_ID;
-					std::vector<std::pair<uint32_t, std::string_view>>& replacements = PendingIdReplacement[target->ObjectId];
-					replacements.push_back(std::pair((uint32_t)Items.size(), propName));
-				}
-			}
-			else
-				item[propName] = PHX_GAMEOBJECT_NULL_ID;
-			
-			break;
-		}
+    if (Object->Tags.size() > 0)
+    {
+        item["$_tags"] = nlohmann::json::array();
+        for (uint16_t tagId : Object->Tags)
+            item["$_tags"].push_back(GameObjectManager::Get()->Collections[tagId].Name);
+    }
 
-		case Reflection::ValueType::Null:
-		{
-			item[propName] = nlohmann::json(); // save as Null
-			break;
-		}
-
-		[[unlikely]] default:
-		{
-			assert(false);
-			Log.ErrorF(
-				"Cannot serialize property '{}' of {} because it has unserializable type {}", 
-				propName,
-				Object->GetFullName(),
-				Reflection::TypeAsString(value.Type)
-			);
-		}
-
-		}
-	}
-
-	if (Object->Tags.size() > 0)
-	{
-		item["$_tags"] = nlohmann::json::array();
-		for (uint16_t tagId : Object->Tags)
-			item["$_tags"].push_back(GameObjectManager::Get()->Collections[tagId].Name);
-	}
-
-	Items.push_back(item);
+    Items.push_back(item);
 }
 
 std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::string& SceneName)

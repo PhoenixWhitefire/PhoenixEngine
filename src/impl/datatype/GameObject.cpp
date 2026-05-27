@@ -322,7 +322,7 @@ static ObjectHandle cloneRecursive(
 	if (overwritesIt != OverwritesMap.end())
 	{
 		for (const std::pair<ObjectHandle, std::string_view>& overwrite : overwritesIt->second)
-			// change the reference to the OG object to it's clone
+			// change the reference to the OG object to its clone
 			overwrite.first->SetPropertyValue(overwrite.second, newObj->ToGenericValue());
 
 		overwritesIt->second.clear();

@@ -64,16 +64,16 @@ public:
 	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool LoadInLinearSpace = true);
 
 	/*
-		Assign the Texture to the given Name, it's Resource ID will be returned when queried with `::LoadFromPath`
+		Assign the Texture to the given Name, its Resource ID will be returned when queried with `::LoadFromPath`
 		IMPORTANT: If the `ResourceId` of the Texture is NOT `UINT32_MAX`, it will replace the Texture at that ID
 		@param The Texture
-		@param It's Internal Name
-		@return It's Texture Resource ID
+		@param Its Internal Name
+		@return Its Texture Resource ID
 	*/
 	uint32_t Assign(const Texture& Texture, const std::string& Name);
 
 	/*
-		Get a Texture by it's Resource ID
+		Get a Texture by its Resource ID
 	*/
 	Texture& GetTextureResource(uint32_t);
 

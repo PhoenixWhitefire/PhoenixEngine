@@ -92,12 +92,8 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 
 	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
 
-	// "cupid-ref.jpg" some weird bullshit, doesn't happen when it's
-	// saved as PNG, but persists after re-saving as JPG
-	// what the what
-	// also fixes the Missing Texture?? damn khr what the fuck
-	// 30/11/2024
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    // TODO: detect based on texture? i have one that needs this, and the Missing checkerboard depends on it too
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 	{
 		ZoneScopedN("UploadData");
