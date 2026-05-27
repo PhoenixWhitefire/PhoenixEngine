@@ -942,8 +942,11 @@
             "Out": "Matrix"
           },
           "new": {
-            "Description": "Returns a new identity matrix",
-            "Out": "Matrix"
+            "Description": "Returns a new identity matrix when given no arguments, and a matrix with each individual cell set when given 16 number arguments",
+            "Out": "Matrix",
+            "Overloads": [
+              "C1R1: number, C1R2: number, C1R3: number, C1R4: number, C2R1: number, C2R2: number, C2R3: number, C2R4: number, C3R1: number, C3R2: number, C3R3: number, C3R4: number, C4R1: number, C4R2: number, C4R3: number, C4R4: number"
+            ]
           }
         },
         "Members": {
@@ -1059,6 +1062,34 @@
           "__mul": [
             "Matrix"
           ]
+        }
+      },
+      "Mutex": {
+        "Description": "A mutex",
+        "Members": {
+          ":Lock": "This is a blocking operation. Locks the mutex",
+          ":TryLock": {
+            "Description": "Attempts to lock the mutex if it is not already locked by another thread. Returns whether or not the locking succeeded",
+            "Out": "boolean"
+          },
+          ":Unlock": "Unlocks the mutex"
+        }
+      },
+      "SharedBuffer": {
+        "Description": "A buffer accessible without locking between mulitple parallel threads",
+        "Members": {
+          ":Pull": {
+            "Description": "Copies a section of the shared buffer into a regular `buffer` object",
+            "Type": "(SharedBuffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> buffer"
+          },
+          ":Push": {
+            "Description": "Copies a `buffer` into the shared buffer. If no `Length` is provided, then the full length of the source buffer is copied",
+            "Type": "(SharedBuffer, Source: buffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> ()"
+          },
+          "Size": {
+            "Description": "Size of the buffer, in bytes",
+            "Type": "number"
+          }
         }
       }
     },
@@ -2195,6 +2226,16 @@
         "Members": {
           "desynchronize": {
             "Description": "Yields the thread until the parallel phase"
+          },
+          "mutex": {
+            "Description": "Create/find a mutex",
+            "In": "Id: string",
+            "Out": "Mutex"
+          },
+          "sharedbuffer": {
+            "Description": "Create/find a shared buffer",
+            "In": "Id: string, Size: number --[[| integer]]",
+            "Out": "SharedBuffer"
           },
           "spawn": {
             "Description": [

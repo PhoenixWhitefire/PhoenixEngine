@@ -610,8 +610,12 @@ local function documentDatatype(name)
 	end
 	alreadyAdded[name] = true
 
-	local dt = docComments.ScriptEnv.Datatypes[name]
-	assert(dt, name)
+    local dt = docComments.ScriptEnv.Datatypes[name]
+
+    if not dt then
+        warn(`Datatype { name } is not documented`)
+        return
+    end
 
 	for _, t in (dt.TypeDependencies or {}) do
 		if not definitionsFile:find(`declare extern type { t } with`) then
@@ -725,7 +729,7 @@ local function documentDatatype(name)
 			definitionsFile ..= "\n"
 		end
 
-		if not v.Description then
+		if typeof(v) == "table" and not v.Description then
 			print(`No description for { name }.{ k }`)
 		end
 

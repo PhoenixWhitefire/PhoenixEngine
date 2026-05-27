@@ -10,8 +10,9 @@
 #include <Luau/CodeGen.h>
 
 #include "script/ScriptEngine.hpp"
-#include "datatype/Color.hpp"
+#include "script/UserdataTags.hpp"
 #include "script/luhx.hpp"
+#include "datatype/Color.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -2090,6 +2091,12 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 
         lua_pop(base, 1);
         lua_pop(luhx, 1);
+    }
+
+    for (int dei = UserdataTag::__start; dei < UserdataTag::__count; dei++)
+    {
+        const std::string_view& name = UserdataTagNames[dei];
+        json["Datatypes"][name] = nlohmann::json::object();
     }
 
     nlohmann::json& eventSignal = json["Datatypes"]["EventSignal"];

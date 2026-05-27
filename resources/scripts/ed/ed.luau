@@ -1,4 +1,43 @@
 -- ed.luau, 14/09/2025
+
+local workerId = (...)
+
+if typeof(workerId) ~= "number" then
+	task.wait(0.1)
+	for i = 1, 4 do
+		parallel.spawn("./resources/scripts/ed/ed.luau", i)
+	end
+
+	task.wait(0.1)
+
+	local sharedBuffer = parallel.sharedbuffer("BufferBar", 8)
+	local buf = sharedBuffer:Pull()
+
+	print(buffer.readu8(buf, 0))
+	print(buffer.readu8(buf, 1))
+	print(buffer.readu8(buf, 2))
+	print(buffer.readu8(buf, 3))
+	print(buffer.readu32(buf, 4))
+
+	game:Close()
+else
+	local mutex = parallel.mutex("MutexFoo")
+	local sharedBuffer = parallel.sharedbuffer("BufferBar", 8)
+
+local curSlice = sharedBuffer:Pull(workerId - 1, 1)
+buffer.writeu8(curSlice, 0, workerId)
+sharedBuffer:Push(curSlice, workerId - 1)
+
+local criticalHeader = sharedBuffer:Pull(4, 4)
+
+mutex:Lock()
+
+buffer.writeu32(criticalHeader, 0, workerId)
+sharedBuffer:Push(criticalHeader, 4)
+
+mutex:Unlock()
+end
+
 local DeveloperTools = game:GetService("DeveloperTools")
 local AssetManager = game:GetService("AssetManager")
 local ScriptEngine = game:GetService("ScriptEngine")

@@ -789,7 +789,7 @@
     "documentation": "* Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`"
   },
   "@phoenix/global/Matrix.new": {
-    "documentation": "* Returns a new identity matrix"
+    "documentation": "* Returns a new identity matrix when given no arguments, and a matrix with each individual cell set when given 16 number arguments"
   },
   "@phoenix/global/Matrix.rotated": {
     "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z"
@@ -802,6 +802,12 @@
   },
   "@phoenix/global/Matrix.translated": {
     "documentation": "* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)"
+  },
+  "@phoenix/global/Mutex": {
+    "documentation": "* A mutex"
+  },
+  "@phoenix/global/SharedBuffer": {
+    "documentation": "* A buffer accessible without locking between mulitple parallel threads"
   },
   "@phoenix/global/_VMNAME": {
     "documentation": "* A non-unique identifier for the current Luau VM"
@@ -1123,6 +1129,12 @@
   },
   "@phoenix/global/parallel.desynchronize": {
     "documentation": "* Yields the thread until the parallel phase"
+  },
+  "@phoenix/global/parallel.mutex": {
+    "documentation": "* Create/find a mutex"
+  },
+  "@phoenix/global/parallel.sharedbuffer": {
+    "documentation": "* Create/find a shared buffer"
   },
   "@phoenix/global/parallel.spawn": {
     "documentation": "* Spawns a new parallel routine in a parallel VM\n* Passed arguments will be available to the spawned script through `...` in the top-level scope"
@@ -1676,6 +1688,15 @@
   "@phoenix/globaltype/Model.ImportPath": {
     "documentation": "The original file a model was imported from"
   },
+  "@phoenix/globaltype/Mutex.Lock": {
+    "documentation": ""
+  },
+  "@phoenix/globaltype/Mutex.TryLock": {
+    "documentation": "* Attempts to lock the mutex if it is not already locked by another thread. Returns whether or not the locking succeeded\n"
+  },
+  "@phoenix/globaltype/Mutex.Unlock": {
+    "documentation": ""
+  },
   "@phoenix/globaltype/Network.MakeHttpRequestAsync": {
     "documentation": "Makes an HTTP request to the provided URL. `Ok` will be false upon failure, and `Body` will contain the error message"
   },
@@ -1825,6 +1846,15 @@
   },
   "@phoenix/globaltype/ScriptEngine.RunInVM": {
     "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
+  },
+  "@phoenix/globaltype/SharedBuffer.Pull": {
+    "documentation": "* Copies a section of the shared buffer into a regular `buffer` object\n"
+  },
+  "@phoenix/globaltype/SharedBuffer.Push": {
+    "documentation": "* Copies a `buffer` into the shared buffer. If no `Length` is provided, then the full length of the source buffer is copied\n"
+  },
+  "@phoenix/globaltype/SharedBuffer.Size": {
+    "documentation": "* Size of the buffer, in bytes\n"
   },
   "@phoenix/globaltype/Sound.FinishedLoading": {
     "documentation": "Whether the Sound has finished loading the `SoundFile`"

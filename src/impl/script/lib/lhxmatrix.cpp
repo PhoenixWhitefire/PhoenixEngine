@@ -58,8 +58,22 @@ static int matrix_translated(lua_State* L)
 
 static int matrix_new(lua_State* L)
 {
-    luhx_pushmatrix(L, glm::mat4(1.f));
-	return 1;
+    glm::mat4 mat = { 1.f };
+
+    if (lua_gettop(L) != 0)
+    {
+        if (lua_gettop(L) != 16)
+            luaL_error(L, "Matrix.new may only be called with 0 or 16 arguments");
+
+        for (int i = 1; i <= 16; i++)
+        {
+            float v = (double)luaL_checknumber(L, i);
+            glm::value_ptr(mat)[i] = v;
+        }
+    }
+
+    luhx_pushmatrix(L, mat);
+    return 1;
 }
 
 static int matrix_rotatedXYZ(lua_State* L)
@@ -208,31 +222,6 @@ static int mtx_index(lua_State* L)
 	return 1;
 }
 
-static int mtx_newindex(lua_State* L)
-{
-    glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
-	size_t klen = 0;
-	const char* k = luaL_checklstring(L, 2, &klen);
-	float v = static_cast<float>(luaL_checknumber(L, 3));
-
-	if (klen == 4 && k[0] == 'C' && k[2] == 'R')
-	{
-		char col = k[1];
-		char row = k[3];
-
-	    // allows ASCII 49, 50, 51, 52, AKA
-	    // 1, 2, 3, and 4
-	    luaL_argcheck(L, col > 48 && col < 53, 2, "column index must be in range [1 .. 4]");
-	    luaL_argcheck(L, row > 48 && row < 53, 2, "row index must be in range [1 .. 4]");
-
-		m[col - 49][row - 49] = v;
-	}
-	else
-		luaL_error(L, "'%s' is not a valid assignable member of Matrices", k);
-
-	return 0;
-}
-
 static int mtx_eq(lua_State* L)
 {
     const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
@@ -292,9 +281,6 @@ static void createmetatable(lua_State* L)
 
 	lua_pushcfunction(L, mtx_index, "Matrix.__index");
     lua_setfield(L, -2, "__index");
-
-	lua_pushcfunction(L, mtx_newindex, "Matrix.__newindex");
-	lua_setfield(L, -2, "__newindex");
 
 	lua_pushcfunction(L, mtx_eq, "Matrix.__eq");
 	lua_setfield(L, -2, "__eq");

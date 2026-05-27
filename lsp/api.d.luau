@@ -173,12 +173,22 @@ end
 declare Matrix: {
   identity: Matrix,
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
-  new: ((  ) -> (Matrix)),
+  new: ((  ) -> (Matrix)) & (( C1R1: number, C1R2: number, C1R3: number, C1R4: number, C2R1: number, C2R2: number, C2R3: number, C2R4: number, C3R1: number, C3R2: number, C3R3: number, C3R4: number, C4R1: number, C4R2: number, C4R3: number, C4R4: number ) -> (Matrix)),
   rotated: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
   rotatedXYZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
   rotatedYXZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
   translated: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
 }
+declare extern type Mutex with
+  function Lock(self): (  )
+  function TryLock(self): ( boolean )
+  function Unlock(self): (  )
+end
+declare extern type SharedBuffer with
+  Pull: (SharedBuffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> buffer
+  Push: (SharedBuffer, Source: buffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> ()
+  Size: number
+end
 
 
 export type GameObject = {
@@ -906,6 +916,8 @@ declare json: {
 }
 declare parallel: {
   desynchronize: ((  ) -> ()),
+  mutex: (( Id: string ) -> (Mutex)),
+  sharedbuffer: (( Id: string, Size: number --[[| integer]] ) -> (SharedBuffer)),
   spawn: (( FilePath: string, ...unknown ) -> ()),
   synchronize: ((  ) -> ()),
   synchronized: ((  ) -> (boolean))

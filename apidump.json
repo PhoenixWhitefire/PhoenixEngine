@@ -446,11 +446,12 @@
           "__eq": "function",
           "__index": "function",
           "__mul": "function",
-          "__newindex": "function",
           "__sub": "function",
           "__type": "string"
         }
-      }
+      },
+      "Mutex": {},
+      "SharedBuffer": {}
     },
     "Globals": {
       "_VMNAME": "string",
@@ -765,6 +766,8 @@
       },
       "parallel": {
         "desynchronize": "function",
+        "mutex": "function",
+        "sharedbuffer": "function",
         "spawn": "function",
         "synchronize": "function",
         "synchronized": "function"
