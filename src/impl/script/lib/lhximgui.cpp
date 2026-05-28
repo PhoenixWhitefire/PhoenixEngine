@@ -148,6 +148,12 @@ static int imgui_itemactive(lua_State* L)
     return 1;
 }
 
+static int imgui_itemdeactivatedafteredit(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::IsItemDeactivatedAfterEdit());
+    return 1;
+}
+
 static int imgui_anyitemactive(lua_State* L)
 {
     lua_pushboolean(L, ImGui::IsAnyItemActive());
@@ -301,20 +307,22 @@ static int imgui_inputstring(lua_State* L)
     const char* name = luaL_checkstring(L, 1);
 	std::string value = luaL_checkstring(L, 2);
     value.reserve(value.size() + 64);
-	ImGui::InputText(name, &value, luaL_optboolean(L, 3, false) ? ImGuiInputTextFlags_Password : 0);
+	bool changed = ImGui::InputText(name, &value, luaL_optboolean(L, 3, false) ? ImGuiInputTextFlags_Password : 0);
 
 	lua_pushlstring(L, value.data(), value.size());
-	return 1;
+    lua_pushboolean(L, changed);
+	return 2;
 }
 
 static int imgui_inputnumber(lua_State* L)
 {
     const char* name = luaL_checkstring(L, 1);
 	double value = luaL_checknumber(L, 2);
-	ImGui::InputDouble(name, &value);
+	bool changed = ImGui::InputDouble(name, &value);
 
 	lua_pushnumber(L, value);
-	return 1;
+    lua_pushboolean(L, changed);
+	return 2;
 }
 
 static int imgui_button(lua_State* L)
@@ -1008,6 +1016,7 @@ static luaL_Reg imgui_funcs[] =
     { "itemhovered", imgui_itemhovered },
     { "itemclicked", imgui_itemclicked },
     { "itemactive", imgui_itemactive },
+    { "itemdeactivatedafteredit", imgui_itemdeactivatedafteredit },
     { "anyitemactive", imgui_anyitemactive },
     { "windowhovered", imgui_windowhovered },
     { "windowappearing", imgui_windowappearing },

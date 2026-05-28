@@ -117,6 +117,8 @@ namespace ScriptEngine
 
 	inline std::vector<std::function<void()>> ParallelEvents;
 	inline std::mutex ParallelEventsMutex;
+
+	inline double ScriptTimeoutLength = 10.0;
 };
 
 namespace ScriptEngine::L

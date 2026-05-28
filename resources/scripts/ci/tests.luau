@@ -9,6 +9,8 @@ task.delay(15, function()
 	game:Close(1)
 end)
 
+game:GetService("ScriptEngine"):SetScriptTimeoutLength(15)
+
 local start = os.clock()
 
 local Types = require("./test-types")

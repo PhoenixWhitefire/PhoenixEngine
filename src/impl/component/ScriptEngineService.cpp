@@ -111,6 +111,17 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
                 return { retval };
             }
         } },
+
+        { "SetScriptTimeoutLength", Reflection::MethodDescriptor{
+            { Reflection::ValueType::Double },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                ScriptEngine::ScriptTimeoutLength = inputs[0].AsDouble();
+
+                return {};
+            }
+        } },
     };
 
     return methods;

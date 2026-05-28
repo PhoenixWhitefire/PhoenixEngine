@@ -2,10 +2,12 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
-task.delay(10, function()
+task.delay(20, function()
 	warn("Docgen appears to have hung - exiting")
 	game:Close(1)
 end)
+
+game:GetService("ScriptEngine"):SetScriptTimeoutLength(20)
 
 local BASE_PATH = "./wikigen"
 local DOCS_PREFIX = "phoenix"
@@ -36,6 +38,12 @@ local libraries = ""
 local globals = ""
 local components = componentsPrologue .. "\n\n"
 local enums = enumsPrologue .. "\n\n"
+local docgenWarned = false
+
+local function docWarn(message)
+	warn(message)
+	docgenWarned = true
+end
 
 local function keysOf<T>(t: { [T]: any }) : { T }
 	local kt = {}
@@ -288,7 +296,8 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 		local v = libm[k]
 
 		if not v or not v.Description then
-			print(`Missing docs for { libname }.{ k }`)
+			docWarn(`Missing docs for { libname }.{ k }`)
+			continue
 		end
 
 		v = v or {}
@@ -323,7 +332,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 			end
 		else
 			if not v.Type or typeof(v.Type) ~= "string" then
-				print("Error with member", k)
+				docWarn(`Error with member {k}`)
 				return str
 			end
 			str ..= `#### \`{libname}.{ k }: { v.Type }\`\n`
@@ -339,7 +348,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 
 		for _, comment in (if typeof(desc) == "table" then desc else { desc }) do
 			if not comment then
-				print(`Missing doc comment for '{ k }'`)
+				docWarn(`Missing doc comment for '{ k }'`)
 			end
 
 			totalcomment ..= `* { comment }\n`
@@ -411,7 +420,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 				local v = t.Properties[n]
 
 				if not d.Properties or not d.Properties[n] then
-					print(`Missing doc comment for Property '{ cn }.{ n }'`)
+					docWarn(`Missing doc comment for Property '{ cn }.{ n }'`)
 					continue
 				end
 
@@ -427,7 +436,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 				end
 
 				if luautype:find("Array") or luautype:find("Map") then
-					warn(`Type '{luautype}' has Array or Map, for {cn}.{n}`)
+					docWarn(`Type '{luautype}' has Array or Map, for {cn}.{n}`)
 				end
 
 				s ..= `* \`{ if isReadOnly then "read " else "" }{ n }: { luautype }\`: { desc }\n`
@@ -450,7 +459,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 				local v = t.Methods[n]
 
 				if not d.Methods or not d.Methods[n] then
-					print(`Missing doc comment for Method '{ cn }:{ n }'`)
+					docWarn(`Missing doc comment for Method '{ cn }:{ n }'`)
 					continue
 				end
 
@@ -463,7 +472,9 @@ local function dumpReflectionApi(t, d, cn, externType)
 					desc = docs.Description or desc
 
 					if docs.Out then
-						assert(not docs.Type, `{cn}.{n} has both a .Out and a .Type`)
+						if docs.Type then
+							docWarn(`{cn}.{n} has both a .Out and a .Type`)
+						end
 
 						subst = subst:sub(1, assert((subst:find(":"))))
 						subst ..= ` {docs.Out}`
@@ -499,7 +510,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 					local newinputs = {}
 
 					if typeof(docs) == "string" or not docs.ParameterNames then
-						warn(`No parameter names for {cn}.{n}`)
+						docWarn(`No parameter names for {cn}.{n}`)
 					end
 
 					for i, t in inputs do
@@ -508,7 +519,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 						else
 							local name = if typeof(docs.ParameterNames) == "table" then docs.ParameterNames[i] else docs.ParameterNames
 							if not name then
-								warn(`Missing parameter name for parameter {i} of {cn}.{n}`)
+								docWarn(`Missing parameter name for parameter {i} of {cn}.{n}`)
 								name = `Param_{i}`
 							end
 
@@ -528,7 +539,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 				elseif not docs.In then
 					assert(docs.Type, n)
 					if not docs.Type:find("self") then
-						warn(`In {cn}.{n}, 'self' must be the first parameter!`)
+						docWarn(`In {cn}.{n}, 'self' must be the first parameter!`)
 					end
 
 					subst = docs.Type
@@ -547,7 +558,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 				end
 
 				if subst:find("Array") or subst:find("Map") then
-					warn(`Type '{subst}' has Array or Map, for {cn}.{n}`)
+					docWarn(`Type '{subst}' has Array or Map, for {cn}.{n}`)
 				end
 			end
 		end
@@ -563,7 +574,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 				local v = t.Events[n]
 
 				if not d.Events or not d.Events[n] or (typeof(d.Events[n]) == "table" and not d.Events[n].Description) then
-					print(`Missing doc comment for Event '{ cn }.{ n }'`)
+					docWarn(`Missing doc comment for Event '{ cn }.{ n }'`)
 					continue
 				end
 
@@ -575,7 +586,9 @@ local function dumpReflectionApi(t, d, cn, externType)
 				}
 
 				if d.Events[n].ArgumentTypes then
-					assert(#string.split(d.Events[n].ArgumentTypes, ",") == #string.split(v, ","), `incorrect number of event callback argument types: {n} ({d.Events[n].ArgumentTypes}) vs {v}`)
+					if #string.split(d.Events[n].ArgumentTypes, ",") ~= #string.split(v, ",") then
+						docWarn(`incorrect number of event callback argument types: {n} ({d.Events[n].ArgumentTypes}) vs {v}`)
+					end
 				end
 
 				definitionsFile ..= `  { n }: EventSignal<{argTypes}>{ if externType then "" else "," }\n`
@@ -613,7 +626,7 @@ local function documentDatatype(name)
     local dt = docComments.ScriptEnv.Datatypes[name]
 
     if not dt then
-        warn(`Datatype { name } is not documented`)
+        docWarn(`Datatype { name } is not documented`)
         return
     end
 
@@ -730,13 +743,14 @@ local function documentDatatype(name)
 		end
 
 		if typeof(v) == "table" and not v.Description then
-			print(`No description for { name }.{ k }`)
+			docWarn(`No description for { name }.{ k }`)
 		end
 
 		local totalcomment = ""
 		for _, comment in (if typeof(v.Description) == "table" then v.Description else { v.Description }) do
 			if not comment then
-				print(`Missing doc comment for '{ k }'`)
+				docWarn(`Missing doc comment for '{ k }'`)
+				continue
 			end
 
 			totalcomment ..= `* { comment }\n`
@@ -786,7 +800,7 @@ for _, k in orderedComponents do
 	components ..= `## \`{ k }\`\n\n`
 
 	if not vd then
-		print(`No docs for Component '{ k }'`)
+		docWarn(`No docs for Component '{ k }'`)
 		definitionsFile ..= "end\n"
 		continue
 	end
@@ -819,7 +833,7 @@ for _, name in orderedLibraries do
 	libraries ..= `### \`{ name }\`\n`
 
     if not lib then
-        warn(`The '{ name }' library has no documentation`)
+        docWarn(`The '{ name }' library has no documentation`)
         continue
     end
 
@@ -864,7 +878,7 @@ for _, name in orderedLibraries do
 
 			for _, comment in (if typeof(members[e].Description) == "table" then members[e].Description else { members[e].Description }) do
 				if not comment then
-					print(`Missing doc comment for Enum.{e}`)
+					docWarn(`Missing doc comment for Enum.{e}`)
 				end
 
 				totalcomment ..= `* { comment }\n`
@@ -883,7 +897,7 @@ for _, name in orderedLibraries do
 			documentationData[`@{DOCS_PREFIX}/global/Enum.{e}`] = enumDocs
 
 			if not members[e].Items then
-				warn(`Enum.{e} has no documentation for its items`)
+				docWarn(`Enum.{e} has no documentation for its items`)
 			end
 
 			type Item = { Name: string, Value: number }
@@ -899,7 +913,7 @@ for _, name in orderedLibraries do
 			for _, item in orderedItems do
 				definitionsFile ..= `  read {item.Name}: Enum{e}\n`
 				if members[e].Items and not members[e].Items[item.Name] then
-					warn(`Enum.{e}.{item.Name} has no documentation`)
+					docWarn(`Enum.{e}.{item.Name} has no documentation`)
 				end
 
 				enumDocs.keys[item.Name] = `@{DOCS_PREFIX}/enum/{e}.{item.Name}`
@@ -925,7 +939,7 @@ for _, name in orderedGlobals do
 	local contents = docComments.ScriptEnv.Globals[name]
 	
 	if not contents then
-		print(`Missing doc entry for global '{ name }'`)
+		docWarn(`Missing doc entry for global '{ name }'`)
 		continue
 	end
 	
@@ -948,7 +962,7 @@ for _, name in orderedGlobals do
 	local totalcomment = ""
 	for _, comment in (if typeof(contents.Description) == "table" then contents.Description else { contents.Description }) do
 		if not comment then
-			print(`Missing doc comment for global '{ name }'`)
+			docWarn(`Missing doc comment for global '{ name }'`)
 		end
 
 		totalcomment ..= `* { comment }\n`
@@ -978,5 +992,5 @@ print("Docs CI finish\n\n\n\n\n")
 
 if not _G.LspDefinitionsGeneratorDoNotShutdown then
 	-- close when we're done
-	game:Close()
+	game:Close(if docgenWarned then 1 else 0)
 end

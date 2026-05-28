@@ -355,6 +355,12 @@ static int fs_remove(lua_State* L)
 
 #include "script/ScriptEngine.hpp"
 
+static void resetTimeoutForVM(lua_State* L)
+{
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    vmud->LastResumed = GetRunningTime();
+}
+
 static int fs_promptsave(lua_State* L)
 {
 	ZoneScoped;
@@ -392,6 +398,7 @@ static int fs_promptsave(lua_State* L)
 	else
 		lua_pushnil(L);
 
+    resetTimeoutForVM(L);
 	return 1;
 }
 
@@ -464,6 +471,7 @@ static int fs_promptopen(lua_State* L)
 		}
 	}
 
+    resetTimeoutForVM(L);
 	return 1;
 }
 
@@ -487,6 +495,7 @@ static int fs_promptopenfolder(lua_State* L)
 	else
 		lua_pushnil(L);
 
+    resetTimeoutForVM(L);
 	return 1;
 }
 

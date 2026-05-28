@@ -314,7 +314,8 @@
           "CloseVM": "(String) -> ()",
           "CompileToBytecode": "(String, Integer?, Integer?) -> (Buffer)",
           "CreateVM": "(String) -> ()",
-          "RunInVM": "(String, String, String?) -> (Boolean, String?)"
+          "RunInVM": "(String, String, String?) -> (Boolean, String?)",
+          "SetScriptTimeoutLength": "(Double) -> ()"
         }
       },
       "Sound": {
@@ -724,6 +725,7 @@
         "inputstring": "function",
         "itemactive": "function",
         "itemclicked": "function",
+        "itemdeactivatedafteredit": "function",
         "itemhovered": "function",
         "menuitem": "function",
         "newline": "function",

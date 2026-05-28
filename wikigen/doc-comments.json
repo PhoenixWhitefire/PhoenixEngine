@@ -673,6 +673,10 @@
               "Code",
               "ChunkName"
             ]
+          },
+          "SetScriptTimeoutLength": {
+            "Description": "Sets how long script coroutines can run for, in seconds, before yielding. Scripts that overrun this duration will error",
+            "ParameterNames": "Length"
           }
         }
       },
@@ -1905,7 +1909,7 @@
               "Text: string",
               "Value: number"
             ],
-            "Out": "number"
+            "Out": "number, boolean"
           },
           "inputstring": {
             "Description": [
@@ -1916,7 +1920,7 @@
               "Value: string",
               "IsPassword: boolean?"
             ],
-            "Out": "string"
+            "Out": "string, boolean"
           },
           "itemactive": {
             "Description": "`ImGui::IsItemActive`",
@@ -1927,6 +1931,10 @@
               "`ImGui::IsItemClicked`"
             ],
             "In": "EnumMouseButton?",
+            "Out": "boolean"
+          },
+          "itemdeactivatedafteredit": {
+            "Description": "`ImGui::IsItemDeactivatedAfterEdit`",
             "Out": "boolean"
           },
           "itemhovered": {

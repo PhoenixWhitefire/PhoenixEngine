@@ -156,6 +156,7 @@ void Engine::LoadConfiguration()
 
 	VSync = readFromConfiguration("VSync", false);
 	FpsCap = readFromConfiguration("FpsCap", 60);
+	ScriptEngine::ScriptTimeoutLength = readFromConfiguration("ScriptTimeoutLength", 10.0);
 
 	std::string_view resDir = readFromConfiguration("ResourcesDirectory", std::string_view("<NOT_SET>"));
 

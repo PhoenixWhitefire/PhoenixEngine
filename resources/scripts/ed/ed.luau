@@ -16,6 +16,9 @@ local FALLBACK_IMAGE = "@etextures/editor-icons/fallback.png"
 local LOGO_IMAGE = "@etextures/logo.png"
 local REIMPORTABLE_MODEL = "Ed_ReimportableModel"
 local EDITOR_BUILD = 4
+local EDITOR_SCRIPT_TIMEOUT_LENGTH = 30
+
+ScriptEngine:SetScriptTimeoutLength(EDITOR_SCRIPT_TIMEOUT_LENGTH)
 
 fs.definealias("editres", "./resources")
 fs.definealias("etextures", "@editres/textures")
@@ -41,31 +44,32 @@ InterfaceLink.Name = "InterfaceLink"
 ServicesLink.Name = "ServicesLink"
 
 local Project: Types.Project = {
-	DataModel = nil,
-	Workspace = nil,
-	Name = "Should not be visible",
-	IsTempPath = false,
-	HasGitRepository = false,
+    DataModel = nil,
+    Workspace = nil,
+    Name = "Should not be visible",
+    IsTempPath = false,
+    HasGitRepository = false,
 }
 local restoreState = nil
 
 local RecentProjects: { string } = {}
 local EditorPreferences = {
-	Version = 1,
-	AutoLaunchCodeEditorOnProjectOpen = false,
-	ClearOutputOnProjectOpen = true,
-	ClearOutputOnPlaytest = true,
-	CodeEditorPath = nil :: string?,
-	UseLightTheme = false,
-	ClosingProjectSaveRequiresConfirmation = false,
-	AutosaveInterval = 5,
-	KeepGizmoInView = false,
-	InvertTabButtonLitColors = false,
-	DevToolsOpen = { "Explorer", "Properties", "Scripts" },
-	ToolsOpen = { BottomBar = true, Output = true },
-	AutoReimportModels = true,
-	GitIntegration = true,
-	ProjectsDirectory = "@home/Documents/Phoenix Projects",
+    Version = 1,
+    AutoLaunchCodeEditorOnProjectOpen = false,
+    ClearOutputOnProjectOpen = true,
+    ClearOutputOnPlaytest = true,
+    CodeEditorPath = nil :: string?,
+    UseLightTheme = false,
+    ClosingProjectSaveRequiresConfirmation = false,
+    AutosaveInterval = 5,
+    KeepGizmoInView = false,
+    InvertTabButtonLitColors = false,
+    DevToolsOpen = { "Explorer", "Properties", "Scripts" },
+    ToolsOpen = { BottomBar = true, Output = true },
+    AutoReimportModels = true,
+    GitIntegration = true,
+    ProjectsDirectory = "@home/Documents/Phoenix Projects",
+    ScriptTimeoutLength = 10,
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -251,13 +255,17 @@ local function editorFrame(DeltaTime)
 end
 
 local function stageUpdate(DeltaTime)
-	local s, e = (xpcall::any)(function(dt)
-		editorFrame(dt)
-	end, onError, DeltaTime)
+    ScriptEngine:SetScriptTimeoutLength(EDITOR_SCRIPT_TIMEOUT_LENGTH)
 
-	if not s then
-		warn(`editorFrame error: {e}`)
-	end
+    local s, e = (xpcall::any)(function(dt)
+        editorFrame(dt)
+    end, onError, DeltaTime)
+
+    if not s then
+        warn(`editorFrame error: {e}`)
+    end
+
+    ScriptEngine:SetScriptTimeoutLength(EditorPreferences.ScriptTimeoutLength)
 end
 
 changeStageTo = function(NewStage: Stage)
@@ -1320,6 +1328,7 @@ local OpenGitCommitMenu = false
 local GitStatusResult = ""
 local GitDiffResult = ""
 local GitCommitMessage = ""
+local EditorScriptTimeoutLengthEditing = EditorPreferences.ScriptTimeoutLength
 
 local function getGitStatus()
 	if GitIsAvailable then
@@ -1400,6 +1409,8 @@ local function renderMainMenuBar(dt: number)
 
 		if CurrentStage == "ProjectEditing" then
 			if imgui.menuitem("Project Settings") then
+                local conf = json.parse(assert((fs.read("@project/phoenix.conf")))) :: any
+
 				task.defer(function()
 					imgui.openpopup("Project Settings")
 
@@ -1467,6 +1478,12 @@ local function renderMainMenuBar(dt: number)
 									end
 								end)
 							end
+						end
+
+                        conf.ScriptTimeoutLength = imgui.inputnumber("Exported script time-out length", conf.ScriptTimeoutLength or 10)
+
+						if imgui.button("Save") then
+							fs.write("@project/phoenix.conf", json.encode(conf))
 						end
 
 						imgui.endpopup()
@@ -1717,6 +1734,8 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.setnextwindowposition((ws.x - SETTINGS_SIZE_X) / 2, (ws.y - SETTINGS_SIZE_Y) / 2)
 		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y)
+
+        EditorScriptTimeoutLengthEditing = EditorPreferences.ScriptTimeoutLength
 	end
 
 	if imgui.beginpopupmodal("Editor Settings", true) then
@@ -1747,6 +1766,18 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
 		EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
 		EditorPreferences.GitIntegration = imgui.checkbox("Git integration", EditorPreferences.GitIntegration)
+
+        EditorScriptTimeoutLengthEditing = imgui.inputnumber("Editor playtest script timeout length", EditorPreferences.ScriptTimeoutLength)
+
+        if imgui.itemdeactivatedafteredit() then
+            if EditorScriptTimeoutLengthEditing < 0.1 then
+                Engine:ShowMessageBox("Scary!", "The Editor will not function if you try to set the time-out so low.\nIf you really want that value, change the settings file manually :)", "ok", "warning")
+            else
+                EditorPreferences.ScriptTimeoutLength = EditorScriptTimeoutLengthEditing
+            end
+        end
+
+        imgui.setitemtooltip("This is independent of the time-out length applied for scripts in exported projects")
 
 		imgui.separator()
 
@@ -2009,13 +2040,19 @@ local function runCurrentCommand()
 		CommandBarCommand = `print({ CommandBarCommand:sub(2, #CommandBarCommand) })`
 	end
 
-	local success = ScriptEngine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
+    local callSuccess, runSuccessOrCallError = pcall(function()
+        return ScriptEngine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
+    end)
 
-	if not success then
-		local cmd = CommandBarCommand
-		task.wait() -- wait for command bar to be un-focused, then show the command that ran
-		CommandBarCommand = cmd
-	end
+    if not callSuccess then
+        Logging:Write(`Editor experienced an error while running your code: { runSuccessOrCallError }`, Enum.LogType.Error)
+    end
+
+    if not callSuccess or not runSuccessOrCallError then
+        local cmd = CommandBarCommand
+        task.wait() -- wait for command bar to be un-focused, then show the command that ran
+        CommandBarCommand = cmd
+    end
 
 	if commandBarAction then
 		History:FinishAction(commandBarAction)
@@ -2973,6 +3010,7 @@ function Stages.ProjectPlaying_Enter(Stage: Stage)
 		changeStageTo("ProjectEditing")
 	end)
 
+	ScriptEngine:SetScriptTimeoutLength(EditorPreferences.ScriptTimeoutLength)
 	Physics:SetSimulationForcePaused(false)
 
 	PlayerInput.Cursor = Enum.Cursor.Arrow
@@ -2996,6 +3034,7 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 
 	ScriptEngine:CloseVM(GameVM)
 	Physics:SetSimulationForcePaused(true)
+	ScriptEngine:SetScriptTimeoutLength(EDITOR_SCRIPT_TIMEOUT_LENGTH)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
 end

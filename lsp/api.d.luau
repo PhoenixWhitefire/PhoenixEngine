@@ -453,6 +453,7 @@ export type EcScriptEngine = {
   CompileToBytecode: (self: EcScriptEngine, Source: string, OptimizationLevel: number?, DebugLevel: number?) -> (buffer),
   CreateVM: (self: EcScriptEngine, VmName: string) -> (),
   RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
+  SetScriptTimeoutLength: (self: EcScriptEngine, Length: number) -> (),
 }
 export type EcSound = {
   read FinishedLoading: boolean ,
@@ -873,10 +874,11 @@ declare imgui: {
   image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }?, LinearlySmooth: boolean? ) -> ()),
   imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
   indent: (( Indent: number? ) -> ()),
-  inputnumber: (( Text: string, Value: number ) -> (number)),
-  inputstring: (( Name: string, Value: string, IsPassword: boolean? ) -> (string)),
+  inputnumber: (( Text: string, Value: number ) -> (number, boolean)),
+  inputstring: (( Name: string, Value: string, IsPassword: boolean? ) -> (string, boolean)),
   itemactive: ((  ) -> (boolean)),
   itemclicked: (( EnumMouseButton? ) -> (boolean)),
+  itemdeactivatedafteredit: ((  ) -> (boolean)),
   itemhovered: ((  ) -> (boolean)),
   menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
   newline: ((  ) -> ()),
