@@ -45,7 +45,7 @@ target_link_libraries(PhoenixEngine PRIVATE stdc++)
 
 add_compile_options($<$<CONFIG:ReleaseTSan>:-O3>)
 add_compile_options($<$<CONFIG:ReleaseAUSan>:-O3>)
-add_compile_options($<$<CONFIG:Debug>:-fsanitize=thread>)
+add_compile_options($<$<CONFIG:DebugTSAN>:-fsanitize=thread>)
 add_compile_options($<$<CONFIG:DebugTSan>:-O0>)
 add_compile_options($<$<CONFIG:DebugTSan>:-g3>)
 add_compile_options($<$<CONFIG:Release>:-O3>)

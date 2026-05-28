@@ -48,6 +48,7 @@ static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastB
 
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
+    Log.ErrorF("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
     assert(false);
     RAISE_RT("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
 }
