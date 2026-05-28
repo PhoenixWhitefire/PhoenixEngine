@@ -11,6 +11,7 @@
 
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
+#include "script/SharedMutex.hpp"
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 #include "FileRW.hpp"
@@ -84,6 +85,7 @@ void ScriptEngine::Shutdown()
     }
 
     ParallelVMs.clear();
+    CollectParallelResourceGarbage();
 }
 
 ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
@@ -248,7 +250,10 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
         result = lua_resume(L, nullptr, arguments.size());
 
         if (result != LUA_OK && result != LUA_YIELD && result != LUA_BREAK)
+        {
             Log.ErrorF("Parallel script init: {}", lua_tostring(L, -1));
+            ScriptEngine::L::DumpStacktrace(L);
+        }
 
         lua_pop(vm->MainThread, 1);
     }
@@ -393,6 +398,7 @@ static void processParallelEvents()
 void ScriptEngine::StepVMs()
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
+    CollectParallelResourceGarbage();
 
     for (ParallelVM* vm : ParallelVMs)
     {
@@ -1387,6 +1393,21 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
         lua_Debug yieldar = {};
         lua_getinfo(L, 0, "n", &yieldar);
         RAISE_RT("Cannot yield with '{}' right now (across metamethod/C-call boundary)", ar.name ? ar.name : "<unknown>");
+    }
+
+    std::vector<SharedMutex*>& lsms = ud->PVM ? ud->PVM->LockedSharedMutexes : VMs[ud->VM].LockedSharedMutexes;
+
+    if (lsms.size() > 0)
+    {
+        std::string mutexesStr;
+        for (SharedMutex* sm : lsms)
+        {
+            sm->Mutex.unlock();
+            mutexesStr.append(sm->Name + ", ");
+        }
+
+        mutexesStr = mutexesStr.substr(0, mutexesStr.size() - 2); // remove `, `
+        RAISE_RT("Mutexes were left locked: {}. They have been forcefully unlocked to prevent deadlock", mutexesStr);
     }
 
     // TODO a kind of hack to get what datamodel we're in

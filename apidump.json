@@ -403,6 +403,7 @@
   },
   "ScriptEnv": {
     "Datatypes": {
+      "AtomicInteger": {},
       "Color": {
         "Library": {
           "new": "function"
@@ -765,6 +766,7 @@
         "parse": "function"
       },
       "parallel": {
+        "atomicinteger": "function",
         "desynchronize": "function",
         "mutex": "function",
         "sharedbuffer": "function",

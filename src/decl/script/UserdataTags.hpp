@@ -8,6 +8,7 @@ struct UserdataTag_
 
         Mutex = 1,
         SharedBuffer = 2,
+        AtomicInteger = 3,
 
         __count
     };
@@ -19,6 +20,7 @@ const std::string_view UserdataTagNames[] = {
     "<INVALID>", // 0
     "Mutex",
     "SharedBuffer",
+    "AtomicInteger",
 };
 
 static_assert(std::size(UserdataTagNames) == UserdataTag::__count);

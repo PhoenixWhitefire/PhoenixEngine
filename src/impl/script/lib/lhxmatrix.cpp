@@ -65,11 +65,14 @@ static int matrix_new(lua_State* L)
         if (lua_gettop(L) != 16)
             luaL_error(L, "Matrix.new may only be called with 0 or 16 arguments");
 
-        for (int i = 1; i <= 16; i++)
-        {
-            float v = (double)luaL_checknumber(L, i);
-            glm::value_ptr(mat)[i] = v;
-        }
+		for (int c = 0; c < 4; c++)
+		{
+			for (int r = 0; r < 4; r++)
+			{
+				float v = (double)luaL_checknumber(L, c * 4 + r + 1);
+				mat[c][r] = v;
+			}
+		}
     }
 
     luhx_pushmatrix(L, mat);

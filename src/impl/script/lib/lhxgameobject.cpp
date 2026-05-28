@@ -9,62 +9,50 @@
 
 void luhx_pushgameobject(lua_State* L, GameObject* Object)
 {
-	if (!Object)
-	{
-		lua_pushnil(L); // null objects are nil and false-y
-		return;
-	}
+    if (!Object)
+    {
+        lua_pushnil(L); // null objects are nil and false-y
+        return;
+    }
 
-	/*uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
-		L,
-		sizeof(uint32_t),
-		[](void* ptrId)
-		{
-			uint32_t id = *(uint32_t*)ptrId;
+    lua_getfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
+    if (lua_isnil(L, -1))
+    {
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
+    }
 
-			if (GameObject* o = GameObject::GetObjectById(id))
-				o->DecrementHardRefs(); // removes the reference in `::Create`
-		}
-	);*/
+    lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
+    lua_gettable(L, -2); // OBJECT_REG[ObjectId]
 
-	lua_getfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
-	if (lua_isnil(L, -1))
-	{
-		lua_newtable(L);
-		lua_pushvalue(L, -1);
-		lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
-	}
+    if (!lua_isnil(L, -1))
+    {
+        lua_remove(L, -2); // remove the registry sub-table
+        return; // object already in the registry, return the same value (to make table key hashing/rawequal work)
+    }
+    lua_pop(L, 1); // dont need that nil
 
-	lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
-	lua_gettable(L, -2); // OBJECT_REG[ObjectId]
+    Object->IncrementHardRefs();
 
-	if (!lua_isnil(L, -1))
-	{
-		lua_remove(L, -2); // remove the registry sub-table
-		return; // object already in the registry, return the same value (only way to make table key hashing work afaik)
-	}
-	lua_pop(L, 1); // dont need that nil
+    uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+        L,
+        sizeof(uint32_t),
+        [](void* ptrToId)
+        {
+            GameObjectManager::Get()->FindById(*(uint32_t*)ptrToId)->DecrementHardRefs();
+        }
+    );
+    lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
+    lua_pushvalue(L, -2);
 
-	Object->IncrementHardRefs();
+    *ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-	uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
-		L,
-		sizeof(uint32_t),
-		[](void* ptrToId)
-		{
-			GameObjectManager::Get()->FindById(*(uint32_t*)ptrToId)->DecrementHardRefs();
-		}
-	);
-	lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
-	lua_pushvalue(L, -2);
+    luaL_getmetatable(L, "GameObject");
+    lua_setmetatable(L, -2);
 
-	*ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-	luaL_getmetatable(L, "GameObject");
-	lua_setmetatable(L, -2);
-
-	lua_settable(L, -4);
-	lua_remove(L, -2); // remove the registry sub-table
+    lua_settable(L, -4);
+    lua_remove(L, -2); // remove the registry sub-table
 }
 
 GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)

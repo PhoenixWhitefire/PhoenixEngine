@@ -803,6 +803,19 @@
   },
   "ScriptEnv": {
     "Datatypes": {
+      "AtomicInteger": {
+        "Description": "An atomic integer, which can be accessed from multiple threads with an ID through `parallel.atomicinteger`",
+        "Members": {
+          ":Get": {
+            "Description": "Fetches the value",
+            "Out": "number"
+          },
+          ":Set": {
+            "Description": "Sets the value",
+            "In": "Value: number"
+          }
+        }
+      },
       "Color": {
         "Description": "An RGB color",
         "Library": {
@@ -1065,7 +1078,7 @@
         }
       },
       "Mutex": {
-        "Description": "A mutex",
+        "Description": "A mutex which can be fetched with an ID through `parallel.mutex`",
         "Members": {
           ":Lock": "This is a blocking operation. Locks the mutex",
           ":TryLock": {
@@ -1076,7 +1089,7 @@
         }
       },
       "SharedBuffer": {
-        "Description": "A buffer accessible without locking between mulitple parallel threads",
+        "Description": "A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`",
         "Members": {
           ":Pull": {
             "Description": "Copies a section of the shared buffer into a regular `buffer` object",
@@ -2224,6 +2237,11 @@
       "parallel": {
         "Description": "Parallelization of Luau",
         "Members": {
+          "atomicinteger": {
+            "Description": "Creates/finds an atomic integer with a matching ID",
+            "In": "InitialValue: number?",
+            "Out": "AtomicInteger"
+          },
           "desynchronize": {
             "Description": "Yields the thread until the parallel phase"
           },

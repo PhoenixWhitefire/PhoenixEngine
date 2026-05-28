@@ -2,7 +2,7 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
-task.delay(5, function()
+task.delay(10, function()
 	warn("Docgen appears to have hung - exiting")
 	game:Close(1)
 end)

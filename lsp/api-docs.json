@@ -524,6 +524,9 @@
   "@phoenix/enum/ValueType.VectorGradient": {
     "documentation": "Vector3 gradient (not implemented)"
   },
+  "@phoenix/global/AtomicInteger": {
+    "documentation": "* An atomic integer, which can be accessed from multiple threads with an ID through `parallel.atomicinteger`"
+  },
   "@phoenix/global/Color": {
     "documentation": "* An RGB color"
   },
@@ -804,10 +807,10 @@
     "documentation": "* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)"
   },
   "@phoenix/global/Mutex": {
-    "documentation": "* A mutex"
+    "documentation": "* A mutex which can be fetched with an ID through `parallel.mutex`"
   },
   "@phoenix/global/SharedBuffer": {
-    "documentation": "* A buffer accessible without locking between mulitple parallel threads"
+    "documentation": "* A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`"
   },
   "@phoenix/global/_VMNAME": {
     "documentation": "* A non-unique identifier for the current Luau VM"
@@ -1127,6 +1130,9 @@
   "@phoenix/global/parallel": {
     "documentation": "* Parallelization of Luau"
   },
+  "@phoenix/global/parallel.atomicinteger": {
+    "documentation": "* Creates/finds an atomic integer with a matching ID"
+  },
   "@phoenix/global/parallel.desynchronize": {
     "documentation": "* Yields the thread until the parallel phase"
   },
@@ -1219,6 +1225,12 @@
   },
   "@phoenix/globaltype/AssetManager.UnloadTexture": {
     "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
+  },
+  "@phoenix/globaltype/AtomicInteger.Get": {
+    "documentation": "* Fetches the value\n"
+  },
+  "@phoenix/globaltype/AtomicInteger.Set": {
+    "documentation": "* Sets the value\n"
   },
   "@phoenix/globaltype/Bone.IsActive": {
     "documentation": "Whether or not the Bone Object is actively affecting a `Mesh`"

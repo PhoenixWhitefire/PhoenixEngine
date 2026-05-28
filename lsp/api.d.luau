@@ -123,6 +123,10 @@ type Services = {
   ScriptEngine: EcScriptEngine,
 }
 
+declare extern type AtomicInteger with
+  function Get(self): ( number )
+  function Set(self, Value: number): (  )
+end
 declare extern type Color with
   B: number
   G: number
@@ -915,6 +919,7 @@ declare json: {
   parse: (( Json: string ) -> (JsonSerializable))
 }
 declare parallel: {
+  atomicinteger: (( InitialValue: number? ) -> (AtomicInteger)),
   desynchronize: ((  ) -> ()),
   mutex: (( Id: string ) -> (Mutex)),
   sharedbuffer: (( Id: string, Size: number --[[| integer]] ) -> (SharedBuffer)),

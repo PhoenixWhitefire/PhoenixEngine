@@ -72,6 +72,11 @@ function expectationMt:toThrow(errstr)
 	
 	return err
 end
+function expectationMt:toBeWithin(min: number, max: number)
+    assert(typeof(self._val) == "number", `FAILTEST:Value '{ self._val }' was a { typeof(self._val) } and not a number`)
+    assert(self._val >= min, `FAILTEST:Value '{ self._val }' was below minimum of range [{ min }, { max }]`)
+    assert(self._val <= max, `FAILTEST:Value '{ self._val }' was above maximum of range [{ min }, { max }]`)
+end
 
 local function argsToString(...)
 	local str = ""

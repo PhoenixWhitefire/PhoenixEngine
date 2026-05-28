@@ -18,20 +18,21 @@ return function(test: Types.Test, expect: Types.Expect)
 	test("Min bounds", function()
 		expect(function()
 			local m = Matrix.new()
-			m.C0R1 = m.C0R1
+			local _x = m.C0R1
 		end):toThrow()
 	end)
 	test("Max bounds", function()
 		expect(function()
 			local m = Matrix.new()
-			m.C5R1 = m.C5R1
+			local _x = m.C5R1
 		end):toThrow()
 	end)
-	test("Normal edge assign", function()
+	test("Manual cell assign", function()
 		expect(function()
-			local m = Matrix.new()
-			m.C1R4 = 5
-			assert(m.C1R4 == 5)
+			local m = Matrix.new(1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+			assert(m.C1R1 == 1)
+			assert(m.C1R4 == 2)
+			assert(m.C4R4 == 3)
 		end).never:toThrow()
 	end)
 

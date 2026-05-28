@@ -14,6 +14,7 @@
 #define ROOT_LVM_NAME "RootLVM"
 
 struct EventConnectionData;
+struct SharedMutex;
 
 namespace ScriptEngine
 {
@@ -86,6 +87,7 @@ namespace ScriptEngine
         void Close();
 
         std::deque<YieldedCoroutine> YieldedCoroutines;
+        std::vector<SharedMutex*> LockedSharedMutexes;
         std::string Name;
         lua_State* MainThread = nullptr;
     };
