@@ -18,7 +18,7 @@ local REIMPORTABLE_MODEL = "Ed_ReimportableModel"
 local EDITOR_BUILD = 4
 local EDITOR_SCRIPT_TIMEOUT_LENGTH = 30
 
-ScriptEngine:SetScriptTimeoutLength(EDITOR_SCRIPT_TIMEOUT_LENGTH)
+ScriptEngine:SetVMAllowedExecutionTime(_VMNAME, EDITOR_SCRIPT_TIMEOUT_LENGTH)
 
 fs.definealias("editres", "./resources")
 fs.definealias("etextures", "@editres/textures")
@@ -69,7 +69,8 @@ local EditorPreferences = {
     AutoReimportModels = true,
     GitIntegration = true,
     ProjectsDirectory = "@home/Documents/Phoenix Projects",
-    ScriptTimeoutLength = 10,
+    ScriptAllowedExecutionTime = 10,
+    CancelPlaytestWhenScriptTimesOut = true,
 }
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
@@ -98,7 +99,6 @@ end
 
 local WasHoldingDownM1 = false
 local MouseClick = false
-local WasHoldingF5 = false
 local WasHoldingCtrlKeyDown = false
 local WasHoldingZKeyDown = false
 local WasHoldingYKeyDown = false
@@ -223,40 +223,26 @@ local function handleUndoRedoKeybinds()
 end
 
 local function editorFrame(DeltaTime)
-	if not workspace.SceneCamera then
-		workspace.SceneCamera = GameObject.new("Camera")
-		workspace.SceneCamera.Parent = workspace
-	end
+    if not workspace.SceneCamera then
+        workspace.SceneCamera = GameObject.new("Camera")
+        workspace.SceneCamera.Parent = workspace
+    end
 
-	MouseClick = (not WasHoldingDownM1) and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
-	local f5 = PlayerInput:IsKeyPressed(Enum.Key.F5)
+    MouseClick = (not WasHoldingDownM1) and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 
-	if not History.IsRecordingAction then
-		if CurrentStage == "ProjectEditing" then
-			if f5 and not WasHoldingF5 then
-				changeStageTo("ProjectPlaying")
-			end
+    if not History.IsRecordingAction then
+        if CurrentStage == "ProjectEditing" then
+            handleUndoRedoKeybinds()
+        end
+    end
 
-			handleUndoRedoKeybinds()
+    CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
+    Stages[CurrentStage](DeltaTime)
 
-		elseif CurrentStage == "ProjectPlaying" then
-			if f5 and not WasHoldingF5 then
-				changeStageTo("ProjectEditing")
-			end
-		end
-	end
-
-	WasHoldingF5 = f5
-
-	CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
-	Stages[CurrentStage](DeltaTime)
-
-	WasHoldingDownM1 = PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
+    WasHoldingDownM1 = PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 end
 
 local function stageUpdate(DeltaTime)
-    ScriptEngine:SetScriptTimeoutLength(EDITOR_SCRIPT_TIMEOUT_LENGTH)
-
     local s, e = (xpcall::any)(function(dt)
         editorFrame(dt)
     end, onError, DeltaTime)
@@ -264,8 +250,6 @@ local function stageUpdate(DeltaTime)
     if not s then
         warn(`editorFrame error: {e}`)
     end
-
-    ScriptEngine:SetScriptTimeoutLength(EditorPreferences.ScriptTimeoutLength)
 end
 
 changeStageTo = function(NewStage: Stage)
@@ -614,6 +598,8 @@ local function openProject_(ManualPath: string?)
 	Engine:BindDataModel(Project.DataModel)
 	ScriptEngine:CreateVM(GameEditingVM)
 	Engine:BindDataModel(game)
+
+	ScriptEngine:SetVMAllowedExecutionTime(GameEditingVM, EditorPreferences.ScriptAllowedExecutionTime)
 
 	Project.DataModel.LiveScripts = module
 	Project.HasGitRepository = fs.isdirectory("@project/.git")
@@ -989,6 +975,14 @@ local function saveSettings()
 
 		fs.write("./editor/models.json", json.encode(ModelModifiedTimes :: { [string]: JsonSerializable }))
 		fs.write("./editor/command-history.json", json.encode(CommandBarHistory))
+
+        if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
+            ScriptEngine:SetVMAllowedExecutionTime(GameEditingVM, EditorPreferences.ScriptAllowedExecutionTime)
+
+            if CurrentStage == "ProjectPlaying" then
+                ScriptEngine:SetVMAllowedExecutionTime(GameVM, EditorPreferences.ScriptAllowedExecutionTime)
+            end
+        end
 	end)
 
 	if not success then
@@ -1328,7 +1322,6 @@ local OpenGitCommitMenu = false
 local GitStatusResult = ""
 local GitDiffResult = ""
 local GitCommitMessage = ""
-local EditorScriptTimeoutLengthEditing = EditorPreferences.ScriptTimeoutLength
 
 local function getGitStatus()
 	if GitIsAvailable then
@@ -1480,7 +1473,7 @@ local function renderMainMenuBar(dt: number)
 							end
 						end
 
-                        conf.ScriptTimeoutLength = imgui.inputnumber("Exported script time-out length", conf.ScriptTimeoutLength or 10)
+                        conf.DefaultVMAllowedExecutionTime = imgui.inputnumber("Exported script allowed execution time", conf.DefaultVMAllowedExecutionTime or 30)
 
 						if imgui.button("Save") then
 							fs.write("@project/phoenix.conf", json.encode(conf))
@@ -1734,8 +1727,6 @@ local function renderMainMenuBar(dt: number)
 
 		imgui.setnextwindowposition((ws.x - SETTINGS_SIZE_X) / 2, (ws.y - SETTINGS_SIZE_Y) / 2)
 		imgui.setnextwindowsize(SETTINGS_SIZE_X, SETTINGS_SIZE_Y)
-
-        EditorScriptTimeoutLengthEditing = EditorPreferences.ScriptTimeoutLength
 	end
 
 	if imgui.beginpopupmodal("Editor Settings", true) then
@@ -1767,17 +1758,10 @@ local function renderMainMenuBar(dt: number)
 		EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
 		EditorPreferences.GitIntegration = imgui.checkbox("Git integration", EditorPreferences.GitIntegration)
 
-        EditorScriptTimeoutLengthEditing = imgui.inputnumber("Editor playtest script timeout length", EditorPreferences.ScriptTimeoutLength)
-
-        if imgui.itemdeactivatedafteredit() then
-            if EditorScriptTimeoutLengthEditing < 0.1 then
-                Engine:ShowMessageBox("Scary!", "The Editor will not function if you try to set the time-out so low.\nIf you really want that value, change the settings file manually :)", "ok", "warning")
-            else
-                EditorPreferences.ScriptTimeoutLength = EditorScriptTimeoutLengthEditing
-            end
-        end
-
+        EditorPreferences.ScriptAllowedExecutionTime = imgui.inputnumber("Editor playtest script allowed execution time", EditorPreferences.ScriptAllowedExecutionTime)
         imgui.setitemtooltip("This is independent of the time-out length applied for scripts in exported projects")
+
+        EditorPreferences.CancelPlaytestWhenScriptTimesOut = imgui.checkbox("Cancel playtests when a script times-out", EditorPreferences.CancelPlaytestWhenScriptTimesOut)
 
 		imgui.separator()
 
@@ -1929,6 +1913,11 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
 		table.freeze(Value :: any)
 	end
 
+    if CurrentStage == "ProjectPlaying" and Message:find("Script VM was timed-out") and EditorPreferences.CancelPlaytestWhenScriptTimesOut then
+        Engine:ShowMessageBox("Playtest cancelled", "The playtest was cancelled because of a script timing-out.\nYou may disable this behavior in Editor Settings", "ok", "error")
+        task.defer(changeStageTo, "ProjectEditing" :: "ProjectEditing")
+    end
+
 	local createsNewline = false
 
 	if Message == " &&" then
@@ -2062,31 +2051,44 @@ local function runCurrentCommand()
 end
 
 PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
-	if not CommandBarActive or kie.Action ~= Enum.InputAction.Pressed then
-		return
-	end
+    if kie.Action ~= Enum.InputAction.Pressed then
+        return
+    end
 
-	if kie.Key == Enum.Key.Enter then
-		runCurrentCommand()
-	elseif #CommandBarHistory > 0 then
-		if kie.Key == Enum.Key.Up and CommandBarHistoryCursor > 1 then
-			CommandBarHistoryCursor -= 1
-			CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
-			CommandBarBlinkFrame = 1
-		end
+    if kie.Key == Enum.Key.F5 then
+        if CurrentStage == "ProjectEditing" then
+            changeStageTo("ProjectPlaying")
+        elseif CurrentStage == "ProjectPlaying" then
+            changeStageTo("ProjectEditing")
+        end
+    end
 
-		if kie.Key == Enum.Key.Down and CommandBarHistoryCursor <= #CommandBarHistory then
-			CommandBarHistoryCursor += 1
+    if not CommandBarActive then
+        return
+    end
+
+
+    if kie.Key == Enum.Key.Enter then
+        runCurrentCommand()
+    elseif #CommandBarHistory > 0 then
+        if kie.Key == Enum.Key.Up and CommandBarHistoryCursor > 1 then
+            CommandBarHistoryCursor -= 1
+            CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+            CommandBarBlinkFrame = 1
+        end
+
+        if kie.Key == Enum.Key.Down and CommandBarHistoryCursor <= #CommandBarHistory then
+            CommandBarHistoryCursor += 1
 
             if CommandBarHistoryCursor > #CommandBarHistory then
                 CommandBarCommand = ""
             else
-			    CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+                CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
             end
 
-			CommandBarBlinkFrame = 1
-		end
-	end
+            CommandBarBlinkFrame = 1
+        end
+    end
 end)
 
 local function renderOutput()
@@ -2990,6 +2992,7 @@ function Stages.ProjectPlaying_Enter(Stage: Stage)
 	Project.DataModel.VM = GameVM
 	Engine:BindDataModel(Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
 	ScriptEngine:CreateVM(GameVM)
+	ScriptEngine:SetVMAllowedExecutionTime(GameVM, EditorPreferences.ScriptAllowedExecutionTime)
 
 	local projWp = Project.Workspace
 	assert(projWp)
@@ -3010,7 +3013,6 @@ function Stages.ProjectPlaying_Enter(Stage: Stage)
 		changeStageTo("ProjectEditing")
 	end)
 
-	ScriptEngine:SetScriptTimeoutLength(EditorPreferences.ScriptTimeoutLength)
 	Physics:SetSimulationForcePaused(false)
 
 	PlayerInput.Cursor = Enum.Cursor.Arrow
@@ -3034,7 +3036,6 @@ function Stages.ProjectPlaying_Leave(DeltaTime)
 
 	ScriptEngine:CloseVM(GameVM)
 	Physics:SetSimulationForcePaused(true)
-	ScriptEngine:SetScriptTimeoutLength(EDITOR_SCRIPT_TIMEOUT_LENGTH)
 
 	PlayerInput.CursorMode = Enum.CursorMode.Normal
 end

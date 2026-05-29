@@ -112,13 +112,32 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
             }
         } },
 
-        { "SetScriptTimeoutLength", Reflection::MethodDescriptor{
-            { Reflection::ValueType::Double },
+        { "SetVMAllowedExecutionTime", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String, Reflection::ValueType::Double },
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
-                ScriptEngine::ScriptTimeoutLength = inputs[0].AsDouble();
+                const std::string_view& vmName = inputs[0].AsStringView();
 
+                const auto& vmit = ScriptEngine::VMs.find(std::string(vmName));
+                ScriptEngine::LuauVM* lvm = nullptr;
+
+                if (vmit == ScriptEngine::VMs.end())
+                {
+                    const auto& pvmit = std::find_if(ScriptEngine::ParallelVMs.begin(), ScriptEngine::ParallelVMs.end(), [vmName](const ScriptEngine::ParallelVM* pvm)
+                    {
+                        return pvm->Name == vmName;
+                    });
+
+                    if (pvmit != ScriptEngine::ParallelVMs.end())
+                        lvm = *pvmit;
+                    else
+                        RAISE_RT("Invalid VM '{}'", vmName);
+                }
+                else
+                    lvm = &vmit->second;
+
+                lvm->AllowedExecutionTime = inputs[1].AsDouble();
                 return {};
             }
         } },

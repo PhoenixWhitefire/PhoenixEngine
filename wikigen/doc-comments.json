@@ -674,9 +674,12 @@
               "ChunkName"
             ]
           },
-          "SetScriptTimeoutLength": {
-            "Description": "Sets how long script coroutines can run for, in seconds, before yielding. Scripts that overrun this duration will error",
-            "ParameterNames": "Length"
+          "SetVMAllowedExecutionTime": {
+            "Description": "Sets how long script coroutines are allowed to run for, in seconds, before yielding. Scripts that overrun this duration will error",
+            "ParameterNames": [
+              "VmName",
+              "Length"
+            ]
           }
         }
       },

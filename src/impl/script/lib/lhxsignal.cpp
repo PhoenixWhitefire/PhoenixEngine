@@ -116,7 +116,7 @@ static int sig_namecall(lua_State* L)
 				// there cannot be more than one instance of it
 				// running concurrently. thus, we can re-use a single thread
 				// instead of creating a new one for each invocation
-				if (lua_status(cL) == LUA_YIELD)
+				if (lua_status(cL) == LUA_YIELD || lua_status(cL) == LUA_ERRRUN)
 				{
 					lua_State* nL = lua_newthread(eL);
 					lua_xpush(eL, nL, 2);

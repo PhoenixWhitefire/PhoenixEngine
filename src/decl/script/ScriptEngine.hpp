@@ -90,6 +90,7 @@ namespace ScriptEngine
         std::vector<SharedMutex*> LockedSharedMutexes;
         std::string Name;
         lua_State* MainThread = nullptr;
+		double AllowedExecutionTime = 10.0;
     };
 
     struct ParallelVM : public LuauVM
@@ -118,7 +119,7 @@ namespace ScriptEngine
 	inline std::vector<std::function<void()>> ParallelEvents;
 	inline std::mutex ParallelEventsMutex;
 
-	inline double ScriptTimeoutLength = 10.0;
+	inline double DefaultVMAllowedExecutionTime = 10.0;
 };
 
 namespace ScriptEngine::L
@@ -187,5 +188,5 @@ namespace ScriptEngine::L
 	using DebugBreakReason = DebugBreakReason_::DBR;
 
 	inline void(*DebugBreak)(lua_State*, lua_Debug*, DebugBreakReason) = nullptr;
-	inline void(*LeaveDebugger)() = nullptr;
+	inline void(*LeaveDebugger)(lua_State*) = nullptr;
 };

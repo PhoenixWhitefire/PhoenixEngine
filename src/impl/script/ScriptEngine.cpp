@@ -97,7 +97,8 @@ ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
 
     VMs[Name] = LuauVM{
         .Name = Name,
-        .MainThread = L::CreateMainThread(Name)
+        .MainThread = L::CreateMainThread(Name),
+        .AllowedExecutionTime = DefaultVMAllowedExecutionTime,
     };
 
     return VMs[Name];
@@ -110,6 +111,7 @@ ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
     ParallelVM* vm = new ParallelVM;
     vm->Name = name;
     vm->MainThread = L::CreateMainThread(name);
+    vm->AllowedExecutionTime = DefaultVMAllowedExecutionTime;
 
     L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(vm->MainThread);
     vmud->PVM = vm;
@@ -1524,9 +1526,12 @@ void ScriptEngine::L::DumpStacktrace(
     {
         std::string line = "from ";
 
-        if (ar.source)
-            line.append(ar.short_src);
-        
+        if (ar.short_src)
+        {
+            const char* shorter = strstr(ar.short_src, "scripts/");
+            line.append(shorter ? shorter : ar.short_src);
+        }
+
         if (ar.currentline > 0)
         {
             line.append(":");
@@ -1870,11 +1875,12 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     cb->interrupt = [](lua_State* L, int GcState)
         {
             StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+            LuauVM& vm = vmud->PVM ? *vmud->PVM : VMs[vmud->VM];
 
-            if (GetRunningTime() - vmud->LastResumed > ScriptEngine::ScriptTimeoutLength)
+            if (GetRunningTime() - vmud->LastResumed > vm.AllowedExecutionTime)
             {
-                vmud->LastResumed = GetRunningTime(); // interrupt may recurse due to GC
-                luaL_error(L, "Script VM was timed-out for running for more than %lf seconds without yielding (GC: %i)", ScriptEngine::ScriptTimeoutLength, GcState);
+                vmud->LastResumed = GetRunningTime() + 0.5; // interrupt may recurse due to GC
+                luaL_error(L, "Script VM was timed-out for running for more than %lf seconds without yielding (GC: %i)", vm.AllowedExecutionTime, GcState);
             }
         };
 
@@ -1950,7 +1956,7 @@ static lua_Status finishCoroutine(lua_State* L, int status)
         breakHere(L, DebugBreakReason::Error);
 
     if (LeaveDebugger)
-        LeaveDebugger();
+        LeaveDebugger(L);
 
     return (lua_Status)status;
 }

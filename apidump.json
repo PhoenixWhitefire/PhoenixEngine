@@ -315,7 +315,7 @@
           "CompileToBytecode": "(String, Integer?, Integer?) -> (Buffer)",
           "CreateVM": "(String) -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
-          "SetScriptTimeoutLength": "(Double) -> ()"
+          "SetVMAllowedExecutionTime": "(String, Double) -> ()"
         }
       },
       "Sound": {

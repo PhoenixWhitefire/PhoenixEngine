@@ -453,7 +453,7 @@ export type EcScriptEngine = {
   CompileToBytecode: (self: EcScriptEngine, Source: string, OptimizationLevel: number?, DebugLevel: number?) -> (buffer),
   CreateVM: (self: EcScriptEngine, VmName: string) -> (),
   RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
-  SetScriptTimeoutLength: (self: EcScriptEngine, Length: number) -> (),
+  SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
 }
 export type EcSound = {
   read FinishedLoading: boolean ,

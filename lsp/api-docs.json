@@ -1862,8 +1862,8 @@
   "@phoenix/globaltype/ScriptEngine.RunInVM": {
     "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
   },
-  "@phoenix/globaltype/ScriptEngine.SetScriptTimeoutLength": {
-    "documentation": "Sets how long script coroutines can run for, in seconds, before yielding. Scripts that overrun this duration will error"
+  "@phoenix/globaltype/ScriptEngine.SetVMAllowedExecutionTime": {
+    "documentation": "Sets how long script coroutines are allowed to run for, in seconds, before yielding. Scripts that overrun this duration will error"
   },
   "@phoenix/globaltype/SharedBuffer.Pull": {
     "documentation": "* Copies a section of the shared buffer into a regular `buffer` object\n"

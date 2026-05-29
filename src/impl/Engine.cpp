@@ -156,7 +156,7 @@ void Engine::LoadConfiguration()
 
 	VSync = readFromConfiguration("VSync", false);
 	FpsCap = readFromConfiguration("FpsCap", 60);
-	ScriptEngine::ScriptTimeoutLength = readFromConfiguration("ScriptTimeoutLength", 10.0);
+	ScriptEngine::DefaultVMAllowedExecutionTime = readFromConfiguration("DefaultVMAllowedExecutionTime", 10.0);
 
 	std::string_view resDir = readFromConfiguration("ResourcesDirectory", std::string_view("<NOT_SET>"));
 
@@ -897,23 +897,23 @@ static void ensureDataModelValid(const ObjectHandle& DataModel)
 
 void Engine::BindDataModel(const ObjectHandle& NewDataModel)
 {
-	ZoneScoped;
-	ensureDataModelValid(NewDataModel);
+    ZoneScoped;
+    ensureDataModelValid(NewDataModel);
 
-	if (DataModelRef)
-	{
-		EcDataModel* dm = DataModelRef->FindComponent<EcDataModel>();
-		PHX_ENSURE(dm);
+    if (DataModelRef)
+    {
+        EcDataModel* dm = DataModelRef->FindComponent<EcDataModel>();
+        PHX_ENSURE(dm);
 
-		dm->UnbindServices();
-	}
+        dm->UnbindServices();
+    }
 
-	DataModelRef = NewDataModel;
-	WorkspaceRef = NewDataModel->FindChild("Workspace");
-	assert(WorkspaceRef.Dereference());
+    DataModelRef = NewDataModel;
+    WorkspaceRef = NewDataModel->FindChild("Workspace");
+    assert(WorkspaceRef.Dereference());
 
-	ObjectManager.DataModel = NewDataModel->ObjectId;
-	NewDataModel->FindComponent<EcDataModel>()->BindServices();
+    ObjectManager.DataModel = NewDataModel->ObjectId;
+    NewDataModel->FindComponent<EcDataModel>()->BindServices();
 }
 
 static void dispatchParallelVMs(Engine* engine)

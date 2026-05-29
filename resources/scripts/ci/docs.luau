@@ -7,7 +7,7 @@ task.delay(20, function()
 	game:Close(1)
 end)
 
-game:GetService("ScriptEngine"):SetScriptTimeoutLength(20)
+game:GetService("ScriptEngine"):SetVMAllowedExecutionTime(_VMNAME, 20)
 
 local BASE_PATH = "./wikigen"
 local DOCS_PREFIX = "phoenix"

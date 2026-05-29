@@ -23,6 +23,7 @@
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <tinyfiledialogs.h>
 #include <lualib.h>
+#include <luau/VM/src/lstate.h>
 #include <fstream>
 #include <set>
 
@@ -179,7 +180,7 @@ static char* bufferInitialize(uint32_t capacity, const std::string_view& value)
 
 #include "script/ScriptEngine.hpp"
 static void debugBreakHook(lua_State*, lua_Debug*, ScriptEngine::L::DebugBreakReason);
-static void debuggerLeaveCallback();
+static void debuggerLeaveCallback(lua_State*);
 
 static bool canBreakLineAtChar(char c)
 {
@@ -734,7 +735,10 @@ static void renderTextEditors()
         tab.WasPreviouslyVisible = true;
 
         if (tab.DebuggerCurrentLine > 0)
+        {
             tab.Editor.SetCurrentLineIndicator(tab.DebuggerCurrentLine);
+            tab.DebuggerCurrentLine = 0;
+        }
 
         tab.Editor.Render("TextEditor");
 
@@ -5134,24 +5138,20 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
             valueString = "nil";
             break;
         }
-        case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TSTRING: case LUA_TVECTOR:
+        case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TSTRING: case LUA_TVECTOR: case LUA_TUSERDATA:
         {
-            if (!CanEdit)
+            if (!CanEdit || lua_type(L, -1) == LUA_TUSERDATA)
             {
-                switch (lua_type(L, -1))
-                {
-                case LUA_TBOOLEAN: case LUA_TNUMBER: case LUA_TVECTOR:
-                {
-                    valueString = luaL_tolstring(L, -1, nullptr);
-                    lua_pop(L, 1);
-                    break;
-                }
-                default:
-                {
-                    assert(lua_type(L, -1) == LUA_TSTRING);
-                    valueString = std::format("\"{}\"", lua_tostring(L, -1));
-                }
-                }
+                int prevStatus = lua_status(L);
+
+                L->status = LUA_OK;
+                valueString = luaL_tolstring(L, -1, nullptr);
+                L->status = prevStatus;
+
+                lua_pop(L, 1);
+
+                if (lua_type(L, -1) == LUA_TSTRING)
+                    valueString = std::format("\"{}\"", valueString);
             }
             else
             {
@@ -5262,6 +5262,7 @@ static bool InDebugger = false;
 static ImGuiContext* debuggerContext = nullptr;
 static ImGuiContext* prevContext = nullptr;
 static int prevCursorMode = GLFW_CURSOR_NORMAL;
+static int DebuggerStackStart = 0;
 
 static void resetScriptTimeouts()
 {
@@ -5288,6 +5289,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 {
     using namespace ScriptEngine::L;
     ZoneScoped;
+
     resetScriptTimeouts();
 
     if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt)
@@ -5358,6 +5360,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
         engine->RendererContext.FrameBuffer.Unbind();
         glDisable(GL_FRAMEBUFFER_SRGB);
+
+        DebuggerStackStart = lua_gettop(L);
     }
     else
     {
@@ -5402,6 +5406,13 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
         otherTab.DebuggerCurrentLine = 0;
         otherTab.JumpToLine = 0;
         otherTab.SetUIFocus = false;
+    }
+
+    if (Reason == ScriptEngine::L::DebugBreakReason::Error)
+    {
+        tab.Editor.SetErrorMarkers({
+            { ar->currentline, errorMessage }
+        });
     }
 
     tab.DebuggerCurrentLine = ar->currentline;
@@ -5976,7 +5987,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
         ScriptEngine::L::DebugBreak = nullptr;
 }
 
-static void debuggerLeaveCallback()
+static void debuggerLeaveCallback(lua_State* /* L */)
 {
     if (!InDebugger)
         return;
@@ -6001,7 +6012,12 @@ static void debuggerLeaveCallback()
     glEnable(GL_FRAMEBUFFER_SRGB);
 
     for (TextEditorTab& tab : s_TextEditors)
+    {
         tab.Editor.SetCurrentLineIndicator(0);
+        tab.Editor.SetErrorMarkers({});
+    }
+
+    //lua_settop(L, DebuggerStackStart);
 
     s_QueuedDebuggerAction.reset();
     InDebugger = false;

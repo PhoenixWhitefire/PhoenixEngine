@@ -5,11 +5,11 @@
 task.wait(0.04)
 
 task.delay(15, function()
-	warn("Tests appear to have hung - exiting")
-	game:Close(1)
+    warn("Tests appear to have hung - exiting")
+    game:Close(1)
 end)
 
-game:GetService("ScriptEngine"):SetScriptTimeoutLength(15)
+game:GetService("ScriptEngine"):SetVMAllowedExecutionTime(_VMNAME, 15)
 
 local start = os.clock()
 
@@ -18,9 +18,9 @@ local Types = require("./test-types")
 local testEntries = fs.listdir("scripts/ci/tests")
 
 type TestsNode = {
-	IsTest: true,
-	Name: string,
-	Callback: () -> ()
+    IsTest: true,
+    Name: string,
+    Callback: () -> ()
 } | { IsTest: nil, [number]: TestsNode }
 
 local tests: TestsNode = { IsTest = nil }
@@ -28,30 +28,30 @@ local curGroup: TestsNode? = nil
 local testCount = 0
 
 local function contextify(v)
-	if typeof(v) == "string" then
-		return `.{v}`
-	else
-		return `[{v}]`
-	end
+    if typeof(v) == "string" then
+        return `.{v}`
+    else
+        return `[{v}]`
+    end
 end
 
 local function testAreDeepEqual(selfv: unknown, expectedv: unknown, context: string?)
-	context = context or ""
+    context = context or ""
 	
-	if typeof(selfv) ~= typeof(expectedv) or typeof(selfv) ~= "table" then
-		assert(selfv == expectedv, `FAILTEST:Value{context} was '{selfv}' ({ typeof(selfv) }) and not '{expectedv}' ({typeof(expectedv)})`)
-	else
-		assert(typeof(selfv) == "table")
-		assert(typeof(expectedv) == "table")
+    if typeof(selfv) ~= typeof(expectedv) or typeof(selfv) ~= "table" then
+        assert(selfv == expectedv, `FAILTEST:Value{context} was '{selfv}' ({ typeof(selfv) }) and not '{expectedv}' ({typeof(expectedv)})`)
+    else
+        assert(typeof(selfv) == "table")
+        assert(typeof(expectedv) == "table")
 
-		for i, v in expectedv do
-			testAreDeepEqual(selfv[i], v, context .. contextify(i))
-		end
+        for i, v in expectedv do
+            testAreDeepEqual(selfv[i], v, context .. contextify(i))
+        end
 		
-		for i, v in selfv do
-			testAreDeepEqual(v, expectedv[i], context .. contextify(i))
-		end
-	end
+        for i, v in selfv do
+            testAreDeepEqual(v, expectedv[i], context .. contextify(i))
+        end
+    end
 end
 
 local expectationMt = {}
@@ -100,7 +100,7 @@ function expectNeverMt.__index(self, check)
 	assert(expectationMt[check], `invalid index {check}`)
 	
 	return function(_, ...)
-		local success, err: string | any = pcall(function(...)
+		local success, err = pcall(function(...)
 			return expectationMt[check](self, ...)
 		end, ...)
 		
@@ -111,7 +111,7 @@ function expectNeverMt.__index(self, check)
 			end
 			error(errstr)
 		else
-			assert(err:find("FAILTEST:"), err)
+			assert(tostring(err):find("FAILTEST:"), tostring(err))
 			-- the test SHOULD have failed for `.never` to succeed
 		end
 	end
