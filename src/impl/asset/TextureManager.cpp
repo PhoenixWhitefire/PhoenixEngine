@@ -9,6 +9,7 @@
 #include "asset/TextureManager.hpp"
 #include "ThreadManager.hpp"
 #include "Utilities.hpp"
+#include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -90,26 +91,34 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	else
 		Format = NumChannelsToFormat[texture.NumColorChannels];
 
-	glBindTexture(GL_TEXTURE_2D, texture.GpuId);
+    GLenum internalFormat;
+    if (texture.IsHdr)
+        internalFormat = texture.NumColorChannels == 4 ? GL_RGBA16F : GL_RGB16F;
+    else if (texture.IsLinearSpace)
+        internalFormat = GL_SRGB8_ALPHA8;
+    else
+        internalFormat = GL_RGBA;
+
+    glBindTexture(GL_TEXTURE_2D, texture.GpuId);
 
     // TODO: detect based on texture? i have one that needs this, and the Missing checkerboard depends on it too
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	{
-		ZoneScopedN("UploadData");
+    {
+        ZoneScopedN("UploadData");
 
-		glTexImage2D(
-			GL_TEXTURE_2D,
-			0,
-			texture.IsLinearSpace ? GL_SRGB8_ALPHA8 : GL_RGBA,
-			texture.Width,
-			texture.Height,
-			0,
-			Format,
-			GL_UNSIGNED_BYTE,
-			texture.TMP_ImageByteData
-		);
-	}
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            internalFormat,
+            texture.Width,
+            texture.Height,
+            0,
+            Format,
+            texture.IsHdr ? GL_FLOAT : GL_UNSIGNED_BYTE,
+            texture.TMP_ImageByteData
+        );
+    }
 
 	{
 		ZoneScopedN("GenerateMipMaps");
@@ -124,7 +133,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
 	// 11/05/2026: Check is mirrored in `EcEnvironmentService::ChangeSkybox`
 	if (texture.ImagePath.find("Sky") == std::string::npos && texture.ImagePath[0] != '!')
 	{
-		free(texture.TMP_ImageByteData);
+		Memory::Free(texture.TMP_ImageByteData);
 		texture.TMP_ImageByteData = nullptr;
 	}
 
@@ -252,19 +261,34 @@ static void emloadTexture(
 	ZoneScoped;
 	AsyncTexture->NumColorChannels = 4;
 
-	uint8_t* data = nullptr;
+	void* data = nullptr;
 
 	if (ActualPath[0] != '!')
 	{
 		ZoneScopedN("stbi_load");
 
-		data = stbi_load(
-			ActualPath.c_str(),
-			&AsyncTexture->Width,
-			&AsyncTexture->Height,
-			&AsyncTexture->NumColorChannels,
-			0
-		);
+        if (stbi_is_hdr(ActualPath.c_str()))
+        {
+			data = stbi_loadf(
+                ActualPath.c_str(),
+                &AsyncTexture->Width,
+                &AsyncTexture->Height,
+                &AsyncTexture->NumColorChannels,
+                0
+            );
+            AsyncTexture->IsHdr = true;
+        }
+        else
+        {
+            data = stbi_load(
+                ActualPath.c_str(),
+                &AsyncTexture->Width,
+                &AsyncTexture->Height,
+                &AsyncTexture->NumColorChannels,
+                0
+            );
+            AsyncTexture->IsHdr = false;
+        }
 	}
 	else
 	{
@@ -491,25 +515,10 @@ void TextureManager::FinalizeAsyncLoadedTextures()
 		image.NumColorChannels = loadedImage.NumColorChannels;
 		image.FailureReason = loadedImage.FailureReason;
 		image.LoadedAsynchronously = loadedImage.LoadedAsynchronously;
+        image.IsHdr = loadedImage.IsHdr;
 
-		if (image.Status == Texture::LoadStatus::Succeeded)
-		{
-			size_t bufSize = (size_t)image.Width * (size_t)image.Height * (size_t)image.NumColorChannels;
-
-			image.TMP_ImageByteData = (uint8_t*)malloc(bufSize);
-
-			PHX_ENSURE_MSG(image.TMP_ImageByteData, std::format(
-				"`malloc` failed in ::FinalizeAsyncLoadedTextures (Requested amount was {} bytes)",
-				bufSize
-			));
-
-			// if image fails to load this will be NULL
-			if (loadedImage.TMP_ImageByteData)
-				memcpy(image.TMP_ImageByteData, loadedImage.TMP_ImageByteData, bufSize);
-
-			if (loadedImage.ImagePath[0] != '!' && image.ImagePath[0] != '!') // do not try to free builtin textures
-				free(loadedImage.TMP_ImageByteData);
-		}
+        if (image.Status == Texture::LoadStatus::Succeeded)
+            image.TMP_ImageByteData = loadedImage.TMP_ImageByteData;
 
 		m_UploadTextureToGpu(image);
 		

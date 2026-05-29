@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <cassert>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <atomic>

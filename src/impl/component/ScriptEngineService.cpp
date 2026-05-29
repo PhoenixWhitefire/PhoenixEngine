@@ -54,6 +54,9 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
 
                 if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
                 {
+                    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+                    vmud->LastResumed = GetRunningTime();
+
                     int result = lua_resume(ML, ML, 0);
                     const char* err = nullptr;
 

@@ -7,11 +7,11 @@
 
 #include "geometry/Physics.hpp"
 #include "geometry/IntersectionLib.hpp"
-#include "Timing.hpp"
-#include "Stl.hpp"
 #include "component/Transform.hpp"
 #include "component/Workspace.hpp"
 #include "component/RigidBody.hpp"
+#include "Timing.hpp"
+#include "Stl.hpp"
 
 struct Collision
 {

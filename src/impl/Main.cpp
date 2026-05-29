@@ -83,7 +83,6 @@ catch (...)                                                                     
 #include "UserInput.hpp"
 #include "Utilities.hpp"
 #include "Version.hpp"
-#include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 

@@ -1102,7 +1102,7 @@ void Engine::Start()
 
                     //glGenerateMipmap(GL_TEXTURE_2D);
 
-                    free(texture.TMP_ImageByteData);
+                    Memory::Free(texture.TMP_ImageByteData);
                     texture.TMP_ImageByteData = nullptr;
                 }
 
