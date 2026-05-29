@@ -20,12 +20,12 @@ namespace DeveloperTools
 	inline bool Initialized = false;
 
 	inline bool DocumentationShown = false;
-    inline bool ExplorerShown = true;
+    inline bool ExplorerShown = false;
     inline bool InfoShown = false;
     inline bool MaterialsShown = false;
-    inline bool PropertiesShown = true;
+    inline bool PropertiesShown = false;
     inline bool RendererShown = false;
-    inline bool ScriptsShown = true;
+    inline bool ScriptsShown = false;
     inline bool SettingsShown = false;
     inline bool ShadersShown = false;
 };

@@ -4930,8 +4930,12 @@ void DeveloperTools::SetExplorerRoot(const ObjectHandle NewRoot)
 void DeveloperTools::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
 {
     Selections = NewSelections;
-    ExplorerShouldSeekToCurrentSelection = true;
-    DeveloperTools::ExplorerShown = true;
+
+    if (NewSelections.size() > 0)
+    {
+        ExplorerShouldSeekToCurrentSelection = true;
+        DeveloperTools::ExplorerShown = true;
+    }
 }
 
 const std::vector<ObjectHandle>& DeveloperTools::GetExplorerSelections()

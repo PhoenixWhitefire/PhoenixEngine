@@ -92,9 +92,9 @@ local ToolOrder = {
 }
 
 for _, tool in DeveloperTools:GetToolNames() do
-	if not table.find(ToolOrder, tool) then
-		table.insert(ToolOrder, tool)
-	end
+    if not table.find(ToolOrder, tool) then
+        table.insert(ToolOrder, tool)
+    end
 end
 
 local WasHoldingDownM1 = false
@@ -123,10 +123,6 @@ for k: keyof<typeof(EditorPreferences)>, v in EditorPreferences do
 end
 
 EditorPreferences = savedEditorPreferences :: typeof(EditorPreferences)
-
-for _, devTool in EditorPreferences.DevToolsOpen do
-	DeveloperTools:SetToolEnabled(devTool, true)
-end
 
 local commandBarSavedHistory = if fs.isfile("./editor/command-history.json") then json.parse(assert(fs.read("./editor/command-history.json"))) else {}
 assert(typeof(commandBarSavedHistory) == "table")
@@ -954,15 +950,21 @@ end
 local WasToolEnabled = {}
 local didFocusCodeEditorSetting = false
 
-local function saveSettings()
-	local success, error = pcall(function()
-		EditorPreferences.DevToolsOpen = {}
+local function updateDevToolsOpenState()
+    EditorPreferences.DevToolsOpen = {}
 
-		for _, name in DeveloperTools:GetToolNames() do
-			if DeveloperTools:IsToolEnabled(name) then
-				table.insert(EditorPreferences.DevToolsOpen, name)
-			end
-		end
+    for _, name in DeveloperTools:GetToolNames() do
+        if DeveloperTools:IsToolEnabled(name) then
+            table.insert(EditorPreferences.DevToolsOpen, name)
+        end
+    end
+end
+
+local function saveSettings()
+    local success, error = pcall(function()
+        if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
+            updateDevToolsOpenState()
+        end
 
 		fs.write("./editor/settings.json", json.encode(EditorPreferences))
 
@@ -1914,7 +1916,7 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
 	end
 
     if CurrentStage == "ProjectPlaying" and Message:find("Script VM was timed-out") and EditorPreferences.CancelPlaytestWhenScriptTimesOut then
-        Engine:ShowMessageBox("Playtest cancelled", "The playtest was cancelled because of a script timing-out.\nYou may disable this behavior in Editor Settings", "ok", "error")
+        Engine:ShowMessageBox("Playtest cancelled", "The playtest was cancelled because of a script timing-out.\nYou may disable this behavior in Editor Settings.", "ok", "error")
         task.defer(changeStageTo, "ProjectEditing" :: "ProjectEditing")
     end
 
@@ -2029,12 +2031,12 @@ local function runCurrentCommand()
 		CommandBarCommand = `print({ CommandBarCommand:sub(2, #CommandBarCommand) })`
 	end
 
-    local callSuccess, runSuccessOrCallError = pcall(function()
+    local callSuccess, runSuccessOrCallError, callError = pcall(function()
         return ScriptEngine:RunInVM(if CurrentStage == "ProjectEditing" then GameEditingVM else GameVM, CommandBarCommand, "@@projres/scripts/!CommandBar")
     end)
 
     if not callSuccess then
-        Logging:Write(`Editor experienced an error while running your code: { runSuccessOrCallError }`, Enum.LogType.Error)
+        Logging:Write(`Editor experienced an error while running your code: { runSuccessOrCallError }: { callError }`, Enum.LogType.Error)
     end
 
     if not callSuccess or not runSuccessOrCallError then
@@ -2562,10 +2564,6 @@ function Stages.SelectProject_Leave(DeltaTime)
 	if EditorPreferences.ClearOutputOnProjectOpen then
 		Log = {}
 	end
-
-	for _, tool in EditorPreferences.DevToolsOpen do
-		DeveloperTools:SetToolEnabled(tool, true)
-	end
 end
 
 local SelectorHoveringOver: number? = nil
@@ -2910,6 +2908,10 @@ function Stages.ProjectEditing_Enter(PreviousStage: Stage)
 			ProjectClosedByDataModelConnection = nil
 			changeStageTo("SelectProject")
 		end)
+
+        for _, name in EditorPreferences.DevToolsOpen do
+            DeveloperTools:SetToolEnabled(name, true)
+        end
 	end
 
 	return nil
@@ -2938,6 +2940,8 @@ function Stages.ProjectEditing(DeltaTime: any)
 end
 
 function Stages.ProjectEditing_Leave(NextStage)
+    updateDevToolsOpenState()
+
 	if NextStage == "ProjectPlaying" then
 		if EditorPreferences.ClearOutputOnPlaytest then
 			Log = {}

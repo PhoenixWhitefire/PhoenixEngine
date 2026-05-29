@@ -114,14 +114,18 @@ jobs:
       if: matrix.build_type == 'Release' && runner.os == 'Windows'
       run: cmake --build Vendor/tracy/profiler/build --config Release -j3 -t tracy-profiler
 
-    - name: Move executable (Windows)
+    - name: Move executable and Wiki (Windows)
       if: runner.os == 'Windows'
       shell: cmd
-      run: move "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" ".\\PhoenixEngine.exe"
+      run: |
+        move "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" ".\\PhoenixEngine.exe"
+        move ".github\\wiki" ".\\wiki"
 
-    - name: Move executable (Linux)
+    - name: Move executable and Wiki (Linux)
       if: runner.os == 'Linux'
-      run: mv "x64/${{ matrix.build_type }}/PhoenixEngine" "./PhoenixEngine"
+      run: |
+        mv "x64/${{ matrix.build_type }}/PhoenixEngine" "./PhoenixEngine"
+        mv ".github/wiki" "./wiki"
 
     - name: Upload build artifact (Windows)
       if: runner.os == 'Windows'
@@ -130,14 +134,16 @@ jobs:
         name: "Phoenix_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
           resources/
-          wikigen/
-          .github/
+          plugins/
+          wiki/
           lsp/
           apidump.json
           default-layout.ini
           debugger-layout.ini
           phoenix.conf
           Vendor/tracy/profiler/build/Release/tracy-profiler.exe
+          README.md
+          ADDITIONAL-COPYRIGHT-NOTICES.txt
           PhoenixEngine.exe
         retention-days: 7
 
@@ -148,14 +154,16 @@ jobs:
         name: "Phoenix_${{ runner.os }}-${{ matrix.build_type }}"
         path: |
           resources/
-          wikigen/
-          .github/
+          plugins/
+          wiki/
           lsp/
           apidump.json
           default-layout.ini
           debugger-layout.ini
           phoenix.conf
           Vendor/tracy/profiler/build/tracy-profiler
+          README.md
+          ADDITIONAL-COPYRIGHT-NOTICES.txt
           PhoenixEngine
         retention-days: 7
 

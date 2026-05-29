@@ -60,7 +60,7 @@ static uint32_t startLoadingSkyboxCubemap(EcEnvironmentService* env)
             0,
             GL_RED,
             GL_UNSIGNED_BYTE,
-            texManager->GetTextureResource(texManager->LoadFromPath("!White")).TMP_ImageByteData
+            nullptr
         );
     }
 
