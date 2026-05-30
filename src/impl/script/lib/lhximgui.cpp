@@ -199,9 +199,15 @@ static int imgui_windowappearing(lua_State* L)
 
 static int imgui_itemclicked(lua_State* L)
 {
-    int button = luaL_optinteger(L, 1, 0);
-    if (button < 0 || button > ImGuiMouseButton_Middle)
+    int button = luaL_optinteger(L, 1, GLFW_MOUSE_BUTTON_LEFT);
+    if (button < 0 || button > GLFW_MOUSE_BUTTON_3)
         luaL_error(L, "invalid mouse button '%i'", button);
+
+    // `IsItemClicked` takes a `ImGuiMouseButton`, and we have a `Enum.MouseButton` that is GLFW mouse buttons
+    static_assert((ImGuiMouseButton_Left == GLFW_MOUSE_BUTTON_LEFT)
+        && (ImGuiMouseButton_Right       == GLFW_MOUSE_BUTTON_RIGHT)
+        && (ImGuiMouseButton_Middle      == GLFW_MOUSE_BUTTON_MIDDLE)
+    );
 
     lua_pushboolean(L, ImGui::IsItemClicked(button));
 	return 1;

@@ -10,7 +10,8 @@ struct UserdataTag_
         SharedBuffer = 2,
         AtomicInteger = 3,
 
-        __count
+        __count,
+        __tag_limit = 127,
     };
 };
 

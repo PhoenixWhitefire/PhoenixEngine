@@ -1,0 +1,36 @@
+-- Configuration.luau, 29/05/2026
+
+return table.freeze({
+    RecentProjectsPath = "./editor/recent-projects.json",
+    ReimportableModelTag = "Ed_ReimportableModel",
+    EditorBuild = 4,
+    EditorScriptsAllowedExecutionTime = 30,
+    GitHubUrl = "https://github.com/PhoenixWhitefire/PhoenixEngine",
+
+    CoreAssets = {
+        "shaders/error.shp",
+        "shaders/error.frag",
+        "shaders/ui.shp",
+        "shaders/ui.vert",
+        "shaders/ui.frag",
+        "shaders/worldUber.shp",
+        "shaders/worldUber.vert",
+        "shaders/worldUber.frag",
+        "shaders/worldUber.geom",
+        "shaders/worldUberSkinned.shp",
+        "shaders/worldUberSkinned.vert",
+        "shaders/worldUberTriProjected.shp",
+        "shaders/skybox.shp",
+        "shaders/skybox.vert",
+        "shaders/skybox.frag",
+        "shaders/particle.shp",
+        "shaders/particle.vert",
+        "shaders/particle.frag",
+        "shaders/postprocessing.shp",
+        "shaders/postprocessing.vert",
+        "shaders/postprocessing.frag",
+        "shaders/boxframe.shp",
+        "shaders/boxframe.frag",
+        "shaders/include/worldCommon.frag",
+    },
+})
