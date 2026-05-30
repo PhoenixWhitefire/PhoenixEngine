@@ -11,6 +11,7 @@ local Engine = game:GetService("Engine")
 local Configuration = require("@ed/Configuration")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
+local State = require("@ed/State")
 local Types = require("@ed/Types")
 local Git = require("@ed/Git")
 
@@ -70,7 +71,7 @@ local function compileScriptBytecodeRecursive(dir)
     end
 end
 
-local function exportProject(Editor: { SaveProject: () -> (), Project: Types.Project })
+local function exportProject(Editor: { SaveProject: () -> () })
     Editor.SaveProject()
 
     local enginePath = findEnginePath()
@@ -81,7 +82,7 @@ local function exportProject(Editor: { SaveProject: () -> (), Project: Types.Pro
     end
 
     imgui.openpopup("Export Project")
-    local exportName = Editor.Project.Name
+    local exportName = State.Project.Name
     local exportDir = fs.promptopenfolder("Choose export directory")
     local exportTo = `{exportDir}/{exportName}`
 
@@ -179,7 +180,7 @@ local function exportProject(Editor: { SaveProject: () -> (), Project: Types.Pro
     fs.copy("@project", exportTo)
     fs.remove(`{ exportTo }/phoenix.editor`)
 
-    fs.copy(enginePath, `{exportTo}/{Editor.Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)
+    fs.copy(enginePath, `{exportTo}/{State.Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)
 
     for _, a in Configuration.CoreAssets do
         local path = `{ exportTo }/resources/{ a }`
@@ -273,7 +274,7 @@ local function getGitStatus()
     end
 end
 
-function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, CurrentStage: Types.Stage, Project: Types.Project, OpenCodeEditor: () -> (), SaveProject: () -> (), SaveToRecents: (string) -> (), ChangeStageTo: (Types.Stage) -> () }, dt: number)
+function CommonUI.RenderMainMenuBar(dt: number)
     if ErrorMessage.Queue[1] then
         local front = ErrorMessage.Queue[1]
 
@@ -290,7 +291,7 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
     end
 
     local sf = imgui.scalefactor()
-    local pushedCol = Editor.CurrentStage == "ProjectPlaying"
+    local pushedCol = State.CurrentStage == "ProjectPlaying"
 
     if pushedCol then
         imgui.pushstylecolor(13, {0, 56/270, 15/270, 1})
@@ -313,7 +314,7 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
     local openSettingsWindow = false
 
     if imgui.beginmenu("File") then
-        if Editor.CurrentStage == "ProjectEditing" then
+        if State.CurrentStage == "ProjectEditing" then
             if imgui.menuitem("Undo", History.CanUndo) then
                 History:Undo()
             end
@@ -343,7 +344,7 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
             end
         end
 
-        if imgui.menuitem("Save", Editor.CurrentStage == "ProjectEditing") then
+        if imgui.menuitem("Save", State.CurrentStage == "ProjectEditing") then
             Editor.SaveProject()
         end
 
@@ -354,7 +355,7 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
                 task.defer(function()
                     imgui.openpopup("Project Settings")
 
-                    local newProjectName = Editor.Project.Name
+                    local newProjectName = State.Project.Name
 
                     while true do
                         if not imgui.beginpopupmodal("Project Settings", true) then
@@ -367,16 +368,16 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
                             imgui.text("Only a-z, A-Z, 0-9 (alphanumeric) is allowed")
                         end
 
-                        if newProjectName ~= Editor.Project.Name and imgui.button("Save new name") then
+                        if newProjectName ~= State.Project.Name and imgui.button("Save new name") then
                             local buttonSelection = Engine:ShowMessageBox("Rename project?", "Are you sure you want to rename the project?", "yesno")
 
                             if buttonSelection == 1 then
-                                local prevName = Editor.Project.Name
+                                local prevName = State.Project.Name
 
-                                fs.rename(`{ Preferences.ProjectsDirectory }/{ Editor.Project.Name }`, newProjectName)
+                                fs.rename(`{ Preferences.ProjectsDirectory }/{ State.Project.Name }`, newProjectName)
                                 fs.definealias("project", `{ Preferences.ProjectsDirectory }/{ newProjectName }`)
 
-                                Editor.Project.Name = newProjectName
+                                State.Project.Name = newProjectName
 
                                 local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
                                 assert(typeof(conf) == "table")
@@ -391,7 +392,7 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
                                 table.remove(Editor.RecentProjects, table.find(Editor.RecentProjects, prevName))
                                 Editor.SaveToRecents(newProjectName)
                             else
-                                newProjectName = Editor.Project.Name
+                                newProjectName = State.Project.Name
                             end
                         end
 
@@ -433,32 +434,35 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
                 end)
             end
 
-            if Preferences.GitIntegration and imgui.beginmenu("Git", Git.Available) then
-                if not Editor.Project.HasGitRepository then
-                    if imgui.menuitem("Initialize repository") then
-                        task.defer(function()
-                            print(fs.execute(`git -C "{ fs.resolvepath("@project") }" init`))
-                            Editor.Project.HasGitRepository = fs.isdirectory("@project/.git")
+            if Preferences.GitIntegration then
+                if imgui.beginmenu("Git", Git.Available) then
+                    if not State.Project.HasGitRepository then
+                        if imgui.menuitem("Initialize repository") then
+                            task.defer(function()
+                                print(fs.execute(`git -C "{ fs.resolvepath("@project") }" init`))
+                                State.Project.HasGitRepository = fs.isdirectory("@project/.git")
 
-                            if Editor.Project.HasGitRepository then
-                                fs.write("@project/.gitignore", "# Generated by Phoenix Engine Editor\n\nphoenix.editor\n")
-                            end
-                        end)
+                                if State.Project.HasGitRepository then
+                                    fs.write("@project/.gitignore", "# Generated by Phoenix Engine Editor\n\nphoenix.editor\n")
+                                end
+                            end)
+                        end
+                    else
+                        if imgui.menuitem("Commit") then
+                            task.defer(function()
+                                Editor.SaveProject()
+                                getGitStatus()
+                                OpenGitCommitMenu = true
+                            end)
+                        end
                     end
-                else
-                    if imgui.menuitem("Commit") then
-                        task.defer(function()
-                            Editor.SaveProject()
-                            getGitStatus()
-                            OpenGitCommitMenu = true
-                        end)
-                    end
+
+                    imgui.endmenu()
                 end
 
-                imgui.endmenu()
-            end
-            if not Git.Available then
-                imgui.setitemtooltip("Git was not detected on your system, please ensure it is installed correctly")
+                if not Git.Available then
+                    imgui.setitemtooltip("Git was not detected on your system, please ensure it is installed correctly")
+                end
             end
 
             if imgui.menuitem("Export") then
@@ -760,6 +764,445 @@ function CommonUI.RenderMainMenuBar(Editor: { RecentProjects: { string }, Curren
         wasSettingsOpen = false
         saveSettings()
     end
+end
+
+local function renderOutput()
+    local renderOutput = false
+    local outputBegan = false
+    if EditorPreferences.ToolsOpen.Output then
+        renderOutput, EditorPreferences.ToolsOpen.Output = imgui.begin("Output", "h", true)
+        outputBegan = true
+    end
+
+    if renderOutput then
+        local logMessageHoveringWip: number = -1
+        local smid = 0
+        local rightClickedLogMessage = false
+
+        for mi, message in Log do
+            imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
+
+            imgui.text(message.Time)
+
+            imgui.popstylecolor()
+
+            local LogColors = {
+                [Enum.LogType.None]    = { 1, 1, 1, 1 },
+                [Enum.LogType.Info]    = { 1, 1, 1, 1 },
+                [Enum.LogType.Warning] = { 255 / 255, 171 / 255, 61 / 255, 1 }, -- warning
+                [Enum.LogType.Error]   = { 255 / 255, 61 / 255, 61 / 255, 1 }   -- error
+            }
+
+            local logColor = LogColors[message.Type]
+            imgui.pushstylecolor(0, logColor)
+            imgui.pushstylecolor(52, logColor)
+
+            for smi, subMessage in message.Message do
+                smid += 1
+
+                if #subMessage.Content == 0 then
+                    continue
+                end
+
+                local prev = message.Message[smi - 1]
+                if not prev or prev.Newline then
+                    imgui.sameline()
+                end
+
+                local tooltip = subMessage.Tooltip
+                local context = message.Message[1].ExtraTags
+                if #context <= 2 or context == "LogContext:Main" then
+                    context = ""
+
+                    for _, m in message.Message do
+                        if #m.ExtraTags > 2 then
+                            context = m.ExtraTags
+                            tooltip = m.Tooltip
+                            break
+                        end
+                    end
+                end
+
+                local _
+                _, tooltip = canInteractWithLogSubMessage(context, subMessage.DirectValue)
+
+                if #tooltip == 0 then
+                    for _, m in message.Message do
+                        if #m.Tooltip > 0 then
+                            tooltip = m.Tooltip
+                            break
+                        end
+                    end
+                end
+
+                local canInteract = (message.Source or subMessage.CanInteract) and LogMessageHovering == smid and tooltip ~= "From Command Bar"
+                local doInteract = false
+
+                if type(subMessage.DirectValue) == "table" then
+                    if not message.OpenTables then
+                        message.OpenTables = {}
+                    end
+
+                    if not message.TablesWithAnyElements then
+                        message.TablesWithAnyElements = {}
+                    end
+
+                    local function hasAnyElements(t): boolean
+                        local cached = message.TablesWithAnyElements[t]
+
+                        if cached == nil then
+                            for _ in t do
+                                message.TablesWithAnyElements[t] = true
+                                return true
+                            end
+                            message.TablesWithAnyElements[t] = false
+                            return false
+                        else
+                            return cached
+                        end
+                    end
+
+                    local startX = imgui.cursorposition().x
+
+                    local function renderTable(t: { [unknown]: unknown }, depth: number, pos: vector?)
+                        local id = tostring(t)
+                        imgui.pushid(id)
+
+                        local open = message.OpenTables[t]
+                        local hasElements = hasAnyElements(t)
+
+                        if message.TablePrettyChangeOpen[id] ~= nil then
+                            imgui.setnextitemopen(message.TablePrettyChangeOpen[id])
+                            message.TablePrettyChangeOpen[id] = nil
+                        end
+
+                        local prev = imgui.cursorposition()
+                        local nodeOpen = imgui.treenode("##", "aw | ar | " .. (if depth == 0 then "dlf" else "")  .. (if hasElements then "" else " lf"))
+                        local after = imgui.cursorposition()
+
+                        if imgui.itemclicked() then
+                            message.TablePrettyChangeOpen[id] = not message.TablePrettyOpen[id]
+                        end
+
+                        imgui.dummy(64, 64)
+                        imgui.setcursorposition(prev + vector.create(16, 0))
+                        imgui.text(if (open and hasElements) then "{" else (if hasElements then "{...}" else "{}"))
+                        imgui.setcursorposition(after)
+
+                        message.TablePrettyOpen[id] = nodeOpen
+
+                        if nodeOpen then
+                            message.OpenTables[t] = true
+                            for k, v in t do
+                                imgui.setcursorposition(imgui.cursorposition() + vector.create(startX - 20, 0))
+
+                                local kstr = k
+                                if type(k) == "string" then
+                                    if not k:match("%W") then
+                                        kstr = k
+                                    else
+                                        kstr = `["{ k }"]`
+                                    end
+                                else
+                                    kstr = `[{ k }]`
+                                end
+
+                                if type(v) == "table" then
+                                    local tpos = imgui.cursorposition()
+                                    if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
+                                        imgui.treepop()
+                                    end
+
+                                    if imgui.itemclicked() then
+                                        local cid = tostring(v)
+                                        message.TablePrettyChangeOpen[cid] = not message.TablePrettyOpen[cid]
+                                    end
+
+                                    imgui.sameline()
+                                    imgui.setcursorposition(imgui.cursorposition() - vector.create(12, 0))
+                                    -- TODO luau cast
+                                    renderTable(v :: any, depth + 1, tpos)
+                                else
+                                    if typeof(k) == "GameObject" then
+                                        if imgui.textlink(kstr) then
+                                            DeveloperTools:SetExplorerSelections({ k })
+                                        end
+                                        imgui.sameline()
+                                        imgui.text(" = ")
+                                    else
+                                        if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
+                                            imgui.treepop()
+                                        end
+                                    end
+
+                                    imgui.sameline()
+                                    imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+
+                                    if typeof(v) == "GameObject" then
+                                        if imgui.textlink(tostring(v)) then
+                                            -- TODO luau cast
+                                            DeveloperTools:SetExplorerSelections({ v :: any })
+                                        end
+                                    else
+                                        local vts = tostring(v) .. ","
+                                        if type(v) == "string" then
+                                            vts = `"{ v }",`
+                                        elseif type(v) ~= "number" and type(v) ~= "boolean" then
+                                            vts = `[{ v }],`
+                                        end
+
+                                        imgui.text(vts)
+                                    end
+                                end
+                            end
+
+                            imgui.treepop()
+
+                            if hasElements then
+                                local p = (if depth > 0 then assert(pos) + vector.create(13, 0) else prev)
+                                imgui.setcursorposition(vector.create(assert(p.x) + 8, imgui.cursorposition().y))
+                                imgui.text("}")
+                            end
+                        else
+                            message.OpenTables[t] = false
+                        end
+
+                        imgui.popid()
+                    end
+
+                    imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+                    -- TODO luau cast
+                    renderTable(subMessage.DirectValue :: any, 0)
+                else
+                    if canInteract then
+                        doInteract = imgui.textlink(subMessage.Content)
+                    else
+                        imgui.text(subMessage.Content)
+                    end
+                end
+
+                if doInteract then
+                    interactWithLogSubMessage(context, subMessage.DirectValue)
+                end
+
+                if message.Source and message.Line and message.Source ~= "CommandBar" then
+                    if imgui.itemclicked(Enum.MouseButton.Right) then
+                        DeveloperTools:OpenTextDocument(message.Source, message.Line)
+                        rightClickedLogMessage = true
+                    end
+                end
+
+                if imgui.itemhovered() then
+                    logMessageHoveringWip = smid
+                end
+
+                if (#tooltip > 0 or #context > 0) and imgui.itemhovered() and imgui.begintooltip() then
+                    if #tooltip > 0 then
+                        imgui.text(tooltip)
+                    end
+
+                    if #context > 0 then
+                        if #tooltip > 0 then
+                            imgui.newline()
+                        end
+
+                        imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
+
+                        imgui.text(context)
+
+                        imgui.popstylecolor()
+                    end
+
+                    imgui.endtooltip()
+                end
+            end
+
+            imgui.popstylecolor()
+            imgui.popstylecolor()
+        end
+
+        if NewLogMessage then
+            imgui.scrollherey()
+            NewLogMessage = false
+        end
+
+        if not rightClickedLogMessage and imgui.windowhovered() and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
+            imgui.openpopup("OutputContextMenu")
+        end
+
+        if imgui.beginpopup("OutputContextMenu") then
+            if imgui.menuitem("Clear Output") then
+                Log = {}
+            end
+
+            imgui.endpopup()
+        end
+
+        LogMessageHovering = logMessageHoveringWip
+    end
+
+    if outputBegan then
+        imgui.endw()
+    end
+end
+
+function CommonUI.RenderViewport(DeltaTime: number)
+    if CurrentStage == "ProjectEditing" and Project.Workspace then
+        local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
+        local rayresult = if not PlayerInput.IsMouseSunk
+                            then Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
+                            else nil
+
+        if rayresult then
+            SelectionPart.Transform = rayresult.Object.Transform
+            SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
+            SelectionPart.Parent = workspace
+
+            if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
+                if PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then -- left control
+                    local sels = DeveloperTools:GetExplorerSelections()
+
+                    if not table.find(sels, rayresult.Object) then
+                        table.insert(sels, rayresult.Object :: GameObject)
+                    end
+
+                    DeveloperTools:SetExplorerSelections(sels)
+                else
+                    DeveloperTools:SetExplorerSelections({ rayresult.Object })
+                end
+            end
+        else
+            SelectionPart.Parent = nil
+        end
+    else
+        for _, v in PrevSelections do
+            v:Destroy()
+        end
+        PrevSelections = {}
+    end
+
+    local newSelections = DeveloperTools:GetExplorerSelections()
+    local selmap: { [number]: GameObject } = {}
+    for i, sel_ in newSelections do
+        if not sel_:HasComponent("Transform") then
+            continue
+        end
+
+        local sel = (sel_ :: any) :: GameObject & EcTransform
+        selmap[sel.ObjectId] = sel
+
+        if not PrevSelections[sel.ObjectId] then
+            local new = SelectionPart:Duplicate()
+            -- TODO luau report bug cast
+            new = (new :: any)
+            new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
+            new.Tint = Color.new(84/255, 150/255, 1)
+            new.Parent = workspace
+            PrevSelections[sel.ObjectId] = new
+        else
+            local box = PrevSelections[sel.ObjectId]
+            box.Transform, box.Size = sel.Transform, sel.Size
+        end
+    end
+
+    for id, box in PrevSelections do
+        local sel = selmap[id]
+        if not sel or not sel:HasComponent("Transform") then
+            box:Destroy()
+            PrevSelections[id] = nil
+        end
+    end
+
+    PluginManager.OnUpdate(DeltaTime, CurrentStage)
+    CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
+    HistoryView.Render()
+    TagViewer.Render()
+
+    if EditorPreferences.ToolsOpen.BottomBar then
+        local w = Renderer.Resolution
+
+        imgui.setnextwindowposition(0, w.y - 35)
+        imgui.setnextwindowsize(w.x, 35)
+
+        imgui.begin("Bottom Bar", "nt | nd | nr | ns")
+
+        imgui.setcursorposition(imgui.cursorposition() + vector.create(0, 2))
+        imgui.text("> ")
+        imgui.sameline()
+        imgui.setcursorposition(imgui.cursorposition() - vector.create(0, 2))
+
+        CommandBarCommand = imgui.inputstring(if CommandBarBlinkFrame == 1 then "##CommandBarBlinking" else "##Command", CommandBarCommand)
+        CommandBarActive = imgui.itemactive()
+
+        if CommandBarBlinkFrame == 1 then
+            CommandBarBlinkFrame += 1
+
+        elseif CommandBarBlinkFrame == 2 then
+            CommandBarBlinkFrame = 0
+            imgui.focuskeyboardhere(-1)
+        end
+
+        if CommandBarPostRun then
+            imgui.focuskeyboardhere(-1)
+            CommandBarPostRun = false
+        end
+
+        imgui.sameline()
+
+        local noteStr = `{ Engine.Framerate } FPS ({ CurrentStage }) | { Project.Name }`
+        imgui.text(noteStr)
+        imgui.setitemtooltip(noteStr)
+
+        imgui.endw()
+    end
+
+    renderOutput()
+
+    local canInteract = IsHoveringViewportTitlebar --or (not IsHoveringViewport and imgui.windowhovered("a | b"))
+    local render, open = imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
+
+    if not open then
+        task.defer(changeStageTo, "SelectProject" :: "SelectProject")
+    end
+
+    if not render then
+        PlayerInput:SetViewportInputRect(vector.zero, vector.create(1, 1))
+        imgui.endw()
+        return
+    end
+
+    local cpos = PlayerInput:GetCursorPosition()
+    local w = imgui.windowposition()
+    local ws = imgui.windowsize()
+
+    local ews = Renderer.Resolution
+    ViewportRenderPosition = vector.create(w.x, w.y)
+    ViewportRenderSize = vector.create(ws.x, ws.y)
+
+    imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if EditorPreferences.ToolsOpen.BottomBar then 54 else 19))
+    PlayerInput:SetViewportInputRect(ViewportRenderPosition, ViewportRenderSize)
+
+    ViewportLeft = w.x - 15
+    ViewportRight = w.x + ws.x + 15
+    ViewportTop = w.y
+    ViewportBottom = w.y + ws.y
+
+    if cpos.x >= w.x - 15 and cpos.x <= w.x + ws.x + 15 then
+        if cpos.y >= w.y and cpos.y < w.y + 16 then
+            IsHoveringViewportTitlebar = true
+        else
+            IsHoveringViewportTitlebar = false
+        end
+    else
+        IsHoveringViewportTitlebar = false
+    end
+    isMouseWithinViewport()
+
+    imgui.setcursorposition(0, ws.y - ews.y)
+
+    imgui.image("!Framebuffer:Main", nil, true)
+
+    imgui.endw()
 end
 
 return CommonUI

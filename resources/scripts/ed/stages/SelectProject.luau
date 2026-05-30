@@ -243,11 +243,12 @@ local function renderSavedProjects(Editor)
     end
 end
 
-local ProjectCategories: { { Name: string, Icon: string, Render: ({ OpenProject: (string) -> (), SaveRecents: () -> () }, number) -> (), OnSwitchTo: (()->())? } } = {
+local ProjectCategories = {
     {
         Name = "Recent",
         Icon = "@etextures/editor-icons/recent.png",
-        Render = renderRenderProjects
+        Render = renderRenderProjects,
+        OnSwitchTo = nil,
     },
     {
         Name = "Saved",
@@ -255,7 +256,7 @@ local ProjectCategories: { { Name: string, Icon: string, Render: ({ OpenProject:
         Render = renderSavedProjects,
         OnSwitchTo = function()
             SavedProjectsCache = nil
-        end
+        end,
     }
 }
 
