@@ -812,6 +812,18 @@
   "@phoenix/global/SharedBuffer": {
     "documentation": "* A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`"
   },
+  "@phoenix/global/_RUNTIME": {
+    "documentation": "* Describes the Luau runtime"
+  },
+  "@phoenix/global/_RUNTIME.name": {
+    "documentation": "* The name of the runtime"
+  },
+  "@phoenix/global/_RUNTIME.url": {
+    "documentation": "* URL associated with the runtime"
+  },
+  "@phoenix/global/_RUNTIME.version": {
+    "documentation": "* Version information"
+  },
   "@phoenix/global/_VMNAME": {
     "documentation": "* A non-unique identifier for the current Luau VM"
   },

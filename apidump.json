@@ -660,6 +660,11 @@
           "VectorGradient": 17
         }
       },
+      "_RUNTIME": {
+        "name": "string",
+        "url": "string",
+        "version": "table"
+      },
       "debug": {
         "breakpoint": "function"
       },

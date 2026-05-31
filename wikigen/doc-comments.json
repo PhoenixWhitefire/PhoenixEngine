@@ -1135,6 +1135,24 @@
       }
     },
     "Libraries": {
+      "_RUNTIME": {
+        "Description": "Describes the Luau runtime",
+        "Members": {
+          "name": {
+            "Description": "The name of the runtime",
+            "Type": "string"
+          },
+          "url": {
+            "Description": "URL associated with the runtime",
+            "Type": "string?"
+          },
+          "version": {
+            "Description": "Version information",
+            "Type": "{ read display: string, git: { commit: string, url: string? } }"
+          }
+        },
+        "Type": "_RUNTIME"
+      },
       "Enum": {
         "Description": [
           "Contains enumerations",

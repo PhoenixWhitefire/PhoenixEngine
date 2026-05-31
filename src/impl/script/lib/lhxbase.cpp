@@ -2,6 +2,7 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
+#include "Version.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -89,9 +90,41 @@ static const luaL_Reg base_funcs[] =
     { NULL, NULL }
 };
 
+static void defineRuntime(lua_State* L)
+{
+	lua_createtable(L, 0, 3);
+
+	lua_pushliteral(L, "phoenix");
+	lua_setfield(L, -2, "name");
+
+	lua_pushliteral(L, "https://github.com/PhoenixWhitefire/PhoenixEngine");
+	lua_setfield(L, -2, "url");
+
+	lua_createtable(L, 0, 2);
+
+	lua_pushstring(L, GetEngineVersion());
+	lua_setfield(L, -2, "display");
+
+	lua_createtable(L, 0, 2);
+
+	lua_pushliteral(L, "https://github.com/PhoenixWhitefire/PhoenixEngine");
+	lua_setfield(L, -2, "url");
+
+	lua_pushstring(L, GetEngineCommitHash());
+	lua_setfield(L, -2, "commit");
+
+	lua_setfield(L, -2, "git");
+
+	lua_setfield(L, -2, "version");
+
+	lua_setreadonly(L, -1, true);
+	lua_setglobal(L, "_RUNTIME");
+}
+
 int luhxopen_base(lua_State* L)
 {
     luaL_register(L, "_G", base_funcs);
+	defineRuntime(L);
 
     return 1;
 }
