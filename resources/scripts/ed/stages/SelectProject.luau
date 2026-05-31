@@ -9,18 +9,9 @@ local Engine = game:GetService("Engine")
 local PluginManager = require("@ed/PluginManager")
 local Configuration = require("@ed/Configuration")
 local Preferences = require("@ed/Preferences")
+local CommonUI = require("@ed/CommonUI")
 local Output = require("@ed/Output")
-
-local RecentProjects: { string } = {}
-
-type CachedProjectInfo = {
-    Name: string,
-    EngineVersion: string,
-    Created: number,
-    Saved: number,
-}
-
-local SavedProjectsCache: { CachedProjectInfo }? = nil
+local State = require("@ed/State")
 
 function SelectProject.Enter(Editor: unknown, _prev: string)
     if not fs.isfile(Configuration.RecentProjectsPath) then
@@ -37,8 +28,8 @@ function SelectProject.Enter(Editor: unknown, _prev: string)
     local rpjson = json.parse(rpstr)
     assert(typeof(rpjson) == "table")
 
-    RecentProjects = rpjson :: typeof(RecentProjects)
-    SavedProjectsCache = nil
+    State.RecentProjects = rpjson :: typeof(State.RecentProjects)
+    State.SavedProjectsCache = nil
 
     PluginManager.Shutdown()
     fs.setunqualifiedroot("./")
@@ -60,7 +51,7 @@ local SelectorHoveringOver: number? = nil
 local OpenProjectContextMenu = false
 local ProjectContextMenuTarget = 0
 
-local function renderProjectSelectorTiles(Editor: { OpenProject: (string) -> () }, Projects: { string } | { CachedProjectInfo })
+local function renderProjectSelectorTiles(Projects: { string } | { State.CachedProjectInfo })
     local cpos = imgui.cursorposition()
     local startX = cpos.x
 
@@ -101,7 +92,7 @@ local function renderProjectSelectorTiles(Editor: { OpenProject: (string) -> () 
         clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
         if clicked then
-            task.defer(Editor.OpenProject, projName)
+            task.defer(State.OpenProject, State, projName)
         end
 
         if hovered then
@@ -128,7 +119,7 @@ local function renderProjectSelectorTiles(Editor: { OpenProject: (string) -> () 
     SelectorHoveringOver = hoveringOverWip
 end
 
-local function promptDeleteProject(Editor: { SaveRecents: () -> () }, Name)
+local function promptDeleteProject(Name)
     local buttonSelection = Engine:ShowMessageBox(
         "Are you sure?",
         `Are you sure you want to delete '{ Name }'? This cannot be undone.`,
@@ -140,14 +131,14 @@ local function promptDeleteProject(Editor: { SaveRecents: () -> () }, Name)
         fs.remove(`{ Preferences.ProjectsDirectory }/{ Name }`)
 
         AssetManager:UnloadTexture(`{ Preferences.ProjectsDirectory }/{ Name }/icon.png`)
-        table.remove(RecentProjects, table.find(RecentProjects, Name))
-        Editor.SaveRecents()
+        table.remove(State.RecentProjects, table.find(State.RecentProjects, Name))
+        State:SaveRecents()
 
-        SavedProjectsCache = nil
+        State.SavedProjectsCache = nil
     end
 end
 
-local function renderRenderProjects(Editor)
+local function renderRenderProjects()
     imgui.text("Recent")
     imgui.newline()
 
@@ -157,7 +148,7 @@ local function renderRenderProjects(Editor)
     cpos = imgui.cursorposition()
     imgui.setcursorposition(cpos.x + 10, cpos.y)
 
-    renderProjectSelectorTiles(Editor, RecentProjects)
+    renderProjectSelectorTiles(State.RecentProjects)
 
     if OpenProjectContextMenu then
         imgui.openpopup("ProjectContextMenu")
@@ -166,23 +157,23 @@ local function renderRenderProjects(Editor)
 
     if imgui.beginpopup("ProjectContextMenu") then
         if imgui.menuitem("Remove from Recents") then
-            table.remove(RecentProjects, ProjectContextMenuTarget)
+            table.remove(State.RecentProjects, ProjectContextMenuTarget)
             -- TODO: fix cast
-            fs.write(Configuration.RecentProjectsPath, json.encode(RecentProjects :: JsonSerializable))
+            fs.write(Configuration.RecentProjectsPath, json.encode(State.RecentProjects :: JsonSerializable))
         end
 
         if imgui.menuitem("Delete") then
-            promptDeleteProject(Editor, RecentProjects[ProjectContextMenuTarget])
+            promptDeleteProject(State.RecentProjects[ProjectContextMenuTarget])
         end
 
         imgui.endpopup()
     end
 end
 
-local function renderSavedProjects(Editor)
-    if not SavedProjectsCache then
-        SavedProjectsCache = {}
-        assert(SavedProjectsCache)
+local function renderSavedProjects()
+    if not State.SavedProjectsCache then
+        State.SavedProjectsCache = {}
+        assert(State.SavedProjectsCache)
 
         for path, type in fs.listdir(Preferences.ProjectsDirectory) do
             if type == "d" and fs.isfile(path .. "/phoenix.conf") then
@@ -207,7 +198,7 @@ local function renderSavedProjects(Editor)
                     created = if createdInfo then createdInfo.Time else 0
                 end
 
-                table.insert(SavedProjectsCache, {
+                table.insert(State.SavedProjectsCache, {
                     EngineVersion = engine,
                     Created = created,
                     Saved = savedTime,
@@ -226,7 +217,7 @@ local function renderSavedProjects(Editor)
     cpos = imgui.cursorposition()
     imgui.setcursorposition(cpos.x + 10, cpos.y)
 
-    renderProjectSelectorTiles(Editor, assert(SavedProjectsCache))
+    renderProjectSelectorTiles(assert(State.SavedProjectsCache))
 
     if OpenProjectContextMenu then
         imgui.openpopup("ProjectContextMenu")
@@ -234,9 +225,9 @@ local function renderSavedProjects(Editor)
     end
     
     if imgui.beginpopup("ProjectContextMenu") then
-        if SavedProjectsCache and imgui.menuitem("Delete") then
-            local proj = SavedProjectsCache[ProjectContextMenuTarget]
-            promptDeleteProject(Editor, proj.Name)
+        if State.SavedProjectsCache and imgui.menuitem("Delete") then
+            local proj = State.SavedProjectsCache[ProjectContextMenuTarget]
+            promptDeleteProject(proj.Name)
         end
 
         imgui.endpopup()
@@ -255,7 +246,7 @@ local ProjectCategories = {
         Icon = "@etextures/editor-icons/open.png",
         Render = renderSavedProjects,
         OnSwitchTo = function()
-            SavedProjectsCache = nil
+            State.SavedProjectsCache = nil
         end,
     }
 }
@@ -263,7 +254,7 @@ local ProjectCategories = {
 local SelectedProjectsCategory = 1
 local PrevSelectedProjectsCategory = 0
 
-function SelectProject.Render(Editor: { CreateNewProject: () -> (), SaveRecents: () -> (), RenderMainMenuBar: (number) -> (), OpenProject: (string) -> () }, DeltaTime: number)
+function SelectProject.Render(DeltaTime: number)
     assert(typeof(DeltaTime) == "number")
 
     if imgui.beginfullscreen("Start Page", 0, 18) then
@@ -274,7 +265,7 @@ function SelectProject.Render(Editor: { CreateNewProject: () -> (), SaveRecents:
             imgui.setcursorposition(cpos.x - 4, cpos.y)
 
             if imgui.imagebutton("+", "@etextures/editor-icons/new.png", vector.create(150, 150)) then
-                task.defer(Editor.CreateNewProject)
+                task.defer(State.CreateNewProject, State)
             end
             imgui.setitemtooltip("Create new Project")
 
@@ -316,14 +307,14 @@ function SelectProject.Render(Editor: { CreateNewProject: () -> (), SaveRecents:
 
         imgui.beginchild("MainSection", 0, 0, "b")
 
-        ProjectCategories[SelectedProjectsCategory].Render(Editor, startPos.x)
+        ProjectCategories[SelectedProjectsCategory].Render(startPos.x)
 
         imgui.dummy()
         imgui.endchild()
     end
     imgui.endw()
 
-    Editor.RenderMainMenuBar(DeltaTime)
+    CommonUI.RenderMainMenuBar(DeltaTime)
 end
 
 return SelectProject

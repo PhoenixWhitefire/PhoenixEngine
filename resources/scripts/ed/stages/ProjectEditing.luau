@@ -10,22 +10,24 @@ local History = game:GetService("History")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
-local Configuration = require("../Configuration")
-local Preferences = require("../Preferences")
-local CommonUI = require("../CommonUI")
-local Reimport = require("../Reimport")
-local Types = require("../Types")
+local Configuration = require("@ed/Configuration")
+local ErrorMessage = require("@ed/ErrorMessage")
+local Preferences = require("@ed/Preferences")
+local CommonUI = require("@ed/CommonUI")
+local Reimport = require("@ed/Reimport")
+local State = require("@ed/State")
+local Types = require("@ed/Types")
 
 local ProjectClosedByDataModelConnection = nil
 
-function ProjectEditing.Enter(Editor: { Project: Types.Project, ChangeStageTo: (Types.Stage) -> () }, PreviousStage: Types.Stage)
-    assert(Editor.Project.DataModel)
-    assert(Editor.Project.Workspace)
+function ProjectEditing.Enter(PreviousStage: Types.Stage)
+    assert(State.Project.DataModel)
+    assert(State.Project.Workspace)
 
-    DeveloperTools:SetExplorerRoot(Editor.Project.DataModel)
+    DeveloperTools:SetExplorerRoot(State.Project.DataModel)
     DeveloperTools:SetExplorerSelections({})
     Physics.Simulating = false
-    workspace.SceneCamera = Editor.Project.Workspace.SceneCamera
+    workspace.SceneCamera = State.Project.Workspace.SceneCamera
     workspace.SceneCamera.UseSimpleController = true
 
     if PreviousStage == "SelectProject" then
@@ -82,12 +84,12 @@ function ProjectEditing.Enter(Editor: { Project: Types.Project, ChangeStageTo: (
             end
         end
 
-        ProjectClosedByDataModelConnection = Editor.Project.DataModel.Closing:Connect(function()
+        ProjectClosedByDataModelConnection = State.Project.DataModel.Closing:Connect(function()
             assert(ProjectClosedByDataModelConnection)
 
             ProjectClosedByDataModelConnection:Disconnect()
             ProjectClosedByDataModelConnection = nil
-            Editor.ChangeStageTo("SelectProject")
+            State:ChangeStageTo("SelectProject")
         end)
 
         for _, name in Preferences.DevToolsOpen do
@@ -100,21 +102,21 @@ end
 
 local ShowedAutosaveDelayedMessage = false
 
-function ProjectEditing.Render(Editor: { LastAutosaved: number, SaveProject: () -> (), SetErrorNotification: (string) -> () }, DeltaTime: number)
+function ProjectEditing.Render(DeltaTime: number)
     assert(typeof(DeltaTime) == "number")
 
     CommonUI.RenderMainMenuBar(DeltaTime)
     CommonUI.RenderViewport(DeltaTime)
 
-    if (game.Time - Editor.LastAutosaved) / 60 > Preferences.AutosaveInterval then
+    if (game.Time - State.LastAutosaved) / 60 > Preferences.AutosaveInterval then
         if not History.CurrentActionName then
-            Editor.SaveProject()
+            State:SaveProject()
             print("Autosaved")
-            Editor.LastAutosaved = game.Time
+            State.LastAutosaved = game.Time
             ShowedAutosaveDelayedMessage = false
 
         elseif not ShowedAutosaveDelayedMessage then
-            Editor.SetErrorNotification(`Autosave has been delayed until the { History.CurrentActionName } action finishes`)
+            ErrorMessage.Push(`Autosave has been delayed until the { History.CurrentActionName } action finishes`)
             ShowedAutosaveDelayedMessage = true
         end
     end
@@ -153,7 +155,7 @@ function ProjectEditing.Leave(Editor: { Log: {}, Project: Types.Project, SavePro
     Editor.Project.DataModel = nil
 
     Engine:SaveConfig()
-    ScriptEngine:CloseVM(Configuration.GameEditingVM)
+    ScriptEngine:CloseVM(Configuration.GameEditingVMName)
 end
 
 return ProjectEditing

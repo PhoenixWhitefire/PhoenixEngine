@@ -1,6 +1,11 @@
 -- Reimport.luau, 30/05/2026
+type Watcher = {
+    Models: { GameObject & EcModel },
+    Disconnect: () -> (),
+}
+
 local Reimport = {
-    Watchers = {},
+    Watchers = {} :: { [string]: Watcher },
     ModelModifiedTimes = {},
 }
 

@@ -6,6 +6,9 @@ return table.freeze({
     EditorBuild = 4,
     EditorScriptsAllowedExecutionTime = 30,
     GitHubUrl = "https://github.com/PhoenixWhitefire/PhoenixEngine",
+    GameEditingVMName = "GameEditingVM",
+    PlaytestVMName = "Playtest",
+    LogoImage = "@etextures/logo.png",
 
     CoreAssets = {
         "shaders/error.shp",
