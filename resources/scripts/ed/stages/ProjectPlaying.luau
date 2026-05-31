@@ -48,7 +48,7 @@ function ProjectPlaying.Enter(_prev)
 
         GameClosedConnection:Disconnect()
         GameClosedConnection = nil
-        State:ChangeStageTo("ProjectEditing")
+        State.ChangeStageTo("ProjectEditing")
     end)
 
     Physics:SetSimulationForcePaused(false)

@@ -530,7 +530,7 @@ static int fs_execute(lua_State* L)
 
 	return ScriptEngine::L::Yield(
 		L,
-		1,
+		0,
 		[command](ScriptEngine::YieldedCoroutine& yc)
 		{
 			std::shared_future<std::string> f = std::async(std::launch::async, [command]()

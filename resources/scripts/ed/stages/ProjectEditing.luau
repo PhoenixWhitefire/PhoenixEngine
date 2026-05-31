@@ -90,7 +90,7 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
 
             ProjectClosedByDataModelConnection:Disconnect()
             ProjectClosedByDataModelConnection = nil
-            State:ChangeStageTo("SelectProject")
+            State.ChangeStageTo("SelectProject")
         end)
 
         for _, name in Preferences.DevToolsOpen do

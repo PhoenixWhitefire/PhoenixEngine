@@ -49,14 +49,14 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
 	            const std::string chname = inputs.size() > 2 ? std::string(inputs[2].AsStringView()) : code;
                 Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("SourceChunkName:{}", chname) };
 
+                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+                vmud->LastResumed = GetRunningTime(); // should do this before `luaL_sandboxthread` because that can trigger GC
+
 	            lua_State* ML = lua_newthread(vm.MainThread);
                 luaL_sandboxthread(ML);
 
                 if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
                 {
-                    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
-                    vmud->LastResumed = GetRunningTime();
-
                     int result = lua_resume(ML, ML, 0);
                     const char* err = nullptr;
 

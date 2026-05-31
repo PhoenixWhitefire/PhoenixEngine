@@ -1292,7 +1292,7 @@ int ScriptEngine::L::HandleMethodCall(
     {
         return ScriptEngine::L::Yield(
             L,
-            func->Outputs.size(),
+            0,
             [func, inputs, Reflector](YieldedCoroutine& yc)
             {
                 std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs);
@@ -1766,8 +1766,11 @@ static void initRequireConfig(luarequire_Configuration* config)
                         lua_pushstring(ML, "module must return a value");
                 }
                 else if (status == LUA_YIELD)
-                    lua_pushstring(ML, "module can not yield");
-
+                {
+                    //lua_pop(L, 1);
+                    //return -1;
+                    lua_pushstring(L, "module cannot yield");
+                }
                 else if (!lua_isstring(ML, -1))
                     lua_pushstring(ML, "unknown error while running module");
             }
@@ -1775,7 +1778,15 @@ static void initRequireConfig(luarequire_Configuration* config)
             // add ML result to L stack
             lua_xmove(ML, L, 1);
             if (lua_status(ML) != LUA_OK)
+            {
+                std::string trace;
+                ScriptEngine::L::DumpStacktrace(L, &trace);
+                trace = "\n" + trace;
+
+                lua_pushlstring(L, trace.data(), trace.size());
+                lua_concat(L, 2);
                 lua_error(L);
+            }
 
             // remove ML thread from L stack
             lua_remove(L, -2);

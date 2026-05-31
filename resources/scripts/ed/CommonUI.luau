@@ -119,9 +119,9 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 
     if kie.Key == Enum.Key.F5 then
         if State.CurrentStage == "ProjectEditing" then
-            State:ChangeStageTo("ProjectPlaying")
+            State.ChangeStageTo("ProjectPlaying")
         elseif State.CurrentStage == "ProjectPlaying" then
-            State:ChangeStageTo("ProjectEditing")
+            State.ChangeStageTo("ProjectEditing")
         end
     end
 
@@ -266,11 +266,11 @@ local function homeTab(_: number)
 
     if inPlaytest then
         if tabButton("Stop", "@etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Stop (F5)") then
-            State:ChangeStageTo("ProjectEditing")
+            State.ChangeStageTo("ProjectEditing")
         end
     else
         if tabButton("Start", "@etextures/editor-icons/start.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Play (F5)") then
-            State:ChangeStageTo("ProjectPlaying")
+            State.ChangeStageTo("ProjectPlaying")
         end
     end
 
@@ -924,7 +924,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
 
             if imgui.menuitem("Close") then
                 -- TODO luau cast
-                task.defer(State.ChangeStageTo, State, "SelectProject" :: "SelectProject")
+                task.defer(State.ChangeStageTo, "SelectProject" :: "SelectProject")
             end
         end
 
@@ -1093,6 +1093,9 @@ function CommonUI.RenderMainMenuBar(dt: number)
                 local buttonText = "Download"
                 imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cursor.y)
 
+                -- TODO
+                canUpdate = false
+
                 if canUpdate and imgui.button(buttonText) then
                     if State.CurrentStage ~= "SelectProject" then
                         Engine:ShowMessageBox("Update", "You must close the current project to update")
@@ -1103,6 +1106,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
                         --State:ChangeStageTo("Update")
                         Engine:ShowMessageBox("W.I.P.", "Not in usable state after refactor :>")
                     end
+                else
+                    imgui.dummy()
                 end
             else
                 local urutdText = "You are on the latest available version."
@@ -1336,7 +1341,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
     local render, open = imgui.begin(State.Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
 
     if not open then
-        task.defer(State.ChangeStageTo, State, "SelectProject" :: "SelectProject")
+        task.defer(State.ChangeStageTo, "SelectProject" :: "SelectProject")
     end
 
     if not render then

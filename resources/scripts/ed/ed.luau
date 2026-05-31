@@ -16,12 +16,14 @@ local CoreTools = require("@ed/CoreTools")
 local CommonUI = require("@ed/CommonUI")
 local State = require("@ed/State")
 local Types = require("@ed/Types")
+local Git = require("@ed/Git")
 
 local Stages = require("@ed/Stages")
 
 Preferences = Preferences :: { [keyof<typeof(Preferences)>]: index<typeof(Preferences), keyof<typeof(Preferences)>> } & typeof(Preferences)
 
 History:EnableRecording()
+Git.Initialize()
 
 local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else Preferences
 assert(typeof(savedEditorPreferences) == "table")
@@ -194,23 +196,27 @@ end
 
 local StageUpdateConnection: EventConnection?
 
-local function changeStageTo(NewStage: Types.Stage)
+function State.ChangeStageTo(NewStage: Types.Stage)
     assert(NewStage ~= "None" and NewStage ~= "Update")
-    assert(State.CurrentStage ~= "None" and State.CurrentStage ~= "Update")
-    assert(Stages[NewStage])
+    assert(State.CurrentStage ~= "Update")
+    assert(Stages[NewStage], NewStage)
 
     if StageUpdateConnection then
         StageUpdateConnection:Disconnect()
         StageUpdateConnection = nil
     end
 
-    if Stages[State.CurrentStage].Leave then
-        Stages[State.CurrentStage].Leave(NewStage)
+    local leave = Stages[State.CurrentStage].Leave
+
+    if leave then
+        leave(NewStage)
     end
 
     local targetDm = game
-    if Stages[NewStage].Enter then
-        targetDm = Stages[NewStage].Enter(State.CurrentStage) or targetDm
+    local enter = Stages[NewStage].Enter
+
+    if enter then
+        targetDm = enter(State.CurrentStage) or targetDm
     end
 
     PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
@@ -227,7 +233,7 @@ task.defer(checkIfLatestVersionBuilt)
 
 if table.find(Engine:GetCliArguments(), "-ed_ci") then
     -- TODO luau cast
-    task.defer(changeStageTo, "SelectProject" :: "SelectProject")
+    task.defer(State.ChangeStageTo, "SelectProject" :: "SelectProject")
 
     if StageUpdateConnection then
         StageUpdateConnection:Disconnect()
@@ -263,7 +269,7 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
         game:Close()
     end)()
 else
-    changeStageTo("SelectProject")
+    State.ChangeStageTo("SelectProject")
 end
 
 local loadProjectIndex = table.find(Engine:GetCliArguments(), "--project")

@@ -12,7 +12,7 @@ static int task_wait(lua_State* L)
 
 	return ScriptEngine::L::Yield(
 		L,
-		1,
+		0,
 		[sleepTime](ScriptEngine::YieldedCoroutine& yc)
 		{
 			double curTime = GetRunningTime();

@@ -198,7 +198,7 @@ static void initializeSound(SoundComponentManager* SoundManager)
 		};
 
 	if (ma_result initResult = ma_engine_init(&config, &SoundManager->AudioEngine); initResult != MA_SUCCESS)
-		RAISE_RT("Audio Engine init failed, error code: {}", (int)initResult);
+		RAISE_RT("Audio Engine init failed: {} (code {})", ma_result_description(initResult), (int)initResult);
 }
 
 SoundComponentManager::SoundComponentManager()
@@ -256,7 +256,7 @@ void EcSound::Reload()
 	)
 	{
 		FinishedLoading = true;
-		Log.ErrorF("Failed to load sound file '{}' for '{}', error code: {}", filePath, Object->GetFullName(), (int)result);
+		Log.ErrorF("Failed to load sound file '{}' for '{}': {} (code {})", filePath, Object->GetFullName(), ma_result_description(result), (int)result);
 		return;
 	}
 
@@ -264,7 +264,7 @@ void EcSound::Reload()
 
 	if (ma_result result = ma_sound_get_length_in_seconds(SoundInstance, &Length); result != MA_SUCCESS)
 	{
-		Log.ErrorF("Failed to get length of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+		Log.ErrorF("Failed to get length of sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
 		return;
 	}
 
@@ -288,7 +288,7 @@ void EcSound::Update(double)
         if (playing)
         {
             if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
-                Log.ErrorF("Failed to stop sound '{}' (disabled object), error code: {}", Object->GetFullName(), (int)result);
+                Log.ErrorF("Failed to stop sound '{}' (disabled object): {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
         }
 
         return;
@@ -297,11 +297,11 @@ void EcSound::Update(double)
 	if (playing && !m_PlayRequested)
 	{
 		if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
-			Log.ErrorF("Failed to play sound '{}', error code: {}", Object->GetFullName(), (int)result);
+			Log.ErrorF("Failed to play sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
 	}
 	else if (!playing && m_PlayRequested)
 		if (ma_result result = ma_sound_start(SoundInstance); result != MA_SUCCESS)
-			Log.ErrorF("Failed to stop sound '{}', error code: {}", Object->GetFullName(), (int)result);
+			Log.ErrorF("Failed to stop sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
 
 	ma_sound_set_looping(SoundInstance, Looped); // TODO doesn't work
 	if (!Looped && Length - Position < 0.05f)
@@ -313,8 +313,8 @@ void EcSound::Update(double)
 	{
 		if (ma_result result = ma_sound_seek_to_second(SoundInstance, NextRequestedPosition); result != MA_SUCCESS)
 			Log.ErrorF(
-				"Failed to seek to position {} (in seconds) for sound '{}', error code: {}",
-				NextRequestedPosition, Object->GetFullName(), (int)result
+				"Failed to seek to position {} (in seconds) for sound '{}': {} (code {})",
+				NextRequestedPosition, Object->GetFullName(), ma_result_description(result), (int)result
 			);
 		NextRequestedPosition = -1.f;
 	}
@@ -322,7 +322,7 @@ void EcSound::Update(double)
     if (m_PlayRequested)
     {
         if (ma_result result = ma_sound_get_cursor_in_seconds(SoundInstance, &Position); result != MA_SUCCESS)
-            Log.ErrorF("Failed to get playback position of sound '{}', error code: {}", Object->GetFullName(), (int)result);
+            Log.ErrorF("Failed to get playback position of sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
     }
 
 	if (EcTransform* trans = Object->FindComponent<EcTransform>())

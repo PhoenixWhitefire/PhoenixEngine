@@ -34,7 +34,7 @@ type StateType = {
     SaveProject: (StateType) -> (),
     OpenProject: (StateType, ManualPath: string?) -> (),
     CreateNewProject: (StateType, Catch: boolean?) -> (),
-    ChangeStageTo: (StateType, Types.Stage) -> (),
+    ChangeStageTo: (Types.Stage) -> (),
 }
 
 local EditorCam = assert(workspace.SceneCamera)
@@ -309,7 +309,7 @@ local function openProject_(State: StateType, ManualPath: string?)
     History:ClearHistory()
     History.TargetDataModel = State.Project.DataModel
 
-    State:ChangeStageTo("ProjectEditing")
+    State.ChangeStageTo("ProjectEditing")
 
     local module = State.Project.DataModel.LiveScripts
     State.Project.DataModel.LiveScripts = ""
@@ -465,7 +465,7 @@ local State: StateType = {
         end
     end,
 
-    ChangeStageTo = function(State: StateType, NewStage: Types.Stage)
+    ChangeStageTo = function(NewStage: Types.Stage)
         error("Editor state change callback not registered!")
     end,
 }

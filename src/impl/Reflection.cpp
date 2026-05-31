@@ -190,6 +190,7 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
     case ValueType::String: case ValueType::Buffer:
     {
         std::string_view str = std::string_view(Source.Size < REFLECTION_GV_SSO ? Source.Val.StrSso : Source.Val.Str, Source.Size);
+		// copies bytes based on .Size!!
         fromString(Target, str.data());
 
         if (Source.Type == ValueType::Buffer)
@@ -271,7 +272,7 @@ void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue
 	}
 	}
 
-    assert(Target.Type == Source.Type && Target.Size == Source.Size);
+    assert((Target.Type == Source.Type && Target.Size == Source.Size) || Source.Type == ValueType::Function);
 }
 
 Reflection::GenericValue::GenericValue(GenericValue&& Other)

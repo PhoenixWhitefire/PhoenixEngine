@@ -1,5 +1,6 @@
 -- Stages.luau, 31/05/2026
 local Stages = {
+    None = require("@ed/stages/None"),
     SelectProject = require("@ed/stages/SelectProject"),
     ProjectEditing = require("@ed/stages/ProjectEditing"),
     ProjectPlaying = require("@ed/stages/ProjectPlaying"),
