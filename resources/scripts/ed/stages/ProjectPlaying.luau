@@ -11,11 +11,10 @@ local Configuration = require("@ed/Configuration")
 local Preferences = require("@ed/Preferences")
 local CommonUI = require("@ed/CommonUI")
 local State = require("@ed/State")
-local Types = require("@ed/Types")
 
 local GameClosedConnection = nil
 
-function ProjectPlaying.Enter(_prev: Types.Stage)
+function ProjectPlaying.Enter(_prev)
     PlayerInput.Cursor = Enum.Cursor.NotAllowed
 
     State.PlaytestRestoreState = State.Project.DataModel

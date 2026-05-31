@@ -9,9 +9,7 @@ local Engine = game:GetService("Engine")
 
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local Configuration = require("@ed/Configuration")
-local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
-local CoreTools = require("@ed/CoreTools")
 local Types = require("@ed/Types")
 
 export type CachedProjectInfo = {
@@ -407,54 +405,6 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
             break
         end
     end
-end
-
-local WasHoldingCtrlKeyDown = false
-local WasHoldingZKeyDown = false
-local WasHoldingYKeyDown = false
-
-local function handleUndoRedoKeybinds()
-    local ctrlKeyDown = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
-    local zKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Z)
-    local yKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Y)
-
-    if ctrlKeyDown and zKeyDown then
-        if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
-            local success, error = pcall(function()
-                History:Undo()
-            end)
-
-            if not success then
-                assert(error)
-
-                local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
-                realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
-
-                ErrorMessage.Push("Undo failed: " .. realError)
-            end
-        end
-    end
-
-    if ctrlKeyDown and yKeyDown then
-        if not WasHoldingCtrlKeyDown or not WasHoldingYKeyDown then
-            local success, error = pcall(function()
-                History:Redo()
-            end)
-
-            if not success then
-                assert(error)
-
-                local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
-                realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
-
-                ErrorMessage.Push("Redo failed: " .. realError)
-            end
-        end
-    end
-
-    WasHoldingCtrlKeyDown = ctrlKeyDown
-    WasHoldingZKeyDown = zKeyDown
-    WasHoldingYKeyDown = yKeyDown
 end
 
 local State: StateType = {

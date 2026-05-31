@@ -360,7 +360,7 @@ local function updateDevToolsOpenState()
     end
 end
 
-local function saveSettings()
+function CommonUI.SaveSettings()
     local success, error = pcall(function()
         if State.CurrentStage == "ProjectEditing" or State.CurrentStage == "ProjectPlaying" then
             updateDevToolsOpenState()
@@ -407,7 +407,7 @@ local function toolsTab(_: number)
 
         if WasToolEnabled[tool] ~= nil then
             if WasToolEnabled[tool] ~= enabled then
-                saveSettings()
+                CommonUI.SaveSettings()
             end
         end
 
@@ -934,7 +934,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
         end
 
         if imgui.menuitem("New", State.CurrentStage == "SelectProject") then
-            task.defer(State.CreateNewProject, State)
+            task.defer(State.CreateNewProject, State, nil)
         end
 
         if imgui.menuitem("About") then
@@ -1100,7 +1100,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
                         Engine:ShowMessageBox("Update", "Delete or rename the 'update.zip' file in the Editor's installation directory to proceed", "ok", "error")
                     else
                         imgui.closecurrentpopup()
-                        State:ChangeStageTo("Update")
+                        --State:ChangeStageTo("Update")
+                        Engine:ShowMessageBox("W.I.P.", "Not in usable state after refactor :>")
                     end
                 end
             else
@@ -1215,7 +1216,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
 
     elseif wasSettingsOpen then
         wasSettingsOpen = false
-        saveSettings()
+        CommonUI.SaveSettings()
     end
 end
 
@@ -1378,4 +1379,5 @@ function CommonUI.RenderViewport(DeltaTime: number)
     imgui.endw()
 end
 
+CommonUI.GetCenteredX = getCenteredX
 return CommonUI

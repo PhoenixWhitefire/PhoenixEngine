@@ -15,6 +15,7 @@ local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
 local CommonUI = require("@ed/CommonUI")
 local Reimport = require("@ed/Reimport")
+local Output = require("@ed/Output")
 local State = require("@ed/State")
 local Types = require("@ed/Types")
 
@@ -122,10 +123,10 @@ function ProjectEditing.Render(DeltaTime: number)
     end
 end
 
-function ProjectEditing.Leave(Editor: { Log: {}, Project: Types.Project, SaveProject: () -> () }, NextStage: Types.Stage)
+function ProjectEditing.Leave(NextStage: Types.Stage)
     if NextStage == "ProjectPlaying" then
         if Preferences.ClearOutputOnPlaytest then
-            table.clear(Editor.Log)
+            table.clear(Output.Log)
         end
 
         return
@@ -141,18 +142,18 @@ function ProjectEditing.Leave(Editor: { Log: {}, Project: Types.Project, SavePro
     DeveloperTools:SetExplorerRoot(game)
     DeveloperTools:SetExplorerSelections({})
 
-    assert(Editor.Project.DataModel)
+    assert(State.Project.DataModel)
     if not Preferences.ClosingProjectSaveRequiresConfirmation
         or Engine:ShowMessageBox("Save?", "Save datamodel before closing the current project?", "yesno", "question", 1) == 1
     then
-        Editor.SaveProject()
+        State:SaveProject()
     end
 
-    Editor.Project.DataModel:Destroy()
-    Editor.Project.Workspace = nil
-    Editor.Project.Name = "Should not be visible"
-    Editor.Project.IsTempPath = true
-    Editor.Project.DataModel = nil
+    State.Project.DataModel:Destroy()
+    State.Project.Workspace = nil
+    State.Project.Name = "Should not be visible"
+    State.Project.IsTempPath = true
+    State.Project.DataModel = nil
 
     Engine:SaveConfig()
     ScriptEngine:CloseVM(Configuration.GameEditingVMName)

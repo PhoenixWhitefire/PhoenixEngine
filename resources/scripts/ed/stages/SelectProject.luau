@@ -13,7 +13,7 @@ local CommonUI = require("@ed/CommonUI")
 local Output = require("@ed/Output")
 local State = require("@ed/State")
 
-function SelectProject.Enter(Editor: unknown, _prev: string)
+function SelectProject.Enter(_prev)
     if not fs.isfile(Configuration.RecentProjectsPath) then
         fs.write(Configuration.RecentProjectsPath, "[]")
     end
@@ -39,7 +39,7 @@ function SelectProject.Enter(Editor: unknown, _prev: string)
     end
 end
 
-function SelectProject.Leave(Editor: unknown, _new: string)
+function SelectProject.Leave(_new)
     PluginManager.Load()
 
     if Preferences.ClearOutputOnProjectOpen then
@@ -265,7 +265,7 @@ function SelectProject.Render(DeltaTime: number)
             imgui.setcursorposition(cpos.x - 4, cpos.y)
 
             if imgui.imagebutton("+", "@etextures/editor-icons/new.png", vector.create(150, 150)) then
-                task.defer(State.CreateNewProject, State)
+                task.defer(State.CreateNewProject, State, nil)
             end
             imgui.setitemtooltip("Create new Project")
 

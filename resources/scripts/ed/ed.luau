@@ -1,8 +1,7 @@
 -- ed.luau, 14/09/2025
-local Collections = game:GetService("Collections")
-local Renderer = game:GetService("Renderer")
+local AssetManager = game:GetService("AssetManager")
+local PlayerInput = game:GetService("PlayerInput")
 local History = game:GetService("History")
-local Network = game:GetService("Network")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
@@ -11,27 +10,33 @@ fs.definealias("etextures", "@editres/textures")
 fs.definealias("base", "./resources")
 
 local PluginManager = require("@ed/PluginManager")
+local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
+local CoreTools = require("@ed/CoreTools")
+local CommonUI = require("@ed/CommonUI")
 local State = require("@ed/State")
+local Types = require("@ed/Types")
 
---EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
+local Stages = require("@ed/Stages")
+
+Preferences = Preferences :: { [keyof<typeof(Preferences)>]: index<typeof(Preferences), keyof<typeof(Preferences)>> } & typeof(Preferences)
 
 History:EnableRecording()
 
-local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else EditorPreferences
+local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else Preferences
 assert(typeof(savedEditorPreferences) == "table")
 savedEditorPreferences = savedEditorPreferences :: { [string | number]: JsonSerializable }
 
-for k: keyof<typeof(EditorPreferences)>, v in EditorPreferences do
+for k: keyof<typeof(Preferences)>, v in Preferences do
     if savedEditorPreferences[k] == nil then
         savedEditorPreferences[k] = v
     end
 end
 
-EditorPreferences = savedEditorPreferences :: typeof(EditorPreferences)
+Preferences = savedEditorPreferences :: typeof(Preferences)
 
 if not Engine.IsHeadless then
-    imgui.stylecolors(if EditorPreferences.UseLightTheme then 'l' else 'd')
+    imgui.stylecolors(if Preferences.UseLightTheme then 'l' else 'd')
 end
 
 if not fs.isdirectory("./editor") then
@@ -39,256 +44,25 @@ if not fs.isdirectory("./editor") then
     fs.mkdir("./editor/themes")
 end
 
-if not fs.isdirectory(EditorPreferences.ProjectsDirectory) then
-    fs.mkdir(EditorPreferences.ProjectsDirectory)
-end
-
-local GitIsAvailable = fs.execute("git --version"):find("git version") ~= nil
-print(if GitIsAvailable then "Git is available" else "Git is not available")
-
-local updateInProgress = false
-local updaterGitHubToken = ""
-local updaterLog = ""
-local updaterErr = nil
-local switchedToUpdater = 0
-
-local function runUpdate()
-    updaterLog = "Update has started.\n"
-    updaterErr = nil
-
-    local headers = {
-        ["Authorization"] = `Bearer { updaterGitHubToken }`,
-        ["User-Agent"] = "PhoenixEngine/EditorUpdate"
-    }
-
-    updaterLog ..= "Finding latest workflow run...\n"
-    local workflowRunResponse = Network:MakeHttpRequestAsync({
-        Url = "https://api.github.com/repos/PhoenixWhitefire/PhoenixEngine/actions/workflows/cmake-multi-platform.yml/runs",
-        Headers = headers
-    })
-
-    if not workflowRunResponse.Ok then
-        error(`{ workflowRunResponse.Status }: { workflowRunResponse.Body }`)
-    end
-
-    local workflowRunResponseData = json.parse(workflowRunResponse.Body)
-    assert(typeof(workflowRunResponseData) == "table", "Workflow run response data was not a table")
-    workflowRunResponseData = workflowRunResponseData :: { [string]: JsonSerializable }
-
-    updaterLog ..= `Total count: { assert(workflowRunResponseData.total_count) }\n`
-    updaterLog ..= `Received: { #assert(workflowRunResponseData.workflow_runs :: { JsonSerializable }) }\n`
-
-    local latest = (workflowRunResponseData.workflow_runs :: { { [string]: JsonSerializable } })[1]
-    assert(latest)
-
-    updaterLog ..= `Latest title: { assert(latest.display_title) }\n`
-
-    local artifactsUrl = assert(latest.artifacts_url)
-    assert(typeof(artifactsUrl) == "string")
-    updaterLog ..= `Got artifacts URL: { artifactsUrl }\n`
-
-    local jobsUrl = assert(latest.jobs_url)
-    assert(typeof(jobsUrl) == "string")
-    updaterLog ..= `Got jobs URL { jobsUrl }\n`
-
-    local jobsResponse = Network:MakeHttpRequestAsync({
-        Url = jobsUrl,
-        Headers = headers
-    })
-
-    if not jobsResponse.Ok then
-        error(`{ jobsResponse.Status }: { jobsResponse.Body }`)
-    end
-
-    local jobsJson = json.parse(jobsResponse.Body)
-    assert(typeof(jobsJson) == "table")
-
-    local jobs = (jobsJson :: { [string]: JsonSerializable }).jobs
-    assert(jobs and typeof(jobs) == "table")
-
-    local desiredName = `{ if Engine.TargetPlatform == "Linux" then "ubuntu" else Engine.TargetPlatform:lower() }`
-    local foundJob = false
-
-    for _, job in jobs do
-        assert(typeof(job) == "table")
-
-        local name =  (job :: { [string]: JsonSerializable }).name
-        assert(typeof(name) == "string")
-
-        if name:find(desiredName) and name:find("Release") then
-            if (job :: { [string]: JsonSerializable }).conclusion ~= "success" then
-                error("The Workflow Job for your platform failed or is still in progress.")
-            end
-
-            foundJob = true
-            break
-        end
-    end
-
-    if not foundJob then
-        error(`Could not find the Job for your platform ({ desiredName })`)
-    end
-
-    updaterLog ..= "Confirmed that the Job for your platform succeeded, proceeding to download artifact\n"
-
-    local artifactsResponse = Network:MakeHttpRequestAsync({
-        Url = artifactsUrl,
-        Headers = headers
-    })
-
-    if not artifactsResponse.Ok then
-        error(`{ artifactsResponse.Status }: { artifactsResponse.Body }`)
-    end
-
-    local artifactsData = json.parse(artifactsResponse.Body)
-    assert(typeof(artifactsData) == "table")
-    artifactsData = artifactsData :: { [string]: JsonSerializable }
-
-    updaterLog ..= `Artifact count: { assert(artifactsData.total_count) }\n`
-    updaterLog ..= `Checking for { Engine.TargetPlatform } Release artifact...\n`
-
-    assert(typeof(artifactsData.artifacts) == "table")
-    local releaseArtifact
-
-    for _, v in artifactsData.artifacts do
-        assert(typeof(v) == "table")
-        v = v :: { [string]: JsonSerializable }
-
-        local name = v.name
-        assert(typeof(name) == "string")
-
-        if name:find(Engine.TargetPlatform) and name:find("Release") then
-            releaseArtifact = v
-            break
-        end
-    end
-
-    if not releaseArtifact then
-        error(`Could not find { Engine.TargetPlatform }-Release artifact`)
-    end
-
-    updaterLog ..= "Found Release artifact\n"
-    local bytes = assert(releaseArtifact.size_in_bytes)
-    assert(typeof(bytes) == "number")
-
-    updaterLog ..= string.format("Downloading %.2fMB (%i bytes)...\n", bytes / 1000 / 1000, bytes)
-    local downloadUrl = assert(releaseArtifact.archive_download_url)
-    assert(typeof(downloadUrl) == "string")
-
-    local zipResponse = Network:MakeHttpRequestAsync({
-        Url = downloadUrl,
-        Headers = headers
-    })
-
-    if not zipResponse.Ok then
-        error(`{ zipResponse.Status }: { zipResponse.Body }`)
-    end
-
-    updaterLog ..= `Got { #zipResponse.Body } bytes\n`
-    updaterLog ..= "Writing to update.zip...\n"
-
-    if fs.isfile("./update.zip") then
-        error("`update.zip` already exists in the installation directory!")
-    end
-
-    fs.write("./update.zip", zipResponse.Body)
-    updaterLog ..= "All done!\n"
-
-    task.wait() -- allow the `updaterLog` to be rendered
-    Engine:ShowMessageBox("Update", "Close the Editor, extract the 'update.zip' file into the Editor's directory, and you're all done!")
-end
-
-function Stages.Update(dt: number)
-    Stages.SelectProject(dt)
-
-    if game.Time - switchedToUpdater < 0.1 then
-        imgui.setnextwindowsize(750, 500)
-        imgui.setnextwindowposition(Renderer.Resolution.x / 2 - 750 / 2, Renderer.Resolution.y / 2 - 500 / 2)
-    end
-
-    if imgui.beginpopupmodal("Updater", true) then
-        imgui.text("The Updater will download the latest GitHub Actions artifact, which requires a GitHub token.")
-        imgui.urllink("Generate a Personal Access Token", "https://github.com/settings/personal-access-tokens")
-
-        imgui.text("GitHub token: ")
-        imgui.sameline()
-
-        imgui.setcursorposition(imgui.cursorposition() + vector.create(140, 0))
-        if not updateInProgress then
-            updaterGitHubToken = imgui.inputstring("##Token", updaterGitHubToken, true)
-        else
-            imgui.text(string.rep("*", #updaterGitHubToken))
-        end
-
-        if not updateInProgress then
-            local cxavail = imgui.contentregionavail().x
-            local cursor = imgui.cursorposition()
-            local btsx = imgui.textsize("Begin").x
-
-            imgui.setcursorposition(getCenteredX(cursor.x, cxavail, btsx), cursor.y)
-            if imgui.button("Begin") then
-                task.defer(function()
-                    local s, e = (pcall :: any)(function()
-                        runUpdate()
-                    end)
-
-                    if not s then
-                        updaterLog ..= "Update failed:\n"
-                        updaterErr = e
-                    end
-                end)
-
-                updateInProgress = true
-            end
-        end
-
-        if #updaterLog > 0 then
-            imgui.separator()
-            imgui.text(updaterLog)
-
-            if updaterErr then
-                imgui.pushstylecolor(0, { 1, 0, 0, 1 })
-                imgui.text(updaterErr)
-                imgui.popstylecolor()
-            end
-        end
-
-        imgui.endpopup()
-
-    elseif game.Time - switchedToUpdater > 0.1 and (not updateInProgress or updaterErr) then
-        changeStageTo("SelectProject" :: "SelectProject")
-
-    else
-        if game.Time - switchedToUpdater > 0.1 then
-            setErrorNotification("You can't do that")
-        end
-
-        imgui.openpopup("Updater")
-    end
-end
-
-function Stages.Update_Leave()
-    imgui.openpopup("About")
-    canUpdate = true
-    updaterErr = nil
-    updateInProgress = false
+if not fs.isdirectory(Preferences.ProjectsDirectory) then
+    fs.mkdir(Preferences.ProjectsDirectory)
 end
 
 local function handleEngineShutdown()
-    saveSettings()
+    CommonUI.SaveSettings()
 
-    if CurrentStage == "ProjectEditing" or CurrentStage == "ProjectPlaying" then
+    if State.CurrentStage == "ProjectEditing" or State.CurrentStage == "ProjectPlaying" then
         local choice = Engine:ShowMessageBox("Save", "Save current Editor file before closing?", "yesno", "warning", 1)
 
         if choice == 0 then
             warn("Quitting without saving")
         else
             print("Saving before quitting")
-            saveProject()
+            State:SaveProject()
         end
 
-        if Project.DataModel then
-            Project.DataModel:Destroy()
+        if State.Project.DataModel then
+            State.Project.DataModel:Destroy()
         end
     end
 end
@@ -319,20 +93,68 @@ local function onError(err)
     assert(State)
 
     local errorMessage = `An error occurred: { debug.traceback(err, 2) }`
-    if _state.Project.DataModel then
+    if State.Project.DataModel then
         errorMessage ..= "\n\nThe Editor will perform a save to the file 'resources/scenes/autosave.world', please ensure nothing important is stored at that location before proceeding."
     end
 
     Logging:Write(errorMessage, Enum.LogType.Error)
     Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
 
-    if _state.Project.DataModel then
-        local s, e = AssetManager:SaveScene({ _state.Project.DataModel }, "scenes/autosave.world")
+    if State.Project.DataModel then
+        local s, e = AssetManager:SaveScene({ State.Project.DataModel }, "scenes/autosave.world")
         assert(s, `Failed to save: {e}`)
     end
 end
 
-local function editorFrame(State: StateType, DeltaTime)
+local WasHoldingCtrlKeyDown = false
+local WasHoldingZKeyDown = false
+local WasHoldingYKeyDown = false
+
+local function handleUndoRedoKeybinds()
+    local ctrlKeyDown = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
+    local zKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Z)
+    local yKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Y)
+
+    if ctrlKeyDown and zKeyDown then
+        if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
+            local success, error = pcall(function()
+                History:Undo()
+            end)
+
+            if not success then
+                assert(error)
+
+                local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
+                realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
+
+                ErrorMessage.Push("Undo failed: " .. realError)
+            end
+        end
+    end
+
+    if ctrlKeyDown and yKeyDown then
+        if not WasHoldingCtrlKeyDown or not WasHoldingYKeyDown then
+            local success, error = pcall(function()
+                History:Redo()
+            end)
+
+            if not success then
+                assert(error)
+
+                local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
+                realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
+
+                ErrorMessage.Push("Redo failed: " .. realError)
+            end
+        end
+    end
+
+    WasHoldingCtrlKeyDown = ctrlKeyDown
+    WasHoldingZKeyDown = zKeyDown
+    WasHoldingYKeyDown = yKeyDown
+end
+
+local function editorFrame(State, DeltaTime)
     if not workspace.SceneCamera then
         workspace.SceneCamera = GameObject.new("Camera")
         workspace.SceneCamera.Parent = workspace
@@ -345,7 +167,19 @@ local function editorFrame(State: StateType, DeltaTime)
     end
 
     CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
-    Stages[CurrentStage](DeltaTime)
+
+    -- TODO luau
+    -- Stages[State.CurrentStage].Render(DeltaTime)
+
+    if State.CurrentStage == "SelectProject" then
+        Stages.SelectProject.Render(DeltaTime)
+    elseif State.CurrentStage == "ProjectEditing" then
+        Stages.ProjectEditing.Render(DeltaTime)
+    elseif State.CurrentStage == "ProjectPlaying" then
+        Stages.ProjectPlaying.Render(DeltaTime)
+    else
+        error(`Unexpected editor stage '{ State.CurrentStage }'`)
+    end
 end
 
 local function stageUpdate(State, DeltaTime)
@@ -360,7 +194,9 @@ end
 
 local StageUpdateConnection: EventConnection?
 
-local function changeStageTo(NewStage: string)
+local function changeStageTo(NewStage: Types.Stage)
+    assert(NewStage ~= "None" and NewStage ~= "Update")
+    assert(State.CurrentStage ~= "None" and State.CurrentStage ~= "Update")
     assert(Stages[NewStage])
 
     if StageUpdateConnection then
@@ -368,13 +204,13 @@ local function changeStageTo(NewStage: string)
         StageUpdateConnection = nil
     end
 
-    if Stages[CurrentStage .. "_Leave"] then
-        Stages[CurrentStage .. "_Leave"](NewStage)
+    if Stages[State.CurrentStage].Leave then
+        Stages[State.CurrentStage].Leave(NewStage)
     end
 
     local targetDm = game
-    if Stages[NewStage .. "_Enter"] then
-        targetDm = Stages[NewStage .. "_Enter"](CurrentStage) or targetDm
+    if Stages[NewStage].Enter then
+        targetDm = Stages[NewStage].Enter(State.CurrentStage) or targetDm
     end
 
     PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
@@ -406,9 +242,9 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
             game:Close(1)
         end)
 
-        local success = xpcall(createNewProject_, function(err)
+        local success = xpcall(State.CreateNewProject, function(err)
             warn(debug.traceback(err, 1))
-        end)
+        end, State, false)
 
         if not success then
             warn("Failed to create new project!")
@@ -416,14 +252,14 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
             return
         end
 
-        if CurrentStage ~= "ProjectEditing" then
-            warn(`Stage is {CurrentStage} and not ProjectEditing`)
+        if State.CurrentStage ~= "ProjectEditing" then
+            warn(`Stage is {State.CurrentStage} and not ProjectEditing`)
             game:Close(1)
             return
         end
 
         warn("Editor CI checks done")
-        CurrentStage = "SelectProject"
+        State.CurrentStage = "SelectProject"
         game:Close()
     end)()
 else
@@ -436,6 +272,6 @@ if loadProjectIndex then
     if not name then
         Logging:Write("`--project` specified without the project name!", Enum.LogType.Error)
     else
-        openProject(name)
+        State:OpenProject(name)
     end
 end

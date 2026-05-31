@@ -5,7 +5,7 @@ local History = game:GetService("History")
 local CoreTools = {}
 CoreTools.EditorCanUseMouse = true
 
-local Types = require("./Types.luau")
+local Types = require("./Types")
 
 local GizmoActive = true
 local GizmoMode = 1
