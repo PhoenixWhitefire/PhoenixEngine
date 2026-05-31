@@ -6,15 +6,15 @@ local Network = game:GetService("Network")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
-local PluginManager = require("@ed/PluginManager")
-
-
-
 fs.definealias("editres", "./resources")
 fs.definealias("etextures", "@editres/textures")
 fs.definealias("base", "./resources")
 
-EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
+local PluginManager = require("@ed/PluginManager")
+local Preferences = require("@ed/Preferences")
+local State = require("@ed/State")
+
+--EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
 
 History:EnableRecording()
 
@@ -43,26 +43,14 @@ if not fs.isdirectory(EditorPreferences.ProjectsDirectory) then
     fs.mkdir(EditorPreferences.ProjectsDirectory)
 end
 
-if fs.isfile("./editor/models.json") then
-    ModelModifiedTimes = json.parse(assert(fs.read("./editor/models.json"))) :: { [string]: number }
-end
-
 local GitIsAvailable = fs.execute("git --version"):find("git version") ~= nil
 print(if GitIsAvailable then "Git is available" else "Git is not available")
-
-local LogMessageHovering: number = -1
 
 local updateInProgress = false
 local updaterGitHubToken = ""
 local updaterLog = ""
 local updaterErr = nil
 local switchedToUpdater = 0
-
-function Stages.Update_Enter()
-    imgui.openpopup("Updater")
-    canUpdate = false
-    switchedToUpdater = game.Time
-end
 
 local function runUpdate()
     updaterLog = "Update has started.\n"
@@ -327,39 +315,50 @@ local function checkIfLatestVersionBuilt()
     end
 end
 
-Collections:GetTagAddedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
-    if not Object:HasComponent("Model") or not Object:HasComponent("Transform") then
-        return
+local function onError(err)
+    assert(State)
+
+    local errorMessage = `An error occurred: { debug.traceback(err, 2) }`
+    if _state.Project.DataModel then
+        errorMessage ..= "\n\nThe Editor will perform a save to the file 'resources/scenes/autosave.world', please ensure nothing important is stored at that location before proceeding."
     end
 
-    watchModelForReimporting(Object :: GameObject & EcModel)
-end)
+    Logging:Write(errorMessage, Enum.LogType.Error)
+    Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
 
-Collections:GetTagRemovedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
-    if not Object:HasComponent("Model") or not Object:HasComponent("Transform") then
-        return
+    if _state.Project.DataModel then
+        local s, e = AssetManager:SaveScene({ _state.Project.DataModel }, "scenes/autosave.world")
+        assert(s, `Failed to save: {e}`)
+    end
+end
+
+local function editorFrame(State: StateType, DeltaTime)
+    if not workspace.SceneCamera then
+        workspace.SceneCamera = GameObject.new("Camera")
+        workspace.SceneCamera.Parent = workspace
     end
 
-    local model = Object :: GameObject & EcModel
-    local watcher = ReimportWatchers[model.ImportPath]
-
-    if not watcher then
-        return
+    if not History.IsRecordingAction then
+        if State.CurrentStage == "ProjectEditing" then
+            handleUndoRedoKeybinds()
+        end
     end
 
-    local index = table.find(watcher.Models, model)
+    CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
+    Stages[CurrentStage](DeltaTime)
+end
 
-    if not index then
-        return
+local function stageUpdate(State, DeltaTime)
+    local s, e = (xpcall::any)(function(State, dt)
+        editorFrame(State, dt)
+    end, onError, State, DeltaTime)
+
+    if not s then
+        warn(`editorFrame error: {e}`)
     end
+end
 
-    table.remove(watcher.Models, index)
-
-    if #watcher.Models == 0 then
-        watcher.Disconnect()
-        ReimportWatchers[model.ImportPath] = nil
-    end
-end)
+local StageUpdateConnection: EventConnection?
 
 local function changeStageTo(NewStage: string)
     assert(Stages[NewStage])
@@ -394,9 +393,9 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
     -- TODO luau cast
     task.defer(changeStageTo, "SelectProject" :: "SelectProject")
 
-    if StageUpdateSignal then
-        StageUpdateSignal:Disconnect()
-        StageUpdateSignal = nil
+    if StageUpdateConnection then
+        StageUpdateConnection:Disconnect()
+        StageUpdateConnection = nil
     end
 
     coroutine.wrap(function()

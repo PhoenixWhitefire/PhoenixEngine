@@ -3,13 +3,11 @@ local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
 local Interface = game:GetService("Interface")
-local Logging = game:GetService("Logging")
 local History = game:GetService("History")
 local Physics = game:GetService("Physics")
 local Engine = game:GetService("Engine")
 
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
-local PluginManager = require("@ed/PluginManager")
 local Configuration = require("@ed/Configuration")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
@@ -37,7 +35,7 @@ type StateType = {
     SaveToRecents: (StateType, string) -> (),
     SaveProject: (StateType) -> (),
     OpenProject: (StateType, ManualPath: string?) -> (),
-    CreateNewProject: (StateType) -> (),
+    CreateNewProject: (StateType, Catch: boolean?) -> (),
     ChangeStageTo: (StateType, Types.Stage) -> (),
 }
 
@@ -459,53 +457,6 @@ local function handleUndoRedoKeybinds()
     WasHoldingYKeyDown = yKeyDown
 end
 
-local function editorFrame(State: StateType, DeltaTime)
-    if not workspace.SceneCamera then
-        workspace.SceneCamera = GameObject.new("Camera")
-        workspace.SceneCamera.Parent = workspace
-    end
-
-    if not History.IsRecordingAction then
-        if State.CurrentStage == "ProjectEditing" then
-            handleUndoRedoKeybinds()
-        end
-    end
-
-    CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
-    Stages[CurrentStage](DeltaTime)
-end
-
-local _state: StateType?
-
-local function onError(err)
-    assert(_state)
-
-    local errorMessage = `An error occurred: { debug.traceback(err, 2) }`
-    if _state.Project.DataModel then
-        errorMessage ..= "\n\nThe Editor will perform a save to the file 'resources/scenes/autosave.world', please ensure nothing important is stored at that location before proceeding."
-    end
-
-    Logging:Write(errorMessage, Enum.LogType.Error)
-    Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
-
-    if _state.Project.DataModel then
-        local s, e = AssetManager:SaveScene({ _state.Project.DataModel }, "scenes/autosave.world")
-        assert(s, `Failed to save: {e}`)
-    end
-end
-
-local function stageUpdate(State, DeltaTime)
-    local s, e = (xpcall::any)(function(State, dt)
-        editorFrame(State, dt)
-    end, onError, State, DeltaTime)
-
-    if not s then
-        warn(`editorFrame error: {e}`)
-    end
-end
-
-local StageUpdateConnection: EventConnection?
-
 local State: StateType = {
     Project = {
         DataModel = nil,
@@ -550,21 +501,23 @@ local State: StateType = {
         State.LastAutosaved = game.Time
     end,
 
-    CreateNewProject = function(State: StateType)
-        PlayerInput.Cursor = Enum.Cursor.NotAllowed
+    CreateNewProject = function(State: StateType, Catch: boolean?)
+        if Catch == nil or Catch == true then
+            PlayerInput.Cursor = Enum.Cursor.NotAllowed
 
-        xpcall(createNewProject_, function(err)
-            Engine:ShowMessageBox("Failed to create project", "Failed to create new project: " .. tostring(err), "ok", "error")
-        end, State)
+            xpcall(createNewProject_, function(err)
+                Engine:ShowMessageBox("Failed to create project", "Failed to create new project: " .. tostring(err), "ok", "error")
+            end, State)
 
-        PlayerInput.Cursor = Enum.Cursor.Arrow
+            PlayerInput.Cursor = Enum.Cursor.Arrow
+        else
+            createNewProject_(State)
+        end
     end,
 
     ChangeStageTo = function(State: StateType, NewStage: Types.Stage)
         error("Editor state change callback not registered!")
     end,
 }
-
-_state = State
 
 return State

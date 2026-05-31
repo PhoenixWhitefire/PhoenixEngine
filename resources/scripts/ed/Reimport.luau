@@ -10,10 +10,50 @@ local Reimport = {
 }
 
 local AssetManager = game:GetService("AssetManager")
+local Collections = game:GetService("Collections")
 local Logging = game:GetService("Logging")
 local History = game:GetService("History")
 
+local Configuration = require("@ed/Configuration")
 local Preferences = require("@ed/Preferences")
+
+if fs.isfile("./editor/models.json") then
+    Reimport.ModelModifiedTimes = json.parse(assert(fs.read("./editor/models.json"))) :: { [string]: number }
+end
+
+Collections:GetTagAddedSignal(Configuration.ReimportableModelTag):Connect(function(Object)
+    if not Object:HasComponent("Model") or not Object:HasComponent("Transform") then
+        return
+    end
+
+    Reimport.WatchModel(Object :: GameObject & EcModel)
+end)
+
+Collections:GetTagRemovedSignal(Configuration.ReimportableModelTag):Connect(function(Object)
+    if not Object:HasComponent("Model") or not Object:HasComponent("Transform") then
+        return
+    end
+
+    local model = Object :: GameObject & EcModel
+    local watcher = Reimport.Watchers[model.ImportPath]
+
+    if not watcher then
+        return
+    end
+
+    local index = table.find(watcher.Models, model)
+
+    if not index then
+        return
+    end
+
+    table.remove(watcher.Models, index)
+
+    if #watcher.Models == 0 then
+        watcher.Disconnect()
+        Reimport.Watchers[model.ImportPath] = nil
+    end
+end)
 
 function Reimport.WatchModel(reimportable: GameObject & EcModel)
     local watcher = Reimport.Watchers[reimportable.ImportPath]
