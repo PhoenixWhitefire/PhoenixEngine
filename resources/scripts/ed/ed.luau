@@ -1,33 +1,18 @@
 -- ed.luau, 14/09/2025
-local Editor = {}
-
-local DeveloperTools = game:GetService("DeveloperTools")
-local AssetManager = game:GetService("AssetManager")
-local ScriptEngine = game:GetService("ScriptEngine")
-local PlayerInput = game:GetService("PlayerInput")
 local Collections = game:GetService("Collections")
-local Interface = game:GetService("Interface")
 local Renderer = game:GetService("Renderer")
 local History = game:GetService("History")
-local Physics = game:GetService("Physics")
 local Network = game:GetService("Network")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
+local PluginManager = require("@ed/PluginManager")
+
+
+
 fs.definealias("editres", "./resources")
 fs.definealias("etextures", "@editres/textures")
 fs.definealias("base", "./resources")
-
-local Configuration = require("./Configuration")
-
-local HistoryView = require("./HistoryView.luau")
-local TagViewer = require("./TagEditor.luau")
-local Types = require("./Types.luau")
-type Stage = Types.Stage
-
-local Stages: { [string]: ((number) -> ()) & ((Stage) -> (GameObject & EcDataModel)?) } = {}
-
-local EditorPreferences = require("./Preferences")
 
 EditorPreferences = EditorPreferences :: { [keyof<typeof(EditorPreferences)>]: index<typeof(EditorPreferences), keyof<typeof(EditorPreferences)>> } & typeof(EditorPreferences)
 
@@ -375,6 +360,32 @@ Collections:GetTagRemovedSignal(REIMPORTABLE_MODEL):Connect(function(Object)
         ReimportWatchers[model.ImportPath] = nil
     end
 end)
+
+local function changeStageTo(NewStage: string)
+    assert(Stages[NewStage])
+
+    if StageUpdateConnection then
+        StageUpdateConnection:Disconnect()
+        StageUpdateConnection = nil
+    end
+
+    if Stages[CurrentStage .. "_Leave"] then
+        Stages[CurrentStage .. "_Leave"](NewStage)
+    end
+
+    local targetDm = game
+    if Stages[NewStage .. "_Enter"] then
+        targetDm = Stages[NewStage .. "_Enter"](CurrentStage) or targetDm
+    end
+
+    PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
+    CoreTools.OnEditorStageChanged(NewStage)
+    StageUpdateConnection = targetDm.OnFrameBegin:Connect(function(dt)
+        stageUpdate(State, dt)
+    end)
+
+    State.CurrentStage = NewStage
+end
 
 game:BindToClose(handleEngineShutdown)
 task.defer(checkIfLatestVersionBuilt)

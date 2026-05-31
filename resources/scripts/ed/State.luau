@@ -561,30 +561,8 @@ local State: StateType = {
     end,
 
     ChangeStageTo = function(State: StateType, NewStage: Types.Stage)
-        assert(Stages[NewStage])
-
-        if StageUpdateConnection then
-            StageUpdateConnection:Disconnect()
-            StageUpdateConnection = nil
-        end
-
-        if Stages[CurrentStage .. "_Leave"] then
-            Stages[CurrentStage .. "_Leave"](NewStage)
-        end
-
-        local targetDm = game
-        if Stages[NewStage .. "_Enter"] then
-            targetDm = Stages[NewStage .. "_Enter"](CurrentStage) or targetDm
-        end
-
-        PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
-        CoreTools.OnEditorStageChanged(NewStage)
-        StageUpdateConnection = targetDm.OnFrameBegin:Connect(function(dt)
-            stageUpdate(State, dt)
-        end)
-
-        State.CurrentStage = NewStage
-    end
+        error("Editor state change callback not registered!")
+    end,
 }
 
 _state = State
