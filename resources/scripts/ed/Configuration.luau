@@ -9,6 +9,7 @@ return table.freeze({
     GameEditingVMName = "GameEditingVM",
     PlaytestVMName = "Playtest",
     LogoImage = "@etextures/logo.png",
+    FallbackImage = "@etextures/editor-icons/fallback.png",
 
     CoreAssets = {
         "shaders/error.shp",

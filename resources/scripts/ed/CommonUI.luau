@@ -1,18 +1,27 @@
 -- CommonUI.luau, 30/05/2026
 local CommonUI = {}
 
+local DeveloperTools = game:GetService("DeveloperTools")
 local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
+local Renderer = game:GetService("Renderer")
 local Network = game:GetService("Network")
 local History = game:GetService("History")
+local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
+local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local Configuration = require("@ed/Configuration")
+local PluginManager = require("@ed/PluginManager")
 local ErrorMessage = require("@ed/ErrorMessage")
+local HistoryView = require("@ed/HistoryView")
 local Preferences = require("@ed/Preferences")
+local TagViewer = require("@ed/TagEditor")
+local CoreTools = require("@ed/CoreTools")
+local Reimport = require("@ed/Reimport")
+local Output = require("@ed/Output")
 local State = require("@ed/State")
-local Types = require("@ed/Types")
 local Git = require("@ed/Git")
 
 local SPYWARE_SETTINGS_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine/issues/30"
@@ -20,6 +29,450 @@ local SPYWARE_SETTINGS_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine/
 local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
 local RibbonPopupDistance = 16
+
+local TabButtonClicked: string? = nil
+local TabButtonHovering: string? = nil
+local WipTabButtonHovering = TabButtonHovering
+local WindowHovering = false
+
+local IsHoveringViewportTitlebar = false
+local IsHoveringViewport = false
+local ViewportRight = 0
+local ViewportLeft = 0
+local ViewportTop = 0
+local ViewportBottom = 0
+
+local CommandBarCommand = ""
+local CommandBarBlinkFrame = 0
+local CommandBarPostRun = false
+local CommandBarActive = false
+local CommandBarHistory: { string } = {}
+local CommandBarHistoryCursor = 1
+
+local commandBarSavedHistory = if fs.isfile("./editor/command-history.json") then json.parse(assert(fs.read("./editor/command-history.json"))) else {}
+assert(typeof(commandBarSavedHistory) == "table")
+CommandBarHistory = commandBarSavedHistory :: any
+CommandBarHistoryCursor = #CommandBarHistory + 1
+
+local PrevSelections: { GameObject & EcTransform } = {}
+
+local ToolOrder = {
+    "Explorer",
+    "Properties"
+}
+
+for _, tool in DeveloperTools:GetToolNames() do
+    if not table.find(ToolOrder, tool) then
+        table.insert(ToolOrder, tool)
+    end
+end
+
+local SelectionPart = GameObject.new("Mesh")
+SelectionPart.Material = "boxframe"
+SelectionPart.Tint = Color.new(166/255, 200/255, 1)
+SelectionPart.PhysicsCollisions = false
+SelectionPart.FaceCulling = Enum.FaceCulling.None
+SelectionPart.Name = "SelectionPart"
+
+local function runCurrentCommand()
+    if #CommandBarHistory == 0 or CommandBarHistory[CommandBarHistoryCursor] ~= CommandBarCommand then
+        table.insert(CommandBarHistory, CommandBarCommand)
+
+        if #CommandBarHistory > 100 then
+            table.remove(CommandBarHistory, 1)
+        end
+
+        CommandBarHistoryCursor = #CommandBarHistory
+    end
+
+    local commandBarAction = History:TryBeginAction("CommandBarCode")
+
+    if #CommandBarCommand > 1 and CommandBarCommand:sub(1, 1) == "=" then
+        CommandBarCommand = `print({ CommandBarCommand:sub(2, #CommandBarCommand) })`
+    end
+
+    local callSuccess, runSuccessOrCallError, callError = pcall(function()
+        return ScriptEngine:RunInVM(if State.CurrentStage == "ProjectEditing" then Configuration.GameEditingVMName else Configuration.PlaytestVMName, CommandBarCommand, "@@projres/scripts/!CommandBar")
+    end)
+
+    if not callSuccess then
+        Logging:Write(`Editor experienced an error while running your code: { runSuccessOrCallError }: { callError }`, Enum.LogType.Error)
+    end
+
+    if not callSuccess or not runSuccessOrCallError then
+        local cmd = CommandBarCommand
+        task.wait() -- wait for command bar to be un-focused, then show the command that ran
+        CommandBarCommand = cmd
+    end
+
+    if commandBarAction then
+        History:FinishAction(commandBarAction)
+    end
+
+    CommandBarPostRun = true
+end
+
+PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
+    if kie.Action ~= Enum.InputAction.Pressed then
+        return
+    end
+
+    if kie.Key == Enum.Key.F5 then
+        if State.CurrentStage == "ProjectEditing" then
+            State:ChangeStageTo("ProjectPlaying")
+        elseif State.CurrentStage == "ProjectPlaying" then
+            State:ChangeStageTo("ProjectEditing")
+        end
+    end
+
+    if not CommandBarActive then
+        return
+    end
+
+
+    if kie.Key == Enum.Key.Enter then
+        runCurrentCommand()
+    elseif #CommandBarHistory > 0 then
+        if kie.Key == Enum.Key.Up and CommandBarHistoryCursor > 1 then
+            CommandBarHistoryCursor -= 1
+            CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+            CommandBarBlinkFrame = 1
+        end
+
+        if kie.Key == Enum.Key.Down and CommandBarHistoryCursor <= #CommandBarHistory then
+            CommandBarHistoryCursor += 1
+
+            if CommandBarHistoryCursor > #CommandBarHistory then
+                CommandBarCommand = ""
+            else
+                CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
+            end
+
+            CommandBarBlinkFrame = 1
+        end
+    end
+end)
+
+local function isMouseWithinViewport()
+    local pos = PlayerInput:GetCursorPosition()
+
+    if pos.x >= ViewportLeft and pos.x <= ViewportRight then
+        if pos.y >= ViewportTop and pos.y < ViewportBottom then
+            IsHoveringViewport = true
+        else
+            IsHoveringViewport = false
+        end
+    else
+        IsHoveringViewport = false
+    end
+
+    return IsHoveringViewport
+end
+
+local LIT_COLOR = { 1, 1, 1, 0.05 }
+local UNLIT_COLOR = { 1, 1, 1, 0 }
+
+local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?, Tooltip: string?): boolean
+    if Enabled == nil then
+        Enabled = true
+    end
+
+    if Lit == nil then
+        Lit = false
+    end
+
+    if not Id then
+        Id = Text
+    end
+
+    local tint = if Enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
+
+    if Id == TabButtonHovering then
+        imgui.pushstylecolor(5, { 1, 1, 1, 1 })
+    end
+
+    local backgroundColor = if Preferences.InvertTabButtonLitColors then LIT_COLOR else UNLIT_COLOR
+
+    if Lit then
+        backgroundColor = if Preferences.InvertTabButtonLitColors then UNLIT_COLOR else LIT_COLOR
+    end
+
+    local sf = imgui.scalefactor()
+
+    imgui.pushstylecolor(3, backgroundColor)
+
+    imgui.beginchild(Text .. "_Selection", 120 * sf, 150 * sf, "b")
+
+    local clicked, hovered = false, false
+    local cpos = imgui.cursorposition()
+    imgui.setcursorposition(cpos.x + 2, cpos.y)
+
+    imgui.image(Icon, vector.create(100, 100) * sf, false, tint, false)
+    clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
+    imgui.text(Text)
+    clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
+
+    local windowHovered = imgui.windowhovered()
+
+    imgui.endchild()
+
+    if Enabled and (hovered or windowHovered) then
+        WipTabButtonHovering = Id
+    end
+
+    if hovered and Tooltip then
+        imgui.settooltip(Tooltip)
+    end
+
+    imgui.popstylecolor()
+
+    if Id == TabButtonHovering then
+        imgui.popstylecolor()
+
+        -- if we are hovering and mouseclick
+        if Enabled and TabButtonClicked == Id then
+            TabButtonClicked = nil
+            return true
+        end
+    end
+
+    return if Enabled then clicked else false
+end
+
+PlayerInput.MouseButtonEvent:Connect(function(mie)
+    if mie.Button ~= Enum.MouseButton.Left then
+        return
+    end
+
+    if mie.Action == Enum.InputAction.Released then
+        TabButtonClicked = nil
+        return
+    end
+
+    TabButtonClicked = TabButtonHovering
+end)
+
+local function whyCannotPlaytest()
+    return if History.IsRecordingAction
+        then `You can't until the { assert(History.CurrentActionName) } Action finishes`
+        else nil
+end
+
+local function homeTab(_: number)
+    local startY = imgui.cursorposition().y
+
+    local inPlaytest = State.CurrentStage == "ProjectPlaying"
+    local currentActionTooltip = whyCannotPlaytest()
+
+    if inPlaytest then
+        if tabButton("Stop", "@etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Stop (F5)") then
+            State:ChangeStageTo("ProjectEditing")
+        end
+    else
+        if tabButton("Start", "@etextures/editor-icons/start.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Play (F5)") then
+            State:ChangeStageTo("ProjectPlaying")
+        end
+    end
+
+    imgui.sameline()
+
+    if tabButton("Import Model", "@etextures/editor-icons/Model.png") then
+        task.defer(function()
+            local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
+
+            if paths[1] then
+                local importAction = History:TryBeginAction("Import Model")
+                local success, importedOrError = pcall(function()
+                    return AssetManager:ImportModel(paths[1])
+                end)
+
+                if not success then
+                    ErrorMessage.Push(`Failed to import: { importedOrError }`)
+                    if importAction then
+                        History:DiscardAction(importAction)
+                    end
+
+                    return
+                end
+
+                assert(State.Project.Workspace)
+                importedOrError:AddTag(Configuration.ReimportableModelTag)
+                importedOrError.Parent = State.Project.Workspace
+                DeveloperTools:SetExplorerSelections({ importedOrError })
+
+                local hit = State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, workspace.SceneCamera.Transform.Forward * 50)
+
+                if hit then
+                    importedOrError.Transform = Matrix.translated(hit.Position)
+                end
+
+                if importAction then
+                    History:FinishAction(importAction)
+                end
+
+                Reimport.ModelModifiedTimes[paths[1]] = fs.lastwritten(paths[1])
+                Reimport.WatchModel(importedOrError)
+            else
+                print("No model selected")
+            end
+        end)
+    end
+
+    imgui.sameline()
+
+    if tabButton("Auto re-import\nmodels", "@etextures/editor-icons/auto-reimport.png", true, Preferences.AutoReimportModels) then
+        Preferences.AutoReimportModels = not Preferences.AutoReimportModels
+    end
+
+    imgui.sameline()
+
+    CoreTools.RenderControls(tabButton)
+
+    imgui.sameline()
+    local cx = imgui.cursorposition().x
+    imgui.setcursorposition(cx, startY)
+
+    if tabButton("History", "@etextures/editor-icons/history-viewer.png", true, HistoryView.Open) then
+        HistoryView.Open = not HistoryView.Open
+    end
+
+    imgui.sameline()
+    cx = imgui.cursorposition().x
+    imgui.setcursorposition(cx, startY)
+
+    if tabButton("Collections", `@etextures/editor-icons/Folder_{if TagViewer.Open then "Open" else "Closed"}.png`, true, TagViewer.Open) then
+        TagViewer.Open = not TagViewer.Open
+    end
+
+    imgui.dummy()
+end
+
+local WasToolEnabled = {}
+local didFocusCodeEditorSetting = false
+
+local function updateDevToolsOpenState()
+    Preferences.DevToolsOpen = {}
+
+    for _, name in DeveloperTools:GetToolNames() do
+        if DeveloperTools:IsToolEnabled(name) then
+            table.insert(Preferences.DevToolsOpen, name)
+        end
+    end
+end
+
+local function saveSettings()
+    local success, error = pcall(function()
+        if State.CurrentStage == "ProjectEditing" or State.CurrentStage == "ProjectPlaying" then
+            updateDevToolsOpenState()
+        end
+
+        fs.write("./editor/settings.json", json.encode(Preferences :: JsonSerializable))
+
+        if State.Project.Name and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure and Preferences.CodeEditorPath and #Preferences.CodeEditorPath > 0 then
+            task.defer(ExternalCodeEditor.Open, State.Project.Name)
+        end
+
+        ExternalCodeEditor.RequestOpenSettingsMenuToConfigure = false
+        didFocusCodeEditorSetting = false
+
+        fs.write("./editor/models.json", json.encode(Reimport.ModelModifiedTimes :: { [string]: JsonSerializable }))
+        fs.write("./editor/command-history.json", json.encode(CommandBarHistory :: JsonSerializable))
+
+        if State.CurrentStage == "ProjectEditing" or State.CurrentStage == "ProjectPlaying" then
+            ScriptEngine:SetVMAllowedExecutionTime(Configuration.GameEditingVMName, Preferences.ScriptAllowedExecutionTime)
+
+            if State.CurrentStage == "ProjectPlaying" then
+                ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
+            end
+        end
+    end)
+
+    if not success then
+        warn(`Failed to save settings: { error }`)
+    end
+end
+
+local function toolsTab(_: number)
+    for _, tool in ToolOrder do
+        local enabled = DeveloperTools:IsToolEnabled(tool)
+
+        local iconName = tool
+        if iconName == "Renderer" then
+            iconName = "Settings"
+        end
+
+        if tabButton(tool, `@etextures/editor-icons/{ iconName }.png`, true, enabled) then
+            DeveloperTools:SetToolEnabled(tool, not enabled)
+        end
+
+        if WasToolEnabled[tool] ~= nil then
+            if WasToolEnabled[tool] ~= enabled then
+                saveSettings()
+            end
+        end
+
+        WasToolEnabled[tool] = enabled
+
+        imgui.sameline()
+    end
+
+    local bottomBarOpen = Preferences.ToolsOpen.BottomBar
+    if tabButton("Bottom Bar", `@etextures/editor-icons/command-bar.png`, true, bottomBarOpen) then
+        Preferences.ToolsOpen.BottomBar = not bottomBarOpen
+    end
+
+    imgui.sameline()
+
+    local ouputOpen = Preferences.ToolsOpen.Output
+    if tabButton("Output", `@etextures/editor-icons/command-bar.png`, true, ouputOpen) then
+        Preferences.ToolsOpen.Output = not ouputOpen
+    end
+
+    imgui.dummy()
+end
+
+local function pluginsTab(dt: number)
+    local sepDepth = 0
+
+    local buttons = PluginManager.GetToolbarButtons(State.CurrentStage)
+    for _, button in buttons do
+        if button.IsSeparator then
+            imgui.separator() -- goes horizontal for some reason
+            imgui.sameline()
+            sepDepth += 1
+            continue
+        end
+
+        imgui.pushid(tostring(sepDepth))
+
+        if tabButton(button.Text, button.Icon or Configuration.FallbackImage, button.Enabled, button.Lit, button.Text .. sepDepth) then
+            button.OnClick(button)
+        end
+
+        imgui.popid()
+
+        imgui.sameline()
+    end
+
+    imgui.dummy()
+end
+
+local RibbonTabs: { { Name: string, Renderer: (number) -> () } } = {
+    {
+        Name = "Home",
+        Renderer = homeTab
+    },
+    {
+        Name = "Tools",
+        Renderer = toolsTab
+    },
+    {
+        Name = "Plugins",
+        Renderer = pluginsTab
+    }
+}
+
+local CurrentRibbonTab: number = 1
 
 local function findEnginePath(): string?
     local commandPath = Engine:GetCliArguments()[1]
@@ -71,8 +524,8 @@ local function compileScriptBytecodeRecursive(dir)
     end
 end
 
-local function exportProject(Editor: { SaveProject: () -> () })
-    Editor.SaveProject()
+local function exportProject()
+    State:SaveProject()
 
     local enginePath = findEnginePath()
 
@@ -330,7 +783,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
             end
 
             if imgui.menuitem("Open in Code Editor") then
-                task.defer(Editor.OpenCodeEditor)
+                task.defer(ExternalCodeEditor.Open, State.Project.Name)
             end
 
             if imgui.menuitem("Open Project folder") then
@@ -345,10 +798,10 @@ function CommonUI.RenderMainMenuBar(dt: number)
         end
 
         if imgui.menuitem("Save", State.CurrentStage == "ProjectEditing") then
-            Editor.SaveProject()
+            State:SaveProject()
         end
 
-        if Editor.CurrentStage == "ProjectEditing" then
+        if State.CurrentStage == "ProjectEditing" then
             if imgui.menuitem("Project Settings") then
                 local conf = json.parse(assert((fs.read("@project/phoenix.conf")))) :: any
 
@@ -389,8 +842,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
                                     json.encode(conf)
                                 )
 
-                                table.remove(Editor.RecentProjects, table.find(Editor.RecentProjects, prevName))
-                                Editor.SaveToRecents(newProjectName)
+                                table.remove(State.RecentProjects, table.find(State.RecentProjects, prevName))
+                                State:SaveToRecents(newProjectName)
                             else
                                 newProjectName = State.Project.Name
                             end
@@ -450,7 +903,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
                     else
                         if imgui.menuitem("Commit") then
                             task.defer(function()
-                                Editor.SaveProject()
+                                State:SaveProject()
                                 getGitStatus()
                                 OpenGitCommitMenu = true
                             end)
@@ -466,22 +919,22 @@ function CommonUI.RenderMainMenuBar(dt: number)
             end
 
             if imgui.menuitem("Export") then
-                task.defer(exportProject, Editor)
+                task.defer(exportProject)
             end
 
             if imgui.menuitem("Close") then
                 -- TODO luau cast
-                task.defer(Editor.ChangeStageTo, "SelectProject" :: "SelectProject")
+                task.defer(State.ChangeStageTo, State, "SelectProject" :: "SelectProject")
             end
         end
 
-        if imgui.menuitem("Open", Editor.CurrentStage == "SelectProject") then
-            SavedProjectsCache = nil
-            task.defer(openProject, nil) -- TODO type error when `nil` is not supplied
+        if imgui.menuitem("Open", State.CurrentStage == "SelectProject") then
+            State.SavedProjectsCache = nil
+            task.defer(State.OpenProject, State, nil) -- TODO type error when `nil` is not supplied
         end
 
-        if imgui.menuitem("New", CurrentStage == "SelectProject") then
-            task.defer(createNewProject)
+        if imgui.menuitem("New", State.CurrentStage == "SelectProject") then
+            task.defer(State.CreateNewProject, State)
         end
 
         if imgui.menuitem("About") then
@@ -549,7 +1002,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
         imgui.endpopup()
     end
 
-    if CurrentStage ~= "SelectProject" then
+    if State.CurrentStage ~= "SelectProject" then
         imgui.separator()
 
         WipTabButtonHovering = nil
@@ -602,7 +1055,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
         local LOGO_SIZE = 150 * sf
 
         imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursor.y)
-        imgui.image(LOGO_IMAGE, vector.create(LOGO_SIZE, LOGO_SIZE))
+        imgui.image(Configuration.LogoImage, vector.create(LOGO_SIZE, LOGO_SIZE))
 
         cursor += vector.create(0, 160 * sf)
 
@@ -614,14 +1067,14 @@ function CommonUI.RenderMainMenuBar(dt: number)
         textCentered(Engine.Version, cursor, cxavail)
         cursor += vector.create(0, tts.y + 15 * sf)
 
-        imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(GITHUB_URL).x), cursor.y)
-        imgui.urllink(GITHUB_URL)
+        imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(Configuration.GitHubUrl).x), cursor.y)
+        imgui.urllink(Configuration.GitHubUrl)
         cursor += vector.create(0, tts.y + 2 * sf)
 
         local commitText = `{ Engine.CommitTag } ({ Engine.CommitHash:sub(1, 8) })`
 
         imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(commitText).x), cursor.y)
-        imgui.urllink(commitText, `{ GITHUB_URL }/commit/{ Engine.CommitHash }`)
+        imgui.urllink(commitText, `{ Configuration.GitHubUrl }/commit/{ Engine.CommitHash }`)
         cursor += vector.create(0, tts.y + 16 * sf)
 
         if not isFetchingLatestCommitData and not latestCommit then
@@ -641,13 +1094,13 @@ function CommonUI.RenderMainMenuBar(dt: number)
                 imgui.setcursorposition(getCenteredX(cursor.x, cxavail, imgui.textsize(buttonText).x), cursor.y)
 
                 if canUpdate and imgui.button(buttonText) then
-                    if CurrentStage ~= "SelectProject" then
+                    if State.CurrentStage ~= "SelectProject" then
                         Engine:ShowMessageBox("Update", "You must close the current project to update")
                     elseif fs.isfile("./update.zip") then
                         Engine:ShowMessageBox("Update", "Delete or rename the 'update.zip' file in the Editor's installation directory to proceed", "ok", "error")
                     else
                         imgui.closecurrentpopup()
-                        changeStageTo("Update")
+                        State:ChangeStageTo("Update")
                     end
                 end
             else
@@ -669,7 +1122,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
         imgui.endpopup()
     end
 
-    if openSettingsWindow or openSettingsMenuToConfigureCodeEditor then
+    if openSettingsWindow or ExternalCodeEditor.RequestOpenSettingsMenuToConfigure then
         imgui.openpopup("Editor Settings")
 
         local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420 * sf, 140 * sf
@@ -681,54 +1134,54 @@ function CommonUI.RenderMainMenuBar(dt: number)
     end
 
     if imgui.beginpopupmodal("Editor Settings", true) then
-        local lightMode = imgui.checkbox("Light", EditorPreferences.UseLightTheme)
-        if lightMode ~= EditorPreferences.UseLightTheme then
+        local lightMode = imgui.checkbox("Light", Preferences.UseLightTheme)
+        if lightMode ~= Preferences.UseLightTheme then
             imgui.stylecolors(if lightMode then "l" else "d")
         end
-        EditorPreferences.UseLightTheme = lightMode
+        Preferences.UseLightTheme = lightMode
 
-        if openSettingsMenuToConfigureCodeEditor and not didFocusCodeEditorSetting then
+        if ExternalCodeEditor.RequestOpenSettingsMenuToConfigure and not didFocusCodeEditorSetting then
             imgui.focuskeyboardhere()
             didFocusCodeEditorSetting = true
         end
 
-        EditorPreferences.CodeEditorPath = imgui.inputstring("Code Editor path", EditorPreferences.CodeEditorPath or "")
+        Preferences.CodeEditorPath = imgui.inputstring("Code Editor path", Preferences.CodeEditorPath or "")
 
-        EditorPreferences.AutoLaunchCodeEditorOnProjectOpen = imgui.checkbox("Launch code editor on project open", EditorPreferences.AutoLaunchCodeEditorOnProjectOpen)
+        Preferences.AutoLaunchCodeEditorOnProjectOpen = imgui.checkbox("Launch code editor on project open", Preferences.AutoLaunchCodeEditorOnProjectOpen)
 
-        EditorPreferences.ClearOutputOnProjectOpen = imgui.checkbox("Clear Output on Project open", EditorPreferences.ClearOutputOnProjectOpen)
-        EditorPreferences.ClearOutputOnPlaytest = imgui.checkbox("Clear Output on Playtest", EditorPreferences.ClearOutputOnPlaytest)
+        Preferences.ClearOutputOnProjectOpen = imgui.checkbox("Clear Output on Project open", Preferences.ClearOutputOnProjectOpen)
+        Preferences.ClearOutputOnPlaytest = imgui.checkbox("Clear Output on Playtest", Preferences.ClearOutputOnPlaytest)
 
-        EditorPreferences.ClosingProjectSaveRequiresConfirmation = imgui.checkbox(
+        Preferences.ClosingProjectSaveRequiresConfirmation = imgui.checkbox(
             "Require confirmation for save when closing Project through `File` > `Close`",
-            EditorPreferences.ClosingProjectSaveRequiresConfirmation
+            Preferences.ClosingProjectSaveRequiresConfirmation
         )
 
-        EditorPreferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", EditorPreferences.AutosaveInterval)
-        EditorPreferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", EditorPreferences.KeepGizmoInView)
-        EditorPreferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", EditorPreferences.InvertTabButtonLitColors)
-        EditorPreferences.GitIntegration = imgui.checkbox("Git integration", EditorPreferences.GitIntegration)
+        Preferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", Preferences.AutosaveInterval)
+        Preferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", Preferences.KeepGizmoInView)
+        Preferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", Preferences.InvertTabButtonLitColors)
+        Preferences.GitIntegration = imgui.checkbox("Git integration", Preferences.GitIntegration)
 
-        EditorPreferences.ScriptAllowedExecutionTime = imgui.inputnumber("Editor playtest script allowed execution time", EditorPreferences.ScriptAllowedExecutionTime)
+        Preferences.ScriptAllowedExecutionTime = imgui.inputnumber("Editor playtest script allowed execution time", Preferences.ScriptAllowedExecutionTime)
         imgui.setitemtooltip("This is independent of the time-out length applied for scripts in exported projects")
 
-        EditorPreferences.CancelPlaytestWhenScriptTimesOut = imgui.checkbox("Cancel playtests when a script times-out", EditorPreferences.CancelPlaytestWhenScriptTimesOut)
+        Preferences.CancelPlaytestWhenScriptTimesOut = imgui.checkbox("Cancel playtests when a script times-out", Preferences.CancelPlaytestWhenScriptTimesOut)
 
         imgui.separator()
 
-        imgui.text(`Your projects directory is:\n{ EditorPreferences.ProjectsDirectory }`)
-        imgui.setitemtooltip(EditorPreferences.ProjectsDirectory)
+        imgui.text(`Your projects directory is:\n{ Preferences.ProjectsDirectory }`)
+        imgui.setitemtooltip(Preferences.ProjectsDirectory)
 
         if imgui.button("Change") then
-            local newDir = fs.promptopenfolder("Select Projects directory", EditorPreferences.ProjectsDirectory)
+            local newDir = fs.promptopenfolder("Select Projects directory", Preferences.ProjectsDirectory)
 
-            if newDir and fs.resolvepathabsolute(newDir) ~= fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory) then
+            if newDir and fs.resolvepathabsolute(newDir) ~= fs.resolvepathabsolute(Preferences.ProjectsDirectory) then
                 local moveSuccess, err = pcall(function()
-                    for p, t in fs.listdir(EditorPreferences.ProjectsDirectory) do
-                        local subst, count = p:gsub(fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory), fs.resolvepathabsolute(newDir))
+                    for p, t in fs.listdir(Preferences.ProjectsDirectory) do
+                        local subst, count = p:gsub(fs.resolvepathabsolute(Preferences.ProjectsDirectory), fs.resolvepathabsolute(newDir))
 
                         if count == 0 then
-                            error(`Failed to substitute '{fs.resolvepathabsolute(newDir)}' to replace '{fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory)}' in '{p}'`)
+                            error(`Failed to substitute '{fs.resolvepathabsolute(newDir)}' to replace '{fs.resolvepathabsolute(Preferences.ProjectsDirectory)}' in '{p}'`)
                         end
 
                         fs.move(p, subst)
@@ -738,14 +1191,14 @@ function CommonUI.RenderMainMenuBar(dt: number)
                 if not moveSuccess then
                     Engine:ShowMessageBox(
                         "Failed to move projects",
-                        `Failed to move your projects from '{ fs.resolvepathabsolute(EditorPreferences.ProjectsDirectory) }' to '{ fs.resolvepathabsolute(newDir) }'.\n\nError: { err }\n\n`
+                        `Failed to move your projects from '{ fs.resolvepathabsolute(Preferences.ProjectsDirectory) }' to '{ fs.resolvepathabsolute(newDir) }'.\n\nError: { err }\n\n`
                         .. `Your Projects directory has not been updated.`,
                         "ok",
                         "error"
                     )
                 else
-                    fs.remove(EditorPreferences.ProjectsDirectory)
-                    EditorPreferences.ProjectsDirectory = newDir
+                    fs.remove(Preferences.ProjectsDirectory)
+                    Preferences.ProjectsDirectory = newDir
                 end
             end
         end
@@ -766,291 +1219,11 @@ function CommonUI.RenderMainMenuBar(dt: number)
     end
 end
 
-local function renderOutput()
-    local renderOutput = false
-    local outputBegan = false
-    if EditorPreferences.ToolsOpen.Output then
-        renderOutput, EditorPreferences.ToolsOpen.Output = imgui.begin("Output", "h", true)
-        outputBegan = true
-    end
-
-    if renderOutput then
-        local logMessageHoveringWip: number = -1
-        local smid = 0
-        local rightClickedLogMessage = false
-
-        for mi, message in Log do
-            imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
-
-            imgui.text(message.Time)
-
-            imgui.popstylecolor()
-
-            local LogColors = {
-                [Enum.LogType.None]    = { 1, 1, 1, 1 },
-                [Enum.LogType.Info]    = { 1, 1, 1, 1 },
-                [Enum.LogType.Warning] = { 255 / 255, 171 / 255, 61 / 255, 1 }, -- warning
-                [Enum.LogType.Error]   = { 255 / 255, 61 / 255, 61 / 255, 1 }   -- error
-            }
-
-            local logColor = LogColors[message.Type]
-            imgui.pushstylecolor(0, logColor)
-            imgui.pushstylecolor(52, logColor)
-
-            for smi, subMessage in message.Message do
-                smid += 1
-
-                if #subMessage.Content == 0 then
-                    continue
-                end
-
-                local prev = message.Message[smi - 1]
-                if not prev or prev.Newline then
-                    imgui.sameline()
-                end
-
-                local tooltip = subMessage.Tooltip
-                local context = message.Message[1].ExtraTags
-                if #context <= 2 or context == "LogContext:Main" then
-                    context = ""
-
-                    for _, m in message.Message do
-                        if #m.ExtraTags > 2 then
-                            context = m.ExtraTags
-                            tooltip = m.Tooltip
-                            break
-                        end
-                    end
-                end
-
-                local _
-                _, tooltip = canInteractWithLogSubMessage(context, subMessage.DirectValue)
-
-                if #tooltip == 0 then
-                    for _, m in message.Message do
-                        if #m.Tooltip > 0 then
-                            tooltip = m.Tooltip
-                            break
-                        end
-                    end
-                end
-
-                local canInteract = (message.Source or subMessage.CanInteract) and LogMessageHovering == smid and tooltip ~= "From Command Bar"
-                local doInteract = false
-
-                if type(subMessage.DirectValue) == "table" then
-                    if not message.OpenTables then
-                        message.OpenTables = {}
-                    end
-
-                    if not message.TablesWithAnyElements then
-                        message.TablesWithAnyElements = {}
-                    end
-
-                    local function hasAnyElements(t): boolean
-                        local cached = message.TablesWithAnyElements[t]
-
-                        if cached == nil then
-                            for _ in t do
-                                message.TablesWithAnyElements[t] = true
-                                return true
-                            end
-                            message.TablesWithAnyElements[t] = false
-                            return false
-                        else
-                            return cached
-                        end
-                    end
-
-                    local startX = imgui.cursorposition().x
-
-                    local function renderTable(t: { [unknown]: unknown }, depth: number, pos: vector?)
-                        local id = tostring(t)
-                        imgui.pushid(id)
-
-                        local open = message.OpenTables[t]
-                        local hasElements = hasAnyElements(t)
-
-                        if message.TablePrettyChangeOpen[id] ~= nil then
-                            imgui.setnextitemopen(message.TablePrettyChangeOpen[id])
-                            message.TablePrettyChangeOpen[id] = nil
-                        end
-
-                        local prev = imgui.cursorposition()
-                        local nodeOpen = imgui.treenode("##", "aw | ar | " .. (if depth == 0 then "dlf" else "")  .. (if hasElements then "" else " lf"))
-                        local after = imgui.cursorposition()
-
-                        if imgui.itemclicked() then
-                            message.TablePrettyChangeOpen[id] = not message.TablePrettyOpen[id]
-                        end
-
-                        imgui.dummy(64, 64)
-                        imgui.setcursorposition(prev + vector.create(16, 0))
-                        imgui.text(if (open and hasElements) then "{" else (if hasElements then "{...}" else "{}"))
-                        imgui.setcursorposition(after)
-
-                        message.TablePrettyOpen[id] = nodeOpen
-
-                        if nodeOpen then
-                            message.OpenTables[t] = true
-                            for k, v in t do
-                                imgui.setcursorposition(imgui.cursorposition() + vector.create(startX - 20, 0))
-
-                                local kstr = k
-                                if type(k) == "string" then
-                                    if not k:match("%W") then
-                                        kstr = k
-                                    else
-                                        kstr = `["{ k }"]`
-                                    end
-                                else
-                                    kstr = `[{ k }]`
-                                end
-
-                                if type(v) == "table" then
-                                    local tpos = imgui.cursorposition()
-                                    if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
-                                        imgui.treepop()
-                                    end
-
-                                    if imgui.itemclicked() then
-                                        local cid = tostring(v)
-                                        message.TablePrettyChangeOpen[cid] = not message.TablePrettyOpen[cid]
-                                    end
-
-                                    imgui.sameline()
-                                    imgui.setcursorposition(imgui.cursorposition() - vector.create(12, 0))
-                                    -- TODO luau cast
-                                    renderTable(v :: any, depth + 1, tpos)
-                                else
-                                    if typeof(k) == "GameObject" then
-                                        if imgui.textlink(kstr) then
-                                            DeveloperTools:SetExplorerSelections({ k })
-                                        end
-                                        imgui.sameline()
-                                        imgui.text(" = ")
-                                    else
-                                        if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
-                                            imgui.treepop()
-                                        end
-                                    end
-
-                                    imgui.sameline()
-                                    imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
-
-                                    if typeof(v) == "GameObject" then
-                                        if imgui.textlink(tostring(v)) then
-                                            -- TODO luau cast
-                                            DeveloperTools:SetExplorerSelections({ v :: any })
-                                        end
-                                    else
-                                        local vts = tostring(v) .. ","
-                                        if type(v) == "string" then
-                                            vts = `"{ v }",`
-                                        elseif type(v) ~= "number" and type(v) ~= "boolean" then
-                                            vts = `[{ v }],`
-                                        end
-
-                                        imgui.text(vts)
-                                    end
-                                end
-                            end
-
-                            imgui.treepop()
-
-                            if hasElements then
-                                local p = (if depth > 0 then assert(pos) + vector.create(13, 0) else prev)
-                                imgui.setcursorposition(vector.create(assert(p.x) + 8, imgui.cursorposition().y))
-                                imgui.text("}")
-                            end
-                        else
-                            message.OpenTables[t] = false
-                        end
-
-                        imgui.popid()
-                    end
-
-                    imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
-                    -- TODO luau cast
-                    renderTable(subMessage.DirectValue :: any, 0)
-                else
-                    if canInteract then
-                        doInteract = imgui.textlink(subMessage.Content)
-                    else
-                        imgui.text(subMessage.Content)
-                    end
-                end
-
-                if doInteract then
-                    interactWithLogSubMessage(context, subMessage.DirectValue)
-                end
-
-                if message.Source and message.Line and message.Source ~= "CommandBar" then
-                    if imgui.itemclicked(Enum.MouseButton.Right) then
-                        DeveloperTools:OpenTextDocument(message.Source, message.Line)
-                        rightClickedLogMessage = true
-                    end
-                end
-
-                if imgui.itemhovered() then
-                    logMessageHoveringWip = smid
-                end
-
-                if (#tooltip > 0 or #context > 0) and imgui.itemhovered() and imgui.begintooltip() then
-                    if #tooltip > 0 then
-                        imgui.text(tooltip)
-                    end
-
-                    if #context > 0 then
-                        if #tooltip > 0 then
-                            imgui.newline()
-                        end
-
-                        imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
-
-                        imgui.text(context)
-
-                        imgui.popstylecolor()
-                    end
-
-                    imgui.endtooltip()
-                end
-            end
-
-            imgui.popstylecolor()
-            imgui.popstylecolor()
-        end
-
-        if NewLogMessage then
-            imgui.scrollherey()
-            NewLogMessage = false
-        end
-
-        if not rightClickedLogMessage and imgui.windowhovered() and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
-            imgui.openpopup("OutputContextMenu")
-        end
-
-        if imgui.beginpopup("OutputContextMenu") then
-            if imgui.menuitem("Clear Output") then
-                Log = {}
-            end
-
-            imgui.endpopup()
-        end
-
-        LogMessageHovering = logMessageHoveringWip
-    end
-
-    if outputBegan then
-        imgui.endw()
-    end
-end
-
 function CommonUI.RenderViewport(DeltaTime: number)
-    if CurrentStage == "ProjectEditing" and Project.Workspace then
+    if State.CurrentStage == "ProjectEditing" and State.Project.Workspace then
         local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
         local rayresult = if not PlayerInput.IsMouseSunk
-                            then Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
+                            then State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
                             else nil
 
         if rayresult then
@@ -1113,12 +1286,12 @@ function CommonUI.RenderViewport(DeltaTime: number)
         end
     end
 
-    PluginManager.OnUpdate(DeltaTime, CurrentStage)
-    CoreTools.Update(Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
+    PluginManager.OnUpdate(DeltaTime, State.CurrentStage)
+    CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
     HistoryView.Render()
     TagViewer.Render()
 
-    if EditorPreferences.ToolsOpen.BottomBar then
+    if Preferences.ToolsOpen.BottomBar then
         local w = Renderer.Resolution
 
         imgui.setnextwindowposition(0, w.y - 35)
@@ -1149,20 +1322,20 @@ function CommonUI.RenderViewport(DeltaTime: number)
 
         imgui.sameline()
 
-        local noteStr = `{ Engine.Framerate } FPS ({ CurrentStage }) | { Project.Name }`
+        local noteStr = `{ Engine.Framerate } FPS ({ State.CurrentStage }) | { State.Project.Name }`
         imgui.text(noteStr)
         imgui.setitemtooltip(noteStr)
 
         imgui.endw()
     end
 
-    renderOutput()
+    Output.Render()
 
     local canInteract = IsHoveringViewportTitlebar --or (not IsHoveringViewport and imgui.windowhovered("a | b"))
-    local render, open = imgui.begin(Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
+    local render, open = imgui.begin(State.Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
 
     if not open then
-        task.defer(changeStageTo, "SelectProject" :: "SelectProject")
+        task.defer(State.ChangeStageTo, State, "SelectProject" :: "SelectProject")
     end
 
     if not render then
@@ -1176,11 +1349,11 @@ function CommonUI.RenderViewport(DeltaTime: number)
     local ws = imgui.windowsize()
 
     local ews = Renderer.Resolution
-    ViewportRenderPosition = vector.create(w.x, w.y)
-    ViewportRenderSize = vector.create(ws.x, ws.y)
+    State.ViewportRenderPosition = vector.create(w.x, w.y)
+    State.ViewportRenderSize = vector.create(ws.x, ws.y)
 
-    imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if EditorPreferences.ToolsOpen.BottomBar then 54 else 19))
-    PlayerInput:SetViewportInputRect(ViewportRenderPosition, ViewportRenderSize)
+    imgui.setviewportdockspace(0, 19, ews.x, ews.y - (if Preferences.ToolsOpen.BottomBar then 54 else 19))
+    PlayerInput:SetViewportInputRect(State.ViewportRenderPosition, State.ViewportRenderSize)
 
     ViewportLeft = w.x - 15
     ViewportRight = w.x + ws.x + 15

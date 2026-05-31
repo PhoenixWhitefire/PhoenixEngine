@@ -1,13 +1,19 @@
 -- State.luau, 30/05/2026
+local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
+local Interface = game:GetService("Interface")
+local Logging = game:GetService("Logging")
 local History = game:GetService("History")
+local Physics = game:GetService("Physics")
 local Engine = game:GetService("Engine")
 
-local PluginManager = require("@ed/PluginManager.luau")
+local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
+local PluginManager = require("@ed/PluginManager")
 local Configuration = require("@ed/Configuration")
+local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
-local CoreTools = require("@ed/CoreTools.luau")
+local CoreTools = require("@ed/CoreTools")
 local Types = require("@ed/Types")
 
 export type CachedProjectInfo = {
@@ -23,13 +29,32 @@ type StateType = {
     LastAutosaved: number,
     RecentProjects: { string },
     SavedProjectsCache: { CachedProjectInfo }?,
+    PlaytestRestoreState: (GameObject & EcDataModel)?,
+    ViewportRenderPosition: vector,
+    ViewportRenderSize: vector,
 
     SaveRecents: (StateType) -> (),
+    SaveToRecents: (StateType, string) -> (),
     SaveProject: (StateType) -> (),
     OpenProject: (StateType, ManualPath: string?) -> (),
     CreateNewProject: (StateType) -> (),
     ChangeStageTo: (StateType, Types.Stage) -> (),
 }
+
+local EditorCam = assert(workspace.SceneCamera)
+local WorkspaceLink = GameObject.new("TreeLink")
+local InterfaceLink = GameObject.new("TreeLink")
+local ServicesLink = GameObject.new("TreeLink")
+WorkspaceLink.Name = "WorkspaceLink"
+InterfaceLink.Name = "InterfaceLink"
+ServicesLink.Name = "ServicesLink"
+
+EditorCam.UseSimpleController = true
+WorkspaceLink.Parent = workspace
+InterfaceLink.Parent = Interface
+Physics.Simulating = false
+Physics:SetSimulationForcePaused(true)
+ScriptEngine:SetVMAllowedExecutionTime(_VMNAME, Configuration.EditorScriptsAllowedExecutionTime)
 
 local function saveRecents(State: StateType)
     -- TODO: fix cast
@@ -51,27 +76,6 @@ local function saveToRecents(State: StateType, Path: string)
     end
     table.insert(State.RecentProjects, Path)
     saveRecents(State)
-end
-
-local openSettingsMenuToConfigureCodeEditor = false
-
-local function openCodeEditor(State: StateType)
-    if not Preferences.CodeEditorPath or #Preferences.CodeEditorPath == 0 then
-        Engine:ShowMessageBox(
-            "Configure Code Editor",
-            "You have not configured what Code Editor you would like the Editor to use.\n"
-            .. "You can set the command to launch your desired Code Editor in Editor Settings.\n"
-            .. "Look up the relevant command for your Code Editor. For example, the command for Visual Studio Code is 'code'."
-        )
-
-        openSettingsMenuToConfigureCodeEditor = true
-    else
-        local result = fs.execute(`{ Preferences.CodeEditorPath } "{ fs.home() }/Documents/Phoenix Projects/{ State.Project.Name }"`)
-
-        if #result > 1 then
-            warn("Open code editor result: ", result)
-        end
-    end
 end
 
 local function stubCoreAssets()
@@ -152,7 +156,7 @@ local function createNewProject_(State: StateType)
     fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
     fs.copy("@editres/textures/image-placeholder.png", "@projres/textures/image-placeholder.png")
     fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
-    fs.copy(LOGO_IMAGE, "@project/icon.png")
+    fs.copy(Configuration.LogoImage, "@project/icon.png")
 
     local dm = GameObject.new("DataModel")
     local projWp = GameObject.new("Workspace")
@@ -172,7 +176,7 @@ local function createNewProject_(State: StateType)
     State:SaveProject()
     State:OpenProject(State.Project.Name)
 
-    State.Editor.SavedProjectsCache = nil
+    State.SavedProjectsCache = nil
 end
 
 local function openProject_(State: StateType, ManualPath: string?)
@@ -309,22 +313,22 @@ local function openProject_(State: StateType, ManualPath: string?)
     History:ClearHistory()
     History.TargetDataModel = State.Project.DataModel
 
-    changeStageTo("ProjectEditing")
+    State:ChangeStageTo("ProjectEditing")
 
     local module = State.Project.DataModel.LiveScripts
-    Project.DataModel.LiveScripts = ""
+    State.Project.DataModel.LiveScripts = ""
 
     Engine:BindDataModel(State.Project.DataModel)
-    ScriptEngine:CreateVM(GameEditingVM)
+    ScriptEngine:CreateVM(Configuration.GameEditingVMName)
     Engine:BindDataModel(game)
 
-    ScriptEngine:SetVMAllowedExecutionTime(GameEditingVM, Preferences.ScriptAllowedExecutionTime)
+    ScriptEngine:SetVMAllowedExecutionTime(Configuration.GameEditingVMName, Preferences.ScriptAllowedExecutionTime)
 
     State.Project.DataModel.LiveScripts = module
     State.Project.HasGitRepository = fs.isdirectory("@project/.git")
 
     if Preferences.AutoLaunchCodeEditorOnProjectOpen then
-        openCodeEditor(State)
+        ExternalCodeEditor.Open(State.Project.Name)
     end
 end
 
@@ -407,6 +411,99 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
     end
 end
 
+local WasHoldingCtrlKeyDown = false
+local WasHoldingZKeyDown = false
+local WasHoldingYKeyDown = false
+
+local function handleUndoRedoKeybinds()
+    local ctrlKeyDown = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
+    local zKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Z)
+    local yKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Y)
+
+    if ctrlKeyDown and zKeyDown then
+        if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
+            local success, error = pcall(function()
+                History:Undo()
+            end)
+
+            if not success then
+                assert(error)
+
+                local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
+                realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
+
+                ErrorMessage.Push("Undo failed: " .. realError)
+            end
+        end
+    end
+
+    if ctrlKeyDown and yKeyDown then
+        if not WasHoldingCtrlKeyDown or not WasHoldingYKeyDown then
+            local success, error = pcall(function()
+                History:Redo()
+            end)
+
+            if not success then
+                assert(error)
+
+                local realError = if typeof(error) == "string" then error:sub(error:find(":") or 1, #error) else tostring(error)
+                realError = realError:sub((realError:find(" ") or 0) + 1, #realError)
+
+                ErrorMessage.Push("Redo failed: " .. realError)
+            end
+        end
+    end
+
+    WasHoldingCtrlKeyDown = ctrlKeyDown
+    WasHoldingZKeyDown = zKeyDown
+    WasHoldingYKeyDown = yKeyDown
+end
+
+local function editorFrame(State: StateType, DeltaTime)
+    if not workspace.SceneCamera then
+        workspace.SceneCamera = GameObject.new("Camera")
+        workspace.SceneCamera.Parent = workspace
+    end
+
+    if not History.IsRecordingAction then
+        if State.CurrentStage == "ProjectEditing" then
+            handleUndoRedoKeybinds()
+        end
+    end
+
+    CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
+    Stages[CurrentStage](DeltaTime)
+end
+
+local _state: StateType?
+
+local function onError(err)
+    assert(_state)
+
+    local errorMessage = `An error occurred: { debug.traceback(err, 2) }`
+    if _state.Project.DataModel then
+        errorMessage ..= "\n\nThe Editor will perform a save to the file 'resources/scenes/autosave.world', please ensure nothing important is stored at that location before proceeding."
+    end
+
+    Logging:Write(errorMessage, Enum.LogType.Error)
+    Engine:ShowMessageBox("Editor Error", errorMessage, "ok", "error")
+
+    if _state.Project.DataModel then
+        local s, e = AssetManager:SaveScene({ _state.Project.DataModel }, "scenes/autosave.world")
+        assert(s, `Failed to save: {e}`)
+    end
+end
+
+local function stageUpdate(State, DeltaTime)
+    local s, e = (xpcall::any)(function(State, dt)
+        editorFrame(State, dt)
+    end, onError, State, DeltaTime)
+
+    if not s then
+        warn(`editorFrame error: {e}`)
+    end
+end
+
 local StageUpdateConnection: EventConnection?
 
 local State: StateType = {
@@ -420,14 +517,17 @@ local State: StateType = {
     RecentProjects = {},
     CurrentStage = "None",
     LastAutosaved = 0,
+    ViewportRenderPosition = vector.zero,
+    ViewportRenderSize = vector.zero,
 
     SaveRecents = saveRecents,
+    SaveToRecents = saveToRecents,
 
     SaveProject = function(State: StateType)
         local editingDatamodel = State.Project.DataModel
 
         if State.CurrentStage == "ProjectPlaying" then
-            editingDatamodel = restoreState
+            editingDatamodel = State.PlaytestRestoreState
         end
 
         tryToSave(editingDatamodel, "@projres/scenes/root.world")
@@ -479,10 +579,14 @@ local State: StateType = {
 
         PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
         CoreTools.OnEditorStageChanged(NewStage)
-        StageUpdateConnection = targetDm.OnFrameBegin:Connect(stageUpdate)
+        StageUpdateConnection = targetDm.OnFrameBegin:Connect(function(dt)
+            stageUpdate(State, dt)
+        end)
 
         State.CurrentStage = NewStage
     end
 }
+
+_state = State
 
 return State

@@ -5,6 +5,7 @@ local ErrorMessage = {
 
 function ErrorMessage.Push(Message: string)
     table.insert(ErrorMessage.Queue, { Message = Message, TimeRemaining = 5 })
+    warn(Message)
 end
 
 return ErrorMessage
