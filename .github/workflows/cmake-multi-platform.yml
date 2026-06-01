@@ -132,9 +132,11 @@ jobs:
       uses: actions/upload-artifact@v6
       with:
         name: "Phoenix_${{ runner.os }}-${{ matrix.build_type }}"
+        include-hidden-files: true
         path: |
           resources/
           plugins/
+          wikigen/
           wiki/
           lsp/
           apidump.json
@@ -152,9 +154,11 @@ jobs:
       uses: actions/upload-artifact@v6
       with:
         name: "Phoenix_${{ runner.os }}-${{ matrix.build_type }}"
+        include-hidden-files: true
         path: |
           resources/
           plugins/
+          wikigen/
           wiki/
           lsp/
           apidump.json
