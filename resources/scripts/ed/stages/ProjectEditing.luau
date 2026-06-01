@@ -20,6 +20,73 @@ local State = require("@ed/State")
 local Types = require("@ed/Types")
 
 local ProjectClosedByDataModelConnection = nil
+local EditorCam = workspace.SceneCamera
+
+type SavedEditorCamera = {
+    FieldOfView: number,
+    Position: {
+        X: number,
+        Y: number,
+        Z: number
+    },
+    Rotation: {
+        X: number,
+        Y: number,
+        Z: number
+    }
+}
+
+local function loadEditorCameraTransform()
+    local savedCamTrans: SavedEditorCamera = {
+        FieldOfView = 90,
+        Position = {
+            X = 0,
+            Y = 0,
+            Z = 0
+        },
+        Rotation = {
+            X = 0,
+            Y = 0,
+            Z = 0
+        }
+    }
+
+    if fs.isfile("@project/phoenix.editor") then
+        local editordata = json.parse(assert((fs.read("@project/phoenix.editor")))) :: any
+        savedCamTrans = (editordata.SavedEditorCamera :: SavedEditorCamera) or savedCamTrans
+    end
+
+    EditorCam.FieldOfView = savedCamTrans.FieldOfView
+    EditorCam.Transform = Matrix.translated(savedCamTrans.Position.X, savedCamTrans.Position.Y, savedCamTrans.Position.Z)
+                            * Matrix.rotated(savedCamTrans.Rotation.X, savedCamTrans.Rotation.Y, savedCamTrans.Rotation.Z)
+end
+
+local function saveEditorCameraTransform()
+    local position = EditorCam.Transform.Position
+    local rotation = EditorCam.Transform:ExtractAngles()
+
+    local savedCamTrans: SavedEditorCamera = {
+        FieldOfView = EditorCam.FieldOfView,
+        Position = {
+            X = position.x,
+            Y = position.y,
+            Z = position.z
+        },
+        Rotation = {
+            X = rotation.x,
+            Y = rotation.y,
+            Z = rotation.z
+        }
+    }
+
+    local editordata = {}
+    if fs.isfile("@project/phoenix.editor") then
+        editordata = json.parse(assert((fs.read("@project/phoenix.editor")))) :: any
+    end
+
+    editordata.SavedEditorCamera = savedCamTrans
+    fs.write("@project/phoenix.editor", json.encode(editordata))
+end
 
 function ProjectEditing.Enter(PreviousStage: Types.Stage)
     assert(State.Project.DataModel)
@@ -28,10 +95,10 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
     DeveloperTools:SetExplorerRoot(State.Project.DataModel)
     DeveloperTools:SetExplorerSelections({})
     Physics.Simulating = false
-    workspace.SceneCamera = State.Project.Workspace.SceneCamera
-    workspace.SceneCamera.UseSimpleController = true
 
     if PreviousStage == "SelectProject" then
+        loadEditorCameraTransform()
+
         for icon, fstype in fs.listdir("@etextures/editor-icons") do
             if fstype == "f" and icon:find(".png") then
                 AssetManager:QueueLoadTexture(icon, false)
@@ -124,6 +191,8 @@ function ProjectEditing.Render(DeltaTime: number)
 end
 
 function ProjectEditing.Leave(NextStage: Types.Stage)
+    saveEditorCameraTransform()
+
     if NextStage == "ProjectPlaying" then
         if Preferences.ClearOutputOnPlaytest then
             table.clear(Output.Log)

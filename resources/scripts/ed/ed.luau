@@ -157,11 +157,6 @@ local function handleUndoRedoKeybinds()
 end
 
 local function editorFrame(State, DeltaTime)
-    if not workspace.SceneCamera then
-        workspace.SceneCamera = GameObject.new("Camera")
-        workspace.SceneCamera.Parent = workspace
-    end
-
     if not History.IsRecordingAction then
         if State.CurrentStage == "ProjectEditing" then
             handleUndoRedoKeybinds()

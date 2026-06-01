@@ -803,6 +803,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
                     imgui.openpopup("Project Settings")
 
                     local newProjectName = State.Project.Name
+                    imgui.setnextwindowsize(600, 300)
 
                     while true do
                         if not imgui.beginpopupmodal("Project Settings", true) then

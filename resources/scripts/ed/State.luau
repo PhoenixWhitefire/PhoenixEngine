@@ -166,7 +166,6 @@ local function createNewProject_(State: StateType)
 
     projWp.Parent = dm
     camera.Parent = projWp
-    projWp.SceneCamera = camera
     State.Project.DataModel = dm
 
     State:SaveProject()
@@ -298,7 +297,6 @@ local function openProject_(State: StateType, ManualPath: string?)
         State.Project.Workspace.SceneCamera = cam
     end
 
-    EditorCam.Transform = State.Project.Workspace.SceneCamera.Transform
     WorkspaceLink.Target = State.Project.Workspace
     InterfaceLink.Target = State.Project.DataModel:GetService("Interface")
     ServicesLink.Target = State.Project.DataModel
@@ -444,7 +442,10 @@ local State: StateType = {
         PlayerInput.Cursor = Enum.Cursor.NotAllowed
 
         xpcall(openProject_, function(err)
-            Engine:ShowMessageBox("Failed to open project", "Failed to open project: " .. tostring(err), "ok", "error")
+            local errorMessage = "Failed to open project: " .. tostring(err)
+            warn("Failed to open project: " .. tostring(err))
+
+            Engine:ShowMessageBox("Failed to open project", errorMessage, "ok", "error")
         end, State, ManualPath)
 
         PlayerInput.Cursor = Enum.Cursor.Arrow

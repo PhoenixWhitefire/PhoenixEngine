@@ -41,8 +41,6 @@ function ProjectPlaying.Enter(_prev)
         projWp.SceneCamera.Name = "Camera"
     end
 
-    workspace.SceneCamera = projWp.SceneCamera
-
     GameClosedConnection = State.Project.DataModel.Closing:Connect(function()
         assert(GameClosedConnection)
 
