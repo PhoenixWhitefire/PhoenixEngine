@@ -105,7 +105,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
     bool skinCorrections  = vertexMeta & 0b01000000;
     bool isNonNormalized  = vertexMeta & 0b10000000;
 
-	glm::vec3 assetOrigin;
+	glm::vec3 assetOrigin = glm::vec3(0.f);
     glm::vec3 assetSize = { 1.f, 1.f, 1.f };
 
     if (isNonNormalized)
@@ -119,7 +119,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
         assetSize.z = ReadF32(contents, &headerPtr, &fileTooSmallError);
     }
 
-	glm::vec3 uniformVertexNormal;
+	glm::vec3 uniformVertexNormal = glm::vec3(0.f);
 	glm::vec4 uniformVertexRGBA = { 1.f, 1.f, 1.f, 1.f };
 
 	if (!hasVertexNormal)

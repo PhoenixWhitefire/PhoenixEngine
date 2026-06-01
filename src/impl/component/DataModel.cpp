@@ -228,7 +228,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
     lua_State* mainThread = lvm.MainThread;
 
     double allowedExecTime = lvm.AllowedExecutionTime;
-    lvm.AllowedExecutionTime = 1.0;
+    lvm.AllowedExecutionTime = 5.0;
 
     lua_State* L = lua_newthread(mainThread);
 	luaL_sandboxthread(L);

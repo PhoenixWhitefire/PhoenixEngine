@@ -1651,6 +1651,21 @@ static void initRequireConfig(luarequire_Configuration* config)
     config->is_module_present = [](lua_State*, void* ctx)
         {
             std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+            if (std::filesystem::is_directory(*curpath))
+            {
+                // NOTE: :3
+                if (std::filesystem::is_regular_file(curpath->string() + ".luau"))
+                {
+                    curpath->concat(".luau");
+                    return true;
+                }
+                else if (std::filesystem::is_regular_file(curpath->string() + ".luauc"))
+                {
+                    curpath->concat(".luauc");
+                    return true;
+                }
+            }
+
             return std::filesystem::is_regular_file(*curpath)
                     || std::filesystem::is_regular_file(curpath->string() + "c") // `.luauc`
                     || std::filesystem::is_regular_file(*curpath / "init.luau")
@@ -1721,6 +1736,7 @@ static void initRequireConfig(luarequire_Configuration* config)
                 else
                     RAISE_RT("Could not find module, got path '{}'", curpath->string());
             }
+            modulePath = FileRW::ResolvePathNormalized(modulePath); // replace backslashes with forward slashes on Windows
 
             // from `Luau/CLI/src/ReplRequirer.cpp` 13/08/2025
 
