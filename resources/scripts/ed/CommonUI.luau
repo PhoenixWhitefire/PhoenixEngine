@@ -787,13 +787,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
             end
 
             if imgui.menuitem("Open Project folder") then
-                task.defer(function()
-                    if Engine.TargetPlatform == "Window" then
-                        fs.execute(`start "{ fs.resolvepathabsolute("@project") }"`)
-                    else
-                        fs.execute(`xdg-open "{ fs.resolvepathabsolute("@project") }"`)
-                    end
-                end)
+                fs.systemopen("@project")
             end
         end
 
@@ -928,21 +922,23 @@ function CommonUI.RenderMainMenuBar(dt: number)
             end
         end
 
-        if imgui.menuitem("Open", State.CurrentStage == "SelectProject") then
-            State.SavedProjectsCache = nil
-            task.defer(State.OpenProject, State, nil) -- TODO type error when `nil` is not supplied
-        end
+        if State.CurrentStage == "SelectProject" then
+            if imgui.menuitem("Open") then
+                State.SavedProjectsCache = nil
+                task.defer(State.OpenProject, State, nil) -- TODO luau type error when `nil` is not supplied
+            end
 
-        if imgui.menuitem("New", State.CurrentStage == "SelectProject") then
-            task.defer(State.CreateNewProject, State, nil)
-        end
-
-        if imgui.menuitem("About") then
-            openAboutWindow = true
+            if imgui.menuitem("New") then
+                task.defer(State.CreateNewProject, State, nil)
+            end
         end
 
         if imgui.menuitem("Editor Settings") then
             openSettingsWindow = true
+        end
+
+        if imgui.menuitem("About") then
+            openAboutWindow = true
         end
 
         imgui.endmenu()

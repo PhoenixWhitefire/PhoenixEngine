@@ -693,6 +693,7 @@
         "resolvepathabsolute": "function",
         "setunqualifiedroot": "function",
         "symlink": "function",
+        "systemopen": "function",
         "watch": "function",
         "write": "function"
       },

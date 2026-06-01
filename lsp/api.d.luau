@@ -911,6 +911,7 @@ declare fs: {
   resolvepathabsolute: (Path: string) -> string,
   setunqualifiedroot: (( Alias: string ) -> ()),
   symlink: (( Path: string, Target: string ) -> ()),
+  systemopen: (( Path: string ) -> ()),
   watch: (( Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> () ) -> (() -> ())),
   write: (( Path: string, Contents: string | buffer, CreateDirectories: boolean? ) -> ())
 }

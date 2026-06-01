@@ -1631,6 +1631,13 @@
             ],
             "In": "Path: string, Target: string"
           },
+          "systemopen": {
+            "Description": [
+              "Opens the given path with the system's registered handler",
+              "Can be a path to a folder, a file, or a URL"
+            ],
+            "In": "Path: string"
+          },
           "watch": {
             "Description": [
               "Watch a file or directory for changes",

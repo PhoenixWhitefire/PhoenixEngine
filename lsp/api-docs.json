@@ -911,6 +911,9 @@
   "@phoenix/global/fs.symlink": {
     "documentation": "* Creates a symlink at `Path` referring to `Target`"
   },
+  "@phoenix/global/fs.systemopen": {
+    "documentation": "* Opens the given path with the system's registered handler\n* Can be a path to a folder, a file, or a URL"
+  },
   "@phoenix/global/fs.watch": {
     "documentation": "* Watch a file or directory for changes\n* Returns a function that, when called, disconnects the listener"
   },

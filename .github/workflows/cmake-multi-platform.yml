@@ -104,7 +104,7 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build x64 -j3 --config ${{ matrix.build_type }}
+      run: cmake --build x64 -j4 --config ${{ matrix.build_type }}
 
     - name: Configure CMake for Profiler
       if: matrix.build_type == 'Release' && runner.os == 'Windows'
@@ -112,7 +112,7 @@ jobs:
 
     - name: Build Profiler
       if: matrix.build_type == 'Release' && runner.os == 'Windows'
-      run: cmake --build Vendor/tracy/profiler/build --config Release -j3 -t tracy-profiler
+      run: cmake --build Vendor/tracy/profiler/build --config Release -j4 -t tracy-profiler
 
     - name: Move executable and Wiki (Windows)
       if: runner.os == 'Windows'
