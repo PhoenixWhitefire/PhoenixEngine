@@ -6,6 +6,28 @@ local SCRIPT = "scripts/ci/tests/libraries/parallel.luau"
 local NWORKERS = 8
 local workerId = (...)
 
+if typeof(workerId) == "number" then
+    local sharedBuffer = parallel.sharedbuffer("BufferBar", NWORKERS + 4)
+    local int = parallel.atomicinteger(0)
+
+    local mutex = parallel.mutex("MutexFoo")
+
+    local curSlice = sharedBuffer:Pull(workerId - 1, 1)
+    buffer.writeu8(curSlice, 0, workerId)
+    sharedBuffer:Push(curSlice, workerId - 1)
+
+    mutex:Lock()
+
+    local criticalFooter = sharedBuffer:Pull(NWORKERS, 4)
+
+    buffer.writeu32(criticalFooter, 0, workerId)
+    sharedBuffer:Push(criticalFooter, NWORKERS)
+
+    mutex:Unlock()
+
+    int:Set(int:Get() - 1)
+end
+
 local function parallelTests(test: Types.Test, expect: Types.Expect)
     assert(workerId == nil)
 
@@ -31,28 +53,6 @@ local function parallelTests(test: Types.Test, expect: Types.Expect)
 
         expect(buffer.readu32(buf, NWORKERS)):toBeWithin(1, NWORKERS)
     end)
-end
-
-if typeof(workerId) == "number" then
-    local sharedBuffer = parallel.sharedbuffer("BufferBar", NWORKERS + 4)
-    local int = parallel.atomicinteger(0)
-
-    local mutex = parallel.mutex("MutexFoo")
-
-    local curSlice = sharedBuffer:Pull(workerId - 1, 1)
-    buffer.writeu8(curSlice, 0, workerId)
-    sharedBuffer:Push(curSlice, workerId - 1)
-
-    local criticalHeader = sharedBuffer:Pull(NWORKERS, 4)
-
-    mutex:Lock()
-
-    buffer.writeu32(criticalHeader, 0, workerId)
-    sharedBuffer:Push(criticalHeader, NWORKERS)
-
-    mutex:Unlock()
-
-    int:Set(int:Get() - 1)
 end
 
 return parallelTests

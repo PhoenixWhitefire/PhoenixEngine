@@ -356,8 +356,6 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
 
 void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
 {
-    ParallelVMsExecuting++;
-
     ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(Name.data(), Name.size());
 
@@ -375,15 +373,11 @@ void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
         }
         */
 
-        Desynchronized = true;
-
         processParallelSpawnRequests(this);
         LuauVM::StepScheduler();
     }
     else
         LuauVM::StepScheduler(&YieldedCoroutinesSync);
-
-    ParallelVMsExecuting--;
 }
 
 static void processParallelEvents()

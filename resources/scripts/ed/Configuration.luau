@@ -4,7 +4,8 @@ local Logos = {
     "bi",
     "gay",
     "lesbian",
-    "trans"
+    "pride",
+    "trans",
 }
 
 local CachedLogos = {}

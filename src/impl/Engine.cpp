@@ -925,25 +925,22 @@ static void dispatchParallelVMs(Engine* engine)
         if (vm->YieldedCoroutines.size() == 0 && vm->ParallelSpawnRequests.size() == 0)
             continue;
 
+		vm->Desynchronized = true;
+
         engine->ThreadManagerInstance.Dispatch(
             "ParallelVM",
             [=]()
             {
                 ZoneScoped;
                 ZoneText(vm->Name.data(), vm->Name.size());
+
+				ScriptEngine::ParallelVMsExecuting++;
                 vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Parallel);
+				ScriptEngine::ParallelVMsExecuting--;
             },
             true
         );
     }
-}
-
-static void parallelVMsSerialPhase()
-{
-    ZoneScoped;
-
-    for (ScriptEngine::ParallelVM* vm : ScriptEngine::ParallelVMs)
-        vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Serial);
 }
 
 static void waitForParallelVMs()
@@ -1149,9 +1146,9 @@ void Engine::Start()
 
         REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
 
-        parallelVMsSerialPhase();
-        ScriptEngine::StepVMs(); // scripts may try to draw Dear ImGui, this needs to be AFTER `ImGui::NewFrame`
-        dispatchParallelVMs(this); // only after serial phase!!
+        waitForParallelVMs();      // tsan ??
+        ScriptEngine::StepVMs();   // serial phase
+        dispatchParallelVMs(this);
 
 		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
 		// (really need a generic `Ref` system)
