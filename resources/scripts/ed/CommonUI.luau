@@ -348,7 +348,6 @@ local function homeTab(_: number)
 end
 
 local WasToolEnabled = {}
-local didFocusCodeEditorSetting = false
 
 local function updateDevToolsOpenState()
     Preferences.DevToolsOpen = {}
@@ -368,12 +367,11 @@ function CommonUI.SaveSettings()
 
         fs.write("./editor/settings.json", json.encode(Preferences :: JsonSerializable))
 
-        if State.Project.Name and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure and Preferences.CodeEditorPath and #Preferences.CodeEditorPath > 0 then
+        if State.Project.DataModel and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure and Preferences.CodeEditorPath and #Preferences.CodeEditorPath > 0 then
             task.defer(ExternalCodeEditor.Open, State.Project.Name)
         end
 
         ExternalCodeEditor.RequestOpenSettingsMenuToConfigure = false
-        didFocusCodeEditorSetting = false
 
         fs.write("./editor/models.json", json.encode(Reimport.ModelModifiedTimes :: { [string]: JsonSerializable }))
         fs.write("./editor/command-history.json", json.encode(CommandBarHistory :: JsonSerializable))
@@ -797,7 +795,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
 
         if State.CurrentStage == "ProjectEditing" then
             if imgui.menuitem("Project Settings") then
-                local conf = json.parse(assert((fs.read("@project/phoenix.conf")))) :: any
+                local conf = json.parse(assert(fs.read("@project/phoenix.conf"))) :: any
 
                 task.defer(function()
                     imgui.openpopup("Project Settings")
@@ -1052,7 +1050,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
         local LOGO_SIZE = 150 * sf
 
         imgui.setcursorposition(getCenteredX(cursor.x, cxavail, LOGO_SIZE), cursor.y)
-        imgui.image(Configuration.LogoImage, vector.create(LOGO_SIZE, LOGO_SIZE))
+        imgui.image(Configuration.GetLogo("EditorSettings"), vector.create(LOGO_SIZE, LOGO_SIZE))
 
         cursor += vector.create(0, 160 * sf)
 
@@ -1125,7 +1123,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
         imgui.endpopup()
     end
 
-    if openSettingsWindow or ExternalCodeEditor.RequestOpenSettingsMenuToConfigure then
+    if (openSettingsWindow or ExternalCodeEditor.RequestOpenSettingsMenuToConfigure) and not wasSettingsOpen then
         imgui.openpopup("Editor Settings")
 
         local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420 * sf, 140 * sf
@@ -1143,12 +1141,11 @@ function CommonUI.RenderMainMenuBar(dt: number)
         end
         Preferences.UseLightTheme = lightMode
 
-        if ExternalCodeEditor.RequestOpenSettingsMenuToConfigure and not didFocusCodeEditorSetting then
+        if imgui.windowappearing() and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure then
             imgui.focuskeyboardhere()
-            didFocusCodeEditorSetting = true
         end
 
-        Preferences.CodeEditorPath = imgui.inputstring("Code Editor path", Preferences.CodeEditorPath or "")
+        Preferences.CodeEditorPath = imgui.inputstring("Code Editor path", Preferences.CodeEditorPath)
 
         Preferences.AutoLaunchCodeEditorOnProjectOpen = imgui.checkbox("Launch code editor on project open", Preferences.AutoLaunchCodeEditorOnProjectOpen)
 

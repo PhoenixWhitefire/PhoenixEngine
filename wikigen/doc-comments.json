@@ -1950,6 +1950,11 @@
             ],
             "Out": "string, boolean"
           },
+          "ispopupopen": {
+            "Description": "`ImGui::IsPopupOpen`",
+            "In": "Name: string",
+            "Out": "boolean"
+          },
           "itemactive": {
             "Description": "`ImGui::IsItemActive`",
             "Out": "boolean"

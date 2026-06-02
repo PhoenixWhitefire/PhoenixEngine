@@ -152,7 +152,7 @@ local function createNewProject_(State: StateType)
     fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
     fs.copy("@editres/textures/image-placeholder.png", "@projres/textures/image-placeholder.png")
     fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
-    fs.copy(Configuration.LogoImage, "@project/icon.png")
+    fs.copy(Configuration.GetLogo(), "@project/icon.png")
 
     local dm = GameObject.new("DataModel")
     local projWp = GameObject.new("Workspace")

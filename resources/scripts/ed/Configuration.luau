@@ -1,4 +1,27 @@
 -- Configuration.luau, 29/05/2026
+local Logos = {
+    "aroace",
+    "bi",
+    "gay",
+    "lesbian",
+    "trans"
+}
+
+local CachedLogos = {}
+
+local function getLogo(Target: string?)
+    if Target and CachedLogos[Target] then
+        return CachedLogos[Target]
+    else
+        local logo = `@etextures/logos/{ Logos[math.random(1, #Logos)] }.png`
+
+        if Target then
+            CachedLogos[Target] = logo
+        end
+
+        return logo
+    end
+end
 
 return table.freeze({
     RecentProjectsPath = "./editor/recent-projects.json",
@@ -8,7 +31,6 @@ return table.freeze({
     GitHubUrl = "https://github.com/PhoenixWhitefire/PhoenixEngine",
     GameEditingVMName = "GameEditingVM",
     PlaytestVMName = "Playtest",
-    LogoImage = "@etextures/logo.png",
     FallbackImage = "@etextures/editor-icons/fallback.png",
 
     CoreAssets = {
@@ -37,4 +59,6 @@ return table.freeze({
         "shaders/boxframe.frag",
         "shaders/include/worldCommon.frag",
     },
+
+    GetLogo = getLogo
 })

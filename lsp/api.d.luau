@@ -947,6 +947,7 @@ declare imgui: {
   indent: (( Indent: number? ) -> ()),
   inputnumber: (( Text: string, Value: number ) -> (number, boolean)),
   inputstring: (( Name: string, Value: string, IsPassword: boolean? ) -> (string, boolean)),
+  ispopupopen: (( Name: string ) -> (boolean)),
   itemactive: ((  ) -> (boolean)),
   itemclicked: (( EnumMouseButton? ) -> (boolean)),
   itemdeactivatedafteredit: ((  ) -> (boolean)),

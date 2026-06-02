@@ -903,6 +903,12 @@ static int imgui_closecurrentpopup(lua_State*)
     return 0;
 }
 
+static int imgui_ispopupopen(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::IsPopupOpen(luaL_checkstring(L, 1)));
+    return 1;
+}
+
 static int imgui_beginpopup(lua_State* L)
 {
     lua_pushboolean(L, ImGui::BeginPopup(luaL_checkstring(L, 1), strToWindowFlags(L, luaL_optstring(L, 2, ""))));
@@ -1070,6 +1076,7 @@ static luaL_Reg imgui_funcs[] =
     { "setviewportdockspacedefault", imgui_setviewportdockspacedefault },
     { "openpopup", imgui_openpopup },
     { "closecurrentpopup", imgui_closecurrentpopup },
+    { "ispopupopen", imgui_ispopupopen },
     { "beginpopup", imgui_beginpopup },
     { "endpopup", imgui_endpopup },
     { "beginpopupmodal", imgui_beginpopupmodal },

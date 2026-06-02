@@ -729,6 +729,7 @@
         "indent": "function",
         "inputnumber": "function",
         "inputstring": "function",
+        "ispopupopen": "function",
         "itemactive": "function",
         "itemclicked": "function",
         "itemdeactivatedafteredit": "function",

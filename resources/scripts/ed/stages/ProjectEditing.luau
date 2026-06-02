@@ -52,7 +52,7 @@ local function loadEditorCameraTransform()
     }
 
     if fs.isfile("@project/phoenix.editor") then
-        local editordata = json.parse(assert((fs.read("@project/phoenix.editor")))) :: any
+        local editordata = json.parse(assert(fs.read("@project/phoenix.editor"))) :: any
         savedCamTrans = (editordata.SavedEditorCamera :: SavedEditorCamera) or savedCamTrans
     end
 
@@ -81,7 +81,7 @@ local function saveEditorCameraTransform()
 
     local editordata = {}
     if fs.isfile("@project/phoenix.editor") then
-        editordata = json.parse(assert((fs.read("@project/phoenix.editor")))) :: any
+        editordata = json.parse(assert(fs.read("@project/phoenix.editor"))) :: any
     end
 
     editordata.SavedEditorCamera = savedCamTrans

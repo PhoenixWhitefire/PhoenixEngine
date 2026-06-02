@@ -5,7 +5,7 @@ return {
     AutoLaunchCodeEditorOnProjectOpen = false,
     ClearOutputOnProjectOpen = true,
     ClearOutputOnPlaytest = true,
-    CodeEditorPath = nil :: string?,
+    CodeEditorPath = "",
     UseLightTheme = false,
     ClosingProjectSaveRequiresConfirmation = false,
     AutosaveInterval = 5,

@@ -1019,6 +1019,9 @@
   "@phoenix/global/imgui.inputstring": {
     "documentation": "* `ImGui::InputText`"
   },
+  "@phoenix/global/imgui.ispopupopen": {
+    "documentation": "* `ImGui::IsPopupOpen`"
+  },
   "@phoenix/global/imgui.itemactive": {
     "documentation": "* `ImGui::IsItemActive`"
   },

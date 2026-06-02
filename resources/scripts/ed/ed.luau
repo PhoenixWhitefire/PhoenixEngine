@@ -27,15 +27,13 @@ Git.Initialize()
 
 local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else Preferences
 assert(typeof(savedEditorPreferences) == "table")
-savedEditorPreferences = savedEditorPreferences :: { [string | number]: JsonSerializable }
+savedEditorPreferences = savedEditorPreferences :: { [string]: JsonSerializable }
 
-for k: keyof<typeof(Preferences)>, v in Preferences do
-    if savedEditorPreferences[k] == nil then
-        savedEditorPreferences[k] = v
+for k, v in Preferences do
+    if savedEditorPreferences[k] ~= nil then
+        Preferences[k] = savedEditorPreferences[k]
     end
 end
-
-Preferences = savedEditorPreferences :: typeof(Preferences)
 
 if not Engine.IsHeadless then
     imgui.stylecolors(if Preferences.UseLightTheme then 'l' else 'd')
