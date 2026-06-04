@@ -640,7 +640,9 @@ local function exportProject()
         end
     end
 
-    compileScriptBytecodeRecursive(exportTo .. "/resources/scripts")
+    if keepOnlyScriptBytecode then
+        compileScriptBytecodeRecursive(exportTo .. "/resources/scripts")
+    end
 
     if enginePath:find("x64/Debug") and enginePath:find(".exe") then
         Engine:ShowMessageBox(

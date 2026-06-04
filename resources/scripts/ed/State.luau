@@ -174,6 +174,66 @@ local function createNewProject_(State: StateType)
     State.SavedProjectsCache = nil
 end
 
+local function handleCoreAssetAliasMigration(config)
+	local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
+	assert(typeof(editorconf) == "table")
+	editorconf = editorconf :: { [string]: JsonSerializable }
+
+	local SymlinkMigrationChoices = {
+		Migrated = 1,
+		RemindLater = 2,
+		DoNotMigrate = 3
+	}
+
+	local lastSavedData = editorconf.Saved
+
+	if lastSavedData then
+		assert(typeof(lastSavedData) == "table")
+		lastSavedData = lastSavedData :: { [string]: JsonSerializable }
+
+		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 5 then
+			return
+		end
+	end
+
+	if not Engine.IsHeadless then
+		imgui.openpopup("Migrate core assets to alias")
+		local choiceIndex = 1
+
+		local connection; connection = game.OnFrameBegin:Connect(function()
+			if imgui.beginpopupmodal("Migrate core assets to alias") then
+				imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are not currently referred by aliases.")
+				imgui.text("This can cause incompatibilities with future versions of the Editor.")
+				imgui.text("It is recommended that you migrate these to use the `@base` alias.")
+
+				choiceIndex = imgui.combo("Choice", { "Migrate and alias", "Ignore until next time", "Do not migrate" }, choiceIndex)
+
+				imgui.setnextitemwidth(imgui.contentregionavail().x)
+				if imgui.button("Continue") then
+					assert(connection)
+					connection:Disconnect()
+
+					editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
+					assert(typeof(editorconf) == "table");
+					(editorconf :: any).CoreAssetsSymlinkMigrationChoice = choiceIndex;
+					(editorconf :: any).Saved.EditorBuild = Configuration.EditorBuild
+
+					fs.write("@project/phoenix.conf", json.encode(editorconf))
+
+					if choiceIndex == SymlinkMigrationChoices.Migrated then
+						task.defer(stubCoreAssets)
+					end
+				end
+
+				imgui.endpopup()
+			else
+				assert(connection)
+				connection:Disconnect()
+			end
+		end)
+	end
+end
+
 local function openProject_(State: StateType, ManualPath: string?)
     local path = ManualPath
     local selecting = not path
@@ -246,7 +306,9 @@ local function openProject_(State: StateType, ManualPath: string?)
 
     local config = json.parse(assert(fs.read("@project/phoenix.conf")))
     assert(typeof(config) == "table", "Configuration file is corrupt")
+
     config = config :: { [string]: JsonSerializable }
+    handleCoreAssetAliasMigration(config)
 
     local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
 

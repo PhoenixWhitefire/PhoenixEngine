@@ -537,9 +537,9 @@ static int imgui_dummy(lua_State* L)
 
 static int imgui_beginchild(lua_State* L)
 {
-    ImGuiWindowFlags winFlags = strToWindowFlags(L, luaL_optstring(L, 5, ""));
+    ImGuiWindowFlags winFlags = strToWindowFlags(L, luaL_optstring(L, 4, ""));
     ImGuiChildFlags flags = 0;
-    const char* flagsstr = luaL_optstring(L, 4, "");
+    const char* flagsstr = luaL_optstring(L, 3, "");
 
     for (; *flagsstr; flagsstr++)
     {

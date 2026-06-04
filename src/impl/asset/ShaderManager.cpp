@@ -561,7 +561,13 @@ ShaderManager::~ShaderManager()
 
 static void addIncludes(std::filesystem::path Path)
 {
-	for (const auto& it : std::filesystem::directory_iterator(FileRW::ResolvePathNormalized(Path.string())))
+	if (!std::filesystem::exists(Path))
+	{
+		Log.Info("Skipped adding shader includes.");
+		return;
+	}
+
+	for (const auto& it : std::filesystem::directory_iterator(Path))
 	{
 		if (it.is_directory())
 			addIncludes(it.path());
