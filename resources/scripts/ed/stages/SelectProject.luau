@@ -73,7 +73,7 @@ local function renderProjectSelectorTiles(Projects: { string } | { State.CachedP
             imgui.pushstylecolor(5, { 1, 1, 1, 1 })
 
             imgui.setcursorposition(cpos.x - 10, cpos.y - 10)
-            imgui.beginchild(projName .. "_Selection", 270, 280, "b", "ni")
+            imgui.beginchild(projName .. "_Selection", vector.create(270, 280), "b", "ni")
             imgui.endchild()
             imgui.setcursorposition(cpos.x, cpos.y)
 
@@ -260,7 +260,7 @@ function SelectProject.Render(DeltaTime: number)
     if imgui.beginfullscreen("Start Page", 0, 18) then
         local startPos = imgui.cursorposition()
 
-        if imgui.beginchild("SidePanel", 165, 0, "b") then
+        if imgui.beginchild("SidePanel", vector.create(165, 0), "b") then
             local cpos = imgui.cursorposition()
             imgui.setcursorposition(cpos.x - 4, cpos.y)
 
@@ -276,7 +276,7 @@ function SelectProject.Render(DeltaTime: number)
                     imgui.setcursorposition(cpos.x - 5, cpos.y - 2)
                     imgui.pushstylecolor(5, { 1, 1, 1, 1 })
 
-                    imgui.beginchild("Selection", 160, 160, "b", "ni")
+                    imgui.beginchild("Selection", vector.create(160, 160), "b", "ni")
                     imgui.endchild()
 
                     imgui.popstylecolor()
@@ -305,7 +305,7 @@ function SelectProject.Render(DeltaTime: number)
 
         imgui.setcursorposition(startPos.x + 170, startPos.y)
 
-        imgui.beginchild("MainSection", 0, 0, "b")
+        imgui.beginchild("MainSection", vector.create(0, 0), "b")
 
         ProjectCategories[SelectedProjectsCategory].Render(startPos.x)
 

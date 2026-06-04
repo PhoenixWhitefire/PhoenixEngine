@@ -918,7 +918,7 @@ declare fs: {
 declare imgui: {
   anyitemactive: ((  ) -> (boolean)),
   begin: (( WindowTitle: string, WindowFlags: string?, HasCloseButton: boolean? ) -> (boolean, boolean)),
-  beginchild: (( Name: string, Width: number?, Height: number?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
+  beginchild: (( Name: string, Size: vector?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
   beginfullscreen: (( Name: string, OffsetX: number?, OffsetY: number? ) -> ()),
   beginmainmenubar: ((  ) -> (boolean)),
   beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean)),

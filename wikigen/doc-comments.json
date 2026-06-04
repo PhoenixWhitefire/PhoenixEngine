@@ -1699,12 +1699,8 @@
             "In": [
               "Name: string",
               [
-                "Width: number?",
-                "0"
-              ],
-              [
-                "Height: number?",
-                "0"
+                "Size: vector?",
+                "0, 0"
               ],
               [
                 "ChildFlags: string?",

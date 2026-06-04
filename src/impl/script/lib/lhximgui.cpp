@@ -612,11 +612,14 @@ static int imgui_beginchild(lua_State* L)
         }
     }
 
+    const float DefaultSize[3] = { 0.f, 0.f, 0.f };
+    const float* size = luaL_optvector(L, 2, DefaultSize);
+
     lua_pushboolean(
         L,
         ImGui::BeginChild(
             luaL_checkstring(L, 1),
-            { (float)luaL_optnumber(L, 2, 0.f), (float)luaL_optnumber(L, 3, 0.f) },
+            { size[0], size[1] },
             flags, winFlags
         )
     );
