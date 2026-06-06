@@ -205,6 +205,8 @@ local function renderAppearanceSection()
         end
 
         if imgui.collapsingheader("ImGui base colors") then
+            imgui.indent(25)
+
             for _, col in ImGuiColors do
                 imgui.pushid(`##imgui{ col.Name }`)
 
@@ -226,6 +228,9 @@ local function renderAppearanceSection()
                 imgui.popid()
                 imgui.separator()
             end
+
+            imgui.indent(-25)
+            imgui.newline()
         end
 
         for _, k in OrderedThemeTokens do

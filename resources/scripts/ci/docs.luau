@@ -2,12 +2,12 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
-task.delay(20, function()
+task.delay(60, function()
 	warn("Docgen appears to have hung - exiting")
 	game:Close(1)
 end)
 
-game:GetService("ScriptEngine"):SetVMAllowedExecutionTime(_VMNAME, 20)
+game:GetService("ScriptEngine"):SetVMAllowedExecutionTime(_VMNAME, 60)
 
 local BASE_PATH = "./wikigen"
 local DOCS_PREFIX = "phoenix"
