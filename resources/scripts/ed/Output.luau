@@ -9,6 +9,7 @@ local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
 local Preferences = require("@ed/Preferences")
+local Theme = require("@ed/Theme")
 local State = require("@ed/State")
 
 type LogMessageItem = {
@@ -99,17 +100,17 @@ function Output.Render()
         local rightClickedLogMessage = false
 
         for mi, message in Output.Log do
-            imgui.pushstylecolor(Enum.ImGuiColor.Text, { 0.35, 0.35, 0.35, 1 })
+            imgui.pushstylecolor(Enum.ImGuiColor.Text, Theme.OutputTimestamp)
 
             imgui.text(message.Time)
 
             imgui.popstylecolor()
 
             local LogColors = {
-                [Enum.LogType.None]    = { 1, 1, 1, 1 },
-                [Enum.LogType.Info]    = { 1, 1, 1, 1 },
-                [Enum.LogType.Warning] = { 255 / 255, 171 / 255, 61 / 255, 1 }, -- warning
-                [Enum.LogType.Error]   = { 255 / 255, 61 / 255, 61 / 255, 1 }   -- error
+                [Enum.LogType.None]    = Theme.OutputLogNone,
+                [Enum.LogType.Info]    = Theme.OutputLogInfo,
+                [Enum.LogType.Warning] = Theme.OutputLogWarning,
+                [Enum.LogType.Error]   = Theme.OutputLogError
             }
 
             local logColor = LogColors[message.Type]
@@ -325,7 +326,7 @@ function Output.Render()
                             imgui.newline()
                         end
 
-                        imgui.pushstylecolor(Enum.ImGuiColor.Text, { 0.35, 0.35, 0.35, 1 })
+                        imgui.pushstylecolor(Enum.ImGuiColor.Text, Theme.OutputContextTooltip)
 
                         imgui.text(context)
 

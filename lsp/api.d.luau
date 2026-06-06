@@ -1044,7 +1044,7 @@ declare imgui: {
   settooltip: (( Tooltip: string ) -> ()),
   setviewportdockspace: (( PositionX: number, PositionY: number, SizeX: number, SizeY: number ) -> ()),
   setviewportdockspacedefault: ((  ) -> ()),
-  stylecolors: (( Theme: 'l' | 'd' ) -> ()),
+  stylecolors: (( Theme: 'l' | 'd' | 'c' ) -> ()),
   text: (( Text: string ) -> ()),
   textlink: (( Text: string ) -> (boolean)),
   textsize: (( Text: string ) -> (vector)),

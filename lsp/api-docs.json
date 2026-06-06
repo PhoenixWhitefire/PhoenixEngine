@@ -1367,7 +1367,7 @@
     "documentation": "* Reverts the region of the window in which Dear ImGui windows can be docked to the default settings"
   },
   "@phoenix/global/imgui.stylecolors": {
-    "documentation": "* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`"
+    "documentation": "* `ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`/`ImGui::StyleColorsClassic`"
   },
   "@phoenix/global/imgui.text": {
     "documentation": "* `ImGui::Text`"

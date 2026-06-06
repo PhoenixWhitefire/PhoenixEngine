@@ -387,10 +387,15 @@ static int imgui_stylecolors(lua_State* L)
             ImGui::StyleColorsDark();
             return 0;
         }
+        else if (n[0] == 'c')
+        {
+            ImGui::StyleColorsClassic();
+            return 0;
+        }
         else
             luaL_error(L, "Invalid style '%s'", n);
     }
-    
+
     luaL_error(L, "Invalid style '%s'", n);
 }
 

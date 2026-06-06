@@ -23,6 +23,7 @@ local CoreTools = require("@ed/CoreTools")
 local Reimport = require("@ed/Reimport")
 local Output = require("@ed/Output")
 local State = require("@ed/State")
+local Theme = require("@ed/Theme")
 local Git = require("@ed/Git")
 
 local HoveringOverMenuBar = false
@@ -168,9 +169,6 @@ local function isMouseWithinViewport()
     return IsHoveringViewport
 end
 
-local LIT_COLOR = { 1, 1, 1, 0.05 }
-local UNLIT_COLOR = { 1, 1, 1, 0 }
-
 local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boolean?, Id: string?, Tooltip: string?): boolean
     if Enabled == nil then
         Enabled = true
@@ -184,16 +182,16 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
         Id = Text
     end
 
-    local tint = if Enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
+    local tint = if Enabled then Theme.TabButtonEnabledTint else Theme.TabButtonDisabledTint
 
     if Id == TabButtonHovering then
-        imgui.pushstylecolor(Enum.ImGuiColor.Border, { 1, 1, 1, 1 })
+        imgui.pushstylecolor(Enum.ImGuiColor.Border, Theme.TabButtonHoveringBorder)
     end
 
-    local backgroundColor = if Preferences.InvertTabButtonLitColors then LIT_COLOR else UNLIT_COLOR
+    local backgroundColor = if Preferences.InvertTabButtonLitColors then Theme.TabButtonLit else Theme.TabButtonUnlit
 
     if Lit then
-        backgroundColor = if Preferences.InvertTabButtonLitColors then UNLIT_COLOR else LIT_COLOR
+        backgroundColor = if Preferences.InvertTabButtonLitColors then Theme.TabButtonUnlit else Theme.TabButtonLit
     end
 
     local sf = imgui.scalefactor()
@@ -569,9 +567,7 @@ local function exportProject()
         imgui.separator()
 
         imgui.text("Your project will export to:")
-        imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 1, 1, 1 })
         imgui.text(exportTo)
-        imgui.popstylecolor()
 
         if prevExportTo ~= exportTo then
             if fs.isdirectory(exportTo) then
@@ -1127,7 +1123,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
     if (openSettingsWindow or ExternalCodeEditor.RequestOpenSettingsMenuToConfigure) and not wasSettingsOpen then
         imgui.openpopup("Editor Settings")
 
-        local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 420 * sf, 140 * sf
+        local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 1000 * sf, 600 * sf
 
         local ws = Renderer.Resolution
 

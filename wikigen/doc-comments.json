@@ -2228,10 +2228,10 @@
           },
           "stylecolors": {
             "Description": [
-              "`ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`"
+              "`ImGui::StyleColorsDark`/`ImGui::StyleColorsLight`/`ImGui::StyleColorsClassic`"
             ],
             "In": [
-              "Theme: 'l' | 'd'"
+              "Theme: 'l' | 'd' | 'c'"
             ]
           },
           "text": {

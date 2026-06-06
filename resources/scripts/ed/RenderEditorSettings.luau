@@ -6,42 +6,89 @@ local SPYWARE_SETTINGS_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine/
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local Preferences = require("@ed/Preferences")
 
-local function renderEditorSettings()
-    imgui.demowindow(true)
+local SettingsSectionHorizontalSize = 0
 
-    local lightMode = imgui.checkbox("Light", Preferences.UseLightTheme)
+local function settingPosition(Label: string)
+    imgui.text(Label)
+    imgui.sameline()
+
+    imgui.setcursorposition(vector.create(SettingsSectionHorizontalSize * 0.7, imgui.cursorposition().y))
+    imgui.setnextitemwidth(imgui.contentregionavail().x)
+end
+
+local function setting<R, A...>(Label: string, Function: (string, A...) -> (R), ...: A...): R
+    imgui.pushid(`##{Label}`)
+    settingPosition(Label)
+
+    local result = Function("##", ...)
+    imgui.separator()
+
+    imgui.popid()
+    return result
+end
+
+local function stringSetting(Label: string, Value: string): (string, boolean)
+    imgui.pushid(`##{Label}`)
+    settingPosition(Label)
+
+    local newValue, changed = imgui.inputstring("##", Value)
+    imgui.separator()
+
+    imgui.popid()
+    return newValue, changed
+end
+
+local function numberSetting(Label: string, Value: number): (number, boolean)
+    imgui.pushid(`##{Label}`)
+    settingPosition(Label)
+
+    local newValue, changed = imgui.inputnumber("##", Value)
+    imgui.separator()
+
+    imgui.popid()
+    return newValue, changed
+end
+
+local function renderAppearanceSection()
+    local lightMode = setting("Light", imgui.checkbox, Preferences.UseLightTheme)
     if lightMode ~= Preferences.UseLightTheme then
         imgui.stylecolors(if lightMode then "l" else "d")
     end
-    Preferences.UseLightTheme = lightMode
 
+    Preferences.UseLightTheme = lightMode
+    Preferences.InvertTabButtonLitColors = setting("Invert tab button active colors", imgui.checkbox, Preferences.InvertTabButtonLitColors)
+end
+
+local function renderExternalToolsSection()
     if imgui.windowappearing() and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure then
         imgui.focuskeyboardhere()
     end
 
-    Preferences.CodeEditorPath = imgui.inputstring("Code Editor path", Preferences.CodeEditorPath)
+    Preferences.CodeEditorPath = stringSetting("Code Editor path", Preferences.CodeEditorPath)
+    Preferences.AutoLaunchCodeEditorOnProjectOpen = setting("Launch code editor on project open", imgui.checkbox, Preferences.AutoLaunchCodeEditorOnProjectOpen)
 
-    Preferences.AutoLaunchCodeEditorOnProjectOpen = imgui.checkbox("Launch code editor on project open", Preferences.AutoLaunchCodeEditorOnProjectOpen)
+    Preferences.GitIntegration = setting("Git integration", imgui.checkbox, Preferences.GitIntegration)
+end
 
-    Preferences.ClearOutputOnProjectOpen = imgui.checkbox("Clear Output on Project open", Preferences.ClearOutputOnProjectOpen)
-    Preferences.ClearOutputOnPlaytest = imgui.checkbox("Clear Output on Playtest", Preferences.ClearOutputOnPlaytest)
-
-    Preferences.ClosingProjectSaveRequiresConfirmation = imgui.checkbox(
-        "Require confirmation for save when closing Project through `File` > `Close`",
+local function renderProjectSection()
+    Preferences.ClosingProjectSaveRequiresConfirmation = setting(
+        "Require confirmation for save\nwhen closing Project through `File` > `Close`",
+        imgui.checkbox,
         Preferences.ClosingProjectSaveRequiresConfirmation
     )
 
-    Preferences.AutosaveInterval = imgui.inputnumber("Autosave interval (in minutes)", Preferences.AutosaveInterval)
-    Preferences.KeepGizmoInView = imgui.checkbox("Turn the camera to keep the gizmo handles in view while moving an object", Preferences.KeepGizmoInView)
-    Preferences.InvertTabButtonLitColors = imgui.checkbox("Invert tab button active colors", Preferences.InvertTabButtonLitColors)
-    Preferences.GitIntegration = imgui.checkbox("Git integration", Preferences.GitIntegration)
+    Preferences.AutosaveInterval = numberSetting("Autosave interval (in minutes)", Preferences.AutosaveInterval)
+    Preferences.KeepGizmoInView = setting("Turn the camera to keep the gizmo handles in view while moving an object", imgui.checkbox, Preferences.KeepGizmoInView)
 
-    Preferences.ScriptAllowedExecutionTime = imgui.inputnumber("Editor playtest script allowed execution time", Preferences.ScriptAllowedExecutionTime)
+    Preferences.ClearOutputOnProjectOpen = setting("Clear Output on Project open", imgui.checkbox, Preferences.ClearOutputOnProjectOpen)
+    Preferences.ClearOutputOnPlaytest = setting("Clear Output on Playtest", imgui.checkbox, Preferences.ClearOutputOnPlaytest)
+
+    Preferences.ScriptAllowedExecutionTime = numberSetting("Editor playtest script allowed execution time", Preferences.ScriptAllowedExecutionTime)
     imgui.setitemtooltip("This is independent of the time-out length applied for scripts in exported projects")
 
-    Preferences.CancelPlaytestWhenScriptTimesOut = imgui.checkbox("Cancel playtests when a script times-out", Preferences.CancelPlaytestWhenScriptTimesOut)
+    Preferences.CancelPlaytestWhenScriptTimesOut = setting("Cancel playtests when a script times-out", imgui.checkbox, Preferences.CancelPlaytestWhenScriptTimesOut)
 
-    imgui.separator()
+    imgui.newline()
 
     imgui.text(`Your projects directory is:\n{ Preferences.ProjectsDirectory }`)
     imgui.setitemtooltip(Preferences.ProjectsDirectory)
@@ -83,6 +130,74 @@ local function renderEditorSettings()
         imgui.urllink("Configure spyware settings", SPYWARE_SETTINGS_URL)
         imgui.treepop()
     end
+end
+
+type Section = {
+    Name: string?,
+    Render: () -> ()
+}
+
+local Sections: { [string]: Section } = {
+    Appearance = {
+        Render = renderAppearanceSection
+    },
+    ExternalTools = {
+        Name = "External tools",
+        Render = renderExternalToolsSection,
+    },
+    Project = {
+        Render = renderProjectSection,
+    },
+}
+
+local SectionOrder: { keyof<typeof(Sections)> } = {
+    "Project",
+    "ExternalTools",
+    "Appearance",
+}
+
+local CurrentSectionId: keyof<typeof(Sections)> = "Project"
+
+local function renderSectionSelectionPane()
+    if not imgui.beginchild("SectionSelection", imgui.contentregionavail() * vector.create(0.2, 1), "b") then
+        imgui.endchild()
+        return
+    end
+
+    for _, sectionId in SectionOrder do
+        local section = Sections[sectionId]
+        local name = section.Name or sectionId
+        imgui.treenode(name, "lf | fw | np" .. if CurrentSectionId == sectionId then " | sl" else "")
+
+        if imgui.itemclicked() then
+            CurrentSectionId = sectionId
+        end
+    end
+
+    imgui.endchild()
+    return
+end
+
+local function renderEditorSettings()
+    renderSectionSelectionPane()
+
+    if imgui.windowappearing() and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure then
+        CurrentSectionId = "ExternalTools"
+    end
+
+    imgui.sameline()
+    local cra = imgui.contentregionavail()
+    SettingsSectionHorizontalSize = cra.x
+
+    if not imgui.beginchild("SettingsSection", cra, "b", "h") then
+        imgui.endchild()
+        return
+    end
+
+    local currentSection = Sections[CurrentSectionId]
+    currentSection.Render()
+
+    imgui.endchild()
 end
 
 return renderEditorSettings

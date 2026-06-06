@@ -1,8 +1,4 @@
 -- Theme.luau, 04/06/2026
-local Theme = {
-    Current = {}
-}
+local DefaultThemes = require("@ed/DefaultThemes")
 
-
-
-return Theme
+return DefaultThemes.Dark
