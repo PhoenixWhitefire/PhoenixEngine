@@ -6,7 +6,6 @@ return {
     ClearOutputOnProjectOpen = true,
     ClearOutputOnPlaytest = true,
     CodeEditorPath = "",
-    UseLightTheme = false,
     ClosingProjectSaveRequiresConfirmation = false,
     AutosaveInterval = 5,
     KeepGizmoInView = false,
@@ -18,5 +17,5 @@ return {
     ProjectsDirectory = "@home/Documents/Phoenix Projects",
     ScriptAllowedExecutionTime = 10,
     CancelPlaytestWhenScriptTimesOut = true,
-    CurrentTheme = "Dark",
+    Theme = "Dark",
 }

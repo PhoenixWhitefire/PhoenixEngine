@@ -1222,8 +1222,11 @@
   "@phoenix/global/imgui.closecurrentpopup": {
     "documentation": "* `ImGui::CloseCurrentPopup`"
   },
+  "@phoenix/global/imgui.collapsingheader": {
+    "documentation": "* `ImGui::CollapsingHeader`"
+  },
   "@phoenix/global/imgui.combo": {
-    "documentation": "* `ImGui::Combo`. Returns the selected option index"
+    "documentation": "* `ImGui::Combo`\n* Returns the selected option index, as well as whether the option was changed"
   },
   "@phoenix/global/imgui.contentregionavail": {
     "documentation": "* `ImGui::GetContentRegionAvail`"
@@ -1260,6 +1263,9 @@
   },
   "@phoenix/global/imgui.focuskeyboardhere": {
     "documentation": "* `ImGui::SetKeyboardFocusHere`"
+  },
+  "@phoenix/global/imgui.getstylecolor": {
+    "documentation": "* Gets the current applied style color for a given style token as an array of 4 numbers for RGBA"
   },
   "@phoenix/global/imgui.image": {
     "documentation": "* `ImGui::Image`"
@@ -1314,6 +1320,12 @@
   },
   "@phoenix/global/imgui.radiobutton": {
     "documentation": "* `ImGui::RadioButton`"
+  },
+  "@phoenix/global/imgui.rgbaedit": {
+    "documentation": "* `ImGui::ColorEdit4`\n* The table should have exactly 4 elements\n* Note that this edits the table in-place"
+  },
+  "@phoenix/global/imgui.rgbedit": {
+    "documentation": "* `ImGui::ColorEdit3`\n* The table should have exactly 3 elements\n* Note that this edits the table in-place"
   },
   "@phoenix/global/imgui.sameline": {
     "documentation": "* `ImGui::SameLine`"

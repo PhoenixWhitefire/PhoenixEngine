@@ -665,10 +665,11 @@ static int imgui_combo(lua_State* L)
 
     options.push_back('\0');
 
-    ImGui::Combo(luaL_checkstring(L, 1), &curopt, options.data());
+    bool modified = ImGui::Combo(luaL_checkstring(L, 1), &curopt, options.data());
 
     lua_pushinteger(L, curopt + 1);
-    return 1;
+    lua_pushboolean(L, modified);
+    return 2;
 }
 
 static int imgui_treenode(lua_State* L)
@@ -1001,6 +1002,11 @@ static int imgui_newline(lua_State*)
 
 static int imgui_setstylecolor(lua_State* L)
 {
+    int id = luaL_checkinteger(L, 1);
+
+    if (id < 0 || id >= ImGuiCol_COUNT)
+        luaL_error(L, "Invalid color ID '%i'", id);
+
     lua_pushinteger(L, 1);
     lua_gettable(L, 2);
     lua_pushinteger(L, 2);
@@ -1016,8 +1022,38 @@ static int imgui_setstylecolor(lua_State* L)
     col.z = luaL_checknumber(L, -2);
     col.w = luaL_checknumber(L, -1);
 
-    ImGui::GetStyle().Colors[luaL_checkinteger(L, 1)] = col;
+    ImGui::GetStyle().Colors[id] = col;
     return 0;
+}
+
+static int imgui_getstylecolor(lua_State* L)
+{
+    int id = luaL_checkinteger(L, 1);
+
+    if (id < 0 || id >= ImGuiCol_COUNT)
+        luaL_error(L, "Invalid color ID '%i'", id);
+
+    ImVec4 col = ImGui::GetStyle().Colors[id];
+
+    lua_createtable(L, 4, 0);
+
+    lua_pushinteger(L, 1);
+    lua_pushnumber(L, col.x);
+    lua_settable(L, -3);
+
+    lua_pushinteger(L, 2);
+    lua_pushnumber(L, col.y);
+    lua_settable(L, -3);
+
+    lua_pushinteger(L, 3);
+    lua_pushnumber(L, col.z);
+    lua_settable(L, -3);
+
+    lua_pushinteger(L, 4);
+    lua_pushnumber(L, col.w);
+    lua_settable(L, -3);
+
+    return 1;
 }
 
 static int imgui_focuskeyboardhere(lua_State* L)
@@ -1029,6 +1065,94 @@ static int imgui_focuskeyboardhere(lua_State* L)
 static int imgui_scalefactor(lua_State* L)
 {
     lua_pushnumber(L, Engine::Get()->ScaleFactor);
+    return 1;
+}
+
+static int imgui_collapsingheader(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::CollapsingHeader(luaL_checkstring(L, 1)));
+    return 1;
+}
+
+static int imgui_rgbedit(lua_State* L)
+{
+    luaL_checktype(L, 2, LUA_TTABLE);
+    luaL_argcheck(L, lua_objlen(L, 2) == 3, 2, "expected to have 3 elements");
+
+    float color[3] = {};
+
+    lua_pushinteger(L, 1);
+    lua_gettable(L, 2);
+    color[0] = (float)luaL_checknumber(L, -1);
+
+    lua_pushinteger(L, 2);
+    lua_gettable(L, 2);
+    color[1] = (float)luaL_checknumber(L, -1);
+
+    lua_pushinteger(L, 3);
+    lua_gettable(L, 2);
+    color[2] = (float)luaL_checknumber(L, -1);
+
+    bool edited = ImGui::ColorEdit3(luaL_checkstring(L, 1), color);
+
+    lua_pushinteger(L, 1);
+    lua_pushnumber(L, color[0]);
+    lua_settable(L, 2);
+
+    lua_pushinteger(L, 2);
+    lua_pushnumber(L, color[1]);
+    lua_settable(L, 2);
+
+    lua_pushinteger(L, 3);
+    lua_pushnumber(L, color[2]);
+    lua_settable(L, 2);
+
+    lua_pushboolean(L, edited);
+    return 1;
+}
+
+static int imgui_rgbaedit(lua_State* L)
+{
+    luaL_checktype(L, 2, LUA_TTABLE);
+    luaL_argcheck(L, lua_objlen(L, 2) == 4, 2, "expected to have 4 elements");
+
+    float color[4] = {};
+
+    lua_pushinteger(L, 1);
+    lua_gettable(L, 2);
+    color[0] = (float)luaL_checknumber(L, -1);
+
+    lua_pushinteger(L, 2);
+    lua_gettable(L, 2);
+    color[1] = (float)luaL_checknumber(L, -1);
+
+    lua_pushinteger(L, 3);
+    lua_gettable(L, 2);
+    color[2] = (float)luaL_checknumber(L, -1);
+
+    lua_pushinteger(L, 4);
+    lua_gettable(L, 2);
+    color[3] = (float)luaL_checknumber(L, -1);
+
+    bool edited = ImGui::ColorEdit4(luaL_checkstring(L, 1), color);
+
+    lua_pushinteger(L, 1);
+    lua_pushnumber(L, color[0]);
+    lua_settable(L, 2);
+
+    lua_pushinteger(L, 2);
+    lua_pushnumber(L, color[1]);
+    lua_settable(L, 2);
+
+    lua_pushinteger(L, 3);
+    lua_pushnumber(L, color[2]);
+    lua_settable(L, 2);
+
+    lua_pushinteger(L, 4);
+    lua_pushnumber(L, color[3]);
+    lua_settable(L, 2);
+
+    lua_pushboolean(L, edited);
     return 1;
 }
 
@@ -1103,9 +1227,13 @@ static luaL_Reg imgui_funcs[] =
     { "begintooltip", imgui_begintooltip },
     { "endtooltip", imgui_endtooltip },
     { "newline", imgui_newline },
+    { "getstylecolor", imgui_getstylecolor },
     { "setstylecolor", imgui_setstylecolor },
     { "focuskeyboardhere", imgui_focuskeyboardhere },
     { "scalefactor", imgui_scalefactor },
+    { "collapsingheader", imgui_collapsingheader },
+    { "rgbedit", imgui_rgbedit },
+    { "rgbaedit", imgui_rgbaedit },
     { NULL, NULL }
 };
 

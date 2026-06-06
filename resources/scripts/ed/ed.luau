@@ -12,6 +12,7 @@ fs.definealias("base", "./resources")
 local PluginManager = require("@ed/PluginManager")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
+local ApplyTheme = require("@ed/ApplyTheme")
 local CoreTools = require("@ed/CoreTools")
 local CommonUI = require("@ed/CommonUI")
 local State = require("@ed/State")
@@ -38,7 +39,7 @@ for k, v in Preferences do
 end
 
 if not Engine.IsHeadless then
-    imgui.stylecolors(if Preferences.UseLightTheme then 'l' else 'd')
+    ApplyTheme(Preferences.Theme)
 end
 
 if not fs.isdirectory("./editor") then

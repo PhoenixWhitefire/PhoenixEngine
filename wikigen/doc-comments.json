@@ -1872,16 +1872,22 @@
               "`ImGui::CloseCurrentPopup`"
             ]
           },
+          "collapsingheader": {
+            "Description": "`ImGui::CollapsingHeader`",
+            "In": "Label: string",
+            "Out": "boolean"
+          },
           "combo": {
             "Description": [
-              "`ImGui::Combo`. Returns the selected option index"
+              "`ImGui::Combo`",
+              "Returns the selected option index, as well as whether the option was changed"
             ],
             "In": [
               "Text: string",
               "Options: { string }",
               "CurrentOption: number"
             ],
-            "Out": "number"
+            "Out": "number, boolean"
           },
           "contentregionavail": {
             "Description": [
@@ -1952,6 +1958,11 @@
           "focuskeyboardhere": {
             "Description": "`ImGui::SetKeyboardFocusHere`",
             "In": "Offset: number?"
+          },
+          "getstylecolor": {
+            "Description": "Gets the current applied style color for a given style token as an array of 4 numbers for RGBA",
+            "In": "Token: EnumImGuiColor",
+            "Out": "{ number }"
           },
           "image": {
             "Description": [
@@ -2095,6 +2106,24 @@
           "radiobutton": {
             "Description": "`ImGui::RadioButton`",
             "In": "Label: string, Active: boolean",
+            "Out": "boolean"
+          },
+          "rgbedit": {
+            "Description": [
+              "`ImGui::ColorEdit3`",
+              "The table should have exactly 3 elements",
+              "Note that this edits the table in-place"
+            ],
+            "In": "Label: string, Color: { number }",
+            "Out": "boolean"
+          },
+          "rgbaedit": {
+            "Description": [
+              "`ImGui::ColorEdit4`",
+              "The table should have exactly 4 elements",
+              "Note that this edits the table in-place"
+            ],
+            "In": "Label: string, Color: { number }",
             "Out": "boolean"
           },
           "sameline": {

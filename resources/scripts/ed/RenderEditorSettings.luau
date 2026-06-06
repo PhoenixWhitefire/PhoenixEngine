@@ -4,9 +4,52 @@ local Engine = game:GetService("Engine")
 local SPYWARE_SETTINGS_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine/issues/30"
 
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
+local DefaultThemes = require("@ed/DefaultThemes")
+local GetThemeData = require("@ed/GetThemeData")
+local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
+local ApplyTheme = require("@ed/ApplyTheme")
+local Theme = require("@ed/Theme")
 
 local SettingsSectionHorizontalSize = 0
+local LastUpdatedThemes = 0
+local AvailableThemes = {
+    "Light",
+    "Dark",
+}
+
+local ThemesDirectory = "./editor/themes"
+
+type ImGuiColor = {
+    Name: string,
+    Value: EnumImGuiColor
+}
+local ImGuiColors: { ImGuiColor } = {}
+
+for k, e in Enum.ImGuiColor :: { [string]: EnumImGuiColor } do
+    table.insert(ImGuiColors, {
+        Name = k,
+        Value = e
+    })
+end
+
+table.sort(ImGuiColors, function(a: ImGuiColor, b: ImGuiColor)
+    return a.Name < b.Name
+end)
+
+local function keysOf<T>(t: { [T]: any }, exclude: T?) : { T }
+    local kt = {}
+    for k, _ in t do
+        if k ~= exclude then
+            table.insert(kt, k)
+        end
+    end
+
+    return kt
+end
+
+local OrderedThemeTokens = keysOf(Theme, "ImGui")
+table.sort(OrderedThemeTokens)
 
 local function settingPosition(Label: string)
     imgui.text(Label)
@@ -49,14 +92,155 @@ local function numberSetting(Label: string, Value: number): (number, boolean)
     return newValue, changed
 end
 
+local NewThemeName = ""
+
+local function applyThemeChanges()
+    fs.write(`./editor/{ Preferences.Theme }`, json.encode(Theme :: JsonSerializable))
+    ApplyTheme(Preferences.Theme)
+end
+
 local function renderAppearanceSection()
-    local lightMode = setting("Light", imgui.checkbox, Preferences.UseLightTheme)
-    if lightMode ~= Preferences.UseLightTheme then
-        imgui.stylecolors(if lightMode then "l" else "d")
+    Preferences.InvertTabButtonLitColors = setting("Invert tab button active colors", imgui.checkbox, Preferences.InvertTabButtonLitColors)
+
+    local currentThemeIndex = table.find(AvailableThemes, Preferences.Theme)
+    if not currentThemeIndex then
+        currentThemeIndex = 1
     end
 
-    Preferences.UseLightTheme = lightMode
-    Preferences.InvertTabButtonLitColors = setting("Invert tab button active colors", imgui.checkbox, Preferences.InvertTabButtonLitColors)
+    settingPosition("Theme")
+    local newThemeIndex = imgui.combo("##theme", AvailableThemes, assert(currentThemeIndex))
+
+    if newThemeIndex ~= currentThemeIndex then
+        local name = AvailableThemes[newThemeIndex]
+        ApplyTheme(name)
+
+        Preferences.Theme = name
+    end
+
+    if imgui.button("Create new theme from this") then
+        imgui.openpopup("Create new theme")
+
+        local WSX, WSY = 250, 80
+        local sf = imgui.scalefactor()
+
+        imgui.setnextwindowsize(WSX * sf, WSY * sf)
+    end
+
+    if imgui.beginpopupmodal("Create new theme", true) then
+        if imgui.windowappearing() then
+            imgui.focuskeyboardhere()
+        end
+
+        NewThemeName = imgui.inputstring("Name", NewThemeName)
+
+        if imgui.button("Create", imgui.contentregionavail().x) then
+            local shortPath = `themes/{ NewThemeName }.json`
+            local fullPath = `./editor/{ shortPath }`
+
+            if fs.isfile(fullPath) then
+                ErrorMessage.Push("A theme with that name already exists!")
+            else
+                local newThemeData = {
+                    ImGui = {
+                        Base = Theme.ImGui.Base,
+                        Overrides = {}
+                    },
+                    Inherit = Preferences.Theme
+                }
+
+                local s, e = pcall(function()
+                    fs.write(fullPath, json.encode(newThemeData :: JsonSerializable))
+                end)
+
+                if s then
+                    Preferences.Theme = shortPath
+                    ApplyTheme(shortPath)
+
+                    imgui.closecurrentpopup()
+                else
+                    ErrorMessage.Push(`Failed to create theme file: { e }`)
+                end
+            end
+        end
+
+        imgui.endpopup()
+    end
+
+    imgui.separatortext("Edit theme")
+
+    if DefaultThemes[Preferences.Theme] then
+        imgui.text("You must create a copy of the default theme in order to make edits")
+    else
+        local currentInheritsIndex = if Theme.Inherit then table.find(AvailableThemes, Theme.Inherit) else 0
+        currentInheritsIndex = if currentInheritsIndex then currentInheritsIndex + 1 else 1
+
+        local inheritables = table.clone(AvailableThemes)
+        table.insert(inheritables, 1, "<None>")
+
+        settingPosition("Inherit")
+        local newInheritsIndex = imgui.combo("##inherit", inheritables, currentInheritsIndex)
+
+        if newInheritsIndex ~= currentInheritsIndex then
+            newInheritsIndex -= 1
+            Theme.Inherit = AvailableThemes[newInheritsIndex]
+            applyThemeChanges()
+        end
+
+        imgui.separator()
+
+        local BaseStyles = {
+            "Light",
+            "Dark",
+            "Classic"
+        }
+
+        local prevBaseStyleIndex = table.find(BaseStyles, Theme.ImGui.Base) or 2
+
+        settingPosition("Base style")
+        local newBaseStyleIndex = imgui.combo("##base", BaseStyles, prevBaseStyleIndex)
+
+        if newBaseStyleIndex ~= prevBaseStyleIndex then
+            Theme.ImGui.Base = BaseStyles[newBaseStyleIndex]
+            applyThemeChanges()
+        end
+
+        if imgui.collapsingheader("ImGui base colors") then
+            for _, col in ImGuiColors do
+                imgui.pushid(`##imgui{ col.Name }`)
+
+                settingPosition(col.Name)
+
+                if Theme.ImGui.Overrides[col.Name] then
+                    local edited = imgui.rgbaedit(`##{ col.Name }`, Theme.ImGui.Overrides[col.Name])
+                    if edited then
+                        applyThemeChanges()
+                    end
+                else
+                    if imgui.button("...") then
+                        Theme.ImGui.Overrides[col.Name] = imgui.getstylecolor(col.Value)
+                        applyThemeChanges()
+                    end
+                    imgui.setitemtooltip("Override")
+                end
+
+                imgui.popid()
+                imgui.separator()
+            end
+        end
+
+        for _, k in OrderedThemeTokens do
+            local currentValue = Theme[k]
+
+            settingPosition(k)
+            local edited = imgui.rgbaedit(`##token{ k }`, currentValue)
+
+            if edited then
+                applyThemeChanges()
+            end
+
+            imgui.separator()
+        end
+    end
 end
 
 local function renderExternalToolsSection()
@@ -178,6 +362,34 @@ local function renderSectionSelectionPane()
     return
 end
 
+local function updateAvailableThemes()
+    LastUpdatedThemes = game.Time
+    AvailableThemes = { "Light", "Dark" }
+
+    if not fs.isdirectory("./editor") then
+        fs.mkdir("./editor")
+    end
+
+    if not fs.isdirectory(ThemesDirectory) then
+        fs.mkdir(ThemesDirectory)
+    end
+
+    for path, type in fs.listdir(ThemesDirectory) do
+        if type ~= "f" then
+            continue
+        end
+
+        local edLoc = path:find("editor/")
+        local shortened = path
+
+        if edLoc then
+            shortened = path:sub(edLoc + #("editor/"), #path)
+        end
+
+        table.insert(AvailableThemes, shortened)
+    end
+end
+
 local function renderEditorSettings()
     renderSectionSelectionPane()
 
@@ -198,6 +410,10 @@ local function renderEditorSettings()
     currentSection.Render()
 
     imgui.endchild()
+
+    if game.Time - LastUpdatedThemes > 1 then
+        updateAvailableThemes()
+    end
 end
 
 return renderEditorSettings
