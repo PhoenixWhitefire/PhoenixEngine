@@ -111,6 +111,10 @@ target_link_libraries(PhoenixEngine PRIVATE
 	Luau.Config
 )
 
+if (MSVC)
+    target_link_libraries(PhoenixEngine PRIVATE wldap32.lib)
+endif()
+
 # not letting me put multiple definitions in the same expression waaa
 if (MSVC OR NOT (CMAKE_BUILD_TYPE STREQUAL "DebugTSan"))
 	add_compile_definitions($<IF:$<CONFIG:DebugTSan>,,TRACY_ENABLE>)

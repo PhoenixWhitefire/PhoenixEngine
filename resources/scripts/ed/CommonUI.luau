@@ -1219,7 +1219,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
         local w = Renderer.Resolution
 
         imgui.setnextwindowposition(0, w.y - 35)
-        imgui.setnextwindowsize(w.x, 35)
+        imgui.setnextwindowsize(w.x, 35 * imgui.scalefactor())
 
         imgui.begin("Bottom Bar", "nt | nd | nr | ns")
 
