@@ -12,13 +12,8 @@ local BaseImGuiStyles = {
 }
 
 local applyThemeByName: (Name: string) -> ()
-local themeLineage = {}
 
 local function applyTheme(themeData: ThemeData, current: string)
-    if themeData.Inherit and themeData.Inherit ~= current then
-        applyThemeByName(themeData.Inherit)
-    end
-
     imgui.stylecolors(BaseImGuiStyles[themeData.ImGui.Base])
 
     for name, value in themeData.ImGui.Overrides do
@@ -26,34 +21,21 @@ local function applyTheme(themeData: ThemeData, current: string)
     end
 
     for key, value in themeData do
-        if key == "ImGui" then
-            continue
+        if typeof(value) == "table" then
+            Theme[key] = table.clone(value)
+        else
+            Theme[key] = value
         end
-
-        Theme[key] = value
     end
+
+    Theme.ImGui.Overrides = table.clone(Theme.ImGui.Overrides)
 end
 
 function applyThemeByName(Name: string)
-    if table.find(themeLineage, Name) then
-        local lineage = ""
-
-        for _, theme in themeLineage do
-            lineage ..= `{ theme } -> `
-        end
-        lineage:sub(1, #lineage - 3)
-
-        ErrorMessage.Push(`{ Name } relies on itself! { lineage }`)
-        return
-    end
-
-    table.insert(themeLineage, Name)
     applyTheme(GetThemeData(Name), Name)
 end
 
 return function(Name: string)
-    table.clear(themeLineage)
-
     xpcall(applyThemeByName, function(err)
         ErrorMessage.Push(`Failed to apply theme: { err }`)
     end, Name)

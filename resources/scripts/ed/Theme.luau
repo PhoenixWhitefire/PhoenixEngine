@@ -1,4 +1,4 @@
 -- Theme.luau, 04/06/2026
-local DefaultThemes = require("@ed/DefaultThemes")
+local GetThemeData = require("@ed/GetThemeData")
 
-return DefaultThemes.Dark
+return GetThemeData("Dark")
