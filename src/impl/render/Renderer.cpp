@@ -417,7 +417,7 @@ void Renderer::DrawScene(
 				renderData.Transform[1],
 				renderData.Transform[2],
 				renderData.Transform[3],
-				renderData.Size,
+				renderData.Size / mesh.AssetSize,
 				renderData.TintColor,
 				renderData.Transparency
 			);
@@ -551,7 +551,7 @@ void Renderer::DrawMesh(
 	{
 		Shader.SetUniform("Phoenix_IsInstanced", false);
 		Shader.SetUniform("Phoenix_Transform", Transform);
-		Shader.SetUniform("Phoenix_Scale", Size);
+		Shader.SetUniform("Phoenix_Scale", Size / Object.AssetSize);
 		Shader.Activate();
 
 		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);

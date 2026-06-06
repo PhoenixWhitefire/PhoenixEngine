@@ -961,7 +961,10 @@ for _, name in orderedLibraries do
 			namesUnion ..= ` | "{e}"`
 			typesUnion ..= ` | Enum{e}_INTERNAL`
 
-			assert(members[e], `Enum.{e} has no documentation`)
+			if not members[e] then
+				docWarn(`Enum.{e} has no documentation`)
+				continue
+			end
 
 			local totalcomment = ""
 

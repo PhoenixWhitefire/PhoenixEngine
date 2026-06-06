@@ -702,6 +702,72 @@ declare extern type EnumFileSystemEvent_INTERNAL extends Enum with
   read Renamed_Old: EnumFileSystemEvent
   read Renamed_New: EnumFileSystemEvent
 end
+declare extern type EnumImGuiColor extends EnumItem with end
+declare extern type EnumImGuiColor_INTERNAL extends Enum with
+  read Text: EnumImGuiColor
+  read TextDisabled: EnumImGuiColor
+  read WindowBg: EnumImGuiColor
+  read ChildBg: EnumImGuiColor
+  read PopupBg: EnumImGuiColor
+  read Border: EnumImGuiColor
+  read BorderShadow: EnumImGuiColor
+  read FrameBg: EnumImGuiColor
+  read FrameBgHovered: EnumImGuiColor
+  read FrameBgActive: EnumImGuiColor
+  read TitleBg: EnumImGuiColor
+  read TitleBgActive: EnumImGuiColor
+  read TitleBgCollapsed: EnumImGuiColor
+  read MenuBarBg: EnumImGuiColor
+  read ScrollbarBg: EnumImGuiColor
+  read ScrollbarGrab: EnumImGuiColor
+  read ScrollbarGrabHovered: EnumImGuiColor
+  read ScrollbarGrabActive: EnumImGuiColor
+  read CheckMark: EnumImGuiColor
+  read CheckboxSelectedBg: EnumImGuiColor
+  read SliderGrab: EnumImGuiColor
+  read SliderGrabActive: EnumImGuiColor
+  read Button: EnumImGuiColor
+  read ButtonHovered: EnumImGuiColor
+  read ButtonActive: EnumImGuiColor
+  read Header: EnumImGuiColor
+  read HeaderHovered: EnumImGuiColor
+  read HeaderActive: EnumImGuiColor
+  read Separator: EnumImGuiColor
+  read SeparatorHovered: EnumImGuiColor
+  read SeparatorActive: EnumImGuiColor
+  read ResizeGrip: EnumImGuiColor
+  read ResizeGripHovered: EnumImGuiColor
+  read ResizeGripActive: EnumImGuiColor
+  read InputTextCursor: EnumImGuiColor
+  read TabHovered: EnumImGuiColor
+  read Tab: EnumImGuiColor
+  read TabSelected: EnumImGuiColor
+  read TabSelectedOverline: EnumImGuiColor
+  read TabDimmed: EnumImGuiColor
+  read TabDimmedSelected: EnumImGuiColor
+  read TabDimmedSelectedOverline: EnumImGuiColor
+  read DockingPreview: EnumImGuiColor
+  read DockingEmptyBg: EnumImGuiColor
+  read PlotLines: EnumImGuiColor
+  read PlotLinesHovered: EnumImGuiColor
+  read PlotHistogram: EnumImGuiColor
+  read PlotHistogramHovered: EnumImGuiColor
+  read TableHeaderBg: EnumImGuiColor
+  read TableBorderStrong: EnumImGuiColor
+  read TableBorderLight: EnumImGuiColor
+  read TableRowBg: EnumImGuiColor
+  read TableRowBgAlt: EnumImGuiColor
+  read TextLink: EnumImGuiColor
+  read TextSelectedBg: EnumImGuiColor
+  read TreeLines: EnumImGuiColor
+  read DragDropTarget: EnumImGuiColor
+  read DragDropTargetBg: EnumImGuiColor
+  read UnsavedMarker: EnumImGuiColor
+  read NavCursor: EnumImGuiColor
+  read NavWindowingHighlight: EnumImGuiColor
+  read NavWindowingDimBg: EnumImGuiColor
+  read ModalWindowDimBg: EnumImGuiColor
+end
 declare extern type EnumInputAction extends EnumItem with end
 declare extern type EnumInputAction_INTERNAL extends Enum with
   read Released: EnumInputAction
@@ -872,12 +938,13 @@ declare Enum: {
   CursorMode: EnumCursorMode_INTERNAL,
   FaceCulling: EnumFaceCulling_INTERNAL,
   FileSystemEvent: EnumFileSystemEvent_INTERNAL,
+  ImGuiColor: EnumImGuiColor_INTERNAL,
   InputAction: EnumInputAction_INTERNAL,
   Key: EnumKey_INTERNAL,
   LogType: EnumLogType_INTERNAL,
   MouseButton: EnumMouseButton_INTERNAL,
   ValueType: EnumValueType_INTERNAL,
-  [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "FileSystemEvent" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumFileSystemEvent_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
+  [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "FileSystemEvent" | "ImGuiColor" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumFileSystemEvent_INTERNAL | EnumImGuiColor_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
 }
 
 declare _RUNTIME: _RUNTIME
@@ -958,7 +1025,8 @@ declare imgui: {
   popid: ((  ) -> ()),
   popstylecolor: ((  ) -> ()),
   pushid: (( Id: string ) -> ()),
-  pushstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
+  pushstylecolor: (( Token: EnumImGuiColor, Color: { number } ) -> ()),
+  radiobutton: (( Label: string, Active: boolean ) -> (boolean)),
   sameline: ((  ) -> ()),
   scalefactor: ((  ) -> (number)),
   scrollherey: ((  ) -> ()),
@@ -972,7 +1040,7 @@ declare imgui: {
   setnextwindowopen: (( Open: boolean? ) -> ()),
   setnextwindowposition: (( X: number, Y: number ) -> ()),
   setnextwindowsize: (( Width: number, Height: number ) -> ()),
-  setstylecolor: (( StyleIndex: number, Color: { number } ) -> ()),
+  setstylecolor: (( Token: EnumImGuiColor, Color: { number } ) -> ()),
   settooltip: (( Tooltip: string ) -> ()),
   setviewportdockspace: (( PositionX: number, PositionY: number, SizeX: number, SizeY: number ) -> ()),
   setviewportdockspacedefault: ((  ) -> ()),

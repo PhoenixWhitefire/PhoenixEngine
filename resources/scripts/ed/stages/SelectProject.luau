@@ -70,7 +70,7 @@ local function renderProjectSelectorTiles(Projects: { string } | { State.CachedP
         imgui.setcursorposition(cpos.x, cpos.y)
 
         if SelectorHoveringOver == i then
-            imgui.pushstylecolor(5, { 1, 1, 1, 1 })
+            imgui.pushstylecolor(Enum.ImGuiColor.Border, { 1, 1, 1, 1 })
 
             imgui.setcursorposition(cpos.x - 10, cpos.y - 10)
             imgui.beginchild(projName .. "_Selection", vector.create(270, 280), "b", "ni")
@@ -274,7 +274,7 @@ function SelectProject.Render(DeltaTime: number)
             for i, cat in ProjectCategories do
                 if SelectedProjectsCategory == i then
                     imgui.setcursorposition(cpos.x - 5, cpos.y - 2)
-                    imgui.pushstylecolor(5, { 1, 1, 1, 1 })
+                    imgui.pushstylecolor(Enum.ImGuiColor.Border, { 1, 1, 1, 1 })
 
                     imgui.beginchild("Selection", vector.create(160, 160), "b", "ni")
                     imgui.endchild()

@@ -223,7 +223,7 @@ function Update.Render(dt: number)
             imgui.text(updaterLog)
 
             if updaterErr then
-                imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+                imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
                 imgui.text(updaterErr)
                 imgui.popstylecolor()
             end

@@ -187,7 +187,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
     local tint = if Enabled then { 1, 1, 1, 1 } else { 0.5, 0.5, 0.5, 1 }
 
     if Id == TabButtonHovering then
-        imgui.pushstylecolor(5, { 1, 1, 1, 1 })
+        imgui.pushstylecolor(Enum.ImGuiColor.Border, { 1, 1, 1, 1 })
     end
 
     local backgroundColor = if Preferences.InvertTabButtonLitColors then LIT_COLOR else UNLIT_COLOR
@@ -198,7 +198,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 
     local sf = imgui.scalefactor()
 
-    imgui.pushstylecolor(3, backgroundColor)
+    imgui.pushstylecolor(Enum.ImGuiColor.ChildBg, backgroundColor)
 
     imgui.beginchild(Text .. "_Selection", vector.create(120, 150) * sf, "b")
 
@@ -569,7 +569,7 @@ local function exportProject()
         imgui.separator()
 
         imgui.text("Your project will export to:")
-        imgui.pushstylecolor(0, { 1, 1, 1, 1 })
+        imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 1, 1, 1 })
         imgui.text(exportTo)
         imgui.popstylecolor()
 
@@ -746,7 +746,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
     local pushedCol = State.CurrentStage == "ProjectPlaying"
 
     if pushedCol then
-        imgui.pushstylecolor(13, {0, 56/270, 15/270, 1})
+        imgui.pushstylecolor(Enum.ImGuiColor.MenuBarBg, {0, 56/270, 15/270, 1})
     end
 
     local render = imgui.beginmainmenubar()

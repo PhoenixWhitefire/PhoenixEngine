@@ -77,6 +77,195 @@
   "@phoenix/enum/FileSystemEvent.Renamed_Old": {
     "documentation": "When a file or folder is renamed, passing its old path to callback"
   },
+  "@phoenix/enum/ImGuiColor.Border": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.BorderShadow": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.Button": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ButtonActive": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ButtonHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.CheckMark": {
+    "documentation": "Checkbox tick and `radiobutton` circle"
+  },
+  "@phoenix/enum/ImGuiColor.CheckboxSelectedBg": {
+    "documentation": "Checkbox background when Selected, otherwise use `FrameBg`"
+  },
+  "@phoenix/enum/ImGuiColor.ChildBg": {
+    "documentation": "Background of child windows"
+  },
+  "@phoenix/enum/ImGuiColor.DockingEmptyBg": {
+    "documentation": "Background color for empty node (e.g. CentralNode with no window docked into it)"
+  },
+  "@phoenix/enum/ImGuiColor.DockingPreview": {
+    "documentation": "Preview overlay color when about to docking something"
+  },
+  "@phoenix/enum/ImGuiColor.DragDropTarget": {
+    "documentation": "Rectangle border highlighting a drop target"
+  },
+  "@phoenix/enum/ImGuiColor.DragDropTargetBg": {
+    "documentation": "Rectangle background highlighting a drop target"
+  },
+  "@phoenix/enum/ImGuiColor.FrameBg": {
+    "documentation": "Background of checkbox, radio button, plot, slider, text input"
+  },
+  "@phoenix/enum/ImGuiColor.FrameBgActive": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.FrameBgHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.Header": {
+    "documentation": "// `Header*` colors are used for `collapsingheader`, `treenode`, `menuitem`"
+  },
+  "@phoenix/enum/ImGuiColor.HeaderActive": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.HeaderHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.InputTextCursor": {
+    "documentation": "`inputstring` cursor/caret"
+  },
+  "@phoenix/enum/ImGuiColor.MenuBarBg": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ModalWindowDimBg": {
+    "documentation": "Darken/colorize entire screen behind a modal window, when one is active"
+  },
+  "@phoenix/enum/ImGuiColor.NavCursor": {
+    "documentation": "Color of keyboard/gamepad navigation cursor/rectangle, when visible"
+  },
+  "@phoenix/enum/ImGuiColor.NavWindowingDimBg": {
+    "documentation": "Darken/colorize entire screen behind the `Ctrl`+`Tab` window list, when active"
+  },
+  "@phoenix/enum/ImGuiColor.NavWindowingHighlight": {
+    "documentation": "ighlight window when using `Ctrl`+`Tab`"
+  },
+  "@phoenix/enum/ImGuiColor.PlotHistogram": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.PlotHistogramHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.PlotLines": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.PlotLinesHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.PopupBg": {
+    "documentation": "Background of popups, menus, tooltips windows"
+  },
+  "@phoenix/enum/ImGuiColor.ResizeGrip": {
+    "documentation": "Resize grip in lower-right and lower-left corners of windows"
+  },
+  "@phoenix/enum/ImGuiColor.ResizeGripActive": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ResizeGripHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ScrollbarBg": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ScrollbarGrab": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ScrollbarGrabActive": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.ScrollbarGrabHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.Separator": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.SeparatorActive": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.SeparatorHovered": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.SliderGrab": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.SliderGrabActive": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.Tab": {
+    "documentation": "Tab background, when tab-bar is focused & tab is unselected"
+  },
+  "@phoenix/enum/ImGuiColor.TabDimmed": {
+    "documentation": "Tab background, when tab-bar is unfocused & tab is unselected"
+  },
+  "@phoenix/enum/ImGuiColor.TabDimmedSelected": {
+    "documentation": "Tab background, when tab-bar is unfocused & tab is selected"
+  },
+  "@phoenix/enum/ImGuiColor.TabDimmedSelectedOverline": {
+    "documentation": "Horizontal overline, when tab-bar is unfocused & tab is selected"
+  },
+  "@phoenix/enum/ImGuiColor.TabHovered": {
+    "documentation": "Tab background, when hovered"
+  },
+  "@phoenix/enum/ImGuiColor.TabSelected": {
+    "documentation": "Tab background, when tab-bar is focused & tab is selected"
+  },
+  "@phoenix/enum/ImGuiColor.TabSelectedOverline": {
+    "documentation": "Tab horizontal overline, when tab-bar is focused & tab is selected"
+  },
+  "@phoenix/enum/ImGuiColor.TableBorderLight": {
+    "documentation": "Table inner borders (prefer using Alpha=1.0 here)"
+  },
+  "@phoenix/enum/ImGuiColor.TableBorderStrong": {
+    "documentation": "Table outer and header borders (prefer using Alpha=1.0 here)"
+  },
+  "@phoenix/enum/ImGuiColor.TableHeaderBg": {
+    "documentation": "Table header background"
+  },
+  "@phoenix/enum/ImGuiColor.TableRowBg": {
+    "documentation": "Table row background (even rows)"
+  },
+  "@phoenix/enum/ImGuiColor.TableRowBgAlt": {
+    "documentation": "Table row background (odd rows)"
+  },
+  "@phoenix/enum/ImGuiColor.Text": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.TextDisabled": {
+    "documentation": ""
+  },
+  "@phoenix/enum/ImGuiColor.TextLink": {
+    "documentation": "Hyperlink color"
+  },
+  "@phoenix/enum/ImGuiColor.TextSelectedBg": {
+    "documentation": "Selected text inside an `inputstring`"
+  },
+  "@phoenix/enum/ImGuiColor.TitleBg": {
+    "documentation": "Title bar"
+  },
+  "@phoenix/enum/ImGuiColor.TitleBgActive": {
+    "documentation": "Title bar when focused"
+  },
+  "@phoenix/enum/ImGuiColor.TitleBgCollapsed": {
+    "documentation": "Title bar when collapsed"
+  },
+  "@phoenix/enum/ImGuiColor.TreeLines": {
+    "documentation": "Tree node hierarchy outlines when using `dl`/`dlf`"
+  },
+  "@phoenix/enum/ImGuiColor.UnsavedMarker": {
+    "documentation": "Unsaved Document marker (in window title and tabs)"
+  },
+  "@phoenix/enum/ImGuiColor.WindowBg": {
+    "documentation": "Background of normal windows"
+  },
   "@phoenix/enum/InputAction.Pressed": {
     "documentation": "The key or mouse button was pressed"
   },
@@ -587,6 +776,74 @@
       "Renamed_Old": "@phoenix/enum/FileSystemEvent.Renamed_Old"
     }
   },
+  "@phoenix/global/Enum.ImGuiColor": {
+    "documentation": "* Dear ImGui color tokens, which can be passed to `imgui.pushstylecolor` or `imgui.setstylecolor`",
+    "keys": {
+      "Border": "@phoenix/enum/ImGuiColor.Border",
+      "BorderShadow": "@phoenix/enum/ImGuiColor.BorderShadow",
+      "Button": "@phoenix/enum/ImGuiColor.Button",
+      "ButtonActive": "@phoenix/enum/ImGuiColor.ButtonActive",
+      "ButtonHovered": "@phoenix/enum/ImGuiColor.ButtonHovered",
+      "CheckMark": "@phoenix/enum/ImGuiColor.CheckMark",
+      "CheckboxSelectedBg": "@phoenix/enum/ImGuiColor.CheckboxSelectedBg",
+      "ChildBg": "@phoenix/enum/ImGuiColor.ChildBg",
+      "DockingEmptyBg": "@phoenix/enum/ImGuiColor.DockingEmptyBg",
+      "DockingPreview": "@phoenix/enum/ImGuiColor.DockingPreview",
+      "DragDropTarget": "@phoenix/enum/ImGuiColor.DragDropTarget",
+      "DragDropTargetBg": "@phoenix/enum/ImGuiColor.DragDropTargetBg",
+      "FrameBg": "@phoenix/enum/ImGuiColor.FrameBg",
+      "FrameBgActive": "@phoenix/enum/ImGuiColor.FrameBgActive",
+      "FrameBgHovered": "@phoenix/enum/ImGuiColor.FrameBgHovered",
+      "Header": "@phoenix/enum/ImGuiColor.Header",
+      "HeaderActive": "@phoenix/enum/ImGuiColor.HeaderActive",
+      "HeaderHovered": "@phoenix/enum/ImGuiColor.HeaderHovered",
+      "InputTextCursor": "@phoenix/enum/ImGuiColor.InputTextCursor",
+      "MenuBarBg": "@phoenix/enum/ImGuiColor.MenuBarBg",
+      "ModalWindowDimBg": "@phoenix/enum/ImGuiColor.ModalWindowDimBg",
+      "NavCursor": "@phoenix/enum/ImGuiColor.NavCursor",
+      "NavWindowingDimBg": "@phoenix/enum/ImGuiColor.NavWindowingDimBg",
+      "NavWindowingHighlight": "@phoenix/enum/ImGuiColor.NavWindowingHighlight",
+      "PlotHistogram": "@phoenix/enum/ImGuiColor.PlotHistogram",
+      "PlotHistogramHovered": "@phoenix/enum/ImGuiColor.PlotHistogramHovered",
+      "PlotLines": "@phoenix/enum/ImGuiColor.PlotLines",
+      "PlotLinesHovered": "@phoenix/enum/ImGuiColor.PlotLinesHovered",
+      "PopupBg": "@phoenix/enum/ImGuiColor.PopupBg",
+      "ResizeGrip": "@phoenix/enum/ImGuiColor.ResizeGrip",
+      "ResizeGripActive": "@phoenix/enum/ImGuiColor.ResizeGripActive",
+      "ResizeGripHovered": "@phoenix/enum/ImGuiColor.ResizeGripHovered",
+      "ScrollbarBg": "@phoenix/enum/ImGuiColor.ScrollbarBg",
+      "ScrollbarGrab": "@phoenix/enum/ImGuiColor.ScrollbarGrab",
+      "ScrollbarGrabActive": "@phoenix/enum/ImGuiColor.ScrollbarGrabActive",
+      "ScrollbarGrabHovered": "@phoenix/enum/ImGuiColor.ScrollbarGrabHovered",
+      "Separator": "@phoenix/enum/ImGuiColor.Separator",
+      "SeparatorActive": "@phoenix/enum/ImGuiColor.SeparatorActive",
+      "SeparatorHovered": "@phoenix/enum/ImGuiColor.SeparatorHovered",
+      "SliderGrab": "@phoenix/enum/ImGuiColor.SliderGrab",
+      "SliderGrabActive": "@phoenix/enum/ImGuiColor.SliderGrabActive",
+      "Tab": "@phoenix/enum/ImGuiColor.Tab",
+      "TabDimmed": "@phoenix/enum/ImGuiColor.TabDimmed",
+      "TabDimmedSelected": "@phoenix/enum/ImGuiColor.TabDimmedSelected",
+      "TabDimmedSelectedOverline": "@phoenix/enum/ImGuiColor.TabDimmedSelectedOverline",
+      "TabHovered": "@phoenix/enum/ImGuiColor.TabHovered",
+      "TabSelected": "@phoenix/enum/ImGuiColor.TabSelected",
+      "TabSelectedOverline": "@phoenix/enum/ImGuiColor.TabSelectedOverline",
+      "TableBorderLight": "@phoenix/enum/ImGuiColor.TableBorderLight",
+      "TableBorderStrong": "@phoenix/enum/ImGuiColor.TableBorderStrong",
+      "TableHeaderBg": "@phoenix/enum/ImGuiColor.TableHeaderBg",
+      "TableRowBg": "@phoenix/enum/ImGuiColor.TableRowBg",
+      "TableRowBgAlt": "@phoenix/enum/ImGuiColor.TableRowBgAlt",
+      "Text": "@phoenix/enum/ImGuiColor.Text",
+      "TextDisabled": "@phoenix/enum/ImGuiColor.TextDisabled",
+      "TextLink": "@phoenix/enum/ImGuiColor.TextLink",
+      "TextSelectedBg": "@phoenix/enum/ImGuiColor.TextSelectedBg",
+      "TitleBg": "@phoenix/enum/ImGuiColor.TitleBg",
+      "TitleBgActive": "@phoenix/enum/ImGuiColor.TitleBgActive",
+      "TitleBgCollapsed": "@phoenix/enum/ImGuiColor.TitleBgCollapsed",
+      "TreeLines": "@phoenix/enum/ImGuiColor.TreeLines",
+      "UnsavedMarker": "@phoenix/enum/ImGuiColor.UnsavedMarker",
+      "WindowBg": "@phoenix/enum/ImGuiColor.WindowBg"
+    }
+  },
   "@phoenix/global/Enum.InputAction": {
     "documentation": "* The action that caused an Input Event (such as `PlayerInput.KeyEvent`) to fire",
     "keys": {
@@ -1054,6 +1311,9 @@
   },
   "@phoenix/global/imgui.pushstylecolor": {
     "documentation": "* `ImGui::PushStyleColor`\n* `Color` is an array with 4 numbers representing R, G, B, and A"
+  },
+  "@phoenix/global/imgui.radiobutton": {
+    "documentation": "* `ImGui::RadioButton`"
   },
   "@phoenix/global/imgui.sameline": {
     "documentation": "* `ImGui::SameLine`"

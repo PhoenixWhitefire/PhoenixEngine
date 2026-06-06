@@ -260,7 +260,7 @@ local function libTools()
         local hadDescription, missingDescErrorMessage = isLibFullyDescribed(docLib, members)
 
         if not hadDescription then
-            imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+            imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
         end
 
         local libtnopen = imgui.treenode(lib)
@@ -276,7 +276,7 @@ local function libTools()
             local hadLibDescription = docLib.Description
 
             if not hadLibDescription then
-                imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+                imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
             end
 
             local desc = imgui.inputstring("Description", if typeof(docLib.Description) == "string" then docLib.Description else if typeof(docLib.Description) == "table" then table.concat(docLib.Description, "\n*") else "")
@@ -307,7 +307,7 @@ local function libTools()
                 local memberError = not docMember.Description or not areMemberTypesValid(docMember)
 
                 if memberError then
-                    imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+                    imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
                 end
 
                 if imgui.treenode(name) then
@@ -324,7 +324,7 @@ local function libTools()
                             local tvalid, err = isTypeValid(param)
 
                             if not tvalid then
-                                imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+                                imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
                             end
 
                             docMember.In[index] = imgui.inputstring(tostring(index), param)
@@ -350,7 +350,7 @@ local function libTools()
                             local tvalid, err = isTypeValid(param[1])
 
                             if not tvalid then
-                                imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+                                imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
                             end
 
                             docMember.In[index][1] = imgui.inputstring(tostring(index) .. " type", param[1])
@@ -391,7 +391,7 @@ local function libTools()
                     local outputTypeValid, outputTypeError = isTypeValid(docMember.Out or "")
 
                     if not outputTypeValid then
-                        imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+                        imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
                     end
 
                     local returns = imgui.inputstring("Outputs", docMember.Out or "")
@@ -409,7 +409,7 @@ local function libTools()
                     local hadMemberDescription = docMember.Description
 
                     if not hadMemberDescription then
-                        imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+                        imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
                     end
 
                     imgui.separatortext("Description");

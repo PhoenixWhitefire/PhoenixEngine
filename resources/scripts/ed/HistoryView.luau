@@ -57,7 +57,7 @@ function Viewer.Render()
     local currentAction = History:GetCurrentActionData()
 
     if currentAction then
-        imgui.pushstylecolor(0, { 1, 0, 0, 1 })
+        imgui.pushstylecolor(Enum.ImGuiColor.Text, { 1, 0, 0, 1 })
 
         renderAction(currentAction, -1)
 
@@ -73,7 +73,7 @@ function Viewer.Render()
         end
 
         if i == History.CurrentWaypoint then
-            imgui.pushstylecolor(0, { 0, 1, 0, 1 })
+            imgui.pushstylecolor(Enum.ImGuiColor.Text, { 0, 1, 0, 1 })
         end
 
         renderAction(data, i)

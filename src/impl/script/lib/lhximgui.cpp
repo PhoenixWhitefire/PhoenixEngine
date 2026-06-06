@@ -364,6 +364,12 @@ static int imgui_checkbox(lua_State* L)
     return 2;
 }
 
+static int imgui_radiobutton(lua_State* L)
+{
+    lua_pushboolean(L, ImGui::RadioButton(luaL_checkstring(L, 1), luaL_checkboolean(L, 2)));
+    return 1;
+}
+
 static int imgui_stylecolors(lua_State* L)
 {
     size_t siz = 0;
@@ -1044,6 +1050,7 @@ static luaL_Reg imgui_funcs[] =
     { "textlink", imgui_textlink },
     { "urllink", imgui_urllink },
     { "checkbox", imgui_checkbox },
+    { "radiobutton", imgui_radiobutton },
     { "stylecolors", imgui_stylecolors },
     { "setnextwindowfocus", imgui_setnextwindowfocus },
     { "setnextwindowposition", imgui_setnextwindowposition },

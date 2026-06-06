@@ -18,6 +18,7 @@
 #endif
 
 #include "script/luhx.hpp"
+#include "script/enum/ImGuiColors.hpp"
 #include "script/enum/Keys.hpp"
 #include "Reflection.hpp"
 
@@ -25,7 +26,18 @@ int luhxopen_Enum(lua_State* L)
 {
     lua_newtable(L);
 
-    lua_newtable(L);
+    lua_createtable(L, (int)std::size(ImGuiColNames), 0);
+
+    for (size_t i = 0; i < std::size(ImGuiColNames); i++)
+    {
+        const std::string_view& name = ImGuiColNames[i];
+        lua_pushinteger(L, (int)i);
+        lua_setfield(L, -2, name.data());
+    }
+
+    lua_setfield(L, -2, "ImGuiColor");
+
+    lua_createtable(L, GLFW_KEY_LAST - GLFW_KEY_SPACE, 0);
 
     for (int i = GLFW_KEY_SPACE; i <  GLFW_KEY_LAST; i++)
     {

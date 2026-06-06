@@ -7,6 +7,8 @@ local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local Preferences = require("@ed/Preferences")
 
 local function renderEditorSettings()
+    imgui.demowindow(true)
+
     local lightMode = imgui.checkbox("Light", Preferences.UseLightTheme)
     if lightMode ~= Preferences.UseLightTheme then
         imgui.stylecolors(if lightMode then "l" else "d")

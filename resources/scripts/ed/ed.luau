@@ -20,7 +20,9 @@ local Git = require("@ed/Git")
 
 local Stages = require("@ed/Stages")
 
-Preferences = Preferences :: { [keyof<typeof(Preferences)>]: index<typeof(Preferences), keyof<typeof(Preferences)>> } & typeof(Preferences)
+type AsIndexerForm<T> = { [keyof<T>]: index<T, keyof<T>> }
+
+Preferences = Preferences :: AsIndexerForm<typeof(Preferences)> & typeof(Preferences)
 
 History:EnableRecording()
 Git.Initialize()

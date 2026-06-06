@@ -99,7 +99,7 @@ function Output.Render()
         local rightClickedLogMessage = false
 
         for mi, message in Output.Log do
-            imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
+            imgui.pushstylecolor(Enum.ImGuiColor.Text, { 0.35, 0.35, 0.35, 1 })
 
             imgui.text(message.Time)
 
@@ -113,8 +113,8 @@ function Output.Render()
             }
 
             local logColor = LogColors[message.Type]
-            imgui.pushstylecolor(0, logColor)
-            imgui.pushstylecolor(52, logColor)
+            imgui.pushstylecolor(Enum.ImGuiColor.Text, logColor)
+            imgui.pushstylecolor(Enum.ImGuiColor.TextLink, logColor)
 
             for smi, subMessage in message.Message do
                 smid += 1
@@ -325,7 +325,7 @@ function Output.Render()
                             imgui.newline()
                         end
 
-                        imgui.pushstylecolor(0, { 0.35, 0.35, 0.35, 1 })
+                        imgui.pushstylecolor(Enum.ImGuiColor.Text, { 0.35, 0.35, 0.35, 1 })
 
                         imgui.text(context)
 
