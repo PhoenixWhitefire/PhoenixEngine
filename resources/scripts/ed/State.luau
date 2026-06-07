@@ -7,6 +7,7 @@ local History = game:GetService("History")
 local Physics = game:GetService("Physics")
 local Engine = game:GetService("Engine")
 
+local EditorCameraTransform = require("@ed/EditorCameraTransform")
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local Configuration = require("@ed/Configuration")
 local Preferences = require("@ed/Preferences")
@@ -406,7 +407,7 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
     end
 
     if firstAttempt then
-        local modifiedDate, modifiedDateError = (pcall :: (() -> ()) -> (boolean, unknown))(function()
+        local modifiedDate, modifiedDateError = pcall(function()
             local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
             assert(typeof(conf) == "table", `config was a { typeof(conf) } and not a table`);
 
@@ -426,6 +427,8 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
                 Time = os.time(),
             }
             fs.write("@project/phoenix.editor", json.encode(edconf))
+
+            EditorCameraTransform.Save(workspace.SceneCamera)
         end)
 
         if not modifiedDate then

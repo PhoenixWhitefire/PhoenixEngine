@@ -222,6 +222,8 @@ function State.ChangeStageTo(NewStage: Types.Stage)
     end)
 
     State.CurrentStage = NewStage
+
+    stageUpdate(State, 0)
 end
 
 game:BindToClose(handleEngineShutdown)

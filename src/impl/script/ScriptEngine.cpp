@@ -267,6 +267,13 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
     ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(Name.data(), Name.size());
 
+    // getting this in github CI, can't repro locally
+    if (!MainThread)
+    {
+        Log.ErrorF("{} has no main thread?!", Name);
+        return;
+    }
+
     std::deque<YieldedCoroutine>* yieldedCoros;
     if (YieldedOverride)
         yieldedCoros = YieldedOverride;
