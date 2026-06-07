@@ -5,7 +5,6 @@ local SPYWARE_SETTINGS_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine/
 
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local DefaultThemes = require("@ed/DefaultThemes")
-local GetThemeData = require("@ed/GetThemeData")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
 local ApplyTheme = require("@ed/ApplyTheme")

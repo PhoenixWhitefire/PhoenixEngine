@@ -1264,6 +1264,18 @@
   "@phoenix/global/imgui.focuskeyboardhere": {
     "documentation": "* `ImGui::SetKeyboardFocusHere`"
   },
+  "@phoenix/global/imgui.getscrollmaxx": {
+    "documentation": "* `ImGui::GetScrollMaxX`"
+  },
+  "@phoenix/global/imgui.getscrollmaxy": {
+    "documentation": "* `ImGui::GetScrollMaxY`"
+  },
+  "@phoenix/global/imgui.getscrollx": {
+    "documentation": "* `ImGui::GetScrollX`"
+  },
+  "@phoenix/global/imgui.getscrolly": {
+    "documentation": "* `ImGui::GetScrollY`"
+  },
   "@phoenix/global/imgui.getstylecolor": {
     "documentation": "* Gets the current applied style color for a given style token as an array of 4 numbers for RGBA"
   },
@@ -1332,6 +1344,9 @@
   },
   "@phoenix/global/imgui.scalefactor": {
     "documentation": "* UI scale factor"
+  },
+  "@phoenix/global/imgui.scrollherex": {
+    "documentation": "* `ImGui::SetScrollHereX`"
   },
   "@phoenix/global/imgui.scrollherey": {
     "documentation": "* `ImGui::SetScrollHereY`"

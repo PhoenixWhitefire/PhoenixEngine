@@ -342,7 +342,9 @@ function Output.Render()
         end
 
         if NewLogMessage then
-            imgui.scrollherey()
+            if imgui.getscrolly() > imgui.getscrollmaxy() - 10 then
+                imgui.scrollherey()
+            end
             NewLogMessage = false
         end
 

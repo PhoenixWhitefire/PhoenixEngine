@@ -1959,6 +1959,22 @@
             "Description": "`ImGui::SetKeyboardFocusHere`",
             "In": "Offset: number?"
           },
+          "getscrollx": {
+            "Description": "`ImGui::GetScrollX`",
+            "Out": "number"
+          },
+          "getscrolly": {
+            "Description": "`ImGui::GetScrollY`",
+            "Out": "number"
+          },
+          "getscrollmaxx": {
+            "Description": "`ImGui::GetScrollMaxX`",
+            "Out": "number"
+          },
+          "getscrollmaxy": {
+            "Description": "`ImGui::GetScrollMaxY`",
+            "Out": "number"
+          },
           "getstylecolor": {
             "Description": "Gets the current applied style color for a given style token as an array of 4 numbers for RGBA",
             "In": "Token: EnumImGuiColor",
@@ -2134,6 +2150,9 @@
           "scalefactor": {
             "Description": "UI scale factor",
             "Out": "number"
+          },
+          "scrollherex": {
+            "Description": "`ImGui::SetScrollHereX`"
           },
           "scrollherey": {
             "Description": "`ImGui::SetScrollHereY`"

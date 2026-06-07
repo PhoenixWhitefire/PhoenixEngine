@@ -967,10 +967,40 @@ static int imgui_setnextitemopen(lua_State* L)
     return 0;
 }
 
+static int imgui_scrollherex(lua_State*)
+{
+    ImGui::SetScrollHereX();
+    return 0;
+}
+
 static int imgui_scrollherey(lua_State*)
 {
     ImGui::SetScrollHereY();
     return 0;
+}
+
+static int imgui_getscrollx(lua_State* L)
+{
+    lua_pushnumber(L, ImGui::GetScrollX());
+    return 1;
+}
+
+static int imgui_getscrolly(lua_State* L)
+{
+    lua_pushnumber(L, ImGui::GetScrollY());
+    return 1;
+}
+
+static int imgui_getscrollmaxx(lua_State* L)
+{
+    lua_pushnumber(L, ImGui::GetScrollMaxX());
+    return 1;
+}
+
+static int imgui_getscrollmaxy(lua_State* L)
+{
+    lua_pushnumber(L, ImGui::GetScrollMaxY());
+    return 1;
 }
 
 static int imgui_demowindow(lua_State* L)
@@ -1222,7 +1252,12 @@ static luaL_Reg imgui_funcs[] =
     { "textsize", imgui_textsize },
     { "setnextitemwidth", imgui_setnextitemwidth },
     { "setnextitemopen", imgui_setnextitemopen },
+    { "scrollherex", imgui_scrollherex },
     { "scrollherey", imgui_scrollherey },
+    { "getscrollx", imgui_getscrollx },
+    { "getscrolly", imgui_getscrolly },
+    { "getscrollmaxx", imgui_getscrollmaxx },
+    { "getscrollmaxy", imgui_getscrollmaxy },
     { "demowindow", imgui_demowindow },
     { "begintooltip", imgui_begintooltip },
     { "endtooltip", imgui_endtooltip },
