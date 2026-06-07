@@ -263,11 +263,11 @@ local function homeTab(_: number)
 
     if inPlaytest then
         if tabButton("Stop", "@etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Stop (F5)") then
-            State.ChangeStageTo("ProjectEditing")
+            task.defer(State.ChangeStageTo, "ProjectEditing" :: "ProjectEditing")
         end
     else
         if tabButton("Start", "@etextures/editor-icons/start.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Play (F5)") then
-            State.ChangeStageTo("ProjectPlaying")
+            task.defer(State.ChangeStageTo, "ProjectPlaying" :: "ProjectPlaying")
         end
     end
 

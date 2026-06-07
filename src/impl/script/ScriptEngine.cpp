@@ -2004,7 +2004,7 @@ lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
 
     lua_Debug ar = {};
     if (int r = lua_getinfo(L, 1, "sl", &ar); r && ar.short_src)
-        extTags = std::format("Script:{},Line{}", ar.short_src, ar.currentline);
+        extTags = std::format("Script:{},Line:{}", ar.short_src, ar.currentline);
 
     Logging::ScopedContext sc = Logging::ScopedContext(Logging::Context{ .ContextExtraTags = extTags });
 

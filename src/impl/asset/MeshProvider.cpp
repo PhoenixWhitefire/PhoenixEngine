@@ -383,6 +383,9 @@ void MeshProvider::Initialize(bool InitIsHeadless)
 	this->Assign(PrimitiveMeshes::Cube(), "!Cube", true); // Cube expected to be at index 1
 	this->Assign(PrimitiveMeshes::Quad(), "!Quad", true);
 	this->Assign(PrimitiveMeshes::Sphere(), "!Sphere", true);
+	this->Assign(PrimitiveMeshes::Cylinder(), "!Cylinder", true);
+	this->Assign(PrimitiveMeshes::Cone(), "!Cone", true);
+	this->Assign(PrimitiveMeshes::Pyramid(), "!Pyramid", true);
 
 	s_Instance = this;
 }

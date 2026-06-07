@@ -223,7 +223,9 @@ function State.ChangeStageTo(NewStage: Types.Stage)
 
     State.CurrentStage = NewStage
 
-    stageUpdate(State, 0)
+    if not Engine.IsHeadless then
+        stageUpdate(State, 0)
+    end
 end
 
 game:BindToClose(handleEngineShutdown)
@@ -239,9 +241,9 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
     end
 
     coroutine.wrap(function()
-        warn("Running Editor CI checks")
+        print("Running Editor CI checks")
 
-        task.delay(5, function()
+        task.delay(15, function()
             warn("Potential CI stall - Exiting")
             game:Close(1)
         end)
@@ -262,7 +264,7 @@ if table.find(Engine:GetCliArguments(), "-ed_ci") then
             return
         end
 
-        warn("Editor CI checks done")
+        print("Editor CI checks done")
         State.CurrentStage = "SelectProject"
         game:Close()
     end)()

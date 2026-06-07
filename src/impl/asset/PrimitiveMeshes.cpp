@@ -1,5 +1,5 @@
 #define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
 #include <map>
 
 #include "asset/PrimitiveMeshes.hpp"
@@ -13,156 +13,330 @@ constexpr glm::vec4 White = { 1.f, 1.f, 1.f, 1.f };
 
 Mesh PrimitiveMeshes::Cube()
 {
-	std::vector<Vertex> vertices = {
-		// front face
-		Vertex{ glm::vec3(-.5f,  .5f, -.5f), -VecZAxis, White, glm::vec2(1.f, 0.f) },
-		Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecZAxis, White, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3( .5f, -.5f, -.5f), -VecZAxis, White, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3( .5f,  .5f, -.5f), -VecZAxis, White, glm::vec2(0.f, 0.f) },
+    std::vector<Vertex> vertices = {
+        // front face
+        Vertex{ glm::vec3(-.5f,  .5f, -.5f), -VecZAxis, White, glm::vec2(1.f, 0.f) },
+        Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecZAxis, White, glm::vec2(1.f, 1.f) },
+        Vertex{ glm::vec3( .5f, -.5f, -.5f), -VecZAxis, White, glm::vec2(0.f, 1.f) },
+        Vertex{ glm::vec3( .5f,  .5f, -.5f), -VecZAxis, White, glm::vec2(0.f, 0.f) },
 
-		// back face
-		Vertex{ glm::vec3(-.5f,  .5f,  .5f),  VecZAxis, White, glm::vec2(0.f, 0.f) },
-		Vertex{ glm::vec3(-.5f, -.5f,  .5f),  VecZAxis, White, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3( .5f, -.5f,  .5f),  VecZAxis, White, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3( .5f,  .5f,  .5f),  VecZAxis, White, glm::vec2(1.f, 0.f) },
+        // back face
+        Vertex{ glm::vec3(-.5f,  .5f,  .5f),  VecZAxis, White, glm::vec2(0.f, 0.f) },
+        Vertex{ glm::vec3(-.5f, -.5f,  .5f),  VecZAxis, White, glm::vec2(0.f, 1.f) },
+        Vertex{ glm::vec3( .5f, -.5f,  .5f),  VecZAxis, White, glm::vec2(1.f, 1.f) },
+        Vertex{ glm::vec3( .5f,  .5f,  .5f),  VecZAxis, White, glm::vec2(1.f, 0.f) },
 
-		// right face
-		// it is at this point that i am wondering if i can just read a .obj cube from blender or smthing
-		// instead of doing this by hand and by struggling to imaging where the vertices are in my head
-		Vertex{ glm::vec3( .5f,  .5f, -.5f), VecXAxis, White, glm::vec2(1.f, 0.f) },
-		Vertex{ glm::vec3( .5f, -.5f, -.5f), VecXAxis, White, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3( .5f, -.5f,  .5f), VecXAxis, White, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3( .5f,  .5f,  .5f), VecXAxis, White, glm::vec2(0.f, 0.f) },
+        // right face
+        // it is at this point that i am wondering if i can just read a .obj cube from blender or smthing
+        // instead of doing this by hand and by struggling to imaging where the vertices are in my head
+        Vertex{ glm::vec3( .5f,  .5f, -.5f), VecXAxis, White, glm::vec2(1.f, 0.f) },
+        Vertex{ glm::vec3( .5f, -.5f, -.5f), VecXAxis, White, glm::vec2(1.f, 1.f) },
+        Vertex{ glm::vec3( .5f, -.5f,  .5f), VecXAxis, White, glm::vec2(0.f, 1.f) },
+        Vertex{ glm::vec3( .5f,  .5f,  .5f), VecXAxis, White, glm::vec2(0.f, 0.f) },
 
-		// left face
-		Vertex{ glm::vec3(-.5f,  .5f, -.5f), -VecXAxis, White, glm::vec2(0.f, 0.f) },
-		Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecXAxis, White, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3(-.5f, -.5f,  .5f), -VecXAxis, White, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3(-.5f,  .5f,  .5f), -VecXAxis, White, glm::vec2(1.f, 0.f) },
+        // left face
+        Vertex{ glm::vec3(-.5f,  .5f, -.5f), -VecXAxis, White, glm::vec2(0.f, 0.f) },
+        Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecXAxis, White, glm::vec2(0.f, 1.f) },
+        Vertex{ glm::vec3(-.5f, -.5f,  .5f), -VecXAxis, White, glm::vec2(1.f, 1.f) },
+        Vertex{ glm::vec3(-.5f,  .5f,  .5f), -VecXAxis, White, glm::vec2(1.f, 0.f) },
 
-		// bottom face
-		Vertex{ glm::vec3( .5f, -.5f, -.5f), -VecYAxis, White, glm::vec2(0.f, 0.f) },
-		Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecYAxis, White, glm::vec2(1.f, 0.f) },
-		Vertex{ glm::vec3(-.5f, -.5f,  .5f), -VecYAxis, White, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3( .5f, -.5f,  .5f), -VecYAxis, White, glm::vec2(0.f, 1.f) },
+        // bottom face
+        Vertex{ glm::vec3( .5f, -.5f, -.5f), -VecYAxis, White, glm::vec2(0.f, 0.f) },
+        Vertex{ glm::vec3(-.5f, -.5f, -.5f), -VecYAxis, White, glm::vec2(1.f, 0.f) },
+        Vertex{ glm::vec3(-.5f, -.5f,  .5f), -VecYAxis, White, glm::vec2(1.f, 1.f) },
+        Vertex{ glm::vec3( .5f, -.5f,  .5f), -VecYAxis, White, glm::vec2(0.f, 1.f) },
 
-		// top face
-		Vertex{ glm::vec3( .5f,  .5f, -.5f),  VecYAxis, White, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3(-.5f,  .5f, -.5f),  VecYAxis, White, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3(-.5f,  .5f,  .5f),  VecYAxis, White, glm::vec2(1.f, 0.f) },
-		Vertex{ glm::vec3( .5f,  .5f,  .5f),  VecYAxis, White, glm::vec2(0.f, 0.f) }
-	};
+        // top face
+        Vertex{ glm::vec3( .5f,  .5f, -.5f),  VecYAxis, White, glm::vec2(0.f, 1.f) },
+        Vertex{ glm::vec3(-.5f,  .5f, -.5f),  VecYAxis, White, glm::vec2(1.f, 1.f) },
+        Vertex{ glm::vec3(-.5f,  .5f,  .5f),  VecYAxis, White, glm::vec2(1.f, 0.f) },
+        Vertex{ glm::vec3( .5f,  .5f,  .5f),  VecYAxis, White, glm::vec2(0.f, 0.f) }
+    };
 
-	// counter-clockwise order
-	std::vector<uint32_t> indices = {
-		// front face
-		0, 1, 2,
-		2, 3, 0,
+    // counter-clockwise order
+    std::vector<uint32_t> indices = {
+        // front face
+        0, 1, 2,
+        2, 3, 0,
 
-		4, 7, 6,
-		6, 5, 4,
+        4, 7, 6,
+        6, 5, 4,
 
-		// right face
-		8, 9, 10,
-		10, 11, 8,
+        // right face
+        8, 9, 10,
+        10, 11, 8,
 
-		// left face
-		12, 15, 14,
-		14, 13, 12,
+        // left face
+        12, 15, 14,
+        14, 13, 12,
 
-		// bottom face
-		16, 17, 18,
-		18, 19, 16,
+        // bottom face
+        16, 17, 18,
+        18, 19, 16,
 
-		// top face
-		20, 23, 22,
-		22, 21, 20
-	};
+        // top face
+        20, 23, 22,
+        22, 21, 20
+    };
 
-	return Mesh{
-		.Vertices = vertices,
-		.Indices = indices,
-		.MeshDataPreserved = true,
-	};
+    return Mesh{
+        .Vertices = vertices,
+        .Indices = indices,
+        .MeshDataPreserved = true,
+    };
 }
 
 Mesh PrimitiveMeshes::Quad()
 {
-	std::vector<Vertex> vertices = {
-		Vertex{ glm::vec3(  .5f, -.5f,  0.f ), VecZAxis, White, glm::vec2(1.f, 1.f) },
-		Vertex{ glm::vec3( -.5f, -.5f,  0.f ), VecZAxis, White, glm::vec2(0.f, 1.f) },
-		Vertex{ glm::vec3( -.5f,  .5f,  0.f ), VecZAxis, White, glm::vec2(0.f, 0.f) },
-		Vertex{ glm::vec3(  .5f,  .5f,  0.f ), VecZAxis, White, glm::vec2(1.f, 0.f) }
-	};
+    std::vector<Vertex> vertices = {
+        Vertex{ glm::vec3(  .5f, -.5f,  0.f ), VecZAxis, White, glm::vec2(1.f, 1.f) },
+        Vertex{ glm::vec3( -.5f, -.5f,  0.f ), VecZAxis, White, glm::vec2(0.f, 1.f) },
+        Vertex{ glm::vec3( -.5f,  .5f,  0.f ), VecZAxis, White, glm::vec2(0.f, 0.f) },
+        Vertex{ glm::vec3(  .5f,  .5f,  0.f ), VecZAxis, White, glm::vec2(1.f, 0.f) }
+    };
 
-	std::vector<uint32_t> indices = {
-		0, 1, 2,
-		3, 0, 2
-	};
+    std::vector<uint32_t> indices = {
+        0, 1, 2,
+        3, 0, 2
+    };
 
-	return Mesh{
-		.Vertices = vertices,
-		.Indices = indices,
-		.MeshDataPreserved = true,
-	};
+    return Mesh{
+        .Vertices = vertices,
+        .Indices = indices,
+        .MeshDataPreserved = true,
+    };
 }
 
 Mesh PrimitiveMeshes::Sphere()
 {
-	// https://stackoverflow.com/a/47416720
-	constexpr int HorizontalLines = 15;
-	constexpr int VerticalLines = 15;
+    // https://stackoverflow.com/a/47416720
+    constexpr int HorizontalLines = 15;
+    constexpr int VerticalLines = 15;
 
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
 
-	for (int y = 0; y <= HorizontalLines; y++)
-	{
-		float v = (float)y / HorizontalLines;
-		float phi = v * M_PI;
+    for (int y = 0; y <= HorizontalLines; y++)
+    {
+        float v = (float)y / HorizontalLines;
+        float phi = v * M_PI;
 
-		for (int x = 0; x <= VerticalLines; x++)
-		{
-			float u = (float)x / VerticalLines;
-			float theta = u * 2.f * M_PI;
+        for (int x = 0; x <= VerticalLines; x++)
+        {
+            float u = (float)x / VerticalLines;
+            float theta = u * 2.f * M_PI;
 
-			glm::vec3 pos = glm::normalize(glm::vec3(
-			    sin(phi) * cos(theta),
-			    cos(phi),
-			    sin(phi) * sin(theta)
-			));
+            glm::vec3 pos = glm::normalize(glm::vec3(
+                sin(phi) * cos(theta),
+                cos(phi),
+                sin(phi) * sin(theta)
+            ));
 
-			vertices.push_back(Vertex{
-			    .Position = pos * 0.5f,
-			    .Normal = pos,
-			    .Paint = White,
-				.TextureUV = glm::vec2(u, 1.f - v)
-			});
-		}
-	}
+            vertices.push_back(Vertex{
+                .Position = pos * 0.5f,
+                .Normal = pos,
+                .Paint = White,
+                .TextureUV = glm::vec2(u, 1.f - v)
+            });
+        }
+    }
 
-	for (int y = 0; y < HorizontalLines; y++)
-	{
-	    for (int x = 0; x < VerticalLines; x++)
-	    {
-	        uint32_t i0 = y * (VerticalLines + 1) + x;
-	        uint32_t i1 = i0 + 1;
-	        uint32_t i2 = (y + 1) * (VerticalLines + 1) + x;
-	        uint32_t i3 = i2 + 1;
+    for (int y = 0; y < HorizontalLines; y++)
+    {
+        for (int x = 0; x < VerticalLines; x++)
+        {
+            uint32_t i0 = y * (VerticalLines + 1) + x;
+            uint32_t i1 = i0 + 1;
+            uint32_t i2 = (y + 1) * (VerticalLines + 1) + x;
+            uint32_t i3 = i2 + 1;
 
-	        indices.push_back(i0);
-	        indices.push_back(i2);
-	        indices.push_back(i1);
+            indices.push_back(i0);
+            indices.push_back(i2);
+            indices.push_back(i1);
 
-	        indices.push_back(i1);
-	        indices.push_back(i2);
-	        indices.push_back(i3);
-	    }
-	}
+            indices.push_back(i1);
+            indices.push_back(i2);
+            indices.push_back(i3);
+        }
+    }
 
-	return Mesh{
-		.Vertices = vertices,
-		.Indices = indices,
-		.MeshDataPreserved = true,
-	};
+    return Mesh{
+        .Vertices = vertices,
+        .Indices = indices,
+        .MeshDataPreserved = true,
+    };
+}
+
+Mesh PrimitiveMeshes::Cylinder()
+{
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    const uint32_t NumSegments = 32;
+
+    for (uint32_t i = 0; i <= NumSegments; i++)
+    {
+        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
+        float x = 0.5f * cos(angle);
+        float y = 0.5f * sin(angle);
+        float u = (float)i / (float)NumSegments;
+        glm::vec3 normal = glm::normalize(glm::vec3(x, 0.f, y));
+
+        vertices.push_back(Vertex{ glm::vec3(x,  0.5f, y), normal, White, glm::vec2(u, 1.f) });
+        vertices.push_back(Vertex{ glm::vec3(x, -0.5f, y), normal, White, glm::vec2(u, 0.f) });
+    }
+
+    for (uint32_t i = 0; i < NumSegments; i++)
+    {
+        uint32_t topLeft = i * 2;
+        uint32_t bottomLeft = i * 2 + 1;
+        uint32_t topRight = (i + 1) * 2;
+        uint32_t bottomRight = (i + 1) * 2 + 1;
+
+        indices.push_back(topLeft);
+        indices.push_back(bottomLeft);
+        indices.push_back(topRight);
+
+        indices.push_back(topRight);
+        indices.push_back(bottomLeft);
+        indices.push_back(bottomRight);
+    }
+
+    uint32_t topCenter = (uint32_t)vertices.size();
+    vertices.push_back(Vertex{ glm::vec3(0.f, 0.5f, 0.f), VecYAxis, White, glm::vec2(0.5f, 0.5f) });
+
+    uint32_t topRingStart = (uint32_t)vertices.size();
+    for (uint32_t i = 0; i <= NumSegments; i++)
+    {
+        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
+        float x = 0.5f * cos(angle);
+        float y = 0.5f * sin(angle);
+        vertices.push_back(Vertex{ glm::vec3(x, 0.5f, y), VecYAxis, White, glm::vec2(x + 0.5f, y + 0.5f) });
+    }
+
+    for (uint32_t i = 0; i < NumSegments; i++)
+    {
+        indices.push_back(topCenter);
+        indices.push_back(topRingStart + i);
+        indices.push_back(topRingStart + i + 1);
+    }
+
+    uint32_t bottomCenter = (uint32_t)vertices.size();
+    vertices.push_back(Vertex{ glm::vec3(0.f, -0.5f, 0.f), -VecYAxis, White, glm::vec2(0.5f, 0.5f) });
+
+    uint32_t bottomRingStart = (uint32_t)vertices.size();
+    for (uint32_t i = 0; i <= NumSegments; i++)
+    {
+        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
+        float x = 0.5f * cos(angle);
+        float y = 0.5f * sin(angle);
+        vertices.push_back(Vertex{ glm::vec3(x, -0.5f, y), -VecYAxis, White, glm::vec2(x + 0.5f, y + 0.5f) });
+    }
+
+    for (uint32_t i = 0; i < NumSegments; i++)
+    {
+        indices.push_back(bottomCenter);
+        indices.push_back(bottomRingStart + i + 1);
+        indices.push_back(bottomRingStart + i);
+    }
+
+    return Mesh{
+        .Vertices = vertices,
+        .Indices = indices,
+        .MeshDataPreserved = true,
+    };
+}
+
+Mesh PrimitiveMeshes::Cone()
+{
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    const uint32_t NumSegments = 16;
+
+    vertices.push_back(Vertex{ glm::vec3(0.f, 0.5f, 0.f), VecYAxis, White, glm::vec2(0.5f, 0.5f) });
+
+    for (uint32_t i = 0; i < NumSegments; i++)
+    {
+        float angle = (float)i / (float)NumSegments * 2.f * M_PI;
+        float x = 0.5f * cos(angle);
+        float y = 0.5f * sin(angle);
+        glm::vec3 normal = glm::normalize(glm::vec3(x, 0.f, y));
+
+        vertices.push_back(Vertex{ glm::vec3(x, -0.5f, y), normal, White, glm::vec2(x, y) });
+    }
+
+    for (uint32_t i = 1; i <= NumSegments; i++)
+    {
+        uint32_t next = (i % NumSegments) + 1;
+        indices.push_back(0);
+        indices.push_back(i);
+        indices.push_back(next);
+    }
+
+    uint32_t bottomCenter = (uint32_t)vertices.size();
+    vertices.push_back(Vertex{ glm::vec3(0.f, -0.5f, 0.f), -VecYAxis, White, glm::vec2(0.5f, 0.5f) });
+
+    uint32_t bottomRingStart = (uint32_t)vertices.size();
+    for (uint32_t i = 0; i <= NumSegments; i++)
+    {
+        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
+        float x = 0.5f * cos(angle);
+        float y = 0.5f * sin(angle);
+        vertices.push_back(Vertex{ glm::vec3(x, -0.5f, y), -VecYAxis, White, glm::vec2(x + 0.5f, y + 0.5f) });
+    }
+
+    for (uint32_t i = 0; i < NumSegments; i++)
+    {
+        indices.push_back(bottomCenter);
+        indices.push_back(bottomRingStart + i + 1);
+        indices.push_back(bottomRingStart + i);
+    }
+
+    return Mesh{
+        .Vertices = vertices,
+        .Indices = indices,
+        .MeshDataPreserved = true,
+    };
+}
+
+Mesh PrimitiveMeshes::Pyramid()
+{
+    // https://github.com/VictorGordan/opengl-tutorials/blob/aafd76f8101c8244a5afe5b0f94c0f2323bf0843/YoutubeOpenGL%209%20-%20Lighting/Main.cpp#L29
+    std::vector<Vertex> vertices = {
+        Vertex{ glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3( 0.0f, -1.0f,  0.0f), White, glm::vec2(0.0f, 0.0f) },
+        Vertex{ glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3( 0.0f, -1.0f,  0.0f), White, glm::vec2(0.0f, 1.0f) },
+        Vertex{ glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3( 0.0f, -1.0f,  0.0f), White, glm::vec2(1.0f, 1.0f) },
+        Vertex{ glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3( 0.0f, -1.0f,  0.0f), White, glm::vec2(1.0f, 0.0f) },
+
+        Vertex{ glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(-0.8f,  0.5f,  0.0f), White, glm::vec2(0.0f, 0.0f) },
+        Vertex{ glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(-0.8f,  0.5f,  0.0f), White, glm::vec2(1.0f, 0.0f) },
+        Vertex{ glm::vec3( 0.0f,  0.5f,  0.0f), glm::vec3(-0.8f,  0.5f,  0.0f), White, glm::vec2(0.5f, 1.0f) },
+
+        Vertex{ glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3( 0.0f,  0.5f, -0.8f), White, glm::vec2(1.0f, 0.0f) },
+        Vertex{ glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3( 0.0f,  0.5f, -0.8f), White, glm::vec2(0.0f, 0.0f) },
+        Vertex{ glm::vec3( 0.0f,  0.5f,  0.0f), glm::vec3( 0.0f,  0.5f, -0.8f), White, glm::vec2(0.5f, 1.0f) },
+
+        Vertex{ glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3( 0.8f,  0.5f,  0.0f), White, glm::vec2(0.0f, 0.0f) },
+        Vertex{ glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3( 0.8f,  0.5f,  0.0f), White, glm::vec2(1.0f, 0.0f) },
+        Vertex{ glm::vec3( 0.0f,  0.5f,  0.0f), glm::vec3( 0.8f,  0.5f,  0.0f), White, glm::vec2(0.5f, 1.0f) },
+
+        Vertex{ glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3( 0.0f,  0.5f,  0.8f), White, glm::vec2(1.0f, 0.0f) },
+        Vertex{ glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3( 0.0f,  0.5f,  0.8f), White, glm::vec2(0.0f, 0.0f) },
+        Vertex{ glm::vec3( 0.0f,  0.5f,  0.0f), glm::vec3( 0.0f,  0.5f,  0.8f), White, glm::vec2(0.5f, 1.0f) },
+    };
+    std::vector<uint32_t> indices = {
+        2,   1,  0,
+        3,   2,  0,
+        5,   6,  4,
+        8,   9,  7,
+        11, 12, 10,
+        14, 15, 13,
+    };
+
+    return Mesh{
+        .Vertices = vertices,
+        .Indices = indices,
+        .MeshDataPreserved = true,
+    };
 }

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 echo Installing libssl-dev
 sudo apt-get install libssl-dev

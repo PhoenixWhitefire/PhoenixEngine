@@ -3685,22 +3685,35 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
     {
         History::ScopedAction action = { "AssetSelector_Mesh" };
 
-        if ((AssetSearch.size() == 0 || std::string_view("!cube").find(assetSearchLowercase) != std::string::npos) && ImGui::MenuItem("!Cube"))
-        {
-            setProperties(PropertyName, "!Cube");
-            didSet = true;
-        }
+        constexpr std::string_view BuiltinPrimitives[] = {
+            "!Quad",
+            "!Cube",
+            "!Sphere",
+            "!Cylinder",
+            "!Cone",
+            "!Pyramid",
+        };
 
-        if ((AssetSearch.size() == 0 || std::string_view("!sphere").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Sphere"))
+        for (const std::string_view& builtin : BuiltinPrimitives)
         {
-            setProperties(PropertyName, "!Sphere");
-            didSet = true;
-        }
+            bool shown = AssetSearch.empty();
+            if (!shown)
+            {
+                shown = std::search(
+                    builtin.begin(), builtin.end(),
+                    assetSearchLowercase.begin(), assetSearchLowercase.end(),
+                    [](char a, char b)
+                    {
+                        return tolower(a) == tolower(b);
+                    }
+                ) != builtin.end();
+            }
 
-        if ((AssetSearch.size() == 0 || std::string_view("!quad").find(assetSearchLowercase) != std::string::npos) &&ImGui::MenuItem("!Quad"))
-        {
-            setProperties(PropertyName, "!Quad");
-            didSet = true;
+            if (shown && ImGui::MenuItem(builtin.data()))
+            {
+                setProperties(PropertyName, builtin);
+                didSet = true;
+            }
         }
     }
     else if (PropertyName == "Material")
