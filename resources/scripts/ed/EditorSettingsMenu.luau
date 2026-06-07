@@ -1,9 +1,10 @@
--- RenderEditorSettings.luau, 04/06/2026
+-- EditorSettings.luau, 04/06/2026
+local EditorSettings = {}
+
 local Engine = game:GetService("Engine")
 
 local SPYWARE_SETTINGS_URL = "https://github.com/PhoenixWhitefire/PhoenixEngine/issues/30"
 
-local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local DefaultThemes = require("@ed/DefaultThemes")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
@@ -248,7 +249,7 @@ local function renderAppearanceSection()
 end
 
 local function renderExternalToolsSection()
-    if imgui.windowappearing() and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure then
+    if imgui.windowappearing() and EditorSettings.RequestOpenSection == "ExternalTools" then
         imgui.focuskeyboardhere()
     end
 
@@ -394,11 +395,11 @@ local function updateAvailableThemes()
     end
 end
 
-local function renderEditorSettings()
+function EditorSettings.Render()
     renderSectionSelectionPane()
 
-    if imgui.windowappearing() and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure then
-        CurrentSectionId = "ExternalTools"
+    if imgui.windowappearing() and EditorSettings.RequestOpenSection then
+        CurrentSectionId = EditorSettings.RequestOpenSection
     end
 
     imgui.sameline()
@@ -418,6 +419,9 @@ local function renderEditorSettings()
     if game.Time - LastUpdatedThemes > 1 then
         updateAvailableThemes()
     end
+
+    EditorSettings.RequestOpenSection = nil
 end
 
-return renderEditorSettings
+EditorSettings.RequestOpenSection = nil :: keyof<typeof(Sections)>?
+return EditorSettings

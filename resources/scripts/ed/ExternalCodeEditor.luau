@@ -5,6 +5,7 @@ local ExternalCodeEditor = {
 
 local Engine = game:GetService("Engine")
 
+local EditorSettingsMenu = require("@ed/EditorSettingsMenu")
 local Preferences = require("@ed/Preferences")
 
 function ExternalCodeEditor.Open(ProjectName: string)
@@ -17,6 +18,7 @@ function ExternalCodeEditor.Open(ProjectName: string)
         )
 
         ExternalCodeEditor.RequestOpenSettingsMenuToConfigure = true
+        EditorSettingsMenu.RequestOpenSection = "ExternalTools"
     else
         ExternalCodeEditor.RequestOpenSettingsMenuToConfigure = false
 

@@ -8,6 +8,7 @@ local PlayerInput = game:GetService("PlayerInput")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
+local EditorSettingsMenu = require("@ed/EditorSettingsMenu")
 local Preferences = require("@ed/Preferences")
 local Theme = require("@ed/Theme")
 local State = require("@ed/State")
@@ -353,8 +354,12 @@ function Output.Render()
         end
 
         if imgui.beginpopup("OutputContextMenu") then
-            if imgui.menuitem("Clear Output") then
+            if imgui.menuitem("Clear") then
                 table.clear(Output.Log)
+            end
+
+            if imgui.menuitem("Behavior") then
+                EditorSettingsMenu.RequestOpenSection = "Project"
             end
 
             imgui.endpopup()

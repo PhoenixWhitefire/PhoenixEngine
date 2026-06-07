@@ -29,6 +29,8 @@ local DefaultThemes: { [string]: ThemeData } = {
         OutputLogWarning = { 255 / 255, 171 / 255, 61 / 255, 1 },
         OutputLogError = { 255 / 255, 61 / 255, 61 / 255, 1 },
         OutputContextTooltip = { 0.35, 0.35, 0.35, 1 },
+
+        PlaytestMenubarColor = { 0, 56 / 270, 15 / 270, 1 },
     },
     Light = {
         ImGui = {
@@ -45,6 +47,8 @@ local DefaultThemes: { [string]: ThemeData } = {
         OutputLogInfo = { 0, 0, 0, 1 },
         OutputLogWarning = { 255 / 255, 143 / 255, 0 / 255, 1 },
         OutputLogError = { 243 / 255, 0 / 255, 0 / 255, 1 },
+
+        PlaytestMenubarColor = { 118/255, 255 / 255, 154 / 255, 1 },
     }
 }
 

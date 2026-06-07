@@ -12,7 +12,7 @@ local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
-local RenderEditorSettings = require("@ed/RenderEditorSettings")
+local EditorSettingsMenu = require("@ed/EditorSettingsMenu")
 local Configuration = require("@ed/Configuration")
 local PluginManager = require("@ed/PluginManager")
 local ErrorMessage = require("@ed/ErrorMessage")
@@ -742,7 +742,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
     local pushedCol = State.CurrentStage == "ProjectPlaying"
 
     if pushedCol then
-        imgui.pushstylecolor(Enum.ImGuiColor.MenuBarBg, {0, 56/270, 15/270, 1})
+        imgui.pushstylecolor(Enum.ImGuiColor.MenuBarBg, Theme.PlaytestMenubarColor)
     end
 
     local render = imgui.beginmainmenubar()
@@ -1120,7 +1120,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
         imgui.endpopup()
     end
 
-    if (openSettingsWindow or ExternalCodeEditor.RequestOpenSettingsMenuToConfigure) and not wasSettingsOpen then
+    if (openSettingsWindow or EditorSettingsMenu.RequestOpenSection) and not wasSettingsOpen then
         imgui.openpopup("Editor Settings")
 
         local SETTINGS_SIZE_X, SETTINGS_SIZE_Y = 1000 * sf, 600 * sf
@@ -1132,7 +1132,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
     end
 
     if imgui.beginpopupmodal("Editor Settings", true) then
-        RenderEditorSettings()
+        EditorSettingsMenu.Render()
 
         imgui.endpopup()
         wasSettingsOpen = true
