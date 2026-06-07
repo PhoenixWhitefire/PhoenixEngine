@@ -1326,7 +1326,6 @@ void Engine::Start()
 void Engine::Shutdown()
 {
 	ZoneScoped;
-
 	Log.Info("Engine destructing...");
 
 	Log.Info("Destroying DataModel...");
@@ -1395,7 +1394,7 @@ void Engine::Shutdown()
 	for (const GameObject& obj : ObjectManager.WorldArray)
 	{
 		if (obj.HardRefCount > 0)
-			Log.WarningF("Object {} still has references!", obj.GetFullName());
+			Log.WarningF("Object {} still has {} reference(s)!", obj.GetFullName(), obj.HardRefCount);
 		else if (obj.Valid)
 			Log.WarningF("Object {} left dangling!", obj.GetFullName());
 	}

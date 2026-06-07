@@ -1,9 +1,12 @@
 local DeveloperTools = game:GetService("DeveloperTools")
+local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
 local History = game:GetService("History")
 
 local CoreTools = {}
 CoreTools.EditorCanUseMouse = true
+CoreTools.CameraModel = assert(AssetManager:LoadScene("./resources/scenes/camera.hxscene"))[1] :: (GameObject & EcTransform)?
+assert(CoreTools.CameraModel)
 
 local Types = require("./Types")
 
@@ -40,6 +43,15 @@ for direction, piece in GizmoPieces do
 end
 
 GizmoContainer.Name = "GizmoContainer"
+
+local DefaultCameraModelColors = {}
+
+for _, g in CoreTools.CameraModel:GetChildren() do
+    if g:HasComponent("Mesh") then
+        local m = g :: EcMesh
+        DefaultCameraModelColors[g] = m.Tint
+    end
+end
 
 function CoreTools.RenderControls(TabButtonControl: (string, string, boolean?, boolean?, string?, string?) -> boolean)
     if TabButtonControl("Gizmo", "@etextures/editor-icons/Transform.png", true, GizmoActive) then
@@ -81,6 +93,7 @@ local GizmoDragStartSize = vector.one
 local GizmoDragPlaneNormal = nil
 local BeganSurfaceDragAction: number? = nil
 local BeganGizmoDragAction: number? = nil
+local WasHoveringCameraModel = false
 
 local function roundTo(n: number, x: number): number
     return math.round(n / x) * x
@@ -184,14 +197,46 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         end
     end
 
-    if not target or not workspace.SceneCamera or target == workspace.SceneCamera then
-        resetGizmo()
-        return
-    end
+    local tryingToInteract = not PlayerInput.IsMouseSunk and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 
     local cam = workspace.SceneCamera
     local camPos = cam.Transform.Position
     local cpos = PlayerInput:GetCursorPosition()
+
+    local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
+
+    local cameraHit = if true
+                        then workspace:Raycast(camPos, mouseVector, { CoreTools.CameraModel }, false)
+                        else nil
+
+    if cameraHit and not WasHoveringCameraModel then
+        for _, g in CoreTools.CameraModel:GetChildren() do
+            if g:HasComponent("Mesh") then
+                local m = g :: EcMesh
+                m.Material = "@base/materials/unlit.mtl"
+                m.Tint = Color.new(1, 1, 1)
+            end
+        end
+    elseif not cameraHit and WasHoveringCameraModel then
+        for _, g in CoreTools.CameraModel:GetChildren() do
+            if g:HasComponent("Mesh") then
+                local m = g :: EcMesh
+                m.Material = "@base/materials/plastic.mtl"
+                m.Tint = DefaultCameraModelColors[g]
+            end
+        end
+    end
+
+    if cameraHit and tryingToInteract then
+        DeveloperTools:SetExplorerSelections({ Project.Workspace.SceneCamera })
+    end
+
+    WasHoveringCameraModel = cameraHit ~= nil
+
+    if not target or not workspace.SceneCamera or target == workspace.SceneCamera then
+        resetGizmo()
+        return
+    end
 
     if PlayerInput:IsKeyPressed(Enum.Key.F) and not PlayerInput.IsKeyboardSunk then
         local pos = target.Transform.Position - (cam.Transform.Forward * math.max(target.Size.x, target.Size.y, target.Size.z) * 1.5)
@@ -199,9 +244,6 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         cam.Transform = Matrix.lookAt(pos, target.Transform.Position) * Matrix.rotated(0, math.pi, 0)
     end
 
-    local tryingToInteract = not PlayerInput.IsMouseSunk and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
-
-    local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
     local gizmoHit = if tryingToInteract
                         then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false)
                         else nil

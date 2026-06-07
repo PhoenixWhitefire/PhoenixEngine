@@ -1,0 +1,14 @@
+PHNXENGI
+#Asset Material
+#Date 10-1-2025
+
+
+{
+  "ColorMap": "!White",
+  "Shader": "worldUber",
+  // FILL = 0, LINES = 1, POINTS = 2
+  // most rendering APIs seem to support points (although I'm not sure where the use in it is),
+  // so engine will support it too
+  // 06/04/2025
+  "PolygonMode": 1
+}

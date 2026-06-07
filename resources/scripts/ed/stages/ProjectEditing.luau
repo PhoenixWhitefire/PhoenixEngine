@@ -14,6 +14,7 @@ local EditorCameraTransform = require("@ed/EditorCameraTransform")
 local Configuration = require("@ed/Configuration")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
+local CoreTools = require("@ed/CoreTools")
 local CommonUI = require("@ed/CommonUI")
 local Reimport = require("@ed/Reimport")
 local Output = require("@ed/Output")
@@ -123,10 +124,21 @@ function ProjectEditing.Render(DeltaTime: number)
             ShowedAutosaveDelayedMessage = true
         end
     end
+
+    local sceneCam = State.Project.Workspace and State.Project.Workspace.SceneCamera
+
+    if sceneCam then
+        -- TODO backwards camera orientation
+        CoreTools.CameraModel.Transform = sceneCam.Transform * Matrix.rotated(0, math.pi, 0)
+        CoreTools.CameraModel.Parent = workspace
+    else
+        CoreTools.CameraModel.Parent = nil
+    end
 end
 
 function ProjectEditing.Leave(NextStage: Types.Stage)
     EditorCameraTransform.Save(EditorCam)
+    CoreTools.CameraModel.Parent = nil
 
     if NextStage == "ProjectPlaying" then
         if Preferences.ClearOutputOnPlaytest then

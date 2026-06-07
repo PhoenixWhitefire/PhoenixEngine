@@ -1619,7 +1619,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
 
         const char* path = tinyfd_saveFileDialog(
             "Save Objects",
-            getFileDirectory("resources/scenes/dummy.file").c_str(),
+            FileRW::ResolvePathAbsolute("scenes/").c_str(),
             1,
             filter,
             "Scenes"
@@ -1641,7 +1641,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
 
         const char* path = tinyfd_openFileDialog(
             "Insert Objects",
-            getFileDirectory("resources/scenes/dummy.file").c_str(),
+            FileRW::ResolvePathAbsolute("scenes/").c_str(),
             1,
             filter,
             "Scenes",
