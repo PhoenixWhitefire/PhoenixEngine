@@ -276,6 +276,7 @@ local function renderProjectSection()
     imgui.setitemtooltip("This is independent of the time-out length applied for scripts in exported projects")
 
     Preferences.CancelPlaytestWhenScriptTimesOut = setting("Cancel playtests when a script times-out", imgui.checkbox, Preferences.CancelPlaytestWhenScriptTimesOut)
+    Preferences.DebuggerEnabled = setting("Debugger enabled", imgui.checkbox, Preferences.DebuggerEnabled)
 
     imgui.newline()
 

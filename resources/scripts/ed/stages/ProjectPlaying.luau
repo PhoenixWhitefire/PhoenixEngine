@@ -32,6 +32,10 @@ function ProjectPlaying.Enter(_prev)
     ScriptEngine:CreateVM(Configuration.PlaytestVMName)
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
 
+    if not Preferences.DebuggerEnabled then
+        ScriptEngine:DetachDebuggerFromVM(Configuration.PlaytestVMName)
+    end
+
     local projWp = State.Project.Workspace
     assert(projWp)
 

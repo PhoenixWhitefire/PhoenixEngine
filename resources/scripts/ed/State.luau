@@ -52,6 +52,7 @@ InterfaceLink.Parent = Interface
 Physics.Simulating = false
 Physics:SetSimulationForcePaused(true)
 ScriptEngine:SetVMAllowedExecutionTime(_VMNAME, Configuration.EditorScriptsAllowedExecutionTime)
+ScriptEngine:DetachDebuggerFromVM(_VMNAME)
 
 local function saveRecents(State: StateType)
     -- TODO: fix cast

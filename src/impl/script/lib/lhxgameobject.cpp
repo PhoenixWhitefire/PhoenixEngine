@@ -187,7 +187,6 @@ static int obj_newindex(lua_State* L)
 
 	lua_Debug ar = {};
 	lua_getinfo(L, 1, "sl", &ar);
-	Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
 
 	GameObject* obj = luhx_checkgameobject(L, 1);
 	const char* key = luaL_checkstring(L, 2);

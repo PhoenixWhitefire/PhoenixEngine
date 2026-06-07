@@ -12,7 +12,7 @@ static std::string getScriptTraceExtraTags(lua_State* L)
 	lua_getinfo(L, 1, "sl", &ar);
 
 	if (ar.short_src)
-		return std::format("DocumentLine:{}", ar.currentline);
+		return std::format("Script:{},Line:{}", ar.short_src, ar.currentline);
 	else
 		return "";
 }
@@ -40,7 +40,7 @@ static void appendToLog(lua_State* L)
 
 		try
 		{
-			if (lua_istable(L, i) && !luaL_getmetafield(L, i, "__tostring"))
+			if (lua_istable(L, i))
 				value = ScriptEngine::L::ToGeneric(L, i);
 		}
 		catch (const std::exception& e)

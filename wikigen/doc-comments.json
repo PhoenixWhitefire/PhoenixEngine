@@ -666,6 +666,10 @@
             "Description": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel",
             "ParameterNames": "VmName"
           },
+          "DetachDebuggerFromVM": {
+            "Description": "Detaches the Developer-mode exclusive debugger from a VM, if it is attached. No effect otherwise",
+            "ParameterNames": "VM"
+          },
           "RunInVM": {
             "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
             "ParameterNames": [

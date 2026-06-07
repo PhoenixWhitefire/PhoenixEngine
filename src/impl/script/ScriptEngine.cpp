@@ -14,6 +14,7 @@
 #include "script/SharedMutex.hpp"
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
+#include "DeveloperTools.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -688,8 +689,8 @@ std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode, in
     };
 
     Luau::CompileOptions compileOptions;
-    compileOptions.optimizationLevel = OptimizationLevel != -1 ? OptimizationLevel : (L::DebugBreak ? 1 : 2);
-    compileOptions.debugLevel = DebugLevel != -1 ? DebugLevel : (L::DebugBreak ? 2 : 1);
+    compileOptions.optimizationLevel = OptimizationLevel != -1 ? OptimizationLevel : (DeveloperTools::Initialized ? 1 : 2);
+    compileOptions.debugLevel = DebugLevel != -1 ? DebugLevel : (DeveloperTools::Initialized ? 2 : 1);
     compileOptions.mutableGlobals = mutableGlobals;
 
     std::string bytecode = Luau::compile(std::string(SourceCode), compileOptions);
@@ -1208,7 +1209,7 @@ int ScriptEngine::L::HandleMethodCall(
 {
     lua_Debug ar = {};
     lua_getinfo(L, 1, "sl", &ar);
-    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{},DocumentLine:{}", ar.short_src, ar.currentline) };
+    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("Script:{},Line:{}", ar.short_src, ar.currentline) };
 
     const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
     int numArgs = lua_gettop(L) - 1;
@@ -1852,20 +1853,25 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     lua_pushlstring(state, VmName.data(), VmName.size());
     lua_setglobal(state, "_VMNAME");
 
+    StateUserdata* vmud = new StateUserdata;
     lua_Callbacks* cb = lua_callbacks(state);
 
-    if (L::DebugBreak)
+    if (DeveloperTools::Initialized)
     {
         cb->debugbreak = [](lua_State* L, lua_Debug* ar)
             {
-                if (L::DebugBreak)
-                    L::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
+                StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+                if (vmud->DebuggerAttached)
+                    DeveloperTools::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
             };
         cb->debuginterrupt = [](lua_State* L, lua_Debug* ar)
             {
-                if (L::DebugBreak)
-                    L::DebugBreak(L, ar, DebugBreakReason::Interrupt);
+                StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+                if (vmud->DebuggerAttached)
+                    DeveloperTools::DebugBreak(L, ar, DebugBreakReason::Interrupt);
             };
+
+        vmud->DebuggerAttached = true;
     }
 
     cb->userthread = [](lua_State* LP, lua_State* L)
@@ -1912,7 +1918,6 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
             }
         };
 
-    StateUserdata* vmud = new StateUserdata;
     vmud->LastResumed = GetRunningTime();
     vmud->VM = VmName;
     lua_setthreaddata(state, vmud);
@@ -1957,15 +1962,16 @@ void ScriptEngine::LuauVM::Close()
     VMs.erase(Name);
 }
 
-static void breakHere(lua_State* L, ScriptEngine::L::DebugBreakReason Reason)
+static void breakHere(lua_State* L, DebugBreakReason Reason)
 {
     using namespace ScriptEngine;
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 
-    if (L::DebugBreak)
+    if (vmud->DebuggerAttached)
     {
         lua_Debug ar = {};
         lua_getinfo(L, 1, "sln", &ar);
-        L::DebugBreak(L, &ar, Reason);
+        DeveloperTools::DebugBreak(L, &ar, Reason);
     }
 }
 
@@ -1973,6 +1979,8 @@ static lua_Status finishCoroutine(lua_State* L, int status)
 {
     using namespace ScriptEngine;
     using namespace L;
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    bool maybeEnteredDebugger = vmud->DebuggerAttached;
 
     while (status == LUA_BREAK)
     {
@@ -1983,14 +1991,23 @@ static lua_Status finishCoroutine(lua_State* L, int status)
     if (status == LUA_ERRRUN)
         breakHere(L, DebugBreakReason::Error);
 
-    if (LeaveDebugger)
-        LeaveDebugger(L);
+    // NOTE debugger does its own checks to see if the hook was called
+    if (maybeEnteredDebugger)
+        DeveloperTools::LeaveDebugger(L);
 
     return (lua_Status)status;
 }
 
 lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
 {
+    std::string extTags;
+
+    lua_Debug ar = {};
+    if (int r = lua_getinfo(L, 1, "sl", &ar); r && ar.short_src)
+        extTags = std::format("Script:{},Line{}", ar.short_src, ar.currentline);
+
+    Logging::ScopedContext sc = Logging::ScopedContext(Logging::Context{ .ContextExtraTags = extTags });
+
     StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
     vmud->LastResumed = GetRunningTime();
 

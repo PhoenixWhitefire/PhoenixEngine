@@ -521,6 +521,7 @@ export type EcScriptEngine = {
   CloseVM: (self: EcScriptEngine, VmName: string) -> (),
   CompileToBytecode: (self: EcScriptEngine, Source: string, OptimizationLevel: number?, DebugLevel: number?) -> (buffer),
   CreateVM: (self: EcScriptEngine, VmName: string) -> (),
+  DetachDebuggerFromVM: (self: EcScriptEngine, VM: string) -> (),
   RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
   SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
 }

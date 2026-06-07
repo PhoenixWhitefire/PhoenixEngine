@@ -3,6 +3,10 @@
 #pragma once
 
 #include "render/Renderer.hpp"
+#include "script/DebugBreakReason.hpp"
+
+struct lua_State;
+struct lua_Debug;
 
 namespace DeveloperTools
 {
@@ -16,6 +20,9 @@ namespace DeveloperTools
 	void OpenTextDocument(const std::string&, int Line = 1);
 	// does not require `::Initialize` to be called
 	void LaunchTracy();
+
+	void DebugBreak(lua_State*, lua_Debug*, DebugBreakReason);
+	void LeaveDebugger(lua_State*);
 
 	inline bool Initialized = false;
 

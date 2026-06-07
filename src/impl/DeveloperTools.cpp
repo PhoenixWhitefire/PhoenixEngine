@@ -38,6 +38,8 @@
 #include "component/Camera.hpp"
 #include "component/Model.hpp"
 
+#include "script/ScriptEngine.hpp"
+
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "UserInput.hpp"
@@ -177,10 +179,6 @@ static char* bufferInitialize(uint32_t capacity, const std::string_view& value)
 
     return buf;
 }
-
-#include "script/ScriptEngine.hpp"
-static void debugBreakHook(lua_State*, lua_Debug*, ScriptEngine::L::DebugBreakReason);
-static void debuggerLeaveCallback(lua_State*);
 
 static bool canBreakLineAtChar(char c)
 {
@@ -363,9 +361,6 @@ void DeveloperTools::Initialize(Renderer* renderer)
 
     GlobalsDocPrologue = FileRW::ReadFile("./wikigen/globals-prologue.md", &prologueFound);
     PHX_CHECK(prologueFound && "Globals prologue - ./wikigen/globals-prologue.md");
-
-    ScriptEngine::L::DebugBreak = &debugBreakHook;
-    ScriptEngine::L::LeaveDebugger = debuggerLeaveCallback;
 
     ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
     ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
@@ -5289,14 +5284,14 @@ static void resetScriptTimeouts()
     }
 }
 
-static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBreakReason Reason)
+void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Reason)
 {
     using namespace ScriptEngine::L;
     ZoneScoped;
 
     resetScriptTimeouts();
 
-    if (Reason == ScriptEngine::L::DebugBreakReason::Interrupt)
+    if (Reason == DebugBreakReason::Interrupt)
     {
         lua_State* co = (lua_State*)ar->userdata;
         assert(co);
@@ -5412,7 +5407,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
         otherTab.SetUIFocus = false;
     }
 
-    if (Reason == ScriptEngine::L::DebugBreakReason::Error)
+    if (Reason == DebugBreakReason::Error)
     {
         tab.Editor.SetErrorMarkers({
             { ar->currentline, errorMessage }
@@ -5472,6 +5467,8 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
                 running = false;
             }
 
+            ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+
             static bool s_WasF7Down = false;
             static bool s_WasF8Down = false;
             bool isF7Down = ImGui::IsKeyDown(ImGuiKey_F7) && running;
@@ -5487,12 +5484,14 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
             else
                 s_WasF8Down = false;
 
-            if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down)))
+            if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error
+                && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down))
+            )
             {
                 ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
                 s_QueuedDebuggerAction.reset();
 
-                if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
+                if (Reason == DebugBreakReason::DebuggerStep)
                 {
                     running = false;
                     ImGui::End();
@@ -5507,7 +5506,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
                     s_WasF7Down = true;
                     return;
                 }
-                else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
+                else if (Reason == DebugBreakReason::Breakpoint)
                 {
                     lua_breakpoint(L, -1, ar->currentline, false); // please
                 }
@@ -5520,7 +5519,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
                         if (ar->currentline > s_PrevLine)
                         {
                             s_PrevLine = ar->currentline;
-                            debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
+                            DeveloperTools::DebugBreak(L, ar, DebugBreakReason::DebuggerStep);
                         }
                     };
 
@@ -5531,12 +5530,12 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
             s_WasF7Down = isF7Down;
 
-            if (ScriptEngine::L::DebugBreak && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
+            if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
             {
                 ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
                 s_QueuedDebuggerAction.reset();
 
-                if (Reason == ScriptEngine::L::DebugBreakReason::DebuggerStep)
+                if (Reason == DebugBreakReason::DebuggerStep)
                 {
                     running = false;
                     ImGui::End();
@@ -5550,7 +5549,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
 
                     return;
                 }
-                else if (Reason == ScriptEngine::L::DebugBreakReason::Breakpoint)
+                else if (Reason == DebugBreakReason::Breakpoint)
                 {
                     lua_breakpoint(L, -1, ar->currentline, false); // please
                 }
@@ -5563,7 +5562,7 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
                         if (ar->currentline != s_PrevLine)
                         {
                             s_PrevLine = ar->currentline;
-                            debugBreakHook(L, ar, ScriptEngine::L::DebugBreakReason::DebuggerStep);
+                            DeveloperTools::DebugBreak(L, ar, DebugBreakReason::DebuggerStep);
                         }
                     };
 
@@ -5576,12 +5575,12 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
             ImGui::Checkbox("Quiet Background", &quietBg);
             ImGui::Text("Debugger %i FPS / %.2fms", framesPerSecond, dt);
 
-            if (ScriptEngine::L::DebugBreak)
+            if (vmud->DebuggerAttached)
             {
-                if (ImGui::Button("Detach Debugger for this VM and all VMs created in the future"))
+                if (ImGui::Button("Detach Debugger for this VM"))
                 {
                     lua_Callbacks* cb = lua_callbacks(L);
-                    ScriptEngine::L::DebugBreak = nullptr;
+                    vmud->DebuggerAttached = false;
 
                     cb->debugbreak = nullptr;
                     cb->debugprotectederror = nullptr;
@@ -5988,10 +5987,13 @@ static void debugBreakHook(lua_State* L, lua_Debug* ar, ScriptEngine::L::DebugBr
     ImGui::SetCurrentContext(prevContext);
 
     if (glfwWindowShouldClose(engine->Window))
-        ScriptEngine::L::DebugBreak = nullptr;
+    {
+        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+        vmud->DebuggerAttached = false;
+    }
 }
 
-static void debuggerLeaveCallback(lua_State* /* L */)
+void DeveloperTools::LeaveDebugger(lua_State* /* L */)
 {
     if (!InDebugger)
         return;

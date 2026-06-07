@@ -314,6 +314,7 @@
           "CloseVM": "(String) -> ()",
           "CompileToBytecode": "(String, Integer?, Integer?) -> (Buffer)",
           "CreateVM": "(String) -> ()",
+          "DetachDebuggerFromVM": "(String) -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
           "SetVMAllowedExecutionTime": "(String, Double) -> ()"
         }

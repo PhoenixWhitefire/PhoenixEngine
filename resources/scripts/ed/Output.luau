@@ -42,13 +42,13 @@ local function canInteractWithLogSubMessage(ExtraTags: string, DirectValue: unkn
         return true, `Select { tostring(DirectValue) }`
     end
 
-    local shortSrc = ExtraTags:match("TextDocument:.+,")
+    local shortSrc = ExtraTags:match("Script:.+,")
 
     if shortSrc and (not source or not source:find("CommandBar")) then
-        local lineMatch = ExtraTags:match("DocumentLine:%d+")
+        local lineMatch = ExtraTags:match("Line:%d+")
         shortSrc = shortSrc:sub(1, assert((shortSrc:find(","))))
 
-        return true, `Open { shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1) }{ if lineMatch then lineMatch:sub(#("DocumentLine:"), #lineMatch) else "" }`
+        return true, `Open { shortSrc:sub(#("Script:") + 1, #shortSrc - 1) }{ if lineMatch then lineMatch:sub(#("Line:"), #lineMatch) else "" }`
     end
 
     if source and source:find("CommandBar") then
@@ -64,22 +64,22 @@ local function interactWithLogSubMessage(ExtraTags: string, Value: unknown)
         return
     end
 
-    local shortSrc = ExtraTags:match("TextDocument:.+,")
+    local shortSrc = ExtraTags:match("Script:.+,")
 
     if shortSrc then
-        local lineMatch = ExtraTags:match("DocumentLine:%d+")
+        local lineMatch = ExtraTags:match("Line:%d+")
         shortSrc = shortSrc:sub(1, assert((shortSrc:find(","))))
 
-        local line = lineMatch and tonumber(lineMatch:sub(#("DocumentLine:") + 1))
-        DeveloperTools:OpenTextDocument(shortSrc:sub(#("TextDocument:") + 1, #shortSrc - 1), line)
+        local line = lineMatch and tonumber(lineMatch:sub(#("Line:") + 1))
+        DeveloperTools:OpenTextDocument(shortSrc:sub(#("Script:") + 1, #shortSrc - 1), line)
 
         return
     end
 
-    local doc = ExtraTags:match("TextDocument:.+")
+    local doc = ExtraTags:match("Script:.+")
 
     if doc then
-        DeveloperTools:OpenTextDocument(doc:sub(#("TextDocument:") + 1, #doc))
+        DeveloperTools:OpenTextDocument(doc:sub(#("Script:") + 1, #doc))
 
         return
     end
@@ -158,8 +158,19 @@ function Output.Render()
 
                 local canInteract = (message.Source or subMessage.CanInteract) and LogMessageHovering == smid and tooltip ~= "From Command Bar"
                 local doInteract = false
+                local isPrettyPrintableTable = type(subMessage.DirectValue) == "table"
 
-                if type(subMessage.DirectValue) == "table" then
+                if not isPrettyPrintableTable or subMessage.Content:find("table: 0x") ~= 1 then
+                    if canInteract then
+                        doInteract = imgui.textlink(subMessage.Content)
+                    else
+                        imgui.text(subMessage.Content)
+                    end
+                end
+
+                if isPrettyPrintableTable then
+                    imgui.sameline()
+
                     if not message.OpenTables then
                         message.OpenTables = {}
                     end
@@ -294,12 +305,6 @@ function Output.Render()
                     imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
                     -- TODO luau cast
                     renderTable(subMessage.DirectValue :: any, 0)
-                else
-                    if canInteract then
-                        doInteract = imgui.textlink(subMessage.Content)
-                    else
-                        imgui.text(subMessage.Content)
-                    end
                 end
 
                 if doInteract then
@@ -395,16 +400,16 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
         createsNewline = true
     end
 
-    local source = ExtraTags:match("TextDocument:.+,") or ExtraTags:match("SourceChunkName:.+,")
+    local source = ExtraTags:match("Script:.+,") or ExtraTags:match("SourceChunkName:.+,")
     if source then
-        source = source:sub(#("TextDocument:") + 1, assert((source:find(","))) - 1)
+        source = source:sub(#("Script:") + 1, assert((source:find(","))) - 1)
     end
 
     local line = 1
 
     if source then
-        local lineMatch = ExtraTags:match("DocumentLine:%d+")
-        line = lineMatch and tonumber(lineMatch:sub(#("DocumentLine:") + 1))
+        local lineMatch = ExtraTags:match("Line:%d+")
+        line = lineMatch and tonumber(lineMatch:sub(#("Line:") + 1))
     end
 
     local canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags, Value, source)

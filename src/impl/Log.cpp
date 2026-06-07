@@ -129,7 +129,7 @@ static void log(
 	appendToLog(Message, false);
 
 	if (Logging::IsGameObjectManagerAlive)
-		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(time, Type, Message, tags);
+		((LoggingComponentManager*)LoggingComponentManager::Get())->SignalNewLogMessage(time, Type, Message, tags, Value);
 }
 
 // Append message to log, which is saved to file every second

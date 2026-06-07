@@ -1006,7 +1006,9 @@ function CommonUI.RenderMainMenuBar(dt: number)
             end
         end
 
-        if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering) and not PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right) then
+        if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering)
+            and not PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Right)
+        then
             local windowWidth = Renderer.Resolution.x
 
             local TAB_HEIGHT = 175 * sf
@@ -1014,7 +1016,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
             imgui.setnextwindowposition(0, 16 * sf)
             imgui.setnextwindowsize(windowWidth, TAB_HEIGHT)
 
-            imgui.begin("RibbonTabContents", "nt | nr | nm | nc | ns | h")
+            imgui.begin("RibbonTabContents", "nt | nr | nm | nc | ns | nd | h")
             HoveringOverRibbonTab = imgui.windowhovered() or imgui.anyitemactive()
             RibbonTabs[CurrentRibbonTab].Renderer(dt)
             imgui.endw()

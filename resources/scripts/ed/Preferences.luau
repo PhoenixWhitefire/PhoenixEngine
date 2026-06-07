@@ -18,4 +18,5 @@ return {
     ScriptAllowedExecutionTime = 10,
     CancelPlaytestWhenScriptTimesOut = true,
     Theme = "Dark",
+    DebuggerEnabled = false,
 }

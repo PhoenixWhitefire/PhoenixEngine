@@ -233,7 +233,6 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
     lua_State* L = lua_newthread(mainThread);
 	luaL_sandboxthread(L);
 
-    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("TextDocument:{}", Module) };
     std::string bytecode;
 
     if (isAotBytecode)
@@ -268,7 +267,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
 			Log.Error(
                 std::format("DataModel Script init: {}", err ? err : "unknown error"),
-                std::format("TextDocument:{},DocumentLine:{}", Module, ar.currentline)
+                std::format("Script:{},Line:{}", Module, ar.currentline)
             );
             lua_pop(L, 1);
 			ScriptEngine::L::DumpStacktrace(L);

@@ -144,6 +144,44 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
                 return {};
             }
         } },
+
+
+        { "DetachDebuggerFromVM", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::string& vmName = inputs[0].AsString();
+
+                const auto& vmit = ScriptEngine::VMs.find(vmName);
+                ScriptEngine::LuauVM* lvm = nullptr;
+
+                if (vmit == ScriptEngine::VMs.end())
+                {
+                    const auto& pvmit = std::find_if(ScriptEngine::ParallelVMs.begin(), ScriptEngine::ParallelVMs.end(), [vmName](const ScriptEngine::ParallelVM* pvm)
+                    {
+                        return pvm->Name == vmName;
+                    });
+
+                    if (pvmit != ScriptEngine::ParallelVMs.end())
+                        lvm = *pvmit;
+                    else
+                        RAISE_RT("Invalid VM '{}'", vmName);
+                }
+                else
+                    lvm = &vmit->second;
+
+                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lvm->MainThread);
+                vmud->DebuggerAttached = false;
+
+                lua_Callbacks* cb = lua_callbacks(lvm->MainThread);
+                cb->debugprotectederror = nullptr;
+                cb->debuginterrupt = nullptr;
+                cb->debugbreak = nullptr;
+                cb->debugstep = nullptr;
+                return {};
+            }
+        } },
     };
 
     return methods;
