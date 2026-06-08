@@ -709,8 +709,6 @@ end
 
 local wasSettingsOpen = false
 local OpenGitCommitMenu = false
-local GitStatusResult = ""
-local GitDiffResult = ""
 local GitCommitMessage = ""
 
 local function getGitStatus()
@@ -947,16 +945,16 @@ function CommonUI.RenderMainMenuBar(dt: number)
     end
 
     if imgui.beginpopupmodal("Commit", true) then
-        imgui.text(GitStatusResult)
+        imgui.text(Git.StatusResult)
         imgui.separator()
 
-        if GitStatusResult:find("nothing to commit") then
+        if Git.StatusResult:find("nothing to commit") then
             imgui.text("No changes to commit.")
         else
             local diffOpen = imgui.treenode("Diff", "dlf | fw")
 
             if diffOpen then
-                imgui.text(GitDiffResult)
+                imgui.text(Git.DiffResult)
                 imgui.treepop()
             end
 
