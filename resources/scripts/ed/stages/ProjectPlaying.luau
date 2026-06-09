@@ -43,6 +43,7 @@ function ProjectPlaying.Enter(_prev)
         projWp.SceneCamera = GameObject.new("Camera")
         projWp.SceneCamera.Parent = projWp
         projWp.SceneCamera.Name = "Camera"
+        warn("Created playtest camera")
     end
 
     GameClosedConnection = State.Project.DataModel.Closing:Connect(function()

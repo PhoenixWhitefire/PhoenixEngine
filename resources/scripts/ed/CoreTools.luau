@@ -4,7 +4,7 @@ local PlayerInput = game:GetService("PlayerInput")
 local History = game:GetService("History")
 
 local CoreTools = {}
-CoreTools.EditorCanUseMouse = true
+CoreTools.HoveringOverSceneCamera = false
 CoreTools.CameraModel = assert(AssetManager:LoadScene("./resources/scenes/camera.hxscene"))[1] :: (GameObject & EcTransform)?
 assert(CoreTools.CameraModel)
 
@@ -32,8 +32,9 @@ for direction, piece in GizmoPieces do
     local col = Color.new(math.abs(direction.x), math.abs(direction.y), math.abs(direction.z))
     piece[1].Tint, piece[2].Tint = col, col
     piece[1].Material, piece[2].Material = "unlit", "unlit"
-    piece[1].Size, piece[2].Size = vector.one * 0.5, vector.one * 0.5
+    piece[1].Size, piece[2].Size = vector.one * 0.25, vector.one * 0.25
     piece[1].Name, piece[2].Name = `Gizmo_{direction}_1`, `Gizmo_{direction}_2`
+    piece[1].MeshAsset, piece[2].MeshAsset = "!Cone", "!Cone"
     piece[1].Parent, piece[2].Parent = GizmoContainer, GizmoContainer
 
     piece[2].Transparency = 0.5
@@ -62,7 +63,17 @@ function CoreTools.RenderControls(TabButtonControl: (string, string, boolean?, b
     imgui.setnextitemwidth(80)
     local s = imgui.cursorposition()
 
-	GizmoMode = imgui.combo("Gizmo", { "Move", "Scale" }, GizmoMode)
+	local gizmoMode, changed = imgui.combo("Gizmo", { "Move", "Scale" }, GizmoMode)
+
+    if changed then
+        GizmoMode = gizmoMode
+
+        local shape = if gizmoMode == 1 then "!Cone" else "!Sphere"
+
+        for _, ps in GizmoPieces do
+            ps[1].MeshAsset, ps[2].MeshAsset = shape, shape
+        end
+    end
 
     imgui.setcursorposition(s.x, s.y + 24)
     imgui.setnextitemwidth(80)
@@ -93,7 +104,6 @@ local GizmoDragStartSize = vector.one
 local GizmoDragPlaneNormal = nil
 local BeganSurfaceDragAction: number? = nil
 local BeganGizmoDragAction: number? = nil
-local WasHoveringCameraModel = false
 
 local function roundTo(n: number, x: number): number
     return math.round(n / x) * x
@@ -205,19 +215,27 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
 
     local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
 
-    local cameraHit = if true
+    local cameraHit = if not IsSurfaceDragging and not IsGizmoDragging
                         then workspace:Raycast(camPos, mouseVector, { CoreTools.CameraModel }, false)
                         else nil
 
-    if cameraHit and not WasHoveringCameraModel then
+    if cameraHit and not CoreTools.HoveringOverSceneCamera then
+        local hidden = vector.magnitude(workspace.SceneCamera.Transform.Position - CoreTools.CameraModel.Transform.Position) < 0.5
+
         for _, g in CoreTools.CameraModel:GetChildren() do
             if g:HasComponent("Mesh") then
                 local m = g :: EcMesh
                 m.Material = "@base/materials/unlit.mtl"
                 m.Tint = Color.new(1, 1, 1)
+
+                if hidden then
+                    m.Transparency = 1
+                elseif g.Name:find("I") then
+                    m.Transparency = 0.5
+                end
             end
         end
-    elseif not cameraHit and WasHoveringCameraModel then
+    elseif not cameraHit and CoreTools.HoveringOverSceneCamera then
         for _, g in CoreTools.CameraModel:GetChildren() do
             if g:HasComponent("Mesh") then
                 local m = g :: EcMesh
@@ -231,7 +249,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         DeveloperTools:SetExplorerSelections({ Project.Workspace.SceneCamera })
     end
 
-    WasHoveringCameraModel = cameraHit ~= nil
+    CoreTools.HoveringOverSceneCamera = cameraHit ~= nil
 
     if not target or not workspace.SceneCamera or target == workspace.SceneCamera then
         resetGizmo()
@@ -289,11 +307,15 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     end
 
     if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize then
+        GizmoContainer.Transform = target.Transform
+
         for direction, piece in GizmoPieces do
-            local trans = target.Transform * Matrix.translated(direction * target.Size * 0.5 + direction * vector.one)
-            piece[1].Transform, piece[2].Transform = trans, trans
+            local trans = Matrix.lookAt(direction * 0.75, vector.create(0.0001, 0, 0)) * Matrix.rotated(math.rad(90), 0, 0)
+            piece[1].LocalTransform, piece[2].LocalTransform = trans, trans
         end
     end
+
+    GizmoContainer.Size = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 24
 
     GizmoPrevTarget = target
     GizmoPrevTargetTransform = target.Transform

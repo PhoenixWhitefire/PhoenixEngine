@@ -1,7 +1,7 @@
 PHOENIXF
 #Version 2.13
 #Asset Scene
-#Date 7-6-2026
+#Date 9-6-2026
 #SceneName SaveToFileAction_Camera
 
 {
@@ -97,14 +97,9 @@ PHOENIXF
         0.5,
         1.0
       ],
-      "Material": "@base/materials/plastic.mtl",
+      "Material": "@base/materials/smoothplastic.mtl",
       "Name": "Box",
-      "Parent": 0,
-      "Tint": [
-        0.0,
-        0.0,
-        0.0
-      ]
+      "Parent": 0
     },
     {
       "$_components": [
@@ -144,15 +139,10 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/plastic.mtl",
+      "Material": "@base/materials/smoothplastic.mtl",
       "MeshAsset": "!Cylinder",
       "Name": "Reel1",
-      "Parent": 0,
-      "Tint": [
-        0.5196078419685364,
-        0.5196078419685364,
-        0.5196078419685364
-      ]
+      "Parent": 0
     },
     {
       "$_components": [
@@ -192,15 +182,10 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/plastic.mtl",
+      "Material": "@base/materials/smoothplastic.mtl",
       "MeshAsset": "!Cylinder",
       "Name": "Reel2",
-      "Parent": 0,
-      "Tint": [
-        0.5196078419685364,
-        0.5196078419685364,
-        0.5196078419685364
-      ]
+      "Parent": 0
     },
     {
       "$_components": [
@@ -240,10 +225,179 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/plastic.mtl",
+      "Material": "@base/materials/smoothplastic.mtl",
       "MeshAsset": "!Pyramid",
       "Name": "Lens",
       "Parent": 0
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "Transform"
+      ],
+      "$_objectId": 6,
+      "CastsShadows": false,
+      "FaceCulling": 2,
+      "LocalSize": [
+        -0.574999988079071,
+        -0.574999988079071,
+        -1.0750000476837158
+      ],
+      "Material": "@base/materials/smoothplastic.mtl",
+      "Name": "BoxI",
+      "Parent": 0,
+      "Tint": [
+        0.44117647409439087,
+        0.44117647409439087,
+        0.44117647409439087
+      ]
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "Transform"
+      ],
+      "$_objectId": 7,
+      "CastsShadows": false,
+      "FaceCulling": 2,
+      "LocalSize": [
+        -0.4749999940395355,
+        -0.574999988079071,
+        -0.4749999940395355
+      ],
+      "LocalTransform": [
+        [
+          -1.0,
+          -3.82137093032941e-15,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -4.371138828673793e-08,
+          -1.0,
+          0.0
+        ],
+        [
+          3.82137093032941e-15,
+          -1.0,
+          4.371138828673793e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.5,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/smoothplastic.mtl",
+      "MeshAsset": "!Pyramid",
+      "Name": "LensI",
+      "Parent": 0,
+      "Tint": [
+        0.44117647409439087,
+        0.44117647409439087,
+        0.44117647409439087
+      ]
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "Transform"
+      ],
+      "$_objectId": 8,
+      "CastsShadows": false,
+      "FaceCulling": 2,
+      "LocalSize": [
+        -0.574999988079071,
+        -0.2750000059604645,
+        -0.574999988079071
+      ],
+      "LocalTransform": [
+        [
+          -4.371138828673793e-08,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          -1.0,
+          -4.371138828673793e-08,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.5,
+          -0.25,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/smoothplastic.mtl",
+      "MeshAsset": "!Cylinder",
+      "Name": "Reel1I",
+      "Parent": 0,
+      "Tint": [
+        0.44117647409439087,
+        0.44117647409439087,
+        0.44117647409439087
+      ]
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "Transform"
+      ],
+      "$_objectId": 9,
+      "CastsShadows": false,
+      "FaceCulling": 2,
+      "LocalSize": [
+        -0.574999988079071,
+        -0.2750000059604645,
+        -0.574999988079071
+      ],
+      "LocalTransform": [
+        [
+          -4.371138828673793e-08,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          -1.0,
+          -4.371138828673793e-08,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.5,
+          0.25,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/smoothplastic.mtl",
+      "MeshAsset": "!Cylinder",
+      "Name": "Reel2I",
+      "Parent": 0,
+      "Tint": [
+        0.44117647409439087,
+        0.44117647409439087,
+        0.44117647409439087
+      ]
     }
   ],
   "SceneName": "SaveToFileAction_Camera"

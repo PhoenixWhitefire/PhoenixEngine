@@ -24,7 +24,10 @@ static void recomputeChildrenWorldTransformsRecursive(const ObjectHandle& Object
     {
         if (EcTransform* ct = Child->FindComponent<EcTransform>())
         {
-            ct->Transform = pct->Transform * ct->LocalTransform;
+            glm::mat4 offsetLocal = ct->LocalTransform;
+            offsetLocal[3] = glm::vec4(glm::vec3(ct->LocalTransform[3]) * pct->Size, 1.f);
+
+            ct->Transform = pct->Transform * offsetLocal;
             ct->Size = pct->Size * ct->LocalSize;
         }
 
@@ -113,7 +116,7 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             Reflection::ValueType::Vector3,
             (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
             {
-                return static_cast<EcTransform*>(p)->LocalSize;
+                return static_cast<EcTransform*>(p)->Size;
             },
             (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
             {

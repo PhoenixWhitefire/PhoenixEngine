@@ -164,6 +164,7 @@ local function createNewProject_(State: StateType)
     projWp.Name = "Workspace"
     camera.Name = "Camera"
     dl.Name = "DirectionalLight"
+    projWp.SceneCamera = camera
     dl.Parent = projWp
 
     projWp.Parent = dm
@@ -359,6 +360,8 @@ local function openProject_(State: StateType, ManualPath: string?)
         cam.Name = "Camera"
         cam.Parent = State.Project.Workspace
         State.Project.Workspace.SceneCamera = cam
+
+        warn("Re-created camera")
     end
 
     WorkspaceLink.Target = State.Project.Workspace

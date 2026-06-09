@@ -131,6 +131,17 @@ function ProjectEditing.Render(DeltaTime: number)
         -- TODO backwards camera orientation
         CoreTools.CameraModel.Transform = sceneCam.Transform * Matrix.rotated(0, math.pi, 0)
         CoreTools.CameraModel.Parent = workspace
+
+        if not CoreTools.HoveringOverSceneCamera then
+            local transparency = math.clamp(0.5 / vector.magnitude(CoreTools.CameraModel.Transform.Position - workspace.SceneCamera.Transform.Position)^4, 0, 1)
+
+            for _, g in CoreTools.CameraModel:GetChildren() do
+                if g:HasComponent("Mesh") then
+                    local m = g :: EcMesh
+                    m.Transparency = transparency
+                end
+            end
+        end
     else
         CoreTools.CameraModel.Parent = nil
     end
