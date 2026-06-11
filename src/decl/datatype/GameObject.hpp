@@ -80,6 +80,8 @@ public:
 	void AddChild(const ObjectHandle&);
 	void RemoveChild(uint32_t);
 
+	void EvaluateOwners();
+
 	bool GetEnabled() const;
 	void SetEnabled(bool);
 

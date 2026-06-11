@@ -24,17 +24,24 @@ uint32_t WorkspaceComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcWorkspace>::CreateComponent(Object);
 	m_Components[id].Object = Object;
+	m_Components[id].Object->OwningWorkspace = Object->ObjectId;
+	Object->EvaluateOwners();
 
     return id;
 }
 
 void WorkspaceComponentManager::DeleteComponent(uint32_t Id)
 {
-	if (uint32_t sceneCamId = m_Components[Id].m_SceneCameraId; sceneCamId != PHX_GAMEOBJECT_NULL_ID && sceneCamId != s_FallbackCamera->ObjectId)
+	EcWorkspace& wp = m_Components[Id];
+
+	if (uint32_t sceneCamId = wp.m_SceneCameraId; sceneCamId != PHX_GAMEOBJECT_NULL_ID && sceneCamId != s_FallbackCamera->ObjectId)
 	{
 		GameObjectManager::Get()->FindById(sceneCamId)->DecrementHardRefs();
-		m_Components[Id].m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
+		wp.m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
 	}
+
+	if (wp.Object->OwningDataModel == wp.Object->ObjectId)
+        wp.Object->EvaluateOwners();
 
 	ComponentManager<EcWorkspace>::DeleteComponent(Id);
 }

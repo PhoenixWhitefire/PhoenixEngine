@@ -163,7 +163,7 @@ static int obj_index(lua_State* L)
 	}
 
 	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &ref))
-		luhx_pushsignal(L, event, ref, key);
+		luhx_pushsignal(L, event, ref, key, UINT32_MAX);
 
 	else
 	{

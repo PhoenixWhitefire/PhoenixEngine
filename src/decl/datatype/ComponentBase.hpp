@@ -72,7 +72,7 @@ public:
         component.Object = Object;
         assert(component.Valid);
 
-        REFLECTION_SIGNAL_EVENT(ComponentCreatedCallbacks, Reflection::GenericValue(component.Object));
+        REFLECTION_SIGNAL_EVENT_RESTRICT(ComponentCreatedCallbacks, component.Object.TargetId, Reflection::GenericValue(component.Object));
         return static_cast<uint32_t>(m_Components.size() - 1);
     }
 
@@ -106,7 +106,7 @@ public:
         T& component = m_Components.at(Id);
         component.Valid = false;
 
-        REFLECTION_SIGNAL_EVENT(ComponentDeletedCallbacks, Reflection::GenericValue(component.Object));
+        REFLECTION_SIGNAL_EVENT_RESTRICT(ComponentDeletedCallbacks, component.Object.TargetId, Reflection::GenericValue(component.Object));
     }
 
     virtual void BindService(uint32_t) override

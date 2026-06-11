@@ -1178,7 +1178,8 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
             L,
             gv.Val.Event.Descriptor,
             gv.Val.Event.Reflector,
-            gv.Val.Event.Name
+            gv.Val.Event.Name,
+            gv.Val.Event.RestrictDataModel
         );
 
         break;

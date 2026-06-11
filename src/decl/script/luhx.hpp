@@ -4,6 +4,7 @@
 #pragma once
 
 #include <glm/mat4x4.hpp>
+#include <cstdint>
 
 #include "datatype/EntityComponent.hpp"
 
@@ -57,7 +58,7 @@ void luhx_pushgameobject(lua_State*, GameObject*);
 void luhx_pushvector3(lua_State*, const glm::vec3&);
 void luhx_pushmatrix(lua_State*, const glm::mat4&);
 void luhx_pushcolor(lua_State*, const Color&);
-void luhx_pushsignal(lua_State*, const Reflection::EventDescriptor*, const ReflectorRef&, const char*);
+void luhx_pushsignal(lua_State*, const Reflection::EventDescriptor*, const ReflectorRef&, const char*, uint32_t RestrictDataModel);
 void luhx_pushinputevent(lua_State*, const InputEvent&);
 
 GameObject* luhx_checkgameobject(lua_State*, int);
@@ -67,6 +68,7 @@ struct EventSignalData
 	ReflectorRef Reflector;
 	const Reflection::EventDescriptor* Event = nullptr;
 	const char* EventName = nullptr;
+	uint32_t RestrictDataModel = UINT32_MAX;
 };
 
 struct EventConnectionData

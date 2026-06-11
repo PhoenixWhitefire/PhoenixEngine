@@ -24,6 +24,8 @@ local Types = require("@ed/Types")
 local ProjectClosedByDataModelConnection = nil
 local EditorCam = workspace.SceneCamera
 
+local WatchedMovingVisualizations: { [EventConnection]: GameObject & EcTransform } = {}
+
 function ProjectEditing.Enter(PreviousStage: Types.Stage)
     assert(State.Project.DataModel)
     assert(State.Project.Workspace)
@@ -31,6 +33,7 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
     DeveloperTools:SetExplorerRoot(State.Project.DataModel)
     DeveloperTools:SetExplorerSelections({})
     Physics.Simulating = false
+    CoreTools.VisualizationsContainer.Enabled = true
 
     if PreviousStage == "SelectProject" then
         EditorCameraTransform.Load(EditorCam)
@@ -128,9 +131,8 @@ function ProjectEditing.Render(DeltaTime: number)
     local sceneCam = State.Project.Workspace and State.Project.Workspace.SceneCamera
 
     if sceneCam then
-        -- TODO backwards camera orientation
-        CoreTools.CameraModel.Transform = sceneCam.Transform * Matrix.rotated(0, math.pi, 0)
-        CoreTools.CameraModel.Parent = workspace
+        CoreTools.CameraModel.Transform = sceneCam.Transform
+        CoreTools.CameraModel.Enabled = true
 
         if not CoreTools.HoveringOverSceneCamera then
             local transparency = math.clamp(0.5 / vector.magnitude(CoreTools.CameraModel.Transform.Position - workspace.SceneCamera.Transform.Position)^4, 0, 1)
@@ -143,13 +145,13 @@ function ProjectEditing.Render(DeltaTime: number)
             end
         end
     else
-        CoreTools.CameraModel.Parent = nil
+        CoreTools.CameraModel.Enabled = false
     end
 end
 
 function ProjectEditing.Leave(NextStage: Types.Stage)
     EditorCameraTransform.Save(EditorCam)
-    CoreTools.CameraModel.Parent = nil
+    CoreTools.VisualizationsContainer.Enabled = false
 
     if NextStage == "ProjectPlaying" then
         if Preferences.ClearOutputOnPlaytest then
@@ -164,6 +166,13 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
         end
 
         table.clear(Reimport.Watchers)
+
+        for c, o in WatchedMovingVisualizations do
+            c:Disconnect()
+            o:Destroy()
+        end
+
+        table.clear(WatchedMovingVisualizations)
     end
 
     DeveloperTools:SetExplorerRoot(game)

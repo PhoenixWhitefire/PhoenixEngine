@@ -737,5 +737,5 @@ uint32_t Reflection::EventConnect(std::vector<EventCallback>& Callbacks, const E
 
 void Reflection::EventDisconnect(std::vector<EventCallback>& Callbacks, uint32_t Id)
 {
-    Callbacks[Id] = nullptr;
+    Callbacks[Id].Callback = nullptr;
 }

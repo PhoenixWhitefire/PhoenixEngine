@@ -65,6 +65,7 @@ namespace ScriptEngine
                 const Reflection::EventDescriptor* Event = nullptr;
                 ReflectorRef Reflector;
                 uint32_t ConnectionId = UINT32_MAX;
+                uint32_t RestrictDataModel = UINT32_MAX;
             } RmEventCallback;
         };
 

@@ -15,6 +15,8 @@ uint32_t DataModelComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcDataModel>::CreateComponent(Object);
     m_Components[id].Object = Object;
+    Object->OwningDataModel = Object->ObjectId;
+    Object->EvaluateOwners();
 
     return id;
 }
@@ -26,10 +28,14 @@ void DataModelComponentManager::DeleteComponent(uint32_t Id)
 
     for (lua_State* L : dm.Modules)
         lua_resetthread(L);
-    dm.Modules.clear();
 
+    dm.Modules.clear();
     dm.UnbindServices();
-	ComponentManager<EcDataModel>::DeleteComponent(Id);
+
+    if (dm.Object->OwningDataModel == dm.Object->ObjectId)
+        dm.Object->EvaluateOwners();
+
+    ComponentManager<EcDataModel>::DeleteComponent(Id);
 }
 
 const Reflection::StaticPropertyMap& DataModelComponentManager::GetProperties()
@@ -212,17 +218,17 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
         isAotBytecode = true;
 
     bool readSuccess = true;
-	std::string sourceCodeOrBytecode = FileRW::ReadFile(modulePath, &readSuccess);
+    std::string sourceCodeOrBytecode = FileRW::ReadFile(modulePath, &readSuccess);
 
-	if (!readSuccess)
-	{
-		Log.ErrorF(
-			"Failed to load '{}': {}",
-			Module, sourceCodeOrBytecode // `sourceCodeOrBytecode` will be the error message
-		);
+    if (!readSuccess)
+    {
+        Log.ErrorF(
+            "Failed to load '{}': {}",
+            Module, sourceCodeOrBytecode // `sourceCodeOrBytecode` will be the error message
+        );
 
-		return nullptr;
-	}
+        return nullptr;
+    }
 
     ScriptEngine::LuauVM& lvm = ScriptEngine::VMs.at(Dm->VM);
     lua_State* mainThread = lvm.MainThread;
@@ -231,7 +237,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
     lvm.AllowedExecutionTime = 5.0;
 
     lua_State* L = lua_newthread(mainThread);
-	luaL_sandboxthread(L);
+    luaL_sandboxthread(L);
 
     std::string bytecode;
 
@@ -242,8 +248,8 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
     int result = ScriptEngine::LoadBytecode(L, bytecode, "@" + FileRW::ResolvePathNormalized(Module));
 
-	if (result == 0)
-	{
+    if (result == 0)
+    {
         ZoneScopedN("ResumeMain");
         ZoneText(Module.data(), Module.size());
 
@@ -256,52 +262,52 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
             lua_setglobal(L, "workspace");
         }
 
-		int resumeResult = ScriptEngine::L::Resume(L, nullptr, 0);
+        int resumeResult = ScriptEngine::L::Resume(L, nullptr, 0);
 
-		if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
-		{
+        if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
+        {
             lua_Debug ar = {};
             lua_getinfo(L, 1, "l", &ar);
 
             const char* err = lua_tostring(L, -1);
 
-			Log.Error(
+            Log.Error(
                 std::format("DataModel Script init: {}", err ? err : "unknown error"),
                 std::format("Script:{},Line:{}", Module, ar.currentline)
             );
             lua_pop(L, 1);
-			ScriptEngine::L::DumpStacktrace(L);
+            ScriptEngine::L::DumpStacktrace(L);
 
             lua_resetthread(L);
             lua_pop(mainThread, 1);
 
             lvm.AllowedExecutionTime = allowedExecTime;
             return nullptr;
-		}
+        }
         else
         {
             lvm.AllowedExecutionTime = allowedExecTime;
             return L;
         }
-	}
-	else
-	{
-		Log.ErrorF(
-			"DataModel Script compilation: {}",
-			lua_tostring(L, -1)
-		);
+    }
+    else
+    {
+        Log.ErrorF(
+            "DataModel Script compilation: {}",
+            lua_tostring(L, -1)
+        );
 
-		lua_resetthread(L);
+        lua_resetthread(L);
         lua_pop(mainThread, 1);
 
         lvm.AllowedExecutionTime = allowedExecTime;
         return nullptr;
-	}
+    }
 }
 
 void EcDataModel::Bind()
 {
-	ZoneScopedC(tracy::Color::LightSkyBlue);
+    ZoneScopedC(tracy::Color::LightSkyBlue);
 
     if (Modules.size() > 0 || LiveScripts.empty() || !CanLoadModules)
         return;

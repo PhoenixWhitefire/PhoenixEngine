@@ -295,7 +295,7 @@ local function openProject_(State: StateType, ManualPath: string?)
             return
         end
 
-        game.OnFrameBegin:WaitUntil()
+        game.OnFrameBegin:Wait()
     end
 
     fs.definealias("project", `{ Preferences.ProjectsDirectory }/{ assert(path) }`)

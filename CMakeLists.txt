@@ -185,7 +185,7 @@ set_property(TARGET glfw PROPERTY FOLDER "Vendor/GLFW3")
 set_property(TARGET uninstall PROPERTY FOLDER "Vendor/GLFW3")
 set_property(TARGET update_mappings PROPERTY FOLDER "Vendor/GLFW3")
 
-target_compile_definitions(Luau.VM PRIVATE $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:DebugTSan>>,HARDSTACKTESTS=1 HARDMEMTESTS=2,>)
+target_compile_definitions(Luau.VM PRIVATE $<IF:$<OR:$<CONFIG:Debug>,$<CONFIG:DebugTSan>>,HARDSTACKTESTS=1 HARDMEMTESTS=1,>)
 
 # build engine after all libs
 add_dependencies(PhoenixEngine

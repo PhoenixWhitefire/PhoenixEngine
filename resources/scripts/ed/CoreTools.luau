@@ -5,6 +5,7 @@ local History = game:GetService("History")
 
 local CoreTools = {}
 CoreTools.HoveringOverSceneCamera = false
+CoreTools.VisualizationsContainer = GameObject.new("Model")
 CoreTools.CameraModel = assert(AssetManager:LoadScene("./resources/scenes/camera.hxscene"))[1] :: (GameObject & EcTransform)?
 assert(CoreTools.CameraModel)
 

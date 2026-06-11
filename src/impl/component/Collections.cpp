@@ -93,13 +93,15 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetObjectsWithComponent", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            { Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) },
             { Reflection::ValueType::Array },
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const EcCollections* collections = static_cast<EcCollections*>(p);
                 EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
-                uint32_t datamodel = collections->Object->OwningDataModel;
+                uint32_t datamodel = inputs.size() > 1 ?
+                                        GameObjectManager::Get()->FromGenericValue(inputs[1])->OwningDataModel
+                                        : collections->Object->OwningDataModel;
 
                 std::vector<Reflection::GenericValue> ret;
 
@@ -116,11 +118,17 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetComponentCreatedSignal", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            { Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) },
             { Reflection::ValueType::EventSignal },
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
+                const EcCollections* collections = static_cast<EcCollections*>(p);
+                GameObjectManager* objectManager = GameObjectManager::Get();
+
                 EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
+                uint32_t datamodelId = inputs.size() > 1
+                                            ? objectManager->FromGenericValue(inputs[1])->ObjectId
+                                            : collections->Object->OwningDataModel;
 
                 if (ec == EntityComponent::None)
                     RAISE_RT("Invalid component type '{}'", inputs[0].AsStringView());
@@ -132,6 +140,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
                     .Descriptor = &cm->ComponentCreatedEvent,
                     .Reflector = static_cast<EcCollections*>(p)->Reference,
                     .Name = "Collections:GetComponentCreatedSignal() -> Event",
+                    .RestrictDataModel = datamodelId,
                 };
 
                 gv.Type = Reflection::ValueType::EventSignal;
@@ -140,11 +149,17 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetComponentDeletedSignal", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            { Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) },
             { Reflection::ValueType::EventSignal },
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
+                const EcCollections* collections = static_cast<EcCollections*>(p);
+                GameObjectManager* objectManager = GameObjectManager::Get();
+
                 EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
+                uint32_t datamodelId = inputs.size() > 1
+                                            ? objectManager->FromGenericValue(inputs[1])->ObjectId
+                                            : collections->Object->OwningDataModel;
 
                 if (ec == EntityComponent::None)
                     RAISE_RT("Invalid component type '{}'", inputs[0].AsStringView());
@@ -156,6 +171,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
                     .Descriptor = &cm->ComponentDeletedEvent,
                     .Reflector = static_cast<EcCollections*>(p)->Reference,
                     .Name = "Collections:GetComponentDeletedSignal() -> Event",
+                    .RestrictDataModel = datamodelId,
                 };
 
                 gv.Type = Reflection::ValueType::EventSignal;

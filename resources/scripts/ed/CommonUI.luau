@@ -129,7 +129,6 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
         return
     end
 
-
     if kie.Key == Enum.Key.Enter then
         runCurrentCommand()
     elseif #CommandBarHistory > 0 then
@@ -150,6 +149,18 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
 
             CommandBarBlinkFrame = 1
         end
+    end
+end)
+
+PlayerInput.ScrollEvent:Connect(function(sie: ScrollInputEvent)
+    if PlayerInput.IsMouseSunk then
+        return
+    end
+
+    if not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then
+        workspace.SceneCamera.FieldOfView -= sie.Delta.y * 5
+    else
+        workspace.SceneCamera.Transform += workspace:ScreenPointToVector(PlayerInput:GetCursorPosition()) * sie.Delta.y * 5
     end
 end)
 
@@ -617,7 +628,7 @@ local function exportProject()
         end
 
         imgui.endpopup()
-        game.OnFrameBegin:WaitUntil()
+        game.OnFrameBegin:Wait()
     end
 
     print("Exporting")
@@ -870,7 +881,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
 
                         imgui.endpopup()
 
-                        game.OnFrameBegin:WaitUntil()
+                        game.OnFrameBegin:Wait()
                     end
                 end)
             end

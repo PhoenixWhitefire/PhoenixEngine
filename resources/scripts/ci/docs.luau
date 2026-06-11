@@ -135,7 +135,7 @@ type _RUNTIME = {
 
 export type EventSignal<T...> = {
 	read Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
-	read WaitUntil: (self: EventSignal<T...>) -> (T...)
+	read Wait: (self: EventSignal<T...>) -> (T...)
 }
 
 declare extern type KeyInputEvent with
@@ -152,8 +152,7 @@ declare extern type MouseButtonInputEvent with
 end
 
 declare extern type ScrollInputEvent with
-	read X: number
-	read Y: number
+	read Delta: vector
 end
 
 export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }

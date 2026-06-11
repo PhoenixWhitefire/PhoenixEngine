@@ -88,9 +88,9 @@
       "Collections": {
         "Methods": {
           "GetCollections": "() -> (Array)",
-          "GetComponentCreatedSignal": "(String) -> (EventSignal)",
-          "GetComponentDeletedSignal": "(String) -> (EventSignal)",
-          "GetObjectsWithComponent": "(String) -> (Array)",
+          "GetComponentCreatedSignal": "(String, GameObject?) -> (EventSignal)",
+          "GetComponentDeletedSignal": "(String, GameObject?) -> (EventSignal)",
+          "GetObjectsWithComponent": "(String, GameObject?) -> (Array)",
           "GetTagAddedSignal": "(String) -> (EventSignal)",
           "GetTagRemovedSignal": "(String) -> (EventSignal)",
           "GetTagged": "(String) -> (Array)"

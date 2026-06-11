@@ -48,8 +48,15 @@
 #define REFLECTION_SIGNAL_EVENT(CbListOg, ...) { ZoneScopedN(#CbListOg); \
     std::vector<Reflection::EventCallback> CbList = CbListOg; \
     for (size_t cbi = 0; cbi < CbList.size(); cbi++) \
-        if (const Reflection::EventCallback& cb = CbList[cbi]) \
-            cb({ __VA_ARGS__ }, (uint32_t)cbi); \
+        if (const Reflection::EventCallbackFunction& cb = CbList[cbi].Callback) \
+            cb({ __VA_ARGS__ }, (uint32_t)cbi, UINT32_MAX); \
+} \
+
+#define REFLECTION_SIGNAL_EVENT_RESTRICT(CbListOg, DataModelDescendingObject, ...) { ZoneScopedN(#CbListOg); \
+    std::vector<Reflection::EventCallback> CbList = CbListOg; \
+    for (size_t cbi = 0; cbi < CbList.size(); cbi++) \
+        if (const Reflection::EventCallbackFunction& cb = CbList[cbi].Callback) \
+            cb({ __VA_ARGS__ }, (uint32_t)cbi, DataModelDescendingObject); \
 } \
 
 #define REFLECTION_OPTIONAL(ty) (Reflection::ValueType)(Reflection::ValueType::ty + Reflection::ValueType::Null)
@@ -120,6 +127,7 @@ namespace Reflection
         EventDescriptor* Descriptor = nullptr;
         ReflectorRef Reflector;
         const char* Name = nullptr;
+        uint32_t RestrictDataModel = UINT32_MAX;
     };
 
     struct GenericValue
@@ -203,7 +211,14 @@ namespace Reflection
     typedef std::vector<Reflection::GenericValue>(*MethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
     typedef std::promise<std::vector<Reflection::GenericValue>>*(*YieldingMethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
 
-    using EventCallback = std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t)>;
+    using EventCallbackFunction = std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t, uint32_t)>;
+
+    struct EventCallback
+    {
+        EventCallbackFunction Callback;
+        uint32_t DataModel;
+    };
+
     using EventConnectFunction = std::function<uint32_t(void*, const EventCallback&)>;
     using EventDisconnectFunction = std::function<void(void*, uint32_t)>;
 

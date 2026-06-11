@@ -1693,6 +1693,8 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
                     for (const ObjectHandle& r : roots)
                         r->SetParent(ExplorerRoot);
                 }
+
+                Selections = roots;
             }
         }
         else

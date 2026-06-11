@@ -13,19 +13,19 @@ return function(test: Types.Test, expect: Types.Expect)
             connection = game.OnFrameBegin:Connect(func)
         end).never:toThrow()
 
-        game.OnFrameBegin:WaitUntil()
+        game.OnFrameBegin:Wait()
         task.wait() -- We might be earlier in the resumption queue, so wait until the next resumption point
         expect(count):toBe(1)
 
         assert(connection)
         connection:Disconnect()
 
-        game.OnFrameBegin:WaitUntil()
+        game.OnFrameBegin:Wait()
         task.wait()
         expect(count):toBe(1)
     end)
     test("WaitUntil", function()
-        local n = game.OnFrameBegin:WaitUntil()
+        local n = game.OnFrameBegin:Wait()
         expect(typeof(n)):toBe("number")
         expect(n > 0):toBe(true)
     end)

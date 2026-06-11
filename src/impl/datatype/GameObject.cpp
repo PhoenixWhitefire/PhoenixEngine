@@ -55,7 +55,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			.Get = [](void* p) -> Reflection::GenericValue
 			{
 				GameObject* g = static_cast<GameObject*>(p);
-				return GameObjectManager::Get()->FindById(g->OwningDataModel);
+				return GameObjectManager::Get()->FindById(g->OwningDataModel)->ToGenericValue();
 			},
 			.Set = nullptr,
 			.Type = REFLECTION_OPTIONAL(GameObject),
@@ -529,6 +529,72 @@ bool GameObject::IsDescendantOf(const GameObject* Object) const
 	return false;
 }
 
+void GameObject::EvaluateOwners()
+{
+	ZoneScoped;
+
+	GameObject* parent = GetParent();
+
+	if (parent)
+	{
+		uint32_t newOwningDataModel = parent->OwningDataModel;
+		uint32_t newOwningWorkspace = parent->OwningWorkspace;
+
+		if (this->FindComponent<EcDataModel>())
+			newOwningDataModel = this->ObjectId;
+		else if (parent->FindComponent<EcDataModel>())
+			newOwningDataModel = parent->ObjectId;
+
+		if (this->FindComponent<EcWorkspace>())
+			newOwningWorkspace = this->ObjectId;
+		else if (parent->FindComponent<EcWorkspace>())
+			newOwningWorkspace = parent->ObjectId;
+
+		if (newOwningWorkspace != this->OwningWorkspace)
+		{
+			this->ForEachDescendant([newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
+				d->OwningWorkspace = newOwningWorkspace;
+				return true;
+			});
+			this->OwningWorkspace = newOwningWorkspace;
+
+			if (EcTransform* ct = this->FindComponent<EcTransform>())
+				ct->RecomputeTransformTree();
+		}
+
+		if (newOwningDataModel != this->OwningDataModel)
+		{
+			this->ForEachDescendant([newOwningDataModel](const ObjectHandle& d) noexcept -> bool {
+				d->OwningDataModel = newOwningDataModel;
+				return true;
+			});
+			this->OwningDataModel = newOwningDataModel;
+
+			if (EcTransform* ct = this->FindComponent<EcTransform>())
+				ct->RecomputeTransformTree();
+		}
+	}
+	else
+	{
+		uint32_t newOwningDataModel = UINT32_MAX;
+		uint32_t newOwningWorkspace = UINT32_MAX;
+
+		if (this->FindComponent<EcDataModel>())
+			newOwningDataModel = ObjectId;
+
+		if (this->FindComponent<EcWorkspace>())
+			newOwningWorkspace = ObjectId;
+
+		this->ForEachDescendant([newOwningDataModel, newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
+			d->OwningDataModel = newOwningDataModel;
+			d->OwningWorkspace = newOwningWorkspace;
+			return true;
+		});
+		this->OwningDataModel = newOwningDataModel;
+		this->OwningWorkspace = newOwningWorkspace;
+	}
+}
+
 void GameObject::SetParent(const ObjectHandle& newParent)
 {
 	ZoneScoped;
@@ -589,54 +655,13 @@ void GameObject::SetParent(const ObjectHandle& newParent)
 		}
 	}
 
-	if (!newParent)
+	if (newParent)
 	{
-		this->ForEachDescendant([](const ObjectHandle& d) noexcept -> bool {
-			d->OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
-			d->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
-			return true;
-		});
-		this->OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
-		this->OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
-
-		return;
+		this->Parent = newParent->ObjectId;
+		newParent->AddChild(this);
 	}
 
-	uint32_t newOwningDataModel = newParent->OwningDataModel;
-	uint32_t newOwningWorkspace = newParent->OwningWorkspace;
-
-	if (newParent->FindComponent<EcDataModel>())
-		newOwningDataModel = newParent->ObjectId;
-
-	if (newParent->FindComponent<EcWorkspace>())
-		newOwningWorkspace = newParent->ObjectId;
-
-	if (newOwningWorkspace != this->OwningWorkspace)
-	{
-		this->ForEachDescendant([newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
-			d->OwningWorkspace = newOwningWorkspace;
-			return true;
-		});
-		this->OwningWorkspace = newOwningWorkspace;
-
-		if (EcTransform* ct = this->FindComponent<EcTransform>())
-			ct->RecomputeTransformTree();
-	}
-
-	if (newOwningDataModel != this->OwningDataModel)
-	{
-		this->ForEachDescendant([newOwningDataModel](const ObjectHandle& d) noexcept -> bool {
-			d->OwningDataModel = newOwningDataModel;
-			return true;
-		});
-		this->OwningDataModel = newOwningDataModel;
-
-		if (EcTransform* ct = this->FindComponent<EcTransform>())
-			ct->RecomputeTransformTree();
-	}
-
-	this->Parent = newParent->ObjectId;
-	newParent->AddChild(this);
+	EvaluateOwners();
 }
 
 void GameObject::AddChild(const ObjectHandle& c)
@@ -898,10 +923,11 @@ void GameObject::RemoveComponent(EntityComponent Type)
 {
 	assert(Type != EntityComponent::None);
 
-	for (auto it = Components.begin(); it < Components.end(); it++)
-		if (it->Type == Type)
+	for (auto vit = Components.begin(); vit < Components.end(); vit++)
+		if (vit->Type == Type)
 		{
 			IComponentManager* manager = GetComponentManagerByComponentType(Type);
+			ReflectorRef ref = *vit;
 
 			if (History* history = History::Get(); history->IsRecordingEnabled && OwningDataModel == history->TargetDataModel)
 			{
@@ -929,7 +955,8 @@ void GameObject::RemoveComponent(EntityComponent Type)
 				});
 			}
 
-			manager->DeleteComponent(it->Id);
+			Components.erase(vit);
+			manager->DeleteComponent(ref.Id);
 
 			for (const auto& it2 : manager->GetProperties())
 			{
@@ -947,7 +974,6 @@ void GameObject::RemoveComponent(EntityComponent Type)
 				MemberToComponentMap.erase(it2.first);
 			}
 
-			Components.erase(it);
 			return;
 		}
 	
@@ -1210,7 +1236,7 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 		};
 		collection.AddedEvent.Descriptor->Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
 		{
-			Collections[id].AddedEvent.Callbacks[ConnectionId] = nullptr;
+			Collections[id].AddedEvent.Callbacks[ConnectionId].Callback = nullptr;
 		};
 		collection.RemovedEvent.Descriptor->Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
 		{
@@ -1219,7 +1245,7 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 		};
 		collection.RemovedEvent.Descriptor->Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
 		{
-			Collections[id].RemovedEvent.Callbacks[ConnectionId] = nullptr;
+			Collections[id].RemovedEvent.Callbacks[ConnectionId].Callback = nullptr;
 		};
 
 		return collection;

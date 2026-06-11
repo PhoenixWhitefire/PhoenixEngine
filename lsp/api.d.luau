@@ -71,7 +71,7 @@ type _RUNTIME = {
 
 export type EventSignal<T...> = {
 	read Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
-	read WaitUntil: (self: EventSignal<T...>) -> (T...)
+	read Wait: (self: EventSignal<T...>) -> (T...)
 }
 
 declare extern type KeyInputEvent with
@@ -88,8 +88,7 @@ declare extern type MouseButtonInputEvent with
 end
 
 declare extern type ScrollInputEvent with
-	read X: number
-	read Y: number
+	read Delta: vector
 end
 
 export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }
@@ -335,9 +334,9 @@ export type EcCamera = {
 export type EcCollections = {
 
   GetCollections: (self: EcCollections) -> { string },
-  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<Components>) -> EventSignal<GameObject & index<Components, T>>,
-  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<Components>) -> EventSignal<GameObject>,
-  GetObjectsWithComponent: <T>(self: EcCollections, Component: T & keyof<Components>) -> GameObject & index<Components, T>,
+  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<GameObject & index<Components, T>>,
+  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<GameObject>,
+  GetObjectsWithComponent: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> GameObject & index<Components, T>,
   GetTagAddedSignal: (self: EcCollections, Tag: string) -> EventSignal<GameObject>,
   GetTagRemovedSignal: (self: EcCollections, Tag: string) -> EventSignal<GameObject>,
   GetTagged: (self: EcCollections, Tag: string) -> { GameObject },

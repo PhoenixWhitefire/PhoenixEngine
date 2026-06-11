@@ -25,7 +25,10 @@ bool UserInput::IsMouseButtonDown(int Button)
 
 static bool isAnyMouseButtonDown()
 {
-    return UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT) || UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+    return UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)
+            || UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)
+            || GImGui->IO.MouseWheel != 0.f
+            || GImGui->IO.MouseWheelH != 0.f;
 }
 
 bool UserInput::ShouldIgnoreUIInputSinking()

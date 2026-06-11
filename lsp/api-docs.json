@@ -1777,7 +1777,7 @@
   "@phoenix/globaltype/EventSignal.Connect": {
     "documentation": "* Connect a callback to the Event\n"
   },
-  "@phoenix/globaltype/EventSignal.WaitUntil": {
+  "@phoenix/globaltype/EventSignal.Wait": {
     "documentation": "* Yields the thread until the Event is fired\n"
   },
   "@phoenix/globaltype/GameObject.AddComponent": {
