@@ -68,19 +68,23 @@ uint32_t TransformComponentManager::CreateComponent(GameObject* Object)
 const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
-        REFLECTION_PROPERTY(
-            "LocalTransform",
-            Matrix,
-            REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalTransform),
-            [](void* p, const Reflection::GenericValue& gv)
+        { "LocalTransform", Reflection::PropertyDescriptor{
+            .Name = "LocalTransform",
+            .Get = REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalTransform),
+            .Set = (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
             {
                 ZoneScoped;
-
                 EcTransform* ct = static_cast<EcTransform*>(p);
+                glm::mat4 prevTrans = ct->Transform;
+
                 ct->LocalTransform = gv.AsMatrix();
                 ct->RecomputeTransformTree();
-            }
-        ),
+
+                REFLECTION_SIGNAL_EVENT(ct->OnScriptMovedCallbacks, prevTrans, ct->Transform);
+            },
+            .Type = Reflection::ValueType::Matrix,
+            .ParallelReadSafe = false, // Physics
+        } },
 
         REFLECTION_PROPERTY(
             "LocalSize",
@@ -96,29 +100,32 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             }
         ),
 
-        { "Transform", {
-            "Transform",
-            Reflection::ValueType::Matrix,
-            REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
-            (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+        { "Transform", Reflection::PropertyDescriptor{
+            .Name = "Transform",
+            .Get = REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
+            .Set = (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
             {
                 ZoneScoped;
-                    
                 EcTransform* ct = static_cast<EcTransform*>(p);
+                glm::mat4 prevTrans = ct->Transform;
+
                 ct->SetWorldTransform(gv.AsMatrix());
                 ct->RecomputeTransformTree();
+
+                REFLECTION_SIGNAL_EVENT(ct->OnScriptMovedCallbacks, prevTrans, ct->Transform);
             },
-            false
+            .Type = Reflection::ValueType::Matrix,
+            .Serializes = false,
+            .ParallelReadSafe = false, // Physics
         } },
 
-        { "Size", {
-            "Size",
-            Reflection::ValueType::Vector3,
-            (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
+        { "Size", Reflection::PropertyDescriptor{
+            .Name = "Size",
+            .Get = (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
             {
                 return static_cast<EcTransform*>(p)->Size;
             },
-            (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
+            .Set = (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
             {
                 ZoneScoped;
                     
@@ -126,11 +133,21 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
                 ct->SetWorldSize(gv.AsVector3());
                 ct->RecomputeTransformTree();
             },
-            false
+            .Type = Reflection::ValueType::Vector3,
+            .Serializes = false,
         } }
     };
 
     return props;
+}
+
+const Reflection::StaticEventMap& TransformComponentManager::GetEvents()
+{
+    static const Reflection::StaticEventMap events = {
+        REFLECTION_EVENT(EcTransform, OnScriptMoved, Reflection::ValueType::Matrix, Reflection::ValueType::Matrix),
+    };
+
+    return events;
 }
 
 void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)

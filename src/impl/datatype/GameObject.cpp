@@ -10,22 +10,56 @@
 const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 	.Properties = {
 		REFLECTION_PROPERTY_SIMPLE(GameObject, Name, String),
-		REFLECTION_PROPERTY_SIMPLE(GameObject, Enabled, Boolean),
 		REFLECTION_PROPERTY_SIMPLE(GameObject, Serializes, Boolean),
 		REFLECTION_PROPERTY("ObjectId", Integer, REFLECTION_PROPERTY_GET_SIMPLE(GameObject, ObjectId), nullptr),
 
-		{ "Parent", Reflection::PropertyDescriptor(
-			"Parent",
-			REFLECTION_OPTIONAL(GameObject),
+		REFLECTION_PROPERTY(
+			"Enabled",
+			Boolean,
 			[](void* p) -> Reflection::GenericValue
 			{
-				return GameObject::s_ToGenericValue(static_cast<GameObject*>(p)->GetParent());
+				GameObject* g = static_cast<GameObject*>(p);
+				return g->GetEnabled();
 			},
 			[](void* p, const Reflection::GenericValue& gv)
 			{
-				static_cast<GameObject*>(p)->SetParent(GameObjectManager::Get()->FromGenericValue(gv));
+				GameObject* g = static_cast<GameObject*>(p);
+				g->SetEnabled(gv.AsBoolean());
 			}
-		) }
+		),
+
+		REFLECTION_PROPERTY(
+			"TreeEnabled",
+			Boolean,
+			REFLECTION_PROPERTY_GET_SIMPLE(GameObject, TreeEnabled),
+			nullptr
+		),
+
+		{ "Parent", Reflection::PropertyDescriptor{
+			.Name = "Parent",
+			.Get = [](void* p) -> Reflection::GenericValue
+			{
+				GameObject* g = static_cast<GameObject*>(p);
+				return GameObject::s_ToGenericValue(g->GetParent());
+			},
+			.Set = [](void* p, const Reflection::GenericValue& gv)
+			{
+				GameObject* g = static_cast<GameObject*>(p);
+				g->SetParent(GameObjectManager::Get()->FromGenericValue(gv));
+			},
+			.Type = REFLECTION_OPTIONAL(GameObject),
+		} },
+
+		{ "DataModel", Reflection::PropertyDescriptor{
+			.Name = "DataModel",
+			.Get = [](void* p) -> Reflection::GenericValue
+			{
+				GameObject* g = static_cast<GameObject*>(p);
+				return GameObjectManager::Get()->FindById(g->OwningDataModel);
+			},
+			.Set = nullptr,
+			.Type = REFLECTION_OPTIONAL(GameObject),
+		} },
 	},
 
 	.Methods = {
@@ -276,12 +310,13 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 				return { Reflection::GenericValue(tags) };
 			}
-		} }
+		} },
 	},
 
 	.Events = {
 		REFLECTION_EVENT(GameObject, OnTagAdded, Reflection::ValueType::String),
-		REFLECTION_EVENT(GameObject, OnTagRemoved, Reflection::ValueType::String)
+		REFLECTION_EVENT(GameObject, OnTagRemoved, Reflection::ValueType::String),
+		REFLECTION_EVENT(GameObject, OnTreeEnabledChanged, Reflection::ValueType::Boolean),
 	}
 };
 
@@ -640,6 +675,38 @@ void GameObject::RemoveChild(uint32_t id)
 	}
 	else
 		RAISE_RT("ID:{} is _not my ({}) sonnn~_", ObjectId, id);
+}
+
+bool GameObject::GetEnabled() const
+{
+	return m_Enabled;
+}
+
+void GameObject::SetEnabled(bool Enabled)
+{
+	m_Enabled = Enabled;
+	bool wasTreeEnabled = TreeEnabled;
+
+	if (m_Enabled)
+	{
+		if (GameObject* parent = GetParent())
+			TreeEnabled = m_Enabled && parent->TreeEnabled;
+		else
+			TreeEnabled = true;
+	}
+	else
+		TreeEnabled = false;
+
+	if (wasTreeEnabled != TreeEnabled)
+	{
+		ForEachChild([](const ObjectHandle& child) -> bool
+		{
+			child->SetEnabled(child->GetEnabled());
+			return true;
+		});
+
+		REFLECTION_SIGNAL_EVENT(OnTreeEnabledChangedCallbacks, TreeEnabled);
+	}
 }
 
 Reflection::GenericValue GameObject::s_ToGenericValue(GameObject* Object)

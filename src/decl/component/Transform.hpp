@@ -17,8 +17,9 @@ struct EcTransform : public Component<EntityComponent::Transform>
     // local-space (relative to world transform of nearest Transform ancestor)
     glm::mat4 LocalTransform = { 1.f };
     glm::vec3 LocalSize = { 1.f, 1.f, 1.f };
-    
-    ObjectRef Object;
+
+    std::vector<Reflection::EventCallback> OnScriptMovedCallbacks;
+
     bool Valid = true;
 };
 
@@ -27,4 +28,5 @@ class TransformComponentManager : ComponentManager<EcTransform>
 public:
     uint32_t CreateComponent(GameObject* Object) override;
     const Reflection::StaticPropertyMap& GetProperties() override;
+    const Reflection::StaticEventMap& GetEvents() override;
 };

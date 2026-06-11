@@ -265,18 +265,20 @@ end
 
 
 export type GameObject = {
+  read DataModel: GameObject? ,
   Enabled: boolean,
   Name: string,
   read ObjectId: number ,
   Parent: GameObject?,
   Serializes: boolean,
+  read TreeEnabled: boolean ,
 
   AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   AddTag: (self: GameObject, Tag: string) -> (),
   Destroy: (self: GameObject) -> (),
-  Duplicate: <T>(self: GameObject & T) -> (GameObject & T),
+  Duplicate: <T>(self: GameObject & T) -> GameObject & T,
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
-  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> (GameObject),
+  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> GameObject,
   ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
   ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
   GetChildren: (self: GameObject) -> { GameObject },
@@ -284,13 +286,14 @@ export type GameObject = {
   GetDescendants: (self: GameObject) -> { GameObject },
   GetFullName: (self: GameObject) -> (string),
   GetTags: (self: GameObject) -> { string },
-  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> (boolean),
+  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> boolean,
   HasTag: (self: GameObject, Tag: string) -> (boolean),
   RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   RemoveTag: (self: GameObject, Tag: string) -> (),
 
   OnTagAdded: EventSignal<(string)>,
   OnTagRemoved: EventSignal<(string)>,
+  OnTreeEnabledChanged: EventSignal<(boolean)>,
 }
 export type EcAnimationAsset = {
   Animation: string,
@@ -332,6 +335,9 @@ export type EcCamera = {
 export type EcCollections = {
 
   GetCollections: (self: EcCollections) -> { string },
+  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<Components>) -> EventSignal<GameObject & index<Components, T>>,
+  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<Components>) -> EventSignal<GameObject>,
+  GetObjectsWithComponent: <T>(self: EcCollections, Component: T & keyof<Components>) -> GameObject & index<Components, T>,
   GetTagAddedSignal: (self: EcCollections, Tag: string) -> EventSignal<GameObject>,
   GetTagRemovedSignal: (self: EcCollections, Tag: string) -> EventSignal<GameObject>,
   GetTagged: (self: EcCollections, Tag: string) -> { GameObject },
@@ -361,7 +367,7 @@ export type EcDeveloperTools = {
   SettingsShown: boolean,
   ShadersShown: boolean,
 
-  GetExplorerSelections: (self: EcDeveloperTools) -> ({ GameObject }),
+  GetExplorerSelections: (self: EcDeveloperTools) -> { GameObject },
   GetToolNames: (self: EcDeveloperTools) -> { string },
   Initialize: (self: EcDeveloperTools) -> (),
   IsToolEnabled: (self: EcDeveloperTools, ToolName: string) -> (boolean),
@@ -394,12 +400,12 @@ export type EcEngine = {
   read TargetPlatform: string ,
   read Version: string ,
 
-  BindDataModel: (self: EcEngine, DataModel:  GameObject & EcDataModel ) -> (),
+  BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
   GetCliArguments: (self: EcEngine) -> { string },
-  GetConfigValue: (self: EcEngine, Key: string) -> (JsonSerializable),
+  GetConfigValue: (self: EcEngine, Key: string) -> JsonSerializable,
   SaveConfig: (self: EcEngine) -> (boolean, string),
   SetConfigValue: (self: EcEngine, Key: string, Value: JsonSerializable) -> (),
-  ShowMessageBox: (self: EcEngine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> (number),
+  ShowMessageBox: (self: EcEngine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> number,
 }
 export type EcEnvironment = {
   AmbientLight: Color,
@@ -453,7 +459,7 @@ export type EcModel = {
 }
 export type EcNetwork = {
 
-  MakeHttpRequestAsync: (self: EcNetwork, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> ({ Ok: boolean, Status: number, Headers: { [string]: string }, Body: string }),
+  MakeHttpRequestAsync: (self: EcNetwork, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> { Ok: boolean, Status: number, Headers: { [string]: string }, Body: string },
 }
 export type EcParticleEmitter = {
   Emitting: boolean,
@@ -480,8 +486,8 @@ export type EcPlayerInput = {
   read IsMouseSunk: boolean ,
 
   GetCursorPosition: (self: EcPlayerInput) -> (vector),
-  IsKeyPressed: (self: EcPlayerInput, Key: EnumKey) -> (boolean),
-  IsMouseButtonPressed: (self: EcPlayerInput, Button: EnumMouseButton) -> (boolean),
+  IsKeyPressed: (self: EcPlayerInput, Key: EnumKey) -> boolean,
+  IsMouseButtonPressed: (self: EcPlayerInput, Button: EnumMouseButton) -> boolean,
   ResetViewportInputRect: (self: EcPlayerInput) -> (),
   SetViewportInputRect: (self: EcPlayerInput, Position: vector, Size: vector) -> (),
 
@@ -522,7 +528,7 @@ export type EcScriptEngine = {
   CompileToBytecode: (self: EcScriptEngine, Source: string, OptimizationLevel: number?, DebugLevel: number?) -> (buffer),
   CreateVM: (self: EcScriptEngine, VmName: string) -> (),
   DetachDebuggerFromVM: (self: EcScriptEngine, VM: string) -> (),
-  RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string?) -> (boolean, string?),
+  RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string) -> (boolean, string?),
   SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
 }
 export type EcSound = {
@@ -551,6 +557,8 @@ export type EcTransform = {
   LocalTransform: Matrix,
   Size: vector ,
   Transform: Matrix ,
+
+  OnScriptMoved: EventSignal<(Matrix, Matrix)>,
 }
 export type EcTreeLink = {
   Target: GameObject?,

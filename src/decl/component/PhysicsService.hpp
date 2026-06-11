@@ -9,8 +9,6 @@ struct EcPhysicsService : Component<EntityComponent::PhysicsService>
     glm::vec3 Gravity = { 0.f, -50.f, 0.f };
     double Timescale = 1.0;
 
-    ObjectRef Object;
-
     bool Simulating = true;
     bool DebugCollisionAabbs = false;
     bool DebugContactPoints = false;

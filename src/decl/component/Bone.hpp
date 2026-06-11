@@ -12,7 +12,6 @@ struct EcBone : public Component<EntityComponent::Bone>
 	uint32_t TargetMesh = UINT32_MAX;
 	uint8_t SkeletalBoneId = UINT8_MAX;
 
-	ObjectRef Object;
 	bool Valid = true;
 };
 

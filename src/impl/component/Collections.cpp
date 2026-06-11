@@ -2,6 +2,15 @@
 #include "component/Collections.hpp"
 #include "datatype/GameObject.hpp"
 
+uint32_t CollectionsComponentManager::CreateComponent(GameObject* Object)
+{
+    uint32_t id = ComponentManager<EcCollections>::CreateComponent(Object);
+    m_Components[id].Reference = { id, EntityComponent::Collections };
+    m_Components[id].Object = Object;
+
+    return id;
+}
+
 const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
@@ -55,10 +64,10 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
                 gv.Val.Event = {
                     .Descriptor = collection.AddedEvent.Descriptor,
                     .Reflector = static_cast<EcCollections*>(p)->Reference,
-                    .Name = "CollectionsService:GetTagAddedSignal() -> Event"
+                    .Name = "Collections:GetTagAddedSignal() -> Event",
                 };
-                gv.Type = Reflection::ValueType::EventSignal;
 
+                gv.Type = Reflection::ValueType::EventSignal;
                 return { gv };
             }
         } },
@@ -75,13 +84,84 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
                 gv.Val.Event = {
                     .Descriptor = collection.RemovedEvent.Descriptor,
                     .Reflector = static_cast<EcCollections*>(p)->Reference,
-                    .Name = "CollectionsService:GetTagRemovedSignal() -> Event"
+                    .Name = "Collections:GetTagRemovedSignal() -> Event",
                 };
-                gv.Type = Reflection::ValueType::EventSignal;
 
+                gv.Type = Reflection::ValueType::EventSignal;
                 return { gv };
             }
-        } }
+        } },
+
+        { "GetObjectsWithComponent", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::Array },
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const EcCollections* collections = static_cast<EcCollections*>(p);
+                EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
+                uint32_t datamodel = collections->Object->OwningDataModel;
+
+                std::vector<Reflection::GenericValue> ret;
+
+                GetComponentManagerByComponentType(ec)->ForEachComponent([ret, datamodel](BaseComponent* component) mutable -> bool
+                {
+                    if (component->Object->OwningDataModel == datamodel)
+                        ret.push_back(component->Object->ToGenericValue());
+
+                    return true;
+                });
+
+                return { Reflection::GenericValue(ret) };
+            }
+        } },
+
+        { "GetComponentCreatedSignal", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::EventSignal },
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
+
+                if (ec == EntityComponent::None)
+                    RAISE_RT("Invalid component type '{}'", inputs[0].AsStringView());
+
+                IComponentManager* cm = GetComponentManagerByComponentType(ec);
+
+                Reflection::GenericValue gv;
+                gv.Val.Event = {
+                    .Descriptor = &cm->ComponentCreatedEvent,
+                    .Reflector = static_cast<EcCollections*>(p)->Reference,
+                    .Name = "Collections:GetComponentCreatedSignal() -> Event",
+                };
+
+                gv.Type = Reflection::ValueType::EventSignal;
+                return { gv };
+            }
+        } },
+
+        { "GetComponentDeletedSignal", Reflection::MethodDescriptor{
+            { Reflection::ValueType::String },
+            { Reflection::ValueType::EventSignal },
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
+
+                if (ec == EntityComponent::None)
+                    RAISE_RT("Invalid component type '{}'", inputs[0].AsStringView());
+
+                IComponentManager* cm = GetComponentManagerByComponentType(ec);
+
+                Reflection::GenericValue gv;
+                gv.Val.Event = {
+                    .Descriptor = &cm->ComponentDeletedEvent,
+                    .Reflector = static_cast<EcCollections*>(p)->Reference,
+                    .Name = "Collections:GetComponentDeletedSignal() -> Event",
+                };
+
+                gv.Type = Reflection::ValueType::EventSignal;
+                return { gv };
+            }
+        } },
     };
 
     return methods;

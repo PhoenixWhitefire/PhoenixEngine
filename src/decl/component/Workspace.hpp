@@ -57,7 +57,6 @@ struct EcWorkspace : public Component<EntityComponent::Workspace>
 	std::unordered_map<glm::ivec3, std::vector<uint32_t>> SpatialHash;
 
 	uint32_t m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
-	ObjectRef Object;
 	bool Valid = true;
 };
 

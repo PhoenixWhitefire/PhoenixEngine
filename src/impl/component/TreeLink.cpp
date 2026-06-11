@@ -13,15 +13,14 @@ const Reflection::StaticPropertyMap& TreeLinkComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props =
     {
-        { "Target", {
-            "Target",
-            REFLECTION_OPTIONAL(GameObject),
-            [](void* p)
+        { "Target", Reflection::PropertyDescriptor{
+            .Name = "Target",
+            .Get = [](void* p)
             {
                 EcTreeLink* tl = static_cast<EcTreeLink*>(p);
                 return GameObject::s_ToGenericValue(tl->Target.Referred());
             },
-            [](void* p, const Reflection::GenericValue& gv)
+            .Set = [](void* p, const Reflection::GenericValue& gv)
             {
                 EcTreeLink* tl = static_cast<EcTreeLink*>(p);
                 GameObject* newTarget = GameObjectManager::Get()->FromGenericValue(gv);
@@ -40,7 +39,8 @@ const Reflection::StaticPropertyMap& TreeLinkComponentManager::GetProperties()
                     RAISE_RT("TreeLink cannot target another TreeLink");
 
                 tl->Target = GameObjectManager::Get()->FromGenericValue(gv);
-            }
+            },
+            .Type = REFLECTION_OPTIONAL(GameObject),
         } }
     };
 

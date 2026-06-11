@@ -97,10 +97,9 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
             nullptr
         ),
 
-        { "CurrentActionName", {
-            "CurrentActionName",
-            REFLECTION_OPTIONAL(String),
-            [](void*) -> Reflection::GenericValue
+        { "CurrentActionName", Reflection::PropertyDescriptor{
+            .Name = "CurrentActionName",
+            .Get = [](void*) -> Reflection::GenericValue
             {
                 History* history = History::Get();
                 const std::optional<History::Action>& currentAction = history->GetCurrentAction();
@@ -110,7 +109,8 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
                 else
                     return {};
             },
-            nullptr
+            .Set = nullptr,
+            .Type = REFLECTION_OPTIONAL(String),
         } },
 
         REFLECTION_PROPERTY(

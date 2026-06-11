@@ -44,7 +44,7 @@ function SelectProject.Leave(_new)
     PluginManager.Load()
 
     if Preferences.ClearOutputOnProjectOpen then
-        Output.Log = {}
+        table.clear(Output.Log)
     end
 end
 

@@ -25,7 +25,6 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	uint32_t GpuSkinningBuffer = UINT32_MAX;
 
 	uint32_t ComponentId = UINT32_MAX;
-	ObjectRef Object;
 
 	FaceCullingMode FaceCulling = FaceCullingMode::BackFace;
 	bool CastsShadows = true;

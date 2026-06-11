@@ -65,9 +65,6 @@ const Reflection::StaticPropertyMap& SoundComponentManager::GetProperties()
 			[](void* p, const Reflection::GenericValue& playing)
 			{
 				EcSound* sound = static_cast<EcSound*>(p);
-				if (!sound->Object->Enabled && playing.AsBoolean())
-					RAISE_RT("Tried to play Sound while Object was disabled");
-
 				sound->m_PlayRequested = playing.AsBoolean();
 			}
 		),
@@ -283,7 +280,7 @@ void EcSound::Update(double)
 
 	bool playing = ma_sound_is_playing(SoundInstance);
 
-    if (!Object->Enabled)
+    if (!Object->TreeEnabled)
     {
         if (playing)
         {

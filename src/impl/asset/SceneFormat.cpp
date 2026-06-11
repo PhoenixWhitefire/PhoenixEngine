@@ -655,8 +655,8 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 					std::string valueStr = target->second->GetFullName();
 
 					SF_WARN(
-						"Failed to set GameObject property of '{}' to '{}': {}",
-						object->Name, valueStr, err.what()
+						"Failed to set GameObject property {}.{} to '{}': {}",
+						object->Name, propName, valueStr, err.what()
 					);
 				}
 			}
@@ -749,7 +749,7 @@ static nlohmann::json castGenericToJson(const ObjectRef& Object, const std::stri
 
     case Reflection::ValueType::Vector3:
     {
-        glm::vec3& vec = value.AsVector3();
+        const glm::vec3& vec = value.AsVector3();
         return { vec.x, vec.y, vec.z };
     }
 

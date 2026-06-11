@@ -80,6 +80,9 @@ public:
 	void AddChild(const ObjectHandle&);
 	void RemoveChild(uint32_t);
 
+	bool GetEnabled() const;
+	void SetEnabled(bool);
+
 	// performs a 1-1 copy, including copying the `Parent` property
 	ObjectHandle Duplicate();
 
@@ -100,16 +103,20 @@ public:
 	std::vector<uint16_t> Tags;
 	std::vector<Reflection::EventCallback> OnTagAddedCallbacks;
 	std::vector<Reflection::EventCallback> OnTagRemovedCallbacks;
+	std::vector<Reflection::EventCallback> OnTreeEnabledChangedCallbacks;
 
 	uint16_t HardRefCount = 0;
 
-	bool Enabled = true;
+	bool TreeEnabled = true;
 	bool Serializes = true;
 	bool IsDestructionPending = false;
 	bool Valid = true;
 
 	static nlohmann::json DumpApiToJson();
 	static const Reflection::StaticApi s_Api;
+
+private:
+	bool m_Enabled = true;
 };
 
 class GameObjectManager

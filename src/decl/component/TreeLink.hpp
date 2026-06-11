@@ -9,7 +9,6 @@
 struct EcTreeLink : public Component<EntityComponent::TreeLink>
 {
     ObjectRef Target;
-    ObjectRef Object;
     bool Valid = true;
 };
 

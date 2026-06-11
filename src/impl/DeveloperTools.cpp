@@ -1994,7 +1994,7 @@ static void recursiveIterateTree(const ObjectHandle& current)
             ImVec2(0.f, 0.f),
             ImVec2(1.f, 1.f),
             ImVec4(),
-            object->Enabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : ImVec4(.5f, .5f, .5f, 1.f)
+            object->TreeEnabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : (object->GetEnabled() ? ImVec4(.6f, .6f, .6f, 1.f) : ImVec4(.4f, .4f, .4f, 1.f))
         );
         nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;

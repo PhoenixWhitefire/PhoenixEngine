@@ -60,28 +60,28 @@ void ShaderProgram::Activate()
 			{
 			case Reflection::ValueType::Boolean:
 			{
-				glUniform1i(uniformLoc, value.AsBoolean());
+				glUniform1i(uniformLoc, value.Val.Bool);
 				break;
 			}
 			case Reflection::ValueType::Integer:
 			{
-				glUniform1i(uniformLoc, static_cast<int32_t>(value.AsInteger()));
+				glUniform1i(uniformLoc, static_cast<int32_t>(value.Val.Int));
 				break;
 			}
 			case Reflection::ValueType::Double:
 			{
-				glUniform1f(uniformLoc, static_cast<float>(value.AsDouble()));
+				glUniform1f(uniformLoc, static_cast<float>(value.Val.Double));
 				break;
 			}
 			case Reflection::ValueType::Vector2:
 			{
-				const glm::vec2& vec = value.AsVector2();
+				const glm::vec2& vec = value.Val.Vec2;
 				glUniform2f(uniformLoc, vec.x, vec.y);
 				break;
 			}
 			case Reflection::ValueType::Vector3:
 			{
-				glm::vec3& vec = value.AsVector3();
+				const glm::vec3& vec = value.Val.Vec3;
 				glUniform3f(
 					uniformLoc,
 					vec.x,
@@ -92,7 +92,7 @@ void ShaderProgram::Activate()
 			}
 			case Reflection::ValueType::Color:
 			{
-				Color vec = Color(value);
+				const Color& vec = Color(value);
 				glUniform3f(
 					uniformLoc,
 					vec.R,
@@ -103,8 +103,7 @@ void ShaderProgram::Activate()
 			}
 			case Reflection::ValueType::Matrix:
 			{
-				glm::mat4 mat = value.AsMatrix();
-				glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(mat));
+				glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(value.Val.Mat));
 				break;
 			}
 

@@ -37,7 +37,6 @@ struct EcSound : public Component<EntityComponent::Sound>
 
     float NextRequestedPosition = -1.f;
 
-    ObjectRef Object;
     uint32_t EcId = UINT32_MAX;
 
     std::vector<Reflection::EventCallback> OnLoadedCallbacks;

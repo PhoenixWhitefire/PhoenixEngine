@@ -1561,6 +1561,15 @@
   "@phoenix/globaltype/Collections.GetCollections": {
     "documentation": "Returns a list of all collections that the Collections system has recognized. They may be empty. Order is *not* guaranteed"
   },
+  "@phoenix/globaltype/Collections.GetComponentCreatedSignal": {
+    "documentation": "Returns a signal that fires when a given component is created from the world"
+  },
+  "@phoenix/globaltype/Collections.GetComponentDeletedSignal": {
+    "documentation": "Returns a signal that fires when a given component is deleted from the world"
+  },
+  "@phoenix/globaltype/Collections.GetObjectsWithComponent": {
+    "documentation": "Returns a list of all objects with the given component"
+  },
   "@phoenix/globaltype/Collections.GetTagAddedSignal": {
     "documentation": "Returns a signal that fires when the given tag is added to any Objects"
   },
@@ -1777,6 +1786,9 @@
   "@phoenix/globaltype/GameObject.AddTag": {
     "documentation": "Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag"
   },
+  "@phoenix/globaltype/GameObject.DataModel": {
+    "documentation": "The DataModel this Object belongs to"
+  },
   "@phoenix/globaltype/GameObject.Destroy": {
     "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
   },
@@ -1831,6 +1843,9 @@
   "@phoenix/globaltype/GameObject.OnTagRemoved": {
     "documentation": "Fires when the Object loses a tag, passing the tag to the callback"
   },
+  "@phoenix/globaltype/GameObject.OnTreeEnabledChanged": {
+    "documentation": "Fires when the value of `.TreeEnabled` changes"
+  },
   "@phoenix/globaltype/GameObject.Parent": {
     "documentation": "The hierarchal parent of the Object, or `nil` if it does not have one"
   },
@@ -1842,6 +1857,9 @@
   },
   "@phoenix/globaltype/GameObject.Serializes": {
     "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `AssetManager:SaveScene`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
+  },
+  "@phoenix/globaltype/GameObject.TreeEnabled": {
+    "documentation": "Whether this object and all of its ancestors are enabled"
   },
   "@phoenix/globaltype/History.ActionHistorySize": {
     "documentation": "The total number of Actions that have finished being recorded"
@@ -2232,6 +2250,9 @@
   },
   "@phoenix/globaltype/Transform.LocalTransform": {
     "documentation": "The Object's transformation, relative to its parent Transform ancestor or the world origin"
+  },
+  "@phoenix/globaltype/Transform.OnScriptMoved": {
+    "documentation": "Fires when a script moves the object"
   },
   "@phoenix/globaltype/Transform.Size": {
     "documentation": "The Object's world-space scale factor"

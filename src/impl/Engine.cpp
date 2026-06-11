@@ -480,7 +480,7 @@ static void traverseHierarchy(
 		if (EcSound* sound = object->FindComponent<EcSound>(); sound && !Engine::Get()->IsHeadlessMode)
 			sound->Update(DeltaTime);
 
-		if (!object->Enabled)
+		if (!object->GetEnabled())
 			return true; // continue
 
 		EcTransform* ct = object->FindComponent<EcTransform>();
@@ -627,7 +627,7 @@ static void traverseAndRenderUIHierarchy(
 
 	Root->ForEachChild([&](const ObjectHandle& child) -> bool
 	{
-		if (!child->Enabled)
+		if (!child->GetEnabled())
 			return true;
 
 		EcTreeLink* et = child->FindComponent<EcTreeLink>();

@@ -3,7 +3,8 @@
     "Base": {
       "Events": {
         "OnTagAdded": "(String)",
-        "OnTagRemoved": "(String)"
+        "OnTagRemoved": "(String)",
+        "OnTreeEnabledChanged": "(Boolean)"
       },
       "Methods": {
         "AddComponent": "(String) -> ()",
@@ -25,11 +26,13 @@
         "RemoveTag": "(String) -> ()"
       },
       "Properties": {
+        "DataModel": "GameObject? READONLY",
         "Enabled": "Boolean",
         "Name": "String",
         "ObjectId": "Integer READONLY",
         "Parent": "GameObject?",
-        "Serializes": "Boolean"
+        "Serializes": "Boolean",
+        "TreeEnabled": "Boolean READONLY"
       }
     },
     "Components": {
@@ -85,6 +88,9 @@
       "Collections": {
         "Methods": {
           "GetCollections": "() -> (Array)",
+          "GetComponentCreatedSignal": "(String) -> (EventSignal)",
+          "GetComponentDeletedSignal": "(String) -> (EventSignal)",
+          "GetObjectsWithComponent": "(String) -> (Array)",
           "GetTagAddedSignal": "(String) -> (EventSignal)",
           "GetTagRemovedSignal": "(String) -> (EventSignal)",
           "GetTagged": "(String) -> (Array)"
@@ -347,6 +353,9 @@
         }
       },
       "Transform": {
+        "Events": {
+          "OnScriptMoved": "(Matrix, Matrix)"
+        },
         "Properties": {
           "LocalSize": "Vector3",
           "LocalTransform": "Matrix",

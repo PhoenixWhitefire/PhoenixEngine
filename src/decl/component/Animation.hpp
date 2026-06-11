@@ -65,7 +65,6 @@ struct EcAnimator : public Component<EntityComponent::Animator>
 
     // `AnimationState`s
     std::vector<ObjectHandle> Animations;
-    ObjectRef Object;
 
     bool Animating = true;
     bool Valid = true;

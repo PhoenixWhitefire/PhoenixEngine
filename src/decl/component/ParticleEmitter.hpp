@@ -15,8 +15,6 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 	void Update(double);
 	void Render(const glm::mat4& RenderMatrix);
 
-	ObjectRef Object;
-
 	uint32_t Rate = 50; // Particles to be spawned every second
 	glm::vec2 Lifetime = { 1.5f, 2.f }; // Randomly chosen between the range X - Y;
 

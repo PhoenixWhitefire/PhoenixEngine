@@ -469,7 +469,7 @@ local rtol: { [string]: string } = {
 	["->"] = ":",
 	READONLY = "",
 	RUNTIMEONLY = "",
-	Any = "unknown"
+	Any = "unknown",
 }
 
 local function rtolsub(str)
@@ -584,8 +584,11 @@ local function dumpReflectionApi(t, d, cn, externType)
 				}
 
 				subst = string.sub(subst, 2, #subst)
-				local close = string.find(subst, ") :")
-				assert(close, `{cn}.{n} improper formatting of type, missing ') :'. Got {subst}`)
+				local close = string.find(subst, "%) : ")
+
+				if not close then
+					docWarn(`{cn}.{n} improper formatting of type, missing ') :'. Got {subst}`)
+				end
 
 				if string.sub(subst, 1, 1) == ")" then -- ") : ([...])" when no inputs
 					if typeof(docs) == "table" and docs.Out and typeof(docs.Out) == "string" then
@@ -608,7 +611,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 						else
 							local name = if typeof(docs.ParameterNames) == "table" then docs.ParameterNames[i] else docs.ParameterNames
 							if not name then
-								docWarn(`Missing parameter name for parameter {i} of {cn}.{n}`)
+								docWarn(`Missing parameter name for parameter {i} ({t}) of {cn}.{n}`)
 								name = `Param_{i}`
 							end
 
@@ -616,7 +619,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 						end
 					end
 
-					subst = string.sub(subst, close + 1, #subst)
+					subst = if close then string.sub(subst, close + 1, #subst) else ""
 
 					if typeof(docs) == "table" and docs.Out and typeof(docs.Out) == "string" then
 						subst = " : " ..  docs.Out
@@ -637,7 +640,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 				end
 
 				subst = GameObjectOverrides[n] or subst
-				subst = string.gsub(subst, " : ", " -> ")
+				subst = subst:gsub("%) : ", ") -> ")
 				subst = string.gsub(subst, "self", `self: { if cn == "GameObject" then "" else "Ec" }{cn}`)
 
 				if n ~= "SetShaderVariable" then

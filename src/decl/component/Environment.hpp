@@ -8,8 +8,6 @@ struct EcEnvironmentService : public Component<EntityComponent::Environment>
 {
     void ChangeSkybox(const std::string_view& Path);
 
-    ObjectRef Object;
-
     Color AmbientLight = { .3f, .3f, .3f };
     Color FogColor = { 0.85f, 0.85f, 0.90f };
     float GammaCorrection = 1.f;

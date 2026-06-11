@@ -27,8 +27,6 @@ struct EcCamera : public Component<EntityComponent::Camera>
 	float MovementSpeed = 0.5f;
 	float MouseSensitivity = 100.f;
 	bool Valid = true;
-
-	ObjectRef Object;
 };
 
 class CameraComponentManager : public ComponentManager<EcCamera>

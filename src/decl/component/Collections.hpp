@@ -12,5 +12,6 @@ struct EcCollections : public Component<EntityComponent::Collections>
 class CollectionsComponentManager : public ComponentManager<EcCollections>
 {
 public:
+    uint32_t CreateComponent(GameObject* Object) override;
     const Reflection::StaticMethodMap& GetMethods() override;
 };

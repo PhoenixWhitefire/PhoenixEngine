@@ -2,8 +2,8 @@
 // a simple toolset, build right into the engine
 #pragma once
 
-#include "render/Renderer.hpp"
 #include "script/DebugBreakReason.hpp"
+#include "render/Renderer.hpp"
 
 struct lua_State;
 struct lua_Debug;

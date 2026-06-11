@@ -34,7 +34,6 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
 
     std::vector<glm::vec3> SpatialHashPoints;
 	ObjectRef PrevWorkspace;
-    ObjectRef Object;
     EcTransform* CurTransform; // Only used during the Physics phase
 
     std::string HullsFile;

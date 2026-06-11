@@ -48,10 +48,9 @@ void WorkspaceComponentManager::Shutdown()
 const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
-		{ "SceneCamera", {
-			"SceneCamera",
-			REFLECTION_OPTIONAL(GameObject),
-			[](void* p)
+		{ "SceneCamera", Reflection::PropertyDescriptor{
+			.Name = "SceneCamera",
+			.Get = [](void* p)
 			-> Reflection::GenericValue
 			{
 				const ObjectHandle& cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
@@ -61,10 +60,11 @@ const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
 				else
 					return {}; // Null
 			},
-			[](void* p, const Reflection::GenericValue& gv)
+			.Set = [](void* p, const Reflection::GenericValue& gv)
 			{
 				static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObjectManager::Get()->FromGenericValue(gv));
-			}
+			},
+			.Type = REFLECTION_OPTIONAL(GameObject),
 		} }
     };
 
