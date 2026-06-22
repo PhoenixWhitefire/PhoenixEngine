@@ -704,7 +704,7 @@ std::vector<ObjectHandle> SceneFormat::Deserialize(
 	if (version >= 1.f && version < 2.f)
 		objects = loadSceneVersion1(jsonFileContents, SuccessPtr);
 	else if (version >= 2.f && version < 3.f)
-			objects = loadSceneVersion2(jsonFileContents, version, SuccessPtr);
+		objects = loadSceneVersion2(jsonFileContents, version, SuccessPtr);
 	else
 	{
 		errorString = std::format(
@@ -714,6 +714,21 @@ std::vector<ObjectHandle> SceneFormat::Deserialize(
 		*SuccessPtr = false;
 
 		return {};
+	}
+
+	for (ObjectHandle& object : objects)
+	{
+		if (EcTransform* ct = object->FindComponent<EcTransform>())
+			ct->RecomputeTransformTree();
+		else
+		{
+			object->ForEachDescendant([](const ObjectHandle& d)
+			{
+				if (EcTransform* dt = d->FindComponent<EcTransform>())
+					dt->RecomputeTransformTree();
+				return true;
+			});
+		}
 	}
 
 	return objects;

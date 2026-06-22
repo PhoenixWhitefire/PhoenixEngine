@@ -106,6 +106,7 @@ public:
 	std::vector<Reflection::EventCallback> OnTagAddedCallbacks;
 	std::vector<Reflection::EventCallback> OnTagRemovedCallbacks;
 	std::vector<Reflection::EventCallback> OnTreeEnabledChangedCallbacks;
+	std::vector<Reflection::EventCallback> OnWorkspaceChangedCallbacks;
 
 	uint16_t HardRefCount = 0;
 

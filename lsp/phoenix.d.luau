@@ -264,7 +264,6 @@ end
 
 
 export type GameObject = {
-  read DataModel: GameObject? ,
   Enabled: boolean,
   Name: string,
   read ObjectId: number ,
@@ -293,6 +292,7 @@ export type GameObject = {
   OnTagAdded: EventSignal<(string)>,
   OnTagRemoved: EventSignal<(string)>,
   OnTreeEnabledChanged: EventSignal<(boolean)>,
+  OnWorkspaceChanged: EventSignal<(GameObject, GameObject)>,
 }
 export type EcAnimationAsset = {
   Animation: string,

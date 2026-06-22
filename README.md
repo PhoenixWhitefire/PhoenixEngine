@@ -20,10 +20,10 @@ After downloading from Actions, you can launch the Editor through the main execu
 
 # Building
 
-On Linux, you may use `bash shell/setup.sh`, and then `shell/build.sh CONFIG` (where `CONFIG` is one of `Debug`, `Release`, `[Debug/Release]TSan`, or `ReleaseAUSan`) to download dependencies, configure CMake and build the engine.
+On Linux, you may use `bash shell/setup.sh`, and then `shell/build.sh [CONFIG]` (where `CONFIG` may be empty or one of `Debug`, `Release`, `[Debug/Release]TSan`, or `ReleaseAUSan`) to download dependencies, configure CMake and build the engine.
 Note that dependency installation is done using `apt-get`.
 
-When you want to pull in the latest changes, you may use `shell/update.sh CONFIG`, which runs `git pull` and builds.
+When you want to pull in the latest changes, you may use `shell/update.sh [CONFIG]`, which runs `git pull` and builds.
 
 Otherwise, you may follow these instructions.
 
@@ -41,7 +41,7 @@ Otherwise, you may follow these instructions.
     * On Linux, you may run `bash shell/chmod.sh && shell/configure.sh` in the root Git directory
     
 3. Open the resulting project in your IDE of choice
-4. Build with `shell/build.sh <CONFIG>` or equivalent in your IDE, with `CONFIG` being one of:
+4. Build with `shell/build.sh [CONFIG]` or equivalent in your IDE. `CONFIG` may be blank or one of:
 	* `Debug`: Standard Debug build, no optimizations, Address Sanitizer and Tracy
 	* `Release`: All optimizations, including Link-Time/Whole-Program optimization, no Address Sanitizer, Tracy in `ON_DEMAND` mode
     * `DebugTSan`/`ReleaseTSan`: Debug/Release with Thread sanitizer

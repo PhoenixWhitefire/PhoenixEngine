@@ -4,7 +4,8 @@
       "Events": {
         "OnTagAdded": "(String)",
         "OnTagRemoved": "(String)",
-        "OnTreeEnabledChanged": "(Boolean)"
+        "OnTreeEnabledChanged": "(Boolean)",
+        "OnWorkspaceChanged": "(GameObject, GameObject)"
       },
       "Methods": {
         "AddComponent": "(String) -> ()",
@@ -26,7 +27,6 @@
         "RemoveTag": "(String) -> ()"
       },
       "Properties": {
-        "DataModel": "GameObject? READONLY",
         "Enabled": "Boolean",
         "Name": "String",
         "ObjectId": "Integer READONLY",

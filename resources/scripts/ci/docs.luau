@@ -1079,8 +1079,8 @@ fs.write(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv, true)
 fs.write(WIKI_PATH .. "/API-‐-Components.md", components, true)
 fs.write(WIKI_PATH .. "/API-‐-Enums.md", enums, true)
 
-fs.write("./lsp/api.d.luau", definitionsFile, true)
-fs.write("./lsp/api-docs.json", json.encode(documentationData), true)
+fs.write("./lsp/phoenix.d.luau", definitionsFile, true)
+fs.write("./lsp/phoenix.json", json.encode(documentationData), true)
 
 print("Docs CI finish\n\n\n\n\n")
 

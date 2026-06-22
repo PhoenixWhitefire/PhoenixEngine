@@ -24,7 +24,33 @@ local Types = require("@ed/Types")
 local ProjectClosedByDataModelConnection = nil
 local EditorCam = workspace.SceneCamera
 
-local WatchedMovingVisualizations: { [EventConnection]: GameObject & EcTransform } = {}
+local VisualizationsChangedConnections: { [GameObject]: {
+    Moved: EventConnection?,
+    WorkspaceChanged: EventConnection?,
+} } = {}
+
+local function makeVisualizerForObject(Object: GameObject, Visualization: GameObject & EcTransform)
+    -- TODO luau cast
+    local vis = Visualization:Duplicate() :: GameObject & EcTransform
+    vis.Parent = CoreTools.VisualizationsContainer
+
+    local conns = {}
+    VisualizationsChangedConnections[Object] = conns
+
+    if Object:HasComponent("Transform") then
+        local t = Object :: EcTransform
+        vis.Transform = t.Transform
+
+        conns.Moved = t.OnScriptMoved:Connect(function(_, New)
+            vis.Transform = New
+            vis.Enabled = Object:HasComponent("Transform")
+        end)
+    end
+
+    conns.WorkspaceChanged = Object.OnWorkspaceChanged:Connect(function(_, Current)
+        vis.Enabled = Current == State.Project.Workspace
+    end)
+end
 
 function ProjectEditing.Enter(PreviousStage: Types.Stage)
     assert(State.Project.DataModel)
@@ -102,6 +128,11 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
         for _, name in Preferences.DevToolsOpen do
             DeveloperTools:SetToolEnabled(name, true)
         end
+
+        --for _, g in Collections:GetObjectsWithComponent("Camera", State.Project.DataModel) do
+        --    print("got camera")
+        --    makeVisualizerForObject(g, CoreTools.CameraModel:Duplicate())
+        --end
     end
 
     return nil
@@ -167,12 +198,18 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
 
         table.clear(Reimport.Watchers)
 
-        for c, o in WatchedMovingVisualizations do
-            c:Disconnect()
+        for o, cs in VisualizationsChangedConnections do
+            if cs.Moved then
+                cs.Moved:Disconnect()
+            end
+            if cs.WorkspaceChanged then
+                cs.WorkspaceChanged:Disconnect()
+            end
+
             o:Destroy()
         end
 
-        table.clear(WatchedMovingVisualizations)
+        table.clear(VisualizationsChangedConnections)
     end
 
     DeveloperTools:SetExplorerRoot(game)

@@ -10,6 +10,9 @@
         },
         "OnTreeEnabledChanged": {
           "Description": "Fires when the value of `.TreeEnabled` changes"
+        },
+        "OnWorkspaceChanged": {
+          "Description": "Fires when the Object moves between Workspaces"
         }
       },
       "Methods": {

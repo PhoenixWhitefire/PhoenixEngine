@@ -49,17 +49,6 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			},
 			.Type = REFLECTION_OPTIONAL(GameObject),
 		} },
-
-		{ "DataModel", Reflection::PropertyDescriptor{
-			.Name = "DataModel",
-			.Get = [](void* p) -> Reflection::GenericValue
-			{
-				GameObject* g = static_cast<GameObject*>(p);
-				return GameObjectManager::Get()->FindById(g->OwningDataModel)->ToGenericValue();
-			},
-			.Set = nullptr,
-			.Type = REFLECTION_OPTIONAL(GameObject),
-		} },
 	},
 
 	.Methods = {
@@ -317,6 +306,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		REFLECTION_EVENT(GameObject, OnTagAdded, Reflection::ValueType::String),
 		REFLECTION_EVENT(GameObject, OnTagRemoved, Reflection::ValueType::String),
 		REFLECTION_EVENT(GameObject, OnTreeEnabledChanged, Reflection::ValueType::Boolean),
+		REFLECTION_EVENT(GameObject, OnWorkspaceChanged, Reflection::ValueType::GameObject, Reflection::ValueType::GameObject),
 	}
 };
 
@@ -552,14 +542,18 @@ void GameObject::EvaluateOwners()
 
 		if (newOwningWorkspace != this->OwningWorkspace)
 		{
+			GameObjectManager* objectManager = GameObjectManager::Get();
+			REFLECTION_SIGNAL_EVENT(
+				OnWorkspaceChangedCallbacks,
+				GameObject::s_ToGenericValue(objectManager->FindById(OwningWorkspace)),
+				GameObject::s_ToGenericValue(objectManager->FindById(newOwningWorkspace)),
+			);
+
 			this->ForEachDescendant([newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
 				d->OwningWorkspace = newOwningWorkspace;
 				return true;
 			});
 			this->OwningWorkspace = newOwningWorkspace;
-
-			if (EcTransform* ct = this->FindComponent<EcTransform>())
-				ct->RecomputeTransformTree();
 		}
 
 		if (newOwningDataModel != this->OwningDataModel)
@@ -569,9 +563,6 @@ void GameObject::EvaluateOwners()
 				return true;
 			});
 			this->OwningDataModel = newOwningDataModel;
-
-			if (EcTransform* ct = this->FindComponent<EcTransform>())
-				ct->RecomputeTransformTree();
 		}
 	}
 	else
@@ -585,6 +576,13 @@ void GameObject::EvaluateOwners()
 		if (this->FindComponent<EcWorkspace>())
 			newOwningWorkspace = ObjectId;
 
+		GameObjectManager* objectManager = GameObjectManager::Get();
+		REFLECTION_SIGNAL_EVENT(
+			OnWorkspaceChangedCallbacks,
+			GameObject::s_ToGenericValue(objectManager->FindById(OwningWorkspace)),
+			GameObject::s_ToGenericValue(objectManager->FindById(newOwningWorkspace)),
+		);
+
 		this->ForEachDescendant([newOwningDataModel, newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
 			d->OwningDataModel = newOwningDataModel;
 			d->OwningWorkspace = newOwningWorkspace;
@@ -593,6 +591,9 @@ void GameObject::EvaluateOwners()
 		this->OwningDataModel = newOwningDataModel;
 		this->OwningWorkspace = newOwningWorkspace;
 	}
+
+	if (EcTransform* ct = this->FindComponent<EcTransform>())
+		ct->RecomputeTransformTree();
 }
 
 void GameObject::SetParent(const ObjectHandle& newParent)

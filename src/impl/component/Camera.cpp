@@ -21,7 +21,7 @@ const Reflection::StaticPropertyMap& CameraComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
 		REFLECTION_PROPERTY_SIMPLE(EcCamera, UseSimpleController, Boolean),
-		REFLECTION_PROPERTY_SIMPLE(EcCamera, FieldOfView, Double)
+		REFLECTION_PROPERTY_SIMPLE(EcCamera, FieldOfView, Double),
     };
 
     return props;

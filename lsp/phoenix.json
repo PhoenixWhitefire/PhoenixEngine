@@ -1786,9 +1786,6 @@
   "@phoenix/globaltype/GameObject.AddTag": {
     "documentation": "Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag"
   },
-  "@phoenix/globaltype/GameObject.DataModel": {
-    "documentation": "The DataModel this Object belongs to"
-  },
   "@phoenix/globaltype/GameObject.Destroy": {
     "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
   },
@@ -1845,6 +1842,9 @@
   },
   "@phoenix/globaltype/GameObject.OnTreeEnabledChanged": {
     "documentation": "Fires when the value of `.TreeEnabled` changes"
+  },
+  "@phoenix/globaltype/GameObject.OnWorkspaceChanged": {
+    "documentation": "Fires when the Object moves between Workspaces"
   },
   "@phoenix/globaltype/GameObject.Parent": {
     "documentation": "The hierarchal parent of the Object, or `nil` if it does not have one"

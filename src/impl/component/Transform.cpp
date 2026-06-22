@@ -47,6 +47,7 @@ static void recomputeWorldTransforms(EcTransform* ct)
     {
         if (EcTransform* pct = parent->FindComponent<EcTransform>())
         {
+            pct->RecomputeTransformTree();
             ct->Transform = pct->Transform * ct->LocalTransform; // parent should already have up-to-date World Transforms
             ct->Size = pct->Size * ct->LocalSize;
             break;
@@ -61,6 +62,7 @@ uint32_t TransformComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcTransform>::CreateComponent(Object);
     m_Components[id].Object = Object;
+    m_Components[id].RecomputeTransformTree();
 
     return id;
 }
@@ -108,9 +110,7 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
                 ZoneScoped;
                 EcTransform* ct = static_cast<EcTransform*>(p);
                 glm::mat4 prevTrans = ct->Transform;
-
                 ct->SetWorldTransform(gv.AsMatrix());
-                ct->RecomputeTransformTree();
 
                 REFLECTION_SIGNAL_EVENT(ct->OnScriptMovedCallbacks, prevTrans, ct->Transform);
             },
@@ -131,7 +131,6 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
                     
                 EcTransform* ct = static_cast<EcTransform*>(p);
                 ct->SetWorldSize(gv.AsVector3());
-                ct->RecomputeTransformTree();
             },
             .Type = Reflection::ValueType::Vector3,
             .Serializes = false,

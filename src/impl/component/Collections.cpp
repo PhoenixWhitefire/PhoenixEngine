@@ -99,8 +99,8 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
             {
                 const EcCollections* collections = static_cast<EcCollections*>(p);
                 EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
-                uint32_t datamodel = inputs.size() > 1 ?
-                                        GameObjectManager::Get()->FromGenericValue(inputs[1])->OwningDataModel
+                uint32_t datamodel = inputs.size() > 1 && inputs[1].Type != Reflection::ValueType::Null
+                                        ? GameObjectManager::Get()->FromGenericValue(inputs[1])->ObjectId
                                         : collections->Object->OwningDataModel;
 
                 std::vector<Reflection::GenericValue> ret;
@@ -126,7 +126,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
                 GameObjectManager* objectManager = GameObjectManager::Get();
 
                 EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
-                uint32_t datamodelId = inputs.size() > 1
+                uint32_t datamodelId = inputs.size() > 1 && inputs[1].Type != Reflection::ValueType::Null
                                             ? objectManager->FromGenericValue(inputs[1])->ObjectId
                                             : collections->Object->OwningDataModel;
 
@@ -157,7 +157,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
                 GameObjectManager* objectManager = GameObjectManager::Get();
 
                 EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
-                uint32_t datamodelId = inputs.size() > 1
+                uint32_t datamodelId = inputs.size() > 1 && inputs[1].Type != Reflection::ValueType::Null
                                             ? objectManager->FromGenericValue(inputs[1])->ObjectId
                                             : collections->Object->OwningDataModel;
 
