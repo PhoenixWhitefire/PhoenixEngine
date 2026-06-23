@@ -70,10 +70,10 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
 
-    - name: Setup PATH for Windows Address Sanitizer
-      if: runner.os == 'Windows'
-      shell: cmd
-      run: call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\Common7\Tools\VsDevCmd.bat"
+    # - name: Setup PATH for Windows Address Sanitizer
+    #   if: runner.os == 'Windows'
+    #   shell: cmd
+    #   run: call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\Common7\Tools\VsDevCmd.bat"
 
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'

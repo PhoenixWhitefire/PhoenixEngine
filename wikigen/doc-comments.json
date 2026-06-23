@@ -2480,6 +2480,10 @@
             "In": "File: string, ChunkName: string?",
             "Out": "thread?, string?"
           },
+          "setglobal": {
+            "Description": "Sets a global for a given coroutine",
+            "In": "Coroutine: thread, Global: string, Value: unknown"
+          },
           "wait": {
             "Description": "Yields the thread for the specified number of seconds. Default is `0`",
             "In": "SleepTime: number?",

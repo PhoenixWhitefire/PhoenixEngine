@@ -1,3 +1,5 @@
+assert(plugin)
+
 local Types = require("@ed/Types.luau")
 
 local TestPlugin: Types.Plugin = {

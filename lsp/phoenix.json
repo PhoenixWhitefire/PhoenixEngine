@@ -1474,6 +1474,9 @@
   "@phoenix/global/task.loadfile": {
     "documentation": "* Similar to `loadthread`, however loads from a file instead of from a string directly"
   },
+  "@phoenix/global/task.setglobal": {
+    "documentation": "* Sets a global for a given coroutine"
+  },
   "@phoenix/global/task.wait": {
     "documentation": "* Yields the thread for the specified number of seconds. Default is `0`"
   },

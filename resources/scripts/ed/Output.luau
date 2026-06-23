@@ -19,7 +19,7 @@ type LogMessageItem = {
     Newline: boolean,
     ExtraTags: string,
     CanInteract: boolean,
-    Tooltip: string
+    Tooltip: string,
 }
 type LogMessage = {
     Closed: boolean,
@@ -31,7 +31,9 @@ type LogMessage = {
     OpenTables: { [unknown]: boolean },
     TablesWithAnyElements: { [unknown]: boolean? },
     TablePrettyOpen: { [string]: boolean },
-    TablePrettyChangeOpen: { [string]: boolean }
+    TablePrettyChangeOpen: { [string]: boolean },
+    RepeatCount: number,
+    RawContent: string,
 }
 
 local NewLogMessage = false
@@ -343,6 +345,11 @@ function Output.Render()
                 end
             end
 
+            if message.RepeatCount > 1 then
+                imgui.sameline()
+                imgui.text(`(x{ message.RepeatCount })`)
+            end
+
             imgui.popstylecolor()
             imgui.popstylecolor()
         end
@@ -423,12 +430,19 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
                 ExtraTags = ExtraTags,
                 CanInteract = canInteract,
                 Tooltip = tooltip,
-                Newline = createsNewline
+                Newline = createsNewline,
             })
+            lastLog.RawContent ..= " " .. Message
 
             return
         else
             lastLog.Closed = true
+
+            local prev = Output.Log[#Output.Log - 1]
+            if prev and prev.RawContent == lastLog.RawContent then
+                table.remove(Output.Log)
+                prev.RepeatCount += 1
+            end
         end
     end
 
@@ -438,7 +452,7 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
         ExtraTags = ExtraTags,
         CanInteract = canInteract,
         Tooltip = tooltip,
-        Newline = createsNewline
+        Newline = createsNewline,
     }
 
     local logMessage: LogMessage = {
@@ -451,7 +465,9 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
         OpenTables = {},
         TablesWithAnyElements = {},
         TablePrettyOpen = {},
-        TablePrettyChangeOpen = {}
+        TablePrettyChangeOpen = {},
+        RepeatCount = 1,
+        RawContent = Message,
     }
 
     if #Output.Log >= 999 then

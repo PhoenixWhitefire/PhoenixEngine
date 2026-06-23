@@ -149,11 +149,27 @@ static int task_loadfile(lua_State* L)
 	return 2;
 }
 
+static int task_setglobal(lua_State* L)
+{
+	luaL_checktype(L, 1, LUA_TTHREAD);
+	lua_State* co = lua_tothread(L, 1);
+
+	const char* k = luaL_checkstring(L, 2);
+	luaL_checkany(L, 3);
+
+	lua_xmove(L, co, 1);
+	lua_setglobal(co, k);
+
+	return 0;
+}
+
 const luaL_Reg task_funcs[] = {
     { "wait", task_wait },
     { "defer", task_defer },
     { "delay", task_delay },
 	{ "load", task_load },
+
+	{ "setglobal", task_setglobal },
 
     { NULL, NULL }
 };

@@ -238,6 +238,11 @@ export type MeshAssetData = {
 	},
 	Indices: { number }
 }
+
+declare plugin: {
+	ProjectDatamodel: GameObject & EcDataModel,
+	ProjectWorkspace: GameObject & EcWorkspace,
+}?
 ]]
 
 definitionsFile ..= "\ntype Services = {\n"

@@ -175,6 +175,11 @@ export type MeshAssetData = {
 	Indices: { number }
 }
 
+declare plugin: {
+	ProjectDatamodel: GameObject & EcDataModel,
+	ProjectWorkspace: GameObject & EcWorkspace,
+}?
+
 type Services = {
   Engine: EcEngine,
   PlayerInput: EcPlayerInput,
@@ -1091,6 +1096,7 @@ declare task: {
   delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
   load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
   loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
+  setglobal: (( Coroutine: thread, Global: string, Value: unknown ) -> ()),
   wait: (( SleepTime: number? ) -> (number))
 }
 

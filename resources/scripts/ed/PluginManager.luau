@@ -1,6 +1,7 @@
 --!strict
 local FALLBACK_IMAGE = "textures/editor-icons/fallback.png"
 
+local State = require("./State.luau")
 local Types = require("./Types.luau")
 type EditorStage = Types.Stage
 type Plugin = Types.Plugin
@@ -96,6 +97,11 @@ local function loadPlugin_(Path, ParentPath: string?)
     local co, err = task.loadfile(Path)
 
     if co then
+        task.setglobal(co, "plugin", {
+            ProjectDatamodel = State.Project.DataModel,
+            ProjectWorkspace = State.Project.Workspace,
+        })
+
         local success, data = coroutine.resume(co)
 
         if success and data then

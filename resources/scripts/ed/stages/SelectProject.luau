@@ -194,9 +194,9 @@ local function renderSavedProjects()
                     local savedInfo = editorConf.Saved
                     local createdInfo = conf["Created" :: string] :: any
 
-                    engine = if savedInfo then savedInfo.EngineVersion else "0"
-                    savedTime = if savedInfo then savedInfo.Time else 0
-                    created = if createdInfo then createdInfo.Time else 0
+                    engine = if typeof(savedInfo) == "table" then savedInfo.EngineVersion else "0"
+                    savedTime = if typeof(savedInfo) == "table" then savedInfo.Time else 0
+                    created = if typeof(createdInfo) == "table" then createdInfo.Time else 0
                 end
 
                 table.insert(State.SavedProjectsCache, {

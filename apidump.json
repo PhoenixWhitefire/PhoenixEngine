@@ -873,6 +873,7 @@
         "delay": "function",
         "load": "function",
         "loadfile": "function",
+        "setglobal": "function",
         "wait": "function"
       }
     }
