@@ -25,9 +25,10 @@ local ProjectClosedByDataModelConnection = nil
 local EditorCam = workspace.SceneCamera
 
 local VisualizationsChangedConnections: { [GameObject]: {
-    Moved: EventConnection?,
-    WorkspaceChanged: EventConnection?,
+    read Moved: EventConnection?,
+    read WorkspaceChanged: EventConnection?,
 } } = {}
+local NewCameraCreatedConnection: EventConnection? = nil
 
 local function makeVisualizerForObject(Object: GameObject, Visualization: GameObject & EcTransform)
     -- TODO luau cast
@@ -50,6 +51,8 @@ local function makeVisualizerForObject(Object: GameObject, Visualization: GameOb
     conns.WorkspaceChanged = Object.OnWorkspaceChanged:Connect(function(_, Current)
         vis.Enabled = Current == State.Project.Workspace
     end)
+
+    CoreTools.VisualizationTargets[vis] = Object
 end
 
 function ProjectEditing.Enter(PreviousStage: Types.Stage)
@@ -128,12 +131,20 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
         for _, name in Preferences.DevToolsOpen do
             DeveloperTools:SetToolEnabled(name, true)
         end
-
-        --for _, g in Collections:GetObjectsWithComponent("Camera", State.Project.DataModel) do
-        --    print("got camera")
-        --    makeVisualizerForObject(g, CoreTools.CameraModel:Duplicate())
-        --end
     end
+
+    for _, g in Collections:GetObjectsWithComponent("Camera", State.Project.DataModel) do
+        -- TODO luau inferring `g` as `*error-type*`
+        -- TODO luau cast https://github.com/luau-lang/luau/issues/2456
+        --local cam: GameObject & EcTransform = CoreTools.CameraModel:Duplicate() :: any
+        makeVisualizerForObject(g, CoreTools.CameraModel)
+    end
+
+    NewCameraCreatedConnection = Collections:GetComponentCreatedSignal("Camera", State.Project.DataModel):Connect(function(Camera)
+        task.wait()
+        print(Camera:GetFullName())
+        makeVisualizerForObject(Camera, CoreTools.CameraModel)
+    end)
 
     return nil
 end
@@ -159,24 +170,19 @@ function ProjectEditing.Render(DeltaTime: number)
         end
     end
 
-    local sceneCam = State.Project.Workspace and State.Project.Workspace.SceneCamera
+    for vis, _ in CoreTools.VisualizationTargets do
+        if vis == CoreTools.HoveringOverCamera then
+            continue
+        end
 
-    if sceneCam then
-        CoreTools.CameraModel.Transform = sceneCam.Transform
-        CoreTools.CameraModel.Enabled = true
+        local transparency = math.clamp(0.5 / vector.magnitude(vis.Transform.Position - workspace.SceneCamera.Transform.Position)^4, 0, 1)
 
-        if not CoreTools.HoveringOverSceneCamera then
-            local transparency = math.clamp(0.5 / vector.magnitude(CoreTools.CameraModel.Transform.Position - workspace.SceneCamera.Transform.Position)^4, 0, 1)
-
-            for _, g in CoreTools.CameraModel:GetChildren() do
-                if g:HasComponent("Mesh") then
-                    local m = g :: EcMesh
-                    m.Transparency = transparency
-                end
+        for _, g in vis:GetChildren() do
+            if g:HasComponent("Mesh") then
+                local m = g :: EcMesh
+                m.Transparency = transparency
             end
         end
-    else
-        CoreTools.CameraModel.Enabled = false
     end
 end
 
@@ -197,19 +203,23 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
         end
 
         table.clear(Reimport.Watchers)
+    end
 
-        for o, cs in VisualizationsChangedConnections do
-            if cs.Moved then
-                cs.Moved:Disconnect()
-            end
-            if cs.WorkspaceChanged then
-                cs.WorkspaceChanged:Disconnect()
-            end
-
-            o:Destroy()
+    for o, cs in VisualizationsChangedConnections do
+        if cs.Moved then
+            cs.Moved:Disconnect()
+        end
+        if cs.WorkspaceChanged then
+            cs.WorkspaceChanged:Disconnect()
         end
 
-        table.clear(VisualizationsChangedConnections)
+        o:Destroy()
+    end
+
+    table.clear(VisualizationsChangedConnections)
+
+    if NewCameraCreatedConnection then
+        NewCameraCreatedConnection:Disconnect()
     end
 
     DeveloperTools:SetExplorerRoot(game)

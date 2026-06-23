@@ -105,7 +105,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
 
                 std::vector<Reflection::GenericValue> ret;
 
-                GetComponentManagerByComponentType(ec)->ForEachComponent([ret, datamodel](BaseComponent* component) mutable -> bool
+                GetComponentManagerByComponentType(ec)->ForEachComponent([&ret, datamodel](BaseComponent* component) -> bool
                 {
                     if (component->Object->OwningDataModel == datamodel)
                         ret.push_back(component->Object->ToGenericValue());

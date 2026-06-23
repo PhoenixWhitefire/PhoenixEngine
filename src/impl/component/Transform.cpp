@@ -47,7 +47,6 @@ static void recomputeWorldTransforms(EcTransform* ct)
     {
         if (EcTransform* pct = parent->FindComponent<EcTransform>())
         {
-            pct->RecomputeTransformTree();
             ct->Transform = pct->Transform * ct->LocalTransform; // parent should already have up-to-date World Transforms
             ct->Size = pct->Size * ct->LocalSize;
             break;

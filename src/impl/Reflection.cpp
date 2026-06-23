@@ -553,7 +553,7 @@ static void deallocGv(Reflection::GenericValue* gv)
     }
     case ValueType::GameObject:
     {
-        if (gv->Val.Int != PHX_GAMEOBJECT_NULL_ID)
+        if (gv->Val.Int != PHX_GAMEOBJECT_NULL_ID && gv->Val.Int > 0)
         {
             GameObject* object = GameObjectManager::Get()->FromGenericValue(*gv);
             object->DecrementHardRefs();

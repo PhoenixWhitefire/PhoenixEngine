@@ -4,10 +4,13 @@ local PlayerInput = game:GetService("PlayerInput")
 local History = game:GetService("History")
 
 local CoreTools = {}
-CoreTools.HoveringOverSceneCamera = false
+CoreTools.HoveringOverCamera = nil :: (GameObject & EcTransform)?
 CoreTools.VisualizationsContainer = GameObject.new("Model")
-CoreTools.CameraModel = assert(AssetManager:LoadScene("./resources/scenes/camera.hxscene"))[1] :: (GameObject & EcTransform)?
-assert(CoreTools.CameraModel)
+CoreTools.VisualizationsContainer.Parent = workspace
+CoreTools.VisualizationTargets = {} :: { [GameObject & EcTransform]: GameObject }
+
+local cam = assert(AssetManager:LoadScene("./resources/scenes/camera.hxscene"))[1] :: (GameObject & EcTransform)?
+CoreTools.CameraModel = assert(cam)
 
 local Types = require("./Types")
 
@@ -46,12 +49,12 @@ end
 
 GizmoContainer.Name = "GizmoContainer"
 
-local DefaultCameraModelColors = {}
+local DefaultCameraModelColors: { [string]: Color } = {}
 
 for _, g in CoreTools.CameraModel:GetChildren() do
     if g:HasComponent("Mesh") then
         local m = g :: EcMesh
-        DefaultCameraModelColors[g] = m.Tint
+        DefaultCameraModelColors[g.Name] = m.Tint
     end
 end
 
@@ -217,13 +220,22 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
 
     local cameraHit = if not IsSurfaceDragging and not IsGizmoDragging
-                        then workspace:Raycast(camPos, mouseVector, { CoreTools.CameraModel }, false)
+                        then workspace:Raycast(camPos, mouseVector, { CoreTools.VisualizationsContainer }, false)
                         else nil
+    local camObj = if cameraHit then assert(cameraHit.Object.Parent) :: GameObject & EcTransform else nil
 
-    if cameraHit and not CoreTools.HoveringOverSceneCamera then
-        local hidden = vector.magnitude(workspace.SceneCamera.Transform.Position - CoreTools.CameraModel.Transform.Position) < 0.5
+    if camObj then
+        if camObj.Enabled then
+            assert(camObj:HasComponent("Transform"))
+        else
+            camObj = nil
+        end
+    end
 
-        for _, g in CoreTools.CameraModel:GetChildren() do
+    if cameraHit and CoreTools.HoveringOverCamera ~= camObj and camObj then
+        local hidden = vector.magnitude(workspace.SceneCamera.Transform.Position - camObj.Transform.Position) < 0.5
+
+        for _, g in camObj:GetChildren() do
             if g:HasComponent("Mesh") then
                 local m = g :: EcMesh
                 m.Material = "@base/materials/unlit.mtl"
@@ -236,21 +248,31 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
                 end
             end
         end
-    elseif not cameraHit and CoreTools.HoveringOverSceneCamera then
-        for _, g in CoreTools.CameraModel:GetChildren() do
+
+        if CoreTools.HoveringOverCamera then
+            for _, g in CoreTools.HoveringOverCamera:GetChildren() do
+                if g:HasComponent("Mesh") then
+                    local m = g :: EcMesh
+                    m.Material = "@base/materials/plastic.mtl"
+                    m.Tint = DefaultCameraModelColors[g.Name]
+                end
+            end
+        end
+    elseif not cameraHit and CoreTools.HoveringOverCamera then
+        for _, g in CoreTools.HoveringOverCamera:GetChildren() do
             if g:HasComponent("Mesh") then
                 local m = g :: EcMesh
                 m.Material = "@base/materials/plastic.mtl"
-                m.Tint = DefaultCameraModelColors[g]
+                m.Tint = DefaultCameraModelColors[g.Name]
             end
         end
     end
 
-    if cameraHit and tryingToInteract then
-        DeveloperTools:SetExplorerSelections({ Project.Workspace.SceneCamera })
+    if camObj and tryingToInteract then
+        DeveloperTools:SetExplorerSelections({ assert(CoreTools.VisualizationTargets[camObj]) })
     end
 
-    CoreTools.HoveringOverSceneCamera = cameraHit ~= nil
+    CoreTools.HoveringOverCamera = camObj
 
     if not target or not workspace.SceneCamera or target == workspace.SceneCamera then
         resetGizmo()
@@ -316,7 +338,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         end
     end
 
-    GizmoContainer.Size = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 24
+    GizmoContainer.Size = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 60
 
     GizmoPrevTarget = target
     GizmoPrevTargetTransform = target.Transform

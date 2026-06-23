@@ -16,7 +16,6 @@ uint32_t DataModelComponentManager::CreateComponent(GameObject* Object)
     uint32_t id = ComponentManager<EcDataModel>::CreateComponent(Object);
     m_Components[id].Object = Object;
     Object->OwningDataModel = Object->ObjectId;
-    Object->EvaluateOwners();
 
     return id;
 }
