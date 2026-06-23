@@ -92,13 +92,13 @@ local function setPluginAlias(ParentPath: string?)
     end
 end
 
-local function loadPlugin(Path, ParentPath: string?)
+local function loadPlugin_(Path, ParentPath: string?)
     local co, err = task.loadfile(Path)
 
     if co then
-        local success, data: Plugin = coroutine.resume(co)
+        local success, data = coroutine.resume(co)
 
-        if success then
+        if success and data then
             data.Path = Path:sub(assert((Path:find("/plugins"))) + 1, #Path)
             data.ParentPath = ParentPath
             --table.freeze(data)
@@ -115,10 +115,20 @@ local function loadPlugin(Path, ParentPath: string?)
                 data:OnLoad()
             end
         else
-            warn(`PluginManager: Failed to load-execute plugin { Path }: { data }`)
+            warn(`PluginManager: Failed to load-execute plugin '{ Path }', returned value was { data }`)
         end
     else
-        warn(`PluginManager: Failed to load plugin { Path }: { err }`)
+        warn(`PluginManager: Failed to load plugin '{ Path }': { err }`)
+    end
+end
+
+local function loadPlugin(Path, ParentPath: string?)
+    local success, err = pcall(function()
+        loadPlugin_(Path, ParentPath)
+    end)
+
+    if not success then
+        warn(`PluginManager: Error while loading plugin '{ Path }': { err }`)
     end
 end
 
