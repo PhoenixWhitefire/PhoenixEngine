@@ -1093,6 +1093,21 @@
   "@phoenix/global/debug.breakpoint": {
     "documentation": "* Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on\n* If a line is not specified, breaks into Debugger immediately, and returns no values\n* If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect"
   },
+  "@phoenix/global/debug.profilebegin": {
+    "documentation": "* Begins a profiling zone for the current function, optionally accepting a name"
+  },
+  "@phoenix/global/debug.profileend": {
+    "documentation": "* Ends the last profiling zone"
+  },
+  "@phoenix/global/debug.profilemessage": {
+    "documentation": "* Generates a profiler log message event"
+  },
+  "@phoenix/global/debug.profilezonename": {
+    "documentation": "* Set zone name on a per-call basis"
+  },
+  "@phoenix/global/debug.profilezonetext": {
+    "documentation": "* Set additional debug text for the zone"
+  },
   "@phoenix/global/fs": {
     "documentation": "* Interacting with the player's filesystem"
   },

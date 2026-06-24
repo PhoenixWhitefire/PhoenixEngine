@@ -962,9 +962,14 @@ declare Enum: {
 
 declare _RUNTIME: _RUNTIME
 declare debug: {
-	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,
+	traceback: ((msg: string?, level: number?) -> string) & (co: read, msg: string?, level: number?) -> string,
 	info: (level: number, s: string) -> string,
-  breakpoint: (( (Line: number ) -> (number)) & (() -> ()))
+  breakpoint: (( (Line: number ) -> (number)) & (() -> ())),
+  profilebegin: (( Name: string? ) -> ()),
+  profileend: ((  ) -> ()),
+  profilemessage: (( Message: string ) -> ()),
+  profilezonename: (( Name: string ) -> ()),
+  profilezonetext: (( Text: string ) -> ())
 }
 declare fs: {
   copy: (( From: string, To: string ) -> ()),

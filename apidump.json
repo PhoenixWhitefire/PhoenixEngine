@@ -741,7 +741,12 @@
         "version": "table"
       },
       "debug": {
-        "breakpoint": "function"
+        "breakpoint": "function",
+        "profilebegin": "function",
+        "profileend": "function",
+        "profilemessage": "function",
+        "profilezonename": "function",
+        "profilezonetext": "function"
       },
       "fs": {
         "copy": "function",

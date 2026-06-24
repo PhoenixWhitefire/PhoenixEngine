@@ -1500,6 +1500,25 @@
             ],
             "In": "(Line: number",
             "Out": "number)) & (() -> ()"
+          },
+          "profilebegin": {
+            "Description": "Begins a profiling zone for the current function, optionally accepting a name",
+            "In": "Name: string?"
+          },
+          "profileend": {
+            "Description": "Ends the last profiling zone"
+          },
+          "profilemessage": {
+            "Description": "Generates a profiler log message event",
+            "In": "Message: string"
+          },
+          "profilezonename": {
+            "Description": "Set zone name on a per-call basis",
+            "In": "Name: string"
+          },
+          "profilezonetext": {
+            "Description": "Set additional debug text for the zone",
+            "In": "Text: string"
           }
         }
       },
