@@ -1501,11 +1501,11 @@
             "In": "(Line: number",
             "Out": "number)) & (() -> ()"
           },
-          "profilebegin": {
+          "zonebegin": {
             "Description": "Begins a profiling zone for the current function, optionally accepting a name",
             "In": "Name: string?"
           },
-          "profileend": {
+          "zoneend": {
             "Description": "Ends the last profiling zone"
           },
           "profilemessage": {
@@ -1516,7 +1516,7 @@
             "Description": "Set zone name on a per-call basis",
             "In": "Name: string"
           },
-          "profilezonetext": {
+          "zonetext": {
             "Description": "Set additional debug text for the zone",
             "In": "Text: string"
           }

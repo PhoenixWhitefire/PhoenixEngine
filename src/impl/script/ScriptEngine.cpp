@@ -12,6 +12,7 @@
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
 #include "script/SharedMutex.hpp"
+#include "script/TracyLuau.hpp"
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 #include "DeveloperTools.hpp"
@@ -1995,6 +1996,15 @@ static lua_Status finishCoroutine(lua_State* L, int status)
     // NOTE debugger does its own checks to see if the hook was called
     if (maybeEnteredDebugger)
         DeveloperTools::LeaveDebugger(L);
+
+    while (!vmud->UnfinishedProfilerZones.empty())
+    {
+        const std::string_view& name = vmud->UnfinishedProfilerZones.top();
+        Log.WarningF("Profiler zone '{}' was not finished, did you forget to call `debug.zoneend()`?", name);
+
+        tracy::LuauZoneEndImpl();
+        vmud->UnfinishedProfilerZones.pop();
+    }
 
     return (lua_Status)status;
 }

@@ -57,7 +57,7 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
 
                 if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
                 {
-                    int result = lua_resume(ML, ML, 0);
+                    int result = ScriptEngine::L::Resume(ML, ML, 0);
                     const char* err = nullptr;
 
                     if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)

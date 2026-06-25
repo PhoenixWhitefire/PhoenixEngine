@@ -181,7 +181,7 @@ local function editorFrame(State, DeltaTime)
 end
 
 local function stageUpdate(State, DeltaTime)
-    debug.profilebegin()
+    debug.zonebegin()
 
     local s, e = (xpcall::any)(function(State, dt)
         editorFrame(State, dt)
@@ -191,7 +191,7 @@ local function stageUpdate(State, DeltaTime)
         warn(`editorFrame error: {e}`)
     end
 
-    debug.profileend()
+    debug.zoneend()
 end
 
 local StageUpdateConnection: EventConnection?

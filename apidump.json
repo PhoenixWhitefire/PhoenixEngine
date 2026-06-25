@@ -742,11 +742,10 @@
       },
       "debug": {
         "breakpoint": "function",
-        "profilebegin": "function",
-        "profileend": "function",
         "profilemessage": "function",
-        "profilezonename": "function",
-        "profilezonetext": "function"
+        "zonebegin": "function",
+        "zoneend": "function",
+        "zonetext": "function"
       },
       "fs": {
         "copy": "function",

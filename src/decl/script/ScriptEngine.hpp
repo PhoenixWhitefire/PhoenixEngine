@@ -7,6 +7,7 @@
 #include <future>
 #include <thread>
 #include <deque>
+#include <stack>
 #include <lua.h>
 
 #include "datatype/GameObject.hpp"
@@ -173,6 +174,7 @@ namespace ScriptEngine::L
         std::vector<EventConnectionData*> EventConnections;
         std::vector<lua_State*> Coroutines; // Only populated for the main thread
         std::vector<std::string> YieldBlockers;
+        std::stack<std::string> UnfinishedProfilerZones;
         double LastResumed = 0.f;
         ParallelVM* PVM = nullptr;
         bool DebuggerAttached = false;
