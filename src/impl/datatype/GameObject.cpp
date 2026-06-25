@@ -466,9 +466,8 @@ void GameObject::Destroy()
 		}
 		Tags.clear();
 
-		for (const ReflectorRef& ref : Components)
-			GetComponentManagerByComponentType(ref.Type)->DeleteComponent(ref.Id);
-		Components.clear();
+		while (!Components.empty())
+			RemoveComponent(Components.back().Type);
 
 		this->SetParent(nullptr);
 
@@ -925,6 +924,7 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	assert(Type != EntityComponent::None);
 
 	for (auto vit = Components.begin(); vit < Components.end(); vit++)
+	{
 		if (vit->Type == Type)
 		{
 			IComponentManager* manager = GetComponentManagerByComponentType(Type);
@@ -977,8 +977,9 @@ void GameObject::RemoveComponent(EntityComponent Type)
 
 			return;
 		}
-	
-	RAISE_RT("Don't have that component");
+	}
+
+	RAISE_RT("Tried to remove {} component from {}, but it doesn't have that!", s_EntityComponentNames[(uint8_t)Type], GetFullName());
 }
 
 const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string_view& PropName, ReflectorRef* FromComponent)
@@ -995,6 +996,8 @@ const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string
 	if (auto it = ComponentApis.Properties.find(PropName); it != ComponentApis.Properties.end())
 	{
 		*FromComponent = MemberToComponentMap[PropName];
+		assert(FromComponent->Referred());
+
 		return it->second;
 	}
 
@@ -1014,6 +1017,8 @@ const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_vie
 	if (auto it = ComponentApis.Methods.find(FuncName); it != ComponentApis.Methods.end())
 	{
 		*FromComponent = MemberToComponentMap[FuncName];
+		assert(FromComponent->Referred());
+
 		return it->second;
 	}
 
@@ -1033,6 +1038,8 @@ const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view&
 	if (auto it = ComponentApis.Events.find(EventName); it != ComponentApis.Events.end())
 	{
 		*Handle = MemberToComponentMap[EventName];
+		assert(Handle->Referred());
+
 		return it->second;
 	}
 

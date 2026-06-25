@@ -223,6 +223,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
                         then workspace:Raycast(camPos, mouseVector, { CoreTools.VisualizationsContainer }, false)
                         else nil
     local camObj = if cameraHit then assert(cameraHit.Object.Parent) :: GameObject & EcTransform else nil
+    local camHitDistance = if cameraHit then vector.magnitude(cameraHit.Position - cam.Transform.Position) else math.huge
 
     if camObj then
         if camObj.Enabled then
@@ -292,7 +293,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     if tryingToInteract and not IsGizmoDragging and not gizmoHit then
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, if IsSurfaceDragging then { target } else {})
 
-        if worldHit and (IsSurfaceDragging or worldHit.Object == target) then
+        if worldHit and (not camObj or vector.magnitude(worldHit.Position - cam.Transform.Position) < camHitDistance) and (IsSurfaceDragging or worldHit.Object == target) then
             assert(worldHit)
 
             if not IsSurfaceDragging then
@@ -345,7 +346,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
     GizmoPrevTargetSize = target.Size
 
     if tryingToInteract then
-        if not IsGizmoDragging and gizmoHit then
+        if not IsGizmoDragging and gizmoHit and vector.magnitude(gizmoHit.Position - cam.Transform.Position) < camHitDistance then
             assert(gizmoHit.Object:HasComponent("Mesh"))
             local hit: GameObject & EcMesh & EcTransform = gizmoHit.Object :: any
 

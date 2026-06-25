@@ -1267,7 +1267,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
     Output.Render()
 
     local canInteract = IsHoveringViewportTitlebar --or (not IsHoveringViewport and imgui.windowhovered("a | b"))
-    local render, open = imgui.begin(State.Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", true)
+    local render, open = imgui.begin(State.Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", State.CurrentStage == "ProjectEditing")
 
     if not open then
         task.defer(State.ChangeStageTo, "SelectProject" :: "SelectProject")

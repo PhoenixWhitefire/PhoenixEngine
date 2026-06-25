@@ -141,8 +141,6 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
     end
 
     NewCameraCreatedConnection = Collections:GetComponentCreatedSignal("Camera", State.Project.DataModel):Connect(function(Camera)
-        task.wait()
-        print(Camera:GetFullName())
         makeVisualizerForObject(Camera, CoreTools.CameraModel)
     end)
 
@@ -212,14 +210,19 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
         if cs.WorkspaceChanged then
             cs.WorkspaceChanged:Disconnect()
         end
-
-        o:Destroy()
     end
 
     table.clear(VisualizationsChangedConnections)
 
+    for _, g in CoreTools.VisualizationsContainer:GetChildren() do
+        g:Destroy()
+    end
+
+    table.clear(CoreTools.VisualizationTargets)
+
     if NewCameraCreatedConnection then
         NewCameraCreatedConnection:Disconnect()
+        NewCameraCreatedConnection = nil
     end
 
     DeveloperTools:SetExplorerRoot(game)

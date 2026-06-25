@@ -314,7 +314,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
 
         // make sure the datamodel still exists
         GameObject* dm = yc->DataModel.Referred();
-        if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel))
+        if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel) || lua_status(yc->Coroutine) == LUA_ERRRUN)
         {
             yc->Dead = true;
             continue;

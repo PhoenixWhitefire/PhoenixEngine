@@ -381,6 +381,7 @@ local function openProject_(State: StateType, ManualPath: string?)
 
     Engine:BindDataModel(State.Project.DataModel)
     ScriptEngine:CreateVM(Configuration.GameEditingVMName)
+    ScriptEngine:DetachDebuggerFromVM(Configuration.GameEditingVMName)
     Engine:BindDataModel(game)
 
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.GameEditingVMName, Preferences.ScriptAllowedExecutionTime)
