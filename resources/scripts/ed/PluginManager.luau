@@ -101,6 +101,7 @@ local function loadPlugin_(Path, ParentPath: string?)
             ProjectDatamodel = State.Project.DataModel,
             ProjectWorkspace = State.Project.Workspace,
         })
+        setPluginAlias(ParentPath)
 
         local success, data = coroutine.resume(co)
 
@@ -110,9 +111,7 @@ local function loadPlugin_(Path, ParentPath: string?)
             --table.freeze(data)
 
             if typeof(data.Icon) == "string" then
-                setPluginAlias(ParentPath)
                 data.Icon = fs.resolvepath(data.Icon)
-                fs.removealias("plugin")
             end
 
             table.insert(PluginManager.Plugins, data)
@@ -123,6 +122,8 @@ local function loadPlugin_(Path, ParentPath: string?)
         else
             warn(`PluginManager: Failed to load-execute plugin '{ Path }', returned value was { data }`)
         end
+
+        fs.removealias("plugin")
     else
         warn(`PluginManager: Failed to load plugin '{ Path }': { err }`)
     end
