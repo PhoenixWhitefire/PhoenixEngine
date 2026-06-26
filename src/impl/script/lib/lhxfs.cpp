@@ -19,8 +19,10 @@
 #endif
 
 #include <tracy/Tracy.hpp>
+#include <tinyfiledialogs.h>
 
 #include "script/luhx.hpp"
+#include "script/ScriptEngine.hpp"
 #include "FileRW.hpp"
 
 // windows??
@@ -187,11 +189,27 @@ static int fs_issymlink(lua_State* L)
     return 1;
 }
 
+static ScriptEngine::LuauVM& getSerialLuauVM(lua_State* L)
+{
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    if (vmud->PVM)
+        luaL_error(L, "Function cannot be called by a parallel VM");
+
+    return ScriptEngine::VMs.at(vmud->VM);
+}
+
 static int fs_definealias(lua_State* L)
 {
     const char* aliasName = luaL_checkstring(L, 1);
     if (aliasName[0] == '@')
         luaL_error(L, "invalid alias name '%s' - alias names should not begin with '@' as it is prepended automatically", aliasName);
+
+    if (aliasName[0] == '_')
+    {
+        const ScriptEngine::LuauVM& vm = getSerialLuauVM(L);
+        if (vm.Name != ROOT_LVM_NAME)
+            luaL_error(L, "Cannot define alias '%s': Only the Root Luau VM may define aliases beginning with '_'", aliasName);
+    }
 
     FileRW::DefineAlias(aliasName, luaL_checkstring(L, 2));
     return 0;
@@ -202,6 +220,13 @@ static int fs_removealias(lua_State* L)
     const char* aliasName = luaL_checkstring(L, 1);
     if (aliasName[0] == '@')
         luaL_error(L, "invalid alias name '%s' - alias names should not begin with '@' as it is prepended automatically", aliasName);
+
+    if (aliasName[0] == '_')
+    {
+        const ScriptEngine::LuauVM& vm = getSerialLuauVM(L);
+        if (vm.Name != ROOT_LVM_NAME)
+            luaL_error(L, "Cannot remove alias '%s': Only the Root Luau VM may remove aliases beginning with '_'", aliasName);
+    }
 
     FileRW::RemoveAlias(aliasName);
     return 0;
@@ -350,10 +375,6 @@ static int fs_remove(lua_State* L)
         return 1;
     }
 }
-
-#include <tinyfiledialogs.h>
-
-#include "script/ScriptEngine.hpp"
 
 static void resetTimeoutForVM(lua_State* L)
 {

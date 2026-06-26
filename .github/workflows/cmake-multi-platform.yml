@@ -52,6 +52,8 @@ jobs:
             c_compiler: clang
           - os: ubuntu-latest
             c_compiler: cl
+          - os: ubuntu-latest
+            build_type: DebugTSan
 
     steps:
     - uses: actions/checkout@v6

@@ -1526,7 +1526,20 @@
         }
       },
       "fs": {
-        "Description": "Interacting with the player's filesystem",
+        "Description": [
+          "Interacting with the player's filesystem",
+          "Several aliases may be used with functions in this library, these are unrelated to `require` aliases although the same syntax is used",
+          "The following aliases are provided as part of the API:",
+          "- `self`: The current script file",
+          "- `selfdir`: The containing directory of the current script file",
+          "- `project`: Path to the current project folder",
+          "- `home`: The player's user profile directory",
+          "- `plugin`: Only valid in Editor plugins. The directory of the plugin, if it is not a single-file `.luau`",
+          "These may be used in a manner such as `fs.write(\"@project/savefile.json\", saveData)`",
+          "Other aliases may also exist, however they are strictly internal and should not be explicitly used",
+          "Avoid overwriting the `base` alias as this may cause certain default assets to stop loading",
+          "Aliases beginning with `_` may only be defined or remove by the root Luau VM"
+        ],
         "Members": {
           "copy": {
             "Description": [

@@ -1106,7 +1106,7 @@
     "documentation": "* Set additional debug text for the zone"
   },
   "@phoenix/global/fs": {
-    "documentation": "* Interacting with the player's filesystem"
+    "documentation": "* Interacting with the player's filesystem\n* Several aliases may be used with functions in this library, these are unrelated to `require` aliases although the same syntax is used\n* The following aliases are provided as part of the API:\n* - `self`: The current script file\n* - `selfdir`: The containing directory of the current script file\n* - `project`: Path to the current project folder\n* - `home`: The player's user profile directory\n* - `plugin`: Only valid in Editor plugins. The directory of the plugin, if it is not a single-file `.luau`\n* These may be used in a manner such as `fs.write(\"@project/savefile.json\", saveData)`\n* Other aliases may also exist, however they are strictly internal and should not be explicitly used\n* Avoid overwriting the `base` alias as this may cause certain default assets to stop loading\n* Aliases beginning with `_` may only be defined or remove by the root Luau VM"
   },
   "@phoenix/global/fs.copy": {
     "documentation": "* Copies the file/directory at the given path to a new path\n* If unsuccessfully, throws an error message"

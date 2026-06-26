@@ -67,7 +67,7 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
     if PreviousStage == "SelectProject" then
         EditorCameraTransform.Load(EditorCam)
 
-        for icon, fstype in fs.listdir("@etextures/editor-icons") do
+        for icon, fstype in fs.listdir("@_etextures/editor-icons") do
             if fstype == "f" and icon:find(".png") then
                 AssetManager:QueueLoadTexture(icon, false)
             end

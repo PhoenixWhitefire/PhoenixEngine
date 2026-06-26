@@ -113,7 +113,7 @@ local function createNewProject_(State: StateType)
     fs.mkdir(fullPath)
 
     fs.definealias("project", fullPath)
-    fs.definealias("projres", "@project/resources")
+    fs.definealias("_projres", "@project/resources")
     fs.setunqualifiedroot("@project/")
 
     fs.write("@project/phoenix.conf", json.encode({
@@ -131,29 +131,29 @@ local function createNewProject_(State: StateType)
     }))
     fs.write("@project/phoenix.editor", "{}")
 
-    fs.mkdir("@projres")
-    fs.mkdir("@projres/materials")
-    fs.mkdir("@projres/scenes")
-    fs.mkdir("@projres/sounds")
-    fs.mkdir("@projres/shaders")
-    fs.mkdir("@projres/shaders/include")
-    fs.mkdir("@projres/scripts")
-    fs.mkdir("@projres/textures")
-    fs.mkdir("@projres/textures/materials")
+    fs.mkdir("@_projres")
+    fs.mkdir("@_projres/materials")
+    fs.mkdir("@_projres/scenes")
+    fs.mkdir("@_projres/sounds")
+    fs.mkdir("@_projres/shaders")
+    fs.mkdir("@_projres/shaders/include")
+    fs.mkdir("@_projres/scripts")
+    fs.mkdir("@_projres/textures")
+    fs.mkdir("@_projres/textures/materials")
 
-    fs.mkdir("@projres/scripts/modules")
-    fs.write("@projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
+    fs.mkdir("@_projres/scripts/modules")
+    fs.write("@_projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
 
     stubCoreAssets()
 
     for _, v in { "brick", "error", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
-        fs.copy(`@editres/materials/{v}.mtl`, `@projres/materials/{v}.mtl`)
+        fs.copy(`@_editres/materials/{v}.mtl`, `@_projres/materials/{v}.mtl`)
     end
 
-    fs.copy("@editres/textures/materials", "@projres/textures/materials")
-    fs.copy("@editres/textures/Sky1", "@projres/textures/Sky1")
-    fs.copy("@editres/textures/image-placeholder.png", "@projres/textures/image-placeholder.png")
-    fs.copy("@editres/scripts/defaultconfig.luau", "@projres/scripts/.config.luau")
+    fs.copy("@_editres/textures/materials", "@_projres/textures/materials")
+    fs.copy("@_editres/textures/Sky1", "@_projres/textures/Sky1")
+    fs.copy("@_editres/textures/image-placeholder.png", "@_projres/textures/image-placeholder.png")
+    fs.copy("@_editres/scripts/defaultconfig.luau", "@_projres/scripts/.config.luau")
     fs.copy(Configuration.GetLogo(), "@project/icon.png")
 
     local dm = GameObject.new("DataModel")
@@ -303,7 +303,7 @@ local function openProject_(State: StateType, ManualPath: string?)
     end
 
     fs.definealias("project", `{ Preferences.ProjectsDirectory }/{ assert(path) }`)
-    fs.definealias("projres", "@project/resources")
+    fs.definealias("_projres", "@project/resources")
     fs.setunqualifiedroot("@project/")
     assert(path)
 
@@ -320,7 +320,7 @@ local function openProject_(State: StateType, ManualPath: string?)
 
     handleCoreAssetAliasMigration(config)
 
-    local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
+    local objects, error = AssetManager:LoadScene("@_projres/scenes/root.world")
 
     if not objects then
         error = error or "Unknown error"
@@ -506,7 +506,7 @@ local State: StateType = {
             editingDatamodel = State.PlaytestRestoreState
         end
 
-        tryToSave(editingDatamodel, "@projres/scenes/root.world")
+        tryToSave(editingDatamodel, "@_projres/scenes/root.world")
 
         if State.CurrentStage == "ProjectPlaying" then
             if Engine:ShowMessageBox("Also save Playtest state?", "Would you also like to save the state of the Playtest world as a separate file?", "yesno", "question", 1) == 1 then

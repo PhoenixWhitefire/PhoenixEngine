@@ -14,7 +14,7 @@ local function getLogo(Target: string?)
     if Target and CachedLogos[Target] then
         return CachedLogos[Target]
     else
-        local logo = `@etextures/logos/{ Logos[math.random(1, #Logos)] }.png`
+        local logo = `@_etextures/logos/{ Logos[math.random(1, #Logos)] }.png`
 
         if Target then
             CachedLogos[Target] = logo
@@ -32,7 +32,7 @@ return table.freeze({
     GitHubUrl = "https://github.com/PhoenixWhitefire/PhoenixEngine",
     GameEditingVMName = "GameEditingVM",
     PlaytestVMName = "Playtest",
-    FallbackImage = "@etextures/editor-icons/fallback.png",
+    FallbackImage = "@_etextures/editor-icons/fallback.png",
 
     CoreAssets = {
         "shaders/error.shp",

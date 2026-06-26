@@ -5,8 +5,8 @@ local History = game:GetService("History")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
-fs.definealias("editres", "./resources")
-fs.definealias("etextures", "@editres/textures")
+fs.definealias("_editres", "./resources")
+fs.definealias("_etextures", "@_editres/textures")
 fs.definealias("base", "./resources")
 
 local PluginManager = require("@ed/PluginManager")

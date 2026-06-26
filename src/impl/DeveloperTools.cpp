@@ -301,7 +301,7 @@ static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, con
 
 void DeveloperTools::Initialize(Renderer* renderer)
 {
-    FileRW::DefineAlias("editres", "./resources");
+    FileRW::DefineAlias("_editres", "./resources");
 
     MtlEditorPreview.Initialize(256, 256);
     MtlPreviewRenderer = renderer;
@@ -516,7 +516,7 @@ static bool textEditorAskSaveFileAs(
 
     const char* saveTargetRaw = tinyfd_saveFileDialog(
         "Save Text Document",
-        FileRW::ResolvePathAbsolute("@projres/").c_str(),
+        FileRW::ResolvePathAbsolute("@project/resources/").c_str(),
         0,
         nullptr,
         nullptr
@@ -1833,12 +1833,12 @@ static Texture getIconForComponent(EntityComponent Ec)
     if (Ec == EntityComponent::None)
         componentName = "Empty";
 
-    std::string classIconPath = "@editres/textures/editor-icons/" + componentName + ".png";
+    std::string classIconPath = "@_editres/textures/editor-icons/" + componentName + ".png";
     Texture tex = texManager->GetTextureResource(texManager->LoadFromPath(classIconPath, true, false));
 
     if (tex.Status == Texture::LoadStatus::Failed && tex.ImagePath.find("fallback") == std::string::npos)
     {
-        const std::string& fallbackPath = "@editres/textures/editor-icons/fallback.png";
+        const std::string& fallbackPath = "@_editres/textures/editor-icons/fallback.png";
         Texture& fallback = texManager->GetTextureResource(texManager->LoadFromPath(fallbackPath, true, false));
         texManager->Assign(fallback, classIconPath);
         tex = fallback;
@@ -3677,7 +3677,7 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
     style.FramePadding.y = prevPadding;
 
     static TextureManager* texManager = TextureManager::Get();
-    static uint32_t openIconId = texManager->LoadFromPath("@editres/textures/editor-icons/Folder_Open.png", true, false);
+    static uint32_t openIconId = texManager->LoadFromPath("@_editres/textures/editor-icons/Folder_Open.png", true, false);
 
     ImGui::SameLine();
 

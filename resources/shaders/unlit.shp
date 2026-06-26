@@ -1,5 +1,5 @@
 {
-  "Fragment": "@editres/shaders/unlit.frag",
-  "Geometry": "@editres/shaders/worldUber.geom",
-  "Vertex": "@editres/shaders/worldUber.vert"
+  "Fragment": "@_editres/shaders/unlit.frag",
+  "Geometry": "@_editres/shaders/worldUber.geom",
+  "Vertex": "@_editres/shaders/worldUber.vert"
 }

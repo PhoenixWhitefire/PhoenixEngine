@@ -238,13 +238,13 @@ end
 local ProjectCategories = {
     {
         Name = "Recent",
-        Icon = "@etextures/editor-icons/recent.png",
+        Icon = "@_etextures/editor-icons/recent.png",
         Render = renderRenderProjects,
         OnSwitchTo = nil,
     },
     {
         Name = "Saved",
-        Icon = "@etextures/editor-icons/open.png",
+        Icon = "@_etextures/editor-icons/open.png",
         Render = renderSavedProjects,
         OnSwitchTo = function()
             State.SavedProjectsCache = nil
@@ -265,7 +265,7 @@ function SelectProject.Render(DeltaTime: number)
             local cpos = imgui.cursorposition()
             imgui.setcursorposition(cpos.x - 4, cpos.y)
 
-            if imgui.imagebutton("+", "@etextures/editor-icons/new.png", vector.create(150, 150)) then
+            if imgui.imagebutton("+", "@_etextures/editor-icons/new.png", vector.create(150, 150)) then
                 task.defer(State.CreateNewProject, State, nil)
             end
             imgui.setitemtooltip("Create new Project")

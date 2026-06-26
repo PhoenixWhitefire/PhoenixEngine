@@ -59,7 +59,7 @@ for _, g in CoreTools.CameraModel:GetChildren() do
 end
 
 function CoreTools.RenderControls(TabButtonControl: (string, string, boolean?, boolean?, string?, string?) -> boolean)
-    if TabButtonControl("Gizmo", "@etextures/editor-icons/Transform.png", true, GizmoActive) then
+    if TabButtonControl("Gizmo", "@_etextures/editor-icons/Transform.png", true, GizmoActive) then
 		GizmoActive = not GizmoActive
 	end
 

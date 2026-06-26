@@ -92,7 +92,11 @@ local function runCurrentCommand()
     end
 
     local callSuccess, runSuccessOrCallError, callError = pcall(function()
-        return ScriptEngine:RunInVM(if State.CurrentStage == "ProjectEditing" then Configuration.GameEditingVMName else Configuration.PlaytestVMName, CommandBarCommand, "@@projres/scripts/!CommandBar")
+        return ScriptEngine:RunInVM(
+            if State.CurrentStage == "ProjectEditing" then Configuration.GameEditingVMName else Configuration.PlaytestVMName,
+            CommandBarCommand,
+            "@@project/resources/scripts/!CommandBar"
+        )
     end)
 
     if not callSuccess then
@@ -273,18 +277,18 @@ local function homeTab(_: number)
     local currentActionTooltip = whyCannotPlaytest()
 
     if inPlaytest then
-        if tabButton("Stop", "@etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Stop (F5)") then
+        if tabButton("Stop", "@_etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Stop (F5)") then
             task.defer(State.ChangeStageTo, "ProjectEditing" :: "ProjectEditing")
         end
     else
-        if tabButton("Start", "@etextures/editor-icons/start.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Play (F5)") then
+        if tabButton("Start", "@_etextures/editor-icons/start.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Play (F5)") then
             task.defer(State.ChangeStageTo, "ProjectPlaying" :: "ProjectPlaying")
         end
     end
 
     imgui.sameline()
 
-    if tabButton("Import Model", "@etextures/editor-icons/Model.png") then
+    if tabButton("Import Model", "@_etextures/editor-icons/Model.png") then
         task.defer(function()
             local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
 
@@ -328,7 +332,7 @@ local function homeTab(_: number)
 
     imgui.sameline()
 
-    if tabButton("Auto re-import\nmodels", "@etextures/editor-icons/auto-reimport.png", true, Preferences.AutoReimportModels) then
+    if tabButton("Auto re-import\nmodels", "@_etextures/editor-icons/auto-reimport.png", true, Preferences.AutoReimportModels) then
         Preferences.AutoReimportModels = not Preferences.AutoReimportModels
     end
 
@@ -340,7 +344,7 @@ local function homeTab(_: number)
     local cx = imgui.cursorposition().x
     imgui.setcursorposition(cx, startY)
 
-    if tabButton("History", "@etextures/editor-icons/history-viewer.png", true, HistoryView.Open) then
+    if tabButton("History", "@_etextures/editor-icons/history-viewer.png", true, HistoryView.Open) then
         HistoryView.Open = not HistoryView.Open
     end
 
@@ -348,7 +352,7 @@ local function homeTab(_: number)
     cx = imgui.cursorposition().x
     imgui.setcursorposition(cx, startY)
 
-    if tabButton("Collections", `@etextures/editor-icons/Folder_{if TagViewer.Open then "Open" else "Closed"}.png`, true, TagViewer.Open) then
+    if tabButton("Collections", `@_etextures/editor-icons/Folder_{if TagViewer.Open then "Open" else "Closed"}.png`, true, TagViewer.Open) then
         TagViewer.Open = not TagViewer.Open
     end
 
@@ -407,7 +411,7 @@ local function toolsTab(_: number)
             iconName = "Settings"
         end
 
-        if tabButton(tool, `@etextures/editor-icons/{ iconName }.png`, true, enabled) then
+        if tabButton(tool, `@_etextures/editor-icons/{ iconName }.png`, true, enabled) then
             DeveloperTools:SetToolEnabled(tool, not enabled)
         end
 
@@ -423,14 +427,14 @@ local function toolsTab(_: number)
     end
 
     local bottomBarOpen = Preferences.ToolsOpen.BottomBar
-    if tabButton("Bottom Bar", `@etextures/editor-icons/command-bar.png`, true, bottomBarOpen) then
+    if tabButton("Bottom Bar", `@_etextures/editor-icons/command-bar.png`, true, bottomBarOpen) then
         Preferences.ToolsOpen.BottomBar = not bottomBarOpen
     end
 
     imgui.sameline()
 
     local ouputOpen = Preferences.ToolsOpen.Output
-    if tabButton("Output", `@etextures/editor-icons/command-bar.png`, true, ouputOpen) then
+    if tabButton("Output", `@_etextures/editor-icons/command-bar.png`, true, ouputOpen) then
         Preferences.ToolsOpen.Output = not ouputOpen
     end
 

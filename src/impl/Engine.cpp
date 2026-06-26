@@ -407,7 +407,6 @@ Engine::Engine()
 
     m_InitializeVideo();
 
-    FileRW::DefineAlias("cwd", std::filesystem::current_path().string());
     FileRW::DefineAlias("home", GetUserHomeDirectoryPath());
     FileRW::DefineAlias("base", "resources");
     FileRW::DefineAlias("project", ".");
