@@ -15,6 +15,10 @@
 
 #define ROOT_LVM_NAME "RootLVM"
 
+#ifdef Yield
+#undef Yield
+#endif
+
 struct EventConnectionData;
 struct SharedMutex;
 
