@@ -4,7 +4,7 @@ local ErrorMessage = {
 }
 
 function ErrorMessage.Push(Message: string)
-    table.insert(ErrorMessage.Queue, { Message = Message, TimeRemaining = 2 / math.max(#ErrorMessage.Queue, 0) })
+    table.insert(ErrorMessage.Queue, { Message = Message, TimeRemaining = 2 / math.max(#ErrorMessage.Queue, 1) })
     warn(Message)
 end
 
