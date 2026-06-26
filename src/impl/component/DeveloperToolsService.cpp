@@ -189,6 +189,16 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
                 return {};
             }
         } },
+
+        { "SaveTextDocuments", Reflection::MethodDescriptor{
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                DeveloperTools::SaveTextDocuments();
+                return {};
+            }
+        } },
     };
 
     return methods;

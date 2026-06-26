@@ -51,7 +51,7 @@ local CommandBarHistoryCursor = 1
 
 local commandBarSavedHistory = if fs.isfile("./editor/command-history.json") then json.parse(assert(fs.read("./editor/command-history.json"))) else {}
 assert(typeof(commandBarSavedHistory) == "table")
-CommandBarHistory = commandBarSavedHistory :: any
+CommandBarHistory = commandBarSavedHistory :: { string }
 CommandBarHistoryCursor = #CommandBarHistory + 1
 
 local PrevSelections: { GameObject & EcTransform } = {}
@@ -373,7 +373,7 @@ function CommonUI.SaveSettings()
             updateDevToolsOpenState()
         end
 
-        fs.write("./editor/settings.json", json.encode(Preferences :: JsonSerializable))
+        fs.write("./editor/settings.json", json.encode(Preferences :: JsonEncodable))
 
         if State.Project.DataModel and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure and Preferences.CodeEditorPath and #Preferences.CodeEditorPath > 0 then
             task.defer(ExternalCodeEditor.Open, State.Project.Name)
@@ -381,8 +381,8 @@ function CommonUI.SaveSettings()
 
         ExternalCodeEditor.RequestOpenSettingsMenuToConfigure = false
 
-        fs.write("./editor/models.json", json.encode(Reimport.ModelModifiedTimes :: { [string]: JsonSerializable }))
-        fs.write("./editor/command-history.json", json.encode(CommandBarHistory :: JsonSerializable))
+        fs.write("./editor/models.json", json.encode(Reimport.ModelModifiedTimes))
+        fs.write("./editor/command-history.json", json.encode(CommandBarHistory))
 
         if State.CurrentStage == "ProjectEditing" or State.CurrentStage == "ProjectPlaying" then
             ScriptEngine:SetVMAllowedExecutionTime(Configuration.GameEditingVMName, Preferences.ScriptAllowedExecutionTime)
@@ -670,7 +670,7 @@ local canUpdate = false
 local isFetchingLatestCommitData = false
 local fetchCommitHashData = nil
 
-local function printTable<K, V>(t: { [K]: V }, depth: string, n: string?, printFun: <T>(...T) -> ())
+local function printTable<K, V>(t: { read [K]: V }, depth: string, n: string?, printFun: <T>(...T) -> ())
     printFun = printFun or print
 
     depth = depth or ""
@@ -698,7 +698,7 @@ local function getLatestGitHubCommit()
         local response = json.parse(data.Body)
         assert(typeof(response) == "table", "response from GitHub API was not a table")
 
-        local commit = (response :: { [string]: JsonSerializable }).sha
+        local commit = response.sha
         assert(typeof(commit) == "string", ".sha was not a string")
 
         latestCommit = commit
@@ -838,7 +838,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
 
                                 fs.write(
                                     "@project/phoenix.conf",
-                                    json.encode(conf)
+                                    -- TODO luau cast
+                                    json.encode(conf :: JsonEncodable)
                                 )
 
                                 table.remove(State.RecentProjects, table.find(State.RecentProjects, prevName))

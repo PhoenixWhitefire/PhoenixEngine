@@ -56,7 +56,7 @@ ScriptEngine:DetachDebuggerFromVM(_VMNAME)
 
 local function saveRecents(State: StateType)
     -- TODO: fix cast
-    fs.write(Configuration.RecentProjectsPath, json.encode(State.RecentProjects :: { JsonSerializable }))
+    fs.write(Configuration.RecentProjectsPath, json.encode(State.RecentProjects))
 end
 
 local function saveToRecents(State: StateType, Path: string)
@@ -178,63 +178,67 @@ local function createNewProject_(State: StateType)
 end
 
 local function handleCoreAssetAliasMigration(config)
-	local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
-	assert(typeof(editorconf) == "table")
-	editorconf = editorconf :: { [string]: JsonSerializable }
+    local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
+    assert(typeof(editorconf) == "table")
+    editorconf = editorconf
 
-	local SymlinkMigrationChoices = {
-		Migrated = 1,
-		RemindLater = 2,
-		DoNotMigrate = 3
-	}
+    local SymlinkMigrationChoices = {
+        Migrated = 1,
+        RemindLater = 2,
+        DoNotMigrate = 3
+    }
 
-	local lastSavedData = editorconf.Saved
+    local lastSavedData = editorconf.Saved
 
-	if lastSavedData then
-		assert(typeof(lastSavedData) == "table")
-		lastSavedData = lastSavedData :: { [string]: JsonSerializable }
+    if lastSavedData then
+        assert(typeof(lastSavedData) == "table")
+        lastSavedData = lastSavedData
 
-		if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 5 then
-			return
-		end
-	end
+        if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 5 then
+            return
+        end
+    end
 
-	if not Engine.IsHeadless then
-		imgui.openpopup("Migrate core assets to alias")
-		local choiceIndex = 1
+    if not Engine.IsHeadless then
+        imgui.openpopup("Migrate core assets to alias")
+        local choiceIndex = 1
 
-		local connection; connection = game.OnFrameBegin:Connect(function()
-			if imgui.beginpopupmodal("Migrate core assets to alias") then
-				imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are not currently referred by aliases.")
-				imgui.text("This can cause incompatibilities with future versions of the Editor.")
-				imgui.text("It is recommended that you migrate these to use the `@base` alias.")
+        local connection; connection = game.OnFrameBegin:Connect(function()
+            if imgui.beginpopupmodal("Migrate core assets to alias") then
+                imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are not currently referred by aliases.")
+                imgui.text("This can cause incompatibilities with future versions of the Editor.")
+                imgui.text("It is recommended that you migrate these to use the `@base` alias.")
 
-				choiceIndex = imgui.combo("Choice", { "Migrate and alias", "Ignore until next time", "Do not migrate" }, choiceIndex)
+                choiceIndex = imgui.combo("Choice", { "Migrate and alias", "Ignore until next time", "Do not migrate" }, choiceIndex)
 
-				imgui.setnextitemwidth(imgui.contentregionavail().x)
-				if imgui.button("Continue") then
-					assert(connection)
-					connection:Disconnect()
+                imgui.setnextitemwidth(imgui.contentregionavail().x)
+                if imgui.button("Continue") then
+                    assert(connection)
+                    connection:Disconnect()
 
-					editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
-					assert(typeof(editorconf) == "table");
-					(editorconf :: any).CoreAssetsSymlinkMigrationChoice = choiceIndex;
-					(editorconf :: any).Saved.EditorBuild = Configuration.EditorBuild
+                    editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
 
-					fs.write("@project/phoenix.conf", json.encode(editorconf))
+                    assert(typeof(editorconf) == "table");
+                    editorconf.CoreAssetsSymlinkMigrationChoice = choiceIndex;
 
-					if choiceIndex == SymlinkMigrationChoices.Migrated then
-						task.defer(stubCoreAssets)
-					end
-				end
+                    assert(typeof(editorconf.Saved) == "table")
+                    editorconf.Saved.EditorBuild = Configuration.EditorBuild
 
-				imgui.endpopup()
-			else
-				assert(connection)
-				connection:Disconnect()
-			end
-		end)
-	end
+                    -- TODO luau cast
+                    fs.write("@project/phoenix.conf", json.encode(editorconf :: JsonEncodable))
+
+                    if choiceIndex == SymlinkMigrationChoices.Migrated then
+                        task.defer(stubCoreAssets)
+                    end
+                end
+
+                imgui.endpopup()
+            else
+                assert(connection)
+                connection:Disconnect()
+            end
+        end)
+    end
 end
 
 local function openProject_(State: StateType, ManualPath: string?)
@@ -303,6 +307,10 @@ local function openProject_(State: StateType, ManualPath: string?)
     fs.setunqualifiedroot("@project/")
     assert(path)
 
+    if not fs.isdirectory("@project") then
+        error(`Directory for project '{ path }' not found: '{ fs.resolvepathabsolute("@project") }'`)
+    end
+
     if not fs.isfile("@project/phoenix.editor") then
         fs.write("@project/phoenix.editor", "{}")
     end
@@ -310,7 +318,6 @@ local function openProject_(State: StateType, ManualPath: string?)
     local config = json.parse(assert(fs.read("@project/phoenix.conf")))
     assert(typeof(config) == "table", "Configuration file is corrupt")
 
-    config = config :: { [string]: JsonSerializable }
     handleCoreAssetAliasMigration(config)
 
     local objects, error = AssetManager:LoadScene("@projres/scenes/root.world")
@@ -416,22 +423,22 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
             local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
             assert(typeof(conf) == "table", `config was a { typeof(conf) } and not a table`);
 
-            (conf :: { [string]: JsonSerializable }).Saved = {
+            conf.Saved = {
                 EngineCommit = Engine.CommitHash,
                 EngineVersion = Engine.Version,
                 EditorBuild = Configuration.EditorBuild,
             }
-            fs.write("@project/phoenix.conf", json.encode(conf));
+            fs.write("@project/phoenix.conf", json.encode(conf :: JsonEncodable));
 
             local edconf = json.parse(assert(fs.read("@project/phoenix.editor")))
             assert(typeof(edconf) == "table", `editor config was a { typeof(conf) } and not a table`);
 
-            (edconf :: { [string]: JsonSerializable }).Saved = {
+            edconf.Saved = {
                 EngineCommit = Engine.CommitHash,
                 EngineVersion = Engine.Version,
                 Time = os.time(),
             }
-            fs.write("@project/phoenix.editor", json.encode(edconf))
+            fs.write("@project/phoenix.editor", json.encode(edconf :: JsonEncodable))
 
             EditorCameraTransform.Save(workspace.SceneCamera)
         end)

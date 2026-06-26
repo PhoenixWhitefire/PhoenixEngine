@@ -49,12 +49,12 @@ local function runUpdate()
 
     local workflowRunResponseData = json.parse(workflowRunResponse.Body)
     assert(typeof(workflowRunResponseData) == "table", "Workflow run response data was not a table")
-    workflowRunResponseData = workflowRunResponseData :: { [string]: JsonSerializable }
+    workflowRunResponseData = workflowRunResponseData
 
     updaterLog ..= `Total count: { assert(workflowRunResponseData.total_count) }\n`
-    updaterLog ..= `Received: { #assert(workflowRunResponseData.workflow_runs :: { JsonSerializable }) }\n`
+    updaterLog ..= `Received: { #assert(workflowRunResponseData.workflow_runs :: { JsonDecodable }) }\n`
 
-    local latest = (workflowRunResponseData.workflow_runs :: { { [string]: JsonSerializable } })[1]
+    local latest = (workflowRunResponseData.workflow_runs :: { { [string]: JsonDecodable } })[1]
     assert(latest)
 
     updaterLog ..= `Latest title: { assert(latest.display_title) }\n`
@@ -79,7 +79,7 @@ local function runUpdate()
     local jobsJson = json.parse(jobsResponse.Body)
     assert(typeof(jobsJson) == "table")
 
-    local jobs = (jobsJson :: { [string]: JsonSerializable }).jobs
+    local jobs = jobsJson.jobs
     assert(jobs and typeof(jobs) == "table")
 
     local desiredName = `{ if Engine.TargetPlatform == "Linux" then "ubuntu" else Engine.TargetPlatform:lower() }`
@@ -88,11 +88,11 @@ local function runUpdate()
     for _, job in jobs do
         assert(typeof(job) == "table")
 
-        local name =  (job :: { [string]: JsonSerializable }).name
+        local name =  job.name
         assert(typeof(name) == "string")
 
         if name:find(desiredName) and name:find("Release") then
-            if (job :: { [string]: JsonSerializable }).conclusion ~= "success" then
+            if job.conclusion ~= "success" then
                 error("The Workflow Job for your platform failed or is still in progress.")
             end
 
@@ -118,7 +118,7 @@ local function runUpdate()
 
     local artifactsData = json.parse(artifactsResponse.Body)
     assert(typeof(artifactsData) == "table")
-    artifactsData = artifactsData :: { [string]: JsonSerializable }
+    artifactsData = artifactsData
 
     updaterLog ..= `Artifact count: { assert(artifactsData.total_count) }\n`
     updaterLog ..= `Checking for { Engine.TargetPlatform } Release artifact...\n`
@@ -128,7 +128,6 @@ local function runUpdate()
 
     for _, v in artifactsData.artifacts do
         assert(typeof(v) == "table")
-        v = v :: { [string]: JsonSerializable }
 
         local name = v.name
         assert(typeof(name) == "string")
@@ -232,7 +231,7 @@ function Update.Render(dt: number)
         imgui.endpopup()
 
     elseif game.Time - switchedToUpdater > 0.1 and (not updateInProgress or updaterErr) then
-        State:ChangeStageTo("SelectProject")
+        State.ChangeStageTo("SelectProject")
 
     else
         if game.Time - switchedToUpdater > 0.1 then

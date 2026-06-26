@@ -24,8 +24,13 @@
 #include <tinyfiledialogs.h>
 #include <lualib.h>
 #include <luau/VM/src/lstate.h>
-#include <fstream>
+#include <chrono>
 #include <set>
+
+#include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <thread>
+#include <cmath>
 
 #include "DeveloperTools.hpp"
 
@@ -59,9 +64,8 @@ struct TextEditorTab
 {
     TextEditor Editor;
     std::string FilePath;
-    std::ifstream* FileStream = nullptr;
     std::vector<int> Breakpoints;
-    double LastCheckedIfUnderlyingFileExists = 0.f;
+    std::chrono::time_point<std::chrono::system_clock> LastSynced;
     int JumpToLine = 0; // line to jump to, `0` to not jump
     int DebuggerCurrentLine = 0;
     bool WasPreviouslyVisible = false;
@@ -85,7 +89,7 @@ static const std::string_view AddableComponents[] = {
     "Transform",
     "UIFrame",
     "UIImage",
-    "UITransform"
+    "UITransform",
 };
 
 static nlohmann::json DefaultNewMaterial = {
@@ -542,7 +546,7 @@ static bool textEditorAskSaveFileAs(
 
 static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 {
-    Tab.WasEdited = false;
+    Tab.LastSynced = std::chrono::system_clock::now() + std::chrono::milliseconds(10);
 
     std::string contents = Tab.Editor.GetText();
     std::string textEditorFile = Tab.FilePath;
@@ -556,14 +560,6 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
     if (size_t lastChar = contents.find_last_not_of('\n'); lastChar != std::string::npos)
         contents = contents.substr(0, lastChar + 1) + "\n";
 
-    if (Tab.FileStream)
-    {
-        if (Tab.FileStream->is_open())
-            Tab.FileStream->close();
-        delete Tab.FileStream;
-        Tab.FileStream = nullptr;
-    }
-
     if (textEditorFile == UNSAVEDTAG || textEditorFile.empty() || !std::filesystem::is_regular_file(textEditorFile))
     {
         static uint32_t ErrCount = 0;
@@ -573,6 +569,7 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
         if (!textEditorAskSaveFileAs(AskSave, contents))
         {
             Tab.FilePath = UNSAVEDTAG;
+            Tab.HasUnderlyingFile = false;
             Tab.WasEdited = true;
         }
     }
@@ -588,12 +585,15 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
                 contents,
                 std::format("Couldn't save to {}: {}.\nClick YES to choose a different location, or NO to discard the file", error, realSaveLoc)
             ))
+            {
+                Tab.HasUnderlyingFile = false;
                 Tab.WasEdited = true;
+            }
         }
     }
 }
 
-static std::string textFileContentsFromPath(const std::string& Path, std::ifstream*& Stream)
+static std::string textFileContentsFromPath(const std::string& Path)
 {
     if (Path.find("!InlineDocument:") != std::string::npos)
         return { Path.begin() + strlen("!InlineDocument:"), Path.end() };
@@ -609,11 +609,10 @@ static std::string textFileContentsFromPath(const std::string& Path, std::ifstre
         return error;
     }
 
-    Stream = new std::ifstream(FileRW::ResolvePathNormalized(Path));
+    bool readSuccess = true;
+    std::string scriptContents = FileRW::ReadFile(Path, &readSuccess);
 
-    std::string scriptContents = "";
-
-    if (!(*Stream) || !Stream->is_open() || Stream->bad() || Stream->fail() || Stream->tellg() > 100e6)
+    if (!readSuccess || scriptContents.size() > 10e6)
     {
         std::string error = std::format(
             "File '{}' couldn't be read",
@@ -623,15 +622,8 @@ static std::string textFileContentsFromPath(const std::string& Path, std::ifstre
         setErrorMessage(error);
         return error;
     }
-    else
-    {
-        Stream->seekg(0, std::ios::end);
-        scriptContents.resize(Stream->tellg());
-        Stream->seekg(0, std::ios::beg);
-        Stream->read(&scriptContents[0], scriptContents.size());
 
-        return scriptContents;
-    }
+    return scriptContents;
 }
 
 static std::optional<TextEditor::DebugAction> s_QueuedDebuggerAction = std::nullopt;
@@ -662,19 +654,21 @@ static TextEditorTab& invokeTextEditor(const std::string& File)
         tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
 
     tab.FilePath = File;
-    tab.Editor.SetText(textFileContentsFromPath(File, tab.FileStream));
+    tab.Editor.SetText(textFileContentsFromPath(File));
     tab.Editor.OnDebuggerAction = [](TextEditor*, TextEditor::DebugAction action)
     {
         s_QueuedDebuggerAction = action;
     };
 
+    tab.LastSynced = std::chrono::system_clock::now();
     return tab;
 }
 
 static void renderTextEditors()
 {
     ZoneScopedC(tracy::Color::DarkSeaGreen);
-    double time = GetRunningTime();
+    std::chrono::time_point<std::chrono::system_clock> time = std::chrono::system_clock::now();
+    DeveloperTools::FocusedOnTextDocument = false;
 
     for (int index = 0; index < (int)s_TextEditors.size(); index++)
     {
@@ -686,21 +680,13 @@ static void renderTextEditors()
             tab.SetUIFocus = false;
         }
 
-        if (time - tab.LastCheckedIfUnderlyingFileExists > 0.5)
-        {
-            tab.HasUnderlyingFile = std::filesystem::is_regular_file(tab.FilePath);
-            tab.LastCheckedIfUnderlyingFileExists = time;
-        }
-
         if (!tab.HasUnderlyingFile)
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
-        else if (tab.WasEdited)
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255.f/255.f, 221.f/255.f, 128.f/255.f, 1.f));
 
         bool open = true;
         bool render = ImGui::Begin(std::format("{}###TextEditor_{}", std::filesystem::path(tab.FilePath).filename().string(), index).c_str(), &open);
 
-        if (!tab.HasUnderlyingFile || tab.WasEdited)
+        if (!tab.HasUnderlyingFile)
             ImGui::PopStyleColor();
 
         if (!open)
@@ -747,7 +733,34 @@ static void renderTextEditors()
             tab.JumpToLine = 0;
         }
 
+        if (tab.Editor.IsFocused())
+            DeveloperTools::FocusedOnTextDocument = true;
+
         ImGui::End();
+
+        if (std::chrono::duration_cast<std::chrono::seconds>(time - tab.LastSynced) > std::chrono::seconds(1))
+        {
+            if (tab.HasUnderlyingFile)
+                tab.HasUnderlyingFile = std::filesystem::is_regular_file(tab.FilePath);
+
+            if (tab.HasUnderlyingFile)
+            {
+                std::filesystem::file_time_type lwt = std::filesystem::last_write_time(tab.FilePath);
+                std::chrono::time_point<std::chrono::system_clock> systemTime = std::chrono::clock_cast<std::chrono::system_clock>(lwt);
+
+                if (systemTime > tab.LastSynced)
+                {
+                    tab.Editor.SetText(FileRW::ReadFile(tab.FilePath));
+                    tab.WasEdited = false;
+                }
+                else
+                {
+                    textEditorSaveFile(tab);
+                }
+            }
+
+            tab.LastSynced = time + std::chrono::milliseconds(10);
+        }
     }
 }
 
@@ -4971,6 +4984,12 @@ void DeveloperTools::OpenTextDocument(const std::string& Path, int Line)
     tab.JumpToLine = Line;
 }
 
+void DeveloperTools::SaveTextDocuments()
+{
+    for (TextEditorTab& tab : s_TextEditors)
+        textEditorSaveFile(tab);
+}
+
 void DeveloperTools::Shutdown()
 {
     MtlPreviewCamera.Clear();
@@ -4982,27 +5001,12 @@ void DeveloperTools::Shutdown()
     VisibleTree.clear();
     VisibleTreeWip.clear();
     PickerTargets.clear();
-    
+
     for (TextEditorTab& tab : s_TextEditors)
-    {
         textEditorSaveFile(tab);
-        if (tab.FileStream)
-        {
-            tab.FileStream->close();
-            delete tab.FileStream;
-            tab.FileStream = nullptr;
-        }
-    }
 
     s_TextEditors.clear();
 }
-
-#include <imgui/backends/imgui_impl_opengl3.h>
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <thread>
-#include <cmath>
-
-#include "Engine.hpp"
 
 struct LuauStatusDisplayInfo
 {

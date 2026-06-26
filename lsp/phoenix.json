@@ -1666,6 +1666,9 @@
   "@phoenix/globaltype/DeveloperTools.RendererShown": {
     "documentation": "Whether the Renderer tool is enabled"
   },
+  "@phoenix/globaltype/DeveloperTools.SaveTextDocuments": {
+    "documentation": "Saves all open text documents"
+  },
   "@phoenix/globaltype/DeveloperTools.ScriptsShown": {
     "documentation": "Whether the Scripts tool is enabled"
   },

@@ -95,7 +95,7 @@ end
 local NewThemeName = ""
 
 local function applyThemeChanges()
-    fs.write(`./editor/{ Preferences.Theme }`, json.encode(Theme :: JsonSerializable))
+    fs.write(`./editor/{ Preferences.Theme }`, json.encode(Theme))
     ApplyTheme(Preferences.Theme)
 end
 
@@ -149,7 +149,7 @@ local function renderAppearanceSection()
                 }
 
                 local s, e = pcall(function()
-                    fs.write(fullPath, json.encode(newThemeData :: JsonSerializable))
+                    fs.write(fullPath, json.encode(newThemeData))
                 end)
 
                 if s then

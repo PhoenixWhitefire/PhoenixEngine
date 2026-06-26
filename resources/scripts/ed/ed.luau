@@ -30,7 +30,8 @@ Git.Initialize()
 
 local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else Preferences
 assert(typeof(savedEditorPreferences) == "table")
-savedEditorPreferences = savedEditorPreferences :: { [string]: JsonSerializable }
+-- TODO luau cast
+savedEditorPreferences = savedEditorPreferences :: { [string]: JsonDecodable }
 
 for k, v in Preferences do
     if savedEditorPreferences[k] ~= nil then
@@ -114,9 +115,9 @@ local WasHoldingZKeyDown = false
 local WasHoldingYKeyDown = false
 
 local function handleUndoRedoKeybinds()
-    local ctrlKeyDown = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
-    local zKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Z)
-    local yKeyDown    = not imgui.anyitemactive() and PlayerInput:IsKeyPressed(Enum.Key.Y)
+    local ctrlKeyDown = not imgui.anyitemactive() and not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.LeftControl)
+    local zKeyDown    = not imgui.anyitemactive() and not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.Z)
+    local yKeyDown    = not imgui.anyitemactive() and not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.Y)
 
     if ctrlKeyDown and zKeyDown then
         if not WasHoldingCtrlKeyDown or not WasHoldingZKeyDown then
@@ -282,6 +283,18 @@ if loadProjectIndex then
     if not name then
         Logging:Write("`--project` specified without the project name!", Enum.LogType.Error)
     else
-        State:OpenProject(name)
+        local checkPath = fs.resolvepathabsolute(`{ Preferences.ProjectsDirectory }/{ name }`)
+
+        if fs.isdirectory(checkPath) then
+            State:OpenProject(name)
+        else
+            Engine:ShowMessageBox(
+                "Project not found",
+                `'{ name }' passed through the '--project' launch argument was not found in your Projects directory.`
+                .. `\nTried path: '{ checkPath }'`,
+                "ok",
+                "error"
+            )
+        end
     end
 end

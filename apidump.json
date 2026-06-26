@@ -120,6 +120,7 @@
           "Initialize": "() -> ()",
           "IsToolEnabled": "(String) -> (Boolean)",
           "OpenTextDocument": "(String, Integer?) -> ()",
+          "SaveTextDocuments": "() -> ()",
           "SetExplorerRoot": "(GameObject) -> ()",
           "SetExplorerSelections": "(Array) -> ()",
           "SetToolEnabled": "(String, Boolean) -> ()"

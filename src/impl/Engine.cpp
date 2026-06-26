@@ -1332,11 +1332,6 @@ void Engine::Shutdown()
 	ComponentManagers.DataModel.NotifyAllOfShutdown();
 	ScriptEngine::StepVMs(); // step event callbacks
 
-	DataModelRef->Destroy();
-	WorkspaceRef->Destroy();
-	DataModelRef.Clear();
-	WorkspaceRef.Clear();
-
 	for (GameObject& obj : ObjectManager.WorldArray)
 	{
 		if (!obj.IsDestructionPending && obj.Valid)
@@ -1350,6 +1345,11 @@ void Engine::Shutdown()
 		collection.AddedEvent.Descriptor = nullptr;
 		collection.RemovedEvent.Descriptor = nullptr;
 	}
+
+	DataModelRef->Destroy();
+	WorkspaceRef->Destroy();
+	DataModelRef.Clear();
+	WorkspaceRef.Clear();
 
 	Log.Info("Shutting down script engine...");
 	ScriptEngine::Shutdown();

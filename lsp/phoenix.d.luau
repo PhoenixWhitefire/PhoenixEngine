@@ -91,7 +91,9 @@ declare extern type ScrollInputEvent with
 	read Delta: vector
 end
 
-export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }
+export type JsonEncodable = nil | boolean | number | string | vector | { read JsonEncodable } | { read [string]: JsonEncodable }
+-- TODO bad bad bad type!
+export type JsonDecodable = nil | boolean | number | string | vector | { [string | number]: JsonDecodable }
 
 declare extern type Enum with
 end
@@ -376,6 +378,7 @@ export type EcDeveloperTools = {
   Initialize: (self: EcDeveloperTools) -> (),
   IsToolEnabled: (self: EcDeveloperTools, ToolName: string) -> (boolean),
   OpenTextDocument: (self: EcDeveloperTools, Path: string, Line: number?) -> (),
+  SaveTextDocuments: (self: EcDeveloperTools) -> (),
   SetExplorerRoot: (self: EcDeveloperTools, Root: GameObject) -> (),
   SetExplorerSelections: (self: EcDeveloperTools, Selections: { GameObject }) -> (),
   SetToolEnabled: (self: EcDeveloperTools, ToolName: string, Enabled: boolean) -> (),
@@ -406,9 +409,9 @@ export type EcEngine = {
 
   BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
   GetCliArguments: (self: EcEngine) -> { string },
-  GetConfigValue: (self: EcEngine, Key: string) -> JsonSerializable,
+  GetConfigValue: (self: EcEngine, Key: string) -> JsonDecodable,
   SaveConfig: (self: EcEngine) -> (boolean, string),
-  SetConfigValue: (self: EcEngine, Key: string, Value: JsonSerializable) -> (),
+  SetConfigValue: (self: EcEngine, Key: string, Value: JsonEncodable) -> (),
   ShowMessageBox: (self: EcEngine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> number,
 }
 export type EcEnvironment = {
@@ -1083,8 +1086,8 @@ declare imgui: {
   windowsize: ((  ) -> (vector))
 }
 declare json: {
-  encode: (( Value: JsonSerializable, Indent: number? ) -> (string)),
-  parse: (( Json: string ) -> (JsonSerializable))
+  encode: (( Value: JsonEncodable, Indent: number? ) -> (string)),
+  parse: (( Json: string ) -> (JsonDecodable))
 }
 declare parallel: {
   atomicinteger: (( InitialValue: number? ) -> (AtomicInteger)),

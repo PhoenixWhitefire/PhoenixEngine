@@ -18,6 +18,7 @@ namespace DeveloperTools
 	const std::vector<ObjectHandle>& GetExplorerSelections();
 	void SetExplorerRoot(const ObjectHandle);
 	void OpenTextDocument(const std::string&, int Line = 1);
+	void SaveTextDocuments();
 	// does not require `::Initialize` to be called
 	void LaunchTracy();
 
@@ -25,6 +26,7 @@ namespace DeveloperTools
 	void LeaveDebugger(lua_State*);
 
 	inline bool Initialized = false;
+	inline bool FocusedOnTextDocument = false;
 
 	inline bool DocumentationShown = false;
     inline bool ExplorerShown = false;

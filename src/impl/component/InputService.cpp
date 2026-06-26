@@ -12,6 +12,7 @@
 #endif
 
 #include "component/InputService.hpp"
+#include "DeveloperTools.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
 #include "Engine.hpp"
@@ -46,7 +47,7 @@ const Reflection::StaticPropertyMap& PlayerInputComponentManager::GetProperties(
             Boolean,
             [](void*) -> Reflection::GenericValue
             {
-                return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureKeyboard };
+                return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureKeyboard || DeveloperTools::FocusedOnTextDocument };
             },
             nullptr
         ),

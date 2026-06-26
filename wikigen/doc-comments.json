@@ -308,6 +308,9 @@
               "Line"
             ]
           },
+          "SaveTextDocuments": {
+            "Description": "Saves all open text documents"
+          },
           "SetExplorerRoot": {
             "Description": "Changes the Root of the built-in Explorer's hierarchy view",
             "ParameterNames": [
@@ -369,14 +372,14 @@
           },
           "GetConfigValue": {
             "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)",
-            "Type": "(self, Key: string) : JsonSerializable"
+            "Type": "(self, Key: string) : JsonDecodable"
           },
           "GetCurrentVM": "Returns the name of the currently-bound VM",
           "PollSystemEvents": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well",
           "SaveConfig": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)",
           "SetConfigValue": {
             "Description": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file",
-            "Type": "(self, Key: string, Value: JsonSerializable) : ()"
+            "Type": "(self, Key: string, Value: JsonEncodable) : ()"
           },
           "SetCurrentVM": {
             "Description": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
@@ -2420,7 +2423,7 @@
           "encode": {
             "Description": "Encodes the provided value into a JSON string. The default indentation is 2 spaces",
             "In": [
-              "Value: JsonSerializable",
+              "Value: JsonEncodable",
               "Indent: number?"
             ],
             "Out": "string"
@@ -2432,7 +2435,7 @@
             "In": [
               "Json: string"
             ],
-            "Out": "JsonSerializable"
+            "Out": "JsonDecodable"
           }
         }
       },

@@ -160,7 +160,7 @@ local function renderRenderProjects()
         if imgui.menuitem("Remove from Recents") then
             table.remove(State.RecentProjects, ProjectContextMenuTarget)
             -- TODO: fix cast
-            fs.write(Configuration.RecentProjectsPath, json.encode(State.RecentProjects :: JsonSerializable))
+            fs.write(Configuration.RecentProjectsPath, json.encode(State.RecentProjects))
         end
 
         if imgui.menuitem("Delete") then

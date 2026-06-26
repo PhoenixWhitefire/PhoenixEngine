@@ -12,6 +12,7 @@
 #include <string>
 
 #include "UserInput.hpp"
+#include "DeveloperTools.hpp"
 
 bool UserInput::IsKeyDown(int Key)
 {
@@ -40,6 +41,9 @@ bool UserInput::ShouldIgnoreUIInputSinking()
         return false;
 
     if (isAnyMouseButtonDown() && GImGui->HoveredWindow && std::string_view(GImGui->HoveredWindow->Name).find("WindowOverViewport") == std::string::npos)
+        return false;
+
+    if (DeveloperTools::FocusedOnTextDocument)
         return false;
 
     return true;

@@ -186,6 +186,7 @@ end
 
 function ProjectEditing.Leave(NextStage: Types.Stage)
     EditorCameraTransform.Save(EditorCam)
+    DeveloperTools:SaveTextDocuments()
     CoreTools.VisualizationsContainer.Enabled = false
 
     if NextStage == "ProjectPlaying" then

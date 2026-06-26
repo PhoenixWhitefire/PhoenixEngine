@@ -155,7 +155,9 @@ declare extern type ScrollInputEvent with
 	read Delta: vector
 end
 
-export type JsonSerializable = nil | boolean | number | string | vector | { JsonSerializable } | { [string]: JsonSerializable }
+export type JsonEncodable = nil | boolean | number | string | vector | { read JsonEncodable } | { read [string]: JsonEncodable }
+-- TODO bad bad bad type!
+export type JsonDecodable = nil | boolean | number | string | vector | { [string | number]: JsonDecodable }
 
 declare extern type Enum with
 end
