@@ -5,8 +5,6 @@
 #include <glm/mat4x4.hpp>
 #include <imgui.h>
 
-#include <tracy/Tracy.hpp>
-
 #include <Luau/CodeGen.h>
 
 #include "script/ScriptEngine.hpp"

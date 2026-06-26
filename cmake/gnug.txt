@@ -11,6 +11,8 @@ target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-g3>)
 target_compile_options(PhoenixEngine PRIVATE -MP)
 
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:DebugTSan>:-Wno-error=tsan>) # atomic_thread_fence in tracy_concurrentqueue.h
+
 # https://stackoverflow.com/a/9862800
 target_compile_options(PhoenixEngine PRIVATE
 	-pedantic -Wall -Wextra -Wcast-align
