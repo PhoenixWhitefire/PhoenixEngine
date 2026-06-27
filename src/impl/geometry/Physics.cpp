@@ -258,8 +258,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 			{
 				Engine::Get()->CurrentScene.RenderList.push_back(RenderItem{
 					.RenderMeshId = 0,
-					.Transform = glm::translate(glm::mat4(1.f), points.B),
-					.Size = glm::vec3(0.2f),
+					.Transform = glm::translate(glm::scale(glm::mat4(1.f), glm::vec3(0.2f)), points.B),
 					.MaterialId = MaterialManager::Get()->LoadFromPath("unlit"),
 					.TintColor = glm::vec3(1.f, 0.f, 0.f),
 					.Transparency = 0.1f,

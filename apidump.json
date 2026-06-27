@@ -115,6 +115,7 @@
       },
       "DeveloperTools": {
         "Methods": {
+          "CloseTextDocuments": "() -> ()",
           "GetExplorerSelections": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
           "Initialize": "() -> ()",
@@ -358,7 +359,7 @@
           "OnScriptMoved": "(Matrix, Matrix)"
         },
         "Properties": {
-          "LocalSize": "Vector3",
+          "LocalSize": "Vector3 RUNTIMEONLY",
           "LocalTransform": "Matrix",
           "Size": "Vector3 RUNTIMEONLY",
           "Transform": "Matrix RUNTIMEONLY"
@@ -450,8 +451,7 @@
           "lookAt": "function",
           "new": "function",
           "rotated": "function",
-          "rotatedXYZ": "function",
-          "rotatedYXZ": "function",
+          "scaled": "function",
           "translated": "function"
         },
         "Metatable": {

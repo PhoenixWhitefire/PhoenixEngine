@@ -386,7 +386,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 		if (!object)
 			continue;
 
-		if (node.LocalTransform != glm::mat4(1.f) || node.LocalScale != glm::vec3(1.f))
+		if (node.LocalTransform != glm::mat4(1.f))
 		{
 			EcTransform* ct = object->FindComponent<EcTransform>();
 			if (!ct)
@@ -396,7 +396,6 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 			}
 
 			ct->LocalTransform = node.LocalTransform;
-			ct->LocalSize = node.LocalScale;
 		}
 
 		object->Name = node.Name;
@@ -436,8 +435,7 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 	const nlohmann::json& MeshData,
 	uint32_t PrimitiveIndex,
-	const glm::mat4& Transform,
-	const glm::vec3& Scale
+	const glm::mat4& Transform
 )
 {
 	ZoneScoped;
@@ -517,7 +515,6 @@ ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
 		.Data = Mesh{ .Vertices = vertices, .Indices = indices, .AssetOrigin = center, .AssetSize = size },
 		.Material = m_GetMaterial(primitive),
 		.LocalTransform = Transform,
-		.LocalScale = Scale
 	};
 }
 
@@ -589,7 +586,8 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 	{
 		glm::mat4 trans = glm::translate(glm::mat4(1.f), translation); // 14/09/2024 har har har
 		glm::mat4 rot = glm::mat4_cast(rotation);
-		matLocal = trans * rot;
+		glm::mat4 sca = glm::scale(glm::mat4(1.f), scale);
+		matLocal = trans * rot * sca;
 	}
 
 	uint32_t myIndex = static_cast<uint32_t>(m_Nodes.size());
@@ -614,7 +612,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 
 		for (uint32_t i = 0; i < meshData["primitives"].size(); i++)
 		{
-			ModelNode node = m_LoadPrimitive(meshData, i, matLocal, scale);
+			ModelNode node = m_LoadPrimitive(meshData, i, matLocal);
 			node.NodeId = NodeIndex;
 			node.Parent = From;
 
@@ -647,7 +645,6 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 		);
 
 		m_Nodes.back().LocalTransform = matLocal;
-		m_Nodes.back().LocalScale = scale;
 	}
 
 	// traverse the node's children

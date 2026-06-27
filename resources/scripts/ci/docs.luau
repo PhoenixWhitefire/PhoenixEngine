@@ -473,8 +473,8 @@ local rtol: { [string]: string } = {
 	Vector3 = "vector",
 	Vector2 = "vector",
 	["->"] = ":",
-	READONLY = "",
-	RUNTIMEONLY = "",
+	[" READONLY"] = "",
+	[" RUNTIMEONLY"] = "",
 	Any = "unknown",
 }
 

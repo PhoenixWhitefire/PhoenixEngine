@@ -1054,11 +1054,8 @@
   "@phoenix/global/Matrix.rotated": {
     "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z"
   },
-  "@phoenix/global/Matrix.rotatedXYZ": {
-    "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order X-Y-Z"
-  },
-  "@phoenix/global/Matrix.rotatedYXZ": {
-    "documentation": "* Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z"
+  "@phoenix/global/Matrix.scaled": {
+    "documentation": "* Creates a scaled Matrix"
   },
   "@phoenix/global/Matrix.translated": {
     "documentation": "* Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)"
@@ -1630,6 +1627,9 @@
   "@phoenix/globaltype/DataModel.VM": {
     "documentation": "The Luau Virtual Machine that Scripts bound to this Data Model will run in"
   },
+  "@phoenix/globaltype/DeveloperTools.CloseTextDocuments": {
+    "documentation": "Saves and closes all open text documents"
+  },
   "@phoenix/globaltype/DeveloperTools.DocumentationShown": {
     "documentation": "Whether the Documentation tool is enabled"
   },
@@ -2004,6 +2004,12 @@
   },
   "@phoenix/globaltype/Matrix.Right": {
     "documentation": "* The Right basis vector of the Matrix\n"
+  },
+  "@phoenix/globaltype/Matrix.Scale": {
+    "documentation": "* The current scale of the Matrix\n"
+  },
+  "@phoenix/globaltype/Matrix.ScaleBy": {
+    "documentation": "* Scales the matrix by the given vector\n"
   },
   "@phoenix/globaltype/Matrix.Up": {
     "documentation": "* The Up basis vector of the Matrix\n"

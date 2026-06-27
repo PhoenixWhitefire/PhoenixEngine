@@ -339,7 +339,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         end
     end
 
-    GizmoContainer.Size = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 60
+    --GizmoContainer.Size = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 60
 
     GizmoPrevTarget = target
     GizmoPrevTargetTransform = target.Transform
@@ -391,7 +391,11 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         end
     end
 
-    local hit = IsGizmoDragging and GizmoDragStartObjectPosition and GizmoDragPlaneNormal and GizmoDragStartWorldPoint and rayPlaneIntersect(camPos, mouseVector, GizmoDragStartObjectPosition, GizmoDragPlaneNormal)
+    local hit = IsGizmoDragging
+                and GizmoDragStartObjectPosition
+                and GizmoDragPlaneNormal
+                and GizmoDragStartWorldPoint
+                and rayPlaneIntersect(camPos, mouseVector, GizmoDragStartObjectPosition, GizmoDragPlaneNormal)
 
     if hit then
         assert(GizmoDragHandle)

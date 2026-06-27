@@ -7,6 +7,7 @@
 #include "component/Camera.hpp"
 #include "component/Sound.hpp"
 #include "geometry/IntersectionLib.hpp"
+#include "geometry/DecomposeTRS.hpp"
 #include "Engine.hpp"
 
 static ObjectHandle s_FallbackCamera;
@@ -475,8 +476,9 @@ std::vector<GameObject*> EcWorkspace::GetObjectsInAabb(const glm::vec3& Position
 		if (object)
 		{
 			glm::vec3 bpos = object->Transform[3];
-			glm::vec3 bsize = object->Size;
-        
+			glm::vec3 bsize = {};
+			DecomposeTRS(object->Transform, nullptr, nullptr, &bsize);
+
 			IntersectionLib::Intersection hit = IntersectionLib::AabbAabb(
 				Position,
 				Size,

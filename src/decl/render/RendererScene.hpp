@@ -12,7 +12,6 @@ struct RenderItem
 {
 	uint32_t RenderMeshId = UINT32_MAX;
 	glm::mat4 Transform;
-	glm::vec3 Size;
 	uint32_t MaterialId = UINT32_MAX;
 	glm::vec3 TintColor;
 	float Transparency = 0.f;

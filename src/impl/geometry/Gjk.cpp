@@ -7,6 +7,7 @@
 #include <cfloat>
 
 #include "geometry/Gjk.hpp"
+#include "geometry/DecomposeTRS.hpp"
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 #include "asset/MeshProvider.hpp"
@@ -30,11 +31,14 @@ static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Directi
 	EcTransform* ct = Rb->CurTransform;
 	assert(ct);
 
+	glm::vec3 size = {};
+	DecomposeTRS(ct->Transform, nullptr, nullptr, &size);
+
 	for (uint32_t ind : mesh.Indices)
 	{
 		const Vertex& v = mesh.Vertices[ind];
 
-		glm::vec3 vworld = glm::vec3(ct->Transform * submeshTrans * glm::vec4(v.Position * ct->Size, 1.f));
+		glm::vec3 vworld = glm::vec3(ct->Transform * submeshTrans * glm::vec4(v.Position * size, 1.f));
         float distance = glm::dot(vworld, Direction);
 
         if (distance > *maxDistance)
@@ -61,11 +65,13 @@ static glm::vec3 findFurthestPoint_MeshComponent(const EcRigidBody* Rb, glm::vec
 static glm::vec3 findFurthestPoint_Cube(const EcRigidBody* Rb, glm::vec3 Direction)
 {
 	glm::mat3 rotation = glm::mat3(Rb->CurTransform->Transform);
+	glm::vec3 size = {};
+	DecomposeTRS(Rb->CurTransform->Transform, nullptr, nullptr, &size);
 
 	glm::vec3 localDir = glm::transpose(rotation) * Direction;
 	glm::vec3 result;
 
-	glm::vec3 halfSize = Rb->CurTransform->Size / 2.f;
+	glm::vec3 halfSize = size / 2.f;
 
 	result.x = (localDir.x > 0.f) ? halfSize.x : -halfSize.x;
 	result.y = (localDir.y > 0.f) ? halfSize.y : -halfSize.y;
@@ -80,7 +86,11 @@ static glm::vec3 findFurthestPoint_Sphere(const EcRigidBody* Rb, glm::vec3 Direc
 
 	if (glm::length(Direction) < 0.0001f)
 		return center;
-	return center + glm::normalize(Direction) * (Rb->CurTransform->Size.x / 2.f);
+
+	glm::vec3 size = {};
+	DecomposeTRS(Rb->CurTransform->Transform, nullptr, nullptr, &size);
+
+	return center + glm::normalize(Direction) * (size.x / 2.f);
 }
 
 static glm::vec3 findFurthestPoint_Hulls(const EcRigidBody* Rb, glm::vec3 Direction)

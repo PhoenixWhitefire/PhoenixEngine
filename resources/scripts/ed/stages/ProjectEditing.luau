@@ -186,16 +186,19 @@ end
 
 function ProjectEditing.Leave(NextStage: Types.Stage)
     EditorCameraTransform.Save(EditorCam)
-    DeveloperTools:SaveTextDocuments()
     CoreTools.VisualizationsContainer.Enabled = false
 
     if NextStage == "ProjectPlaying" then
+        DeveloperTools:SaveTextDocuments()
+
         if Preferences.ClearOutputOnPlaytest then
             table.clear(Output.Log)
         end
 
         return
     else
+        DeveloperTools:CloseTextDocuments()
+
         for _, watcher in Reimport.Watchers do
             assert(watcher)
             watcher.Disconnect()

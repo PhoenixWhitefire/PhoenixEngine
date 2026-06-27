@@ -62,7 +62,6 @@ private:
 		Mesh Data;
 		MeshMaterial Material;
 		glm::mat4 LocalTransform = { 1.f };
-		glm::vec3 LocalScale = { 1.f, 1.f, 1.f };
 		std::vector<BoneInfo> Bones;
 	};
 
@@ -71,8 +70,7 @@ private:
 	ModelNode m_LoadPrimitive(
 		const nlohmann::json& MeshData,
 		uint32_t PrimitiveIndex,
-		const glm::mat4& Transform,
-		const glm::vec3& Scale
+		const glm::mat4& Transform
 	);
 
 	void m_TraverseNode(uint32_t NextNode, uint32_t From);

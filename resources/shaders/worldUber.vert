@@ -7,14 +7,12 @@ layout (location = 2) in vec4 VertexPaint;
 layout (location = 3) in vec2 VertexUV;
 // from Instanced Array
 layout (location = 4) in mat4 InstanceTransform;
-layout (location = 8) in vec3 InstanceScale;
-layout (location = 9) in vec3 InstanceColor;
-layout (location = 10) in float InstanceTransparency;
+layout (location = 8) in vec3 InstanceColor;
+layout (location = 9) in float InstanceTransparency;
 
 uniform mat4 Phoenix_RenderMatrix;
 
 uniform mat4 Phoenix_Transform;
-uniform vec3 Phoenix_Scale;
 uniform vec3 Phoenix_ColorTint;
 uniform bool Phoenix_IsInstanced;
 
@@ -38,28 +36,34 @@ out DATA
 	vec3 CameraPosition;
 } data_out;
 
+vec3 getMatrixScale(mat4 m)
+{
+	return vec3(
+		length(m[0]),
+		length(m[1]),
+		length(m[2])
+	);
+}
+
 void main()
 {
 	mat4 trans = Phoenix_Transform;
-	vec3 sca = Phoenix_Scale;
 	vec4 pain = vec4(Phoenix_ColorTint, 1.f) * VertexPaint;
 
 	if (Phoenix_IsInstanced)
 	{
 		trans = InstanceTransform;
-		sca = InstanceScale;
 		pain = vec4(InstanceColor, 1.f) * VertexPaint;
 	}
 
-	vec3 modelPos = VertexPosition * sca;
-	vec4 worldPos = trans * vec4(modelPos, 1.0f);
+	vec4 worldPos = trans * vec4(VertexPosition, 1.0f);
 
 	data_out.VertexNormal = VertexNormal;
 	data_out.Paint = pain;
 	data_out.TextureUV = VertexUV;
 	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = Phoenix_RenderMatrix;
-	data_out.ModelPosition = modelPos;
+	data_out.ModelPosition = VertexPosition * getMatrixScale(trans);
 	data_out.WorldPosition = vec3(worldPos);
 	data_out.Transform = trans;
 	data_out.RelativeToDirecLight = Phoenix_DirectionalLightProjection * worldPos;

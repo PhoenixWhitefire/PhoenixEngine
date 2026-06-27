@@ -1,8 +1,12 @@
 #include <tracy/Tracy.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include "component/Transform.hpp"
 #include "component/RigidBody.hpp"
 #include "datatype/GameObject.hpp"
+#include "geometry/DecomposeTRS.hpp"
 
 static void recomputeAabbRecursive(const ObjectHandle& Object)
 {
@@ -23,13 +27,7 @@ static void recomputeChildrenWorldTransformsRecursive(const ObjectHandle& Object
     Object->ForEachChild([Object, pct](const ObjectHandle& Child) -> bool
     {
         if (EcTransform* ct = Child->FindComponent<EcTransform>())
-        {
-            glm::mat4 offsetLocal = ct->LocalTransform;
-            offsetLocal[3] = glm::vec4(glm::vec3(ct->LocalTransform[3]) * pct->Size, 1.f);
-
-            ct->Transform = pct->Transform * offsetLocal;
-            ct->Size = pct->Size * ct->LocalSize;
-        }
+            ct->Transform = pct->Transform * ct->LocalTransform;
 
         recomputeChildrenWorldTransformsRecursive(Child);
         return true;
@@ -39,7 +37,6 @@ static void recomputeChildrenWorldTransformsRecursive(const ObjectHandle& Object
 static void recomputeWorldTransforms(EcTransform* ct)
 {
     ct->Transform = ct->LocalTransform;
-    ct->Size = ct->LocalSize;
 
     GameObject* parent = ct->Object->GetParent();
 
@@ -48,7 +45,6 @@ static void recomputeWorldTransforms(EcTransform* ct)
         if (EcTransform* pct = parent->FindComponent<EcTransform>())
         {
             ct->Transform = pct->Transform * ct->LocalTransform; // parent should already have up-to-date World Transforms
-            ct->Size = pct->Size * ct->LocalSize;
             break;
         }
         parent = parent->GetParent();
@@ -75,11 +71,10 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             .Set = (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
             {
                 ZoneScoped;
-                EcTransform* ct = static_cast<EcTransform*>(p);
-                glm::mat4 prevTrans = ct->Transform;
 
-                ct->LocalTransform = gv.AsMatrix();
-                ct->RecomputeTransformTree();
+                EcTransform* ct = static_cast<EcTransform*>(p);
+                glm::mat4 prevTrans = ct->LocalTransform;
+                ct->SetLocalTransform(gv.AsMatrix());
 
                 REFLECTION_SIGNAL_EVENT(ct->OnScriptMovedCallbacks, prevTrans, ct->Transform);
             },
@@ -87,19 +82,27 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             .ParallelReadSafe = false, // Physics
         } },
 
-        REFLECTION_PROPERTY(
-            "LocalSize",
-            Vector3,
-            REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, LocalSize),
-            [](void* p, const Reflection::GenericValue& gv)
+        { "LocalSize", Reflection::PropertyDescriptor{
+            .Name = "LocalSize",
+            .Get = [](void* p) -> Reflection::GenericValue
+            {
+                const EcTransform* ct = static_cast<EcTransform*>(p);
+
+                glm::vec3 scale = {};
+                DecomposeTRS(ct->LocalTransform, nullptr, nullptr, &scale);
+
+                return scale;
+            },
+            .Set = [](void* p, const Reflection::GenericValue& gv)
             {
                 ZoneScoped;
 
                 EcTransform* ct = static_cast<EcTransform*>(p);
-                ct->LocalSize = gv.AsVector3();
-                ct->RecomputeTransformTree();
-            }
-        ),
+                ct->SetLocalSize(gv.AsVector3());
+            },
+            .Type = Reflection::ValueType::Vector3,
+            .Serializes = false,
+        } },
 
         { "Transform", Reflection::PropertyDescriptor{
             .Name = "Transform",
@@ -107,6 +110,7 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             .Set = (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
             {
                 ZoneScoped;
+
                 EcTransform* ct = static_cast<EcTransform*>(p);
                 glm::mat4 prevTrans = ct->Transform;
                 ct->SetWorldTransform(gv.AsMatrix());
@@ -122,12 +126,17 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             .Name = "Size",
             .Get = (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
             {
-                return static_cast<EcTransform*>(p)->Size;
+                const EcTransform* ct = static_cast<EcTransform*>(p);
+
+                glm::vec3 scale = {};
+                DecomposeTRS(ct->Transform, nullptr, nullptr, &scale);
+
+                return scale;
             },
             .Set = (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
             {
                 ZoneScoped;
-                    
+
                 EcTransform* ct = static_cast<EcTransform*>(p);
                 ct->SetWorldSize(gv.AsVector3());
             },
@@ -160,11 +169,35 @@ void EcTransform::SetWorldTransform(const glm::mat4& NewWorldTrans)
 
 void EcTransform::SetWorldSize(const glm::vec3& NewWorldSize)
 {
+    glm::vec3 translation = {};
+    glm::quat rotation = {};
+    DecomposeTRS(Transform, &translation, &rotation, nullptr);
+
+    Transform = glm::translate(glm::mat4(1.f), translation) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.f), NewWorldSize);
+
     EcTransform* parent = Object->GetParent() ? Object->GetParent()->FindComponent<EcTransform>() : nullptr;
+    glm::vec3 parentSize = { 1.f, 1.f, 1.f };
 
-    LocalSize = parent ? (NewWorldSize / parent->Size) : NewWorldSize;
-    Size = NewWorldSize;
+    if (parent)
+        DecomposeTRS(parent->Transform, nullptr, nullptr, &parentSize);
 
+    glm::vec3 localSize = NewWorldSize / parentSize;
+    SetLocalSize(localSize);
+}
+
+void EcTransform::SetLocalTransform(const glm::mat4& NewLocalTrans)
+{
+    LocalTransform = NewLocalTrans;
+    RecomputeTransformTree();
+}
+
+void EcTransform::SetLocalSize(const glm::vec3& NewLocalSize)
+{
+    glm::vec3 translation = {};
+    glm::quat rotation = {};
+    DecomposeTRS(LocalTransform, &translation, &rotation, nullptr);
+
+    LocalTransform = glm::translate(glm::mat4(1.f), translation) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.f), NewLocalSize);
     RecomputeTransformTree();
 }
 

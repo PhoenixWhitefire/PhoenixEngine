@@ -370,8 +370,7 @@ IntersectionLib::CollisionPoints IntersectionLib::GjkRay(const EcRigidBody* A, c
 	{
 		// hacky
 		EcTransform trans;
-		trans.Size = glm::vec3(0.001f);
-		trans.Transform[3] = glm::vec4(RayResult->Point, 1.f);
+		trans.Transform = glm::translate(glm::scale(glm::mat4(1.f), glm::vec3(0.001f)), RayResult->Point);
 
 		EcRigidBody sphere;
 		sphere.CollisionType = EnCollisionType::Sphere;

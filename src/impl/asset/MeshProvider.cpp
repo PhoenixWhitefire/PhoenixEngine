@@ -779,20 +779,16 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 	glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, TransformRow4));
 
 	// vec3s
-	// scale
-	glEnableVertexAttribArray(8);
 	// color
-	glEnableVertexAttribArray(9);
+	glEnableVertexAttribArray(8);
 	glVertexAttribDivisor(8, 1);
+
+	glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Color));
+
+	glEnableVertexAttribArray(9);
 	glVertexAttribDivisor(9, 1);
 
-	glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Scale));
-	glVertexAttribPointer(9, 3, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Color));
-
-	glEnableVertexAttribArray(10);
-	glVertexAttribDivisor(10, 1);
-
-	glVertexAttribPointer(10, 1, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Transparency));
+	glVertexAttribPointer(9, 1, GL_FLOAT, GL_FALSE, instanceStride, (void*)offsetof(Renderer::InstanceDrawInfo, Transparency));
 
 	if (mesh.Bones.size() > 0)
 	{
@@ -807,13 +803,13 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 
 		constexpr size_t skinnerStride = sizeof(Vertex::InfluencingJoints) + sizeof(Vertex::JointWeights);
 
+		glEnableVertexAttribArray(10);
 		glEnableVertexAttribArray(11);
-		glEnableVertexAttribArray(12);
+		glVertexAttribDivisor(10, 0);
 		glVertexAttribDivisor(11, 0);
-		glVertexAttribDivisor(12, 0);
 
-		glVertexAttribIPointer(11, 4, GL_UNSIGNED_BYTE, skinnerStride, (void*)0);
-		glVertexAttribPointer(12, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)4);
+		glVertexAttribIPointer(10, 4, GL_UNSIGNED_BYTE, skinnerStride, (void*)0);
+		glVertexAttribPointer(11, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)4);
 
 		std::vector<uint8_t> data;
 		data.resize(mesh.Vertices.size() * 4 + mesh.Vertices.size() * sizeof(float) * 4);

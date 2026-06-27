@@ -8,18 +8,18 @@ struct EcTransform : public Component<EntityComponent::Transform>
 {
     void SetWorldTransform(const glm::mat4&);
 	void SetWorldSize(const glm::vec3&);
+    void SetLocalTransform(const glm::mat4&);
+    void SetLocalSize(const glm::vec3&);
+
     void RecomputeTransformTree();
 
     // world-space
     glm::mat4 Transform = { 1.f };
-    glm::vec3 Size = { 1.f, 1.f, 1.f };
 
     // local-space (relative to world transform of nearest Transform ancestor)
     glm::mat4 LocalTransform = { 1.f };
-    glm::vec3 LocalSize = { 1.f, 1.f, 1.f };
 
     std::vector<Reflection::EventCallback> OnScriptMovedCallbacks;
-
     bool Valid = true;
 };
 

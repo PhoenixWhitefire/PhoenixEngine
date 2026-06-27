@@ -417,7 +417,6 @@ void Renderer::DrawScene(
 				renderData.Transform[1],
 				renderData.Transform[2],
 				renderData.Transform[3],
-				renderData.Size / mesh.AssetSize,
 				renderData.TintColor,
 				renderData.Transparency
 			);
@@ -467,7 +466,6 @@ void Renderer::DrawScene(
 		this->DrawMesh(
 			mesh,
 			shader,
-			renderData.Size,
 			renderData.Transform,
 			renderData.FaceCulling,
 			static_cast<int32_t>(drawInfos.size())
@@ -478,7 +476,6 @@ void Renderer::DrawScene(
 void Renderer::DrawMesh(
 	const Mesh& Object,
 	ShaderProgram& Shader,
-	const glm::vec3& Size,
 	const glm::mat4& Transform,
 	FaceCullingMode FaceCulling,
 	int32_t NumInstances
@@ -551,7 +548,6 @@ void Renderer::DrawMesh(
 	{
 		Shader.SetUniform("Phoenix_IsInstanced", false);
 		Shader.SetUniform("Phoenix_Transform", Transform);
-		Shader.SetUniform("Phoenix_Scale", Size / Object.AssetSize);
 		Shader.Activate();
 
 		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);

@@ -8,6 +8,7 @@
 #include <glm/gtx/matrix_interpolation.hpp>
 
 #include "script/luhx.hpp"
+#include "geometry/DecomposeTRS.hpp"
 
 void luhx_pushmatrix(lua_State* L, const glm::mat4& mtx)
 {
@@ -18,39 +19,29 @@ void luhx_pushmatrix(lua_State* L, const glm::mat4& mtx)
     lua_setmetatable(L, -2);
 }
 
+static glm::vec3 checkVectorArg(lua_State* L, int argBaseIndex)
+{
+	int ty = lua_type(L, argBaseIndex);
+	luaL_argexpected(L, ty == LUA_TVECTOR || ty == LUA_TNUMBER, argBaseIndex, "vector or number");
+
+	if (ty == LUA_TNUMBER)
+	{
+		return glm::vec3(
+			static_cast<float>(luaL_checknumber(L, argBaseIndex)),
+			static_cast<float>(luaL_checknumber(L, argBaseIndex + 1)),
+			static_cast<float>(luaL_checknumber(L, argBaseIndex + 2))
+		);
+	}
+	else
+	{
+		return glm::make_vec3(luaL_checkvector(L, argBaseIndex));
+	}
+}
+
 static int matrix_translated(lua_State* L)
 {
     glm::mat4 m = glm::mat4(1.f);
-
-	int numArgs = lua_gettop(L);
-
-	switch (numArgs)
-	{
-	case 1:
-	{
-		const float* vec = luaL_checkvector(L, -1);
-		m[3] = glm::vec4(glm::make_vec3(vec), 1.f);
-
-		break;
-	}
-	case 3:
-	{
-		float x = static_cast<float>(luaL_checknumber(L, 1));
-		float y = static_cast<float>(luaL_checknumber(L, 2));
-		float z = static_cast<float>(luaL_checknumber(L, 3));
-
-	    m[3] = glm::vec4(glm::vec3(x, y, z), 1.f);
-
-		break;
-	}
-
-	default:
-		luaL_error(
-			L,
-			"`Matrix.translated` expected 1 or 3 arguments, got %i",
-			numArgs
-		);
-	}
+	m[3] = glm::vec4(checkVectorArg(L, 1), 1.f);
 
     luhx_pushmatrix(L, m);
     return 1;
@@ -79,39 +70,19 @@ static int matrix_new(lua_State* L)
     return 1;
 }
 
-static int matrix_rotatedXYZ(lua_State* L)
+static int matrix_rotatedYXZ(lua_State* L)
 {
-    glm::vec3 ang;
+    glm::vec3 ang = checkVectorArg(L, 1);
 
-    if (const float* v = lua_tovector(L, 1))
-        ang = glm::make_vec3(v);
-
-    else
-    {
-        ang.x = static_cast<float>(luaL_checknumber(L, 1));
-        ang.y = static_cast<float>(luaL_checknumber(L, 2));
-        ang.z = static_cast<float>(luaL_checknumber(L, 3));
-    }
-
-	luhx_pushmatrix(L, glm::eulerAngleXYZ(ang.x, ang.y, ang.z));
+	luhx_pushmatrix(L, glm::eulerAngleYXZ(ang.y, ang.x, ang.z));
 	return 1;
 }
 
-static int matrix_rotatedYXZ(lua_State* L)
+static int matrix_scaled(lua_State* L)
 {
-    glm::vec3 ang;
+	glm::vec3 scale = checkVectorArg(L, 1);
 
-    if (const float* v = lua_tovector(L, 1))
-        ang = glm::make_vec3(v);
-
-    else
-    {
-        ang.x = static_cast<float>(luaL_checknumber(L, 1));
-        ang.y = static_cast<float>(luaL_checknumber(L, 2));
-        ang.z = static_cast<float>(luaL_checknumber(L, 3));
-    }
-
-	luhx_pushmatrix(L, glm::eulerAngleYXZ(ang.y, ang.x, ang.z));
+	luhx_pushmatrix(L, glm::scale(glm::mat4(1.f), scale));
 	return 1;
 }
 
@@ -133,9 +104,10 @@ static int matrix_lookAt(lua_State* L)
 static const luaL_Reg matrix_funcs[] = {
 	{ "new", matrix_new },
     { "translated", matrix_translated },
-    { "rotatedXYZ", matrix_rotatedXYZ },
-	{ "rotatedYXZ", matrix_rotatedYXZ},
+    // { "rotatedXYZ", matrix_rotatedXYZ },
+	// { "rotatedYXZ", matrix_rotatedYXZ},
 	{ "rotated", matrix_rotatedYXZ },
+	{ "scaled", matrix_scaled },
     { "lookAt", matrix_lookAt },
 
 	{ NULL, NULL }
@@ -149,6 +121,14 @@ static int mtx_index(lua_State* L)
 
 	if (strcmp(k, "Position") == 0)
 		luhx_pushvector3(L, glm::vec3(m[3]));
+
+	else if (strcmp(k, "Scale") == 0)
+	{
+		glm::vec3 scale = {};
+		DecomposeTRS(m, nullptr, nullptr, &scale);
+
+		luhx_pushvector3(L, scale);
+	}
 
 	else if (strcmp(k, "Forward") == 0)
 		luhx_pushvector3(L, glm::vec3(m[2]));
@@ -204,6 +184,22 @@ static int mtx_index(lua_State* L)
 				return 1;
 			},
 			"Matrix.Lerp"
+		);
+	}
+
+	else if (strcmp(k, "ScaleBy") == 0)
+	{
+		lua_pushcfunction(
+			L,
+			[](lua_State* L) -> int
+			{
+				const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+				glm::vec3 scale = checkVectorArg(L, 2);
+
+				luhx_pushmatrix(L, glm::scale(a, scale));
+				return 1;
+			},
+			"Matrix.ScaleBy"
 		);
 	}
 

@@ -499,18 +499,17 @@ static void traverseHierarchy(
 				if (boxframeMaterial == UINT32_MAX)
 					boxframeMaterial = MaterialManager::Get()->LoadFromPath("@base/materials/boxframe.mtl");
 
-				RendererScene.RenderList.emplace_back(
-					cubeMesh,
-					glm::translate(glm::mat4(1.f), rb->CollisionAabb.Position),
-					rb->CollisionAabb.Size,
-					boxframeMaterial,
-					glm::vec3(1.f, 1.f, 0.f),
-					0.f,
-					0.f,
-					0.f,
-					FaceCullingMode::None,
-					false
-				);
+				RendererScene.RenderList.push_back(RenderItem{
+					.RenderMeshId = cubeMesh,
+					.Transform = glm::translate(glm::scale(glm::mat4(1.f), rb->CollisionAabb.Size), rb->CollisionAabb.Position),
+					.MaterialId = boxframeMaterial,
+					.TintColor = glm::vec3(1.f, 1.f, 0.f),
+					.Transparency = 0.f,
+					.MetalnessFactor = 0.f,
+					.RoughnessFactor = 0.f,
+					.FaceCulling = FaceCullingMode::None,
+					.CastsShadows = false
+				});
 			}
 		}
 
@@ -524,7 +523,6 @@ static void traverseHierarchy(
 			RendererScene.RenderList.emplace_back(
 				cm->RenderMeshId,
 				ct->Transform,
-				ct->Size,
 				cm->MaterialId,
 				cm->Tint,
 				cm->Transparency,
@@ -781,7 +779,6 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	RendererContext.DrawMesh(
 		cubeMesh,
 		SkyboxShader,
-		{ 1.f, 1.f, 1.f },
 		skyRenderMatrix,
 		FaceCullingMode::FrontFace // Cull the Outside, not the Inside
 	);
@@ -849,7 +846,6 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		RendererContext.DrawMesh(
 			quadMesh,
 			PostFxShader,
-			{ 2.f, 2.f, 2.f },
 			glm::mat4(1.f),
 			FaceCullingMode::None,
 			0
@@ -860,7 +856,6 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		RendererContext.DrawMesh(
 			quadMesh,
 			PostFxShader,
-			{ 2.f, 2.f, 2.f },
 			glm::mat4(1.f),
 			FaceCullingMode::None,
 			0
@@ -1195,8 +1190,7 @@ void Engine::Start()
 
                     CurrentScene.RenderList.push_back(RenderItem{
                         .RenderMeshId = 0,
-                        .Transform = glm::translate(glm::mat4(1.f), (glm::vec3)it.first),
-                        .Size = glm::vec3(SPATIAL_HASH_GRID_SIZE),
+                        .Transform = glm::translate(glm::scale(glm::mat4(1.f), glm::vec3(SPATIAL_HASH_GRID_SIZE)), (glm::vec3)it.first),
                         .MaterialId = MaterialManagerInstance.LoadFromPath("@base/materials/neon.mtl"),
                         .TintColor = glm::vec3(1.f, 0.f, 0.f),
                         .Transparency = std::clamp(1.f - ((float)(it.second.size() + 5) / 64.f), 0.2f, 1.f),

@@ -19,6 +19,7 @@ namespace DeveloperTools
 	void SetExplorerRoot(const ObjectHandle);
 	void OpenTextDocument(const std::string&, int Line = 1);
 	void SaveTextDocuments();
+	void CloseTextDocuments();
 	// does not require `::Initialize` to be called
 	void LaunchTracy();
 

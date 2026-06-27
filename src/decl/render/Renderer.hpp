@@ -38,7 +38,6 @@ public:
 	void DrawMesh(
 		const Mesh& Object,
 		ShaderProgram& Shader,
-		const glm::vec3& Size,
 		const glm::mat4& Transform = glm::mat4(1.f),
 		FaceCullingMode Culling = FaceCullingMode::BackFace,
 		int32_t NumInstances = 1
@@ -52,11 +51,10 @@ public:
 		glm::vec4 TransformRow2;
 		glm::vec4 TransformRow3;
 		glm::vec4 TransformRow4;
-		glm::vec3 Scale;
 		glm::vec3 Color;
 		float Transparency;
 	};
-	static_assert(sizeof(InstanceDrawInfo) == ((4*4) + (3*2) + 1) * 4);
+	static_assert(sizeof(InstanceDrawInfo) == ((4*4) + (3*1) + 1) * 4);
 
 	GpuFrameBuffer FrameBuffer;
 

@@ -44,6 +44,7 @@
 #include "component/Model.hpp"
 
 #include "script/ScriptEngine.hpp"
+#include "geometry/DecomposeTRS.hpp"
 
 #include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
@@ -117,7 +118,6 @@ static Scene MtlPreviewScene = Scene{
         RenderItem{
             .RenderMeshId = 0u,
             .Transform = glm::mat4(1.f),
-            .Size = glm::vec3(1.f),
             .MaterialId = 0u,
             .TintColor = glm::vec3(1.f),
             .Transparency = 0.f,
@@ -546,6 +546,23 @@ static bool textEditorAskSaveFileAs(
 
 static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 {
+    std::filesystem::file_time_type lwt = std::filesystem::last_write_time(Tab.FilePath);
+    std::chrono::time_point<std::chrono::system_clock> systemTime = std::chrono::clock_cast<std::chrono::system_clock>(lwt);
+
+    if (systemTime > Tab.LastSynced && Tab.WasEdited)
+    {
+        int choice = tinyfd_messageBox(
+            "Save conflict",
+            std::format("The file {} has changes on disk.\nOverwrite? The NO option will discard the changes made in the Editor.", Tab.FilePath).c_str(),
+            "yesno",
+            "warning",
+            1
+        );
+
+        if (choice == 0)
+            return;
+    }
+
     Tab.LastSynced = std::chrono::system_clock::now() + std::chrono::milliseconds(10);
 
     std::string contents = Tab.Editor.GetText();
@@ -4348,6 +4365,8 @@ static void renderProperties()
                     ImGui::NewLine(); // need to put this on a new line to prevent UI overlapping
 
                     glm::mat4 mat = curVal.AsMatrix();
+                    glm::vec3 scale = {};
+                    DecomposeTRS(mat, nullptr, nullptr, &scale);
 
                     float pos[3] = {
                         mat[3][0],
@@ -4387,13 +4406,8 @@ static void renderProperties()
                     ImGui::InputFloat3("Rotation", rotdegs);
                     ImGui::Unindent();
 
-                    mat = glm::mat4(1.f);
-
-                    mat[3][0] = pos[0];
-                    mat[3][1] = pos[1];
-                    mat[3][2] = pos[2];
-
-                    mat *= glm::eulerAngleYXZ(glm::radians(rotdegs[1]), glm::radians(rotdegs[0]), glm::radians(rotdegs[2]));
+                    glm::mat4 rotMtx = glm::eulerAngleYXZ(glm::radians(rotdegs[1]), glm::radians(rotdegs[0]), glm::radians(rotdegs[2]));
+                    mat = glm::translate(glm::mat4(1.f), glm::make_vec3(pos)) * rotMtx * glm::scale(glm::mat4(1.f), scale);
 
                     newVal = mat;
                 }
@@ -4988,6 +5002,12 @@ void DeveloperTools::SaveTextDocuments()
 {
     for (TextEditorTab& tab : s_TextEditors)
         textEditorSaveFile(tab);
+}
+
+void DeveloperTools::CloseTextDocuments()
+{
+    SaveTextDocuments();
+    s_TextEditors.clear();
 }
 
 void DeveloperTools::Shutdown()

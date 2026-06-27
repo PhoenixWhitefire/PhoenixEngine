@@ -8,17 +8,15 @@ layout (location = 2) in vec4 VertexPaint;
 layout (location = 3) in vec2 VertexUV;
 // from Instanced Array
 layout (location = 4) in mat4 InstanceTransform;
-layout (location = 8) in vec3 InstanceScale;
-layout (location = 9) in vec3 InstanceColor;
-layout (location = 10) in float InstanceTransparency;
+layout (location = 8) in vec3 InstanceColor;
+layout (location = 9) in float InstanceTransparency;
 // skinned meshes
-layout (location = 11) in uvec4 JointsIndices;
-layout (location = 12) in vec4 JointsWeights;
+layout (location = 10) in uvec4 JointsIndices;
+layout (location = 11) in vec4 JointsWeights;
 
 uniform mat4 Phoenix_RenderMatrix;
 
 uniform mat4 Phoenix_Transform;
-uniform vec3 Phoenix_Scale;
 uniform vec3 Phoenix_ColorTint;
 uniform bool Phoenix_IsInstanced;
 
@@ -44,16 +42,23 @@ out DATA
 	vec3 CameraPosition;
 } data_out;
 
+vec3 getMatrixScale(mat4 m)
+{
+	return vec3(
+		length(m[0]),
+		length(m[1]),
+		length(m[2])
+	);
+}
+
 void main()
 {
 	mat4 trans = Phoenix_Transform;
-	vec3 sca = Phoenix_Scale;
 	vec4 pain = vec4(Phoenix_ColorTint, 1.f) * VertexPaint;
 
 	if (Phoenix_IsInstanced)
 	{
 		trans = InstanceTransform;
-		sca = InstanceScale;
 		pain = vec4(InstanceColor, 1.f) * VertexPaint;
 	}
 
@@ -72,7 +77,7 @@ void main()
 	data_out.TextureUV = VertexUV;
 	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = Phoenix_RenderMatrix;
-	data_out.ModelPosition = sca * vec3(skin * vec4(VertexPosition, 1.f));
+	data_out.ModelPosition = getMatrixScale(Phoenix_Transform) * vec3(skin * vec4(VertexPosition, 1.f));
 	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
 	data_out.Transform = trans;
 	data_out.RelativeToDirecLight = Phoenix_DirectionalLightProjection * vec4(data_out.WorldPosition, 1.f);

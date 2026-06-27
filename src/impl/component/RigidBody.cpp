@@ -7,6 +7,7 @@
 #include "component/RigidBody.hpp"
 #include "component/Workspace.hpp"
 #include "asset/MeshProvider.hpp"
+#include "geometry/DecomposeTRS.hpp"
 #include "FileRW.hpp"
 
 static float roundNToGrid(float x)
@@ -161,7 +162,8 @@ void EcRigidBody::RecomputeAabb()
 		return;
 
 	const glm::mat4& transform = ct->Transform;
-	const glm::vec3& glmsize = ct->Size;
+	glm::vec3 glmsize = {};
+	DecomposeTRS(transform, nullptr, nullptr, &glmsize);
 
 	std::array<glm::vec3, 8> verts;
 

@@ -199,6 +199,16 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
                 return {};
             }
         } },
+
+        { "CloseTextDocuments", Reflection::MethodDescriptor{
+            {},
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                DeveloperTools::CloseTextDocuments();
+                return {};
+            }
+        } },
     };
 
     return methods;

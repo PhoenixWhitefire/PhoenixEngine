@@ -16,6 +16,7 @@
 #include "component/RigidBody.hpp"
 #include "component/Light.hpp"
 #include "component/Mesh.hpp"
+#include "geometry/DecomposeTRS.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -196,7 +197,7 @@ static std::vector<ObjectHandle> loadSceneVersion1(
 		if (EcTransform* trans = Loader.Model->FindComponent<EcTransform>())
 		{
 			trans->Transform = glm::translate(glm::mat4(1.f), Position);
-			trans->Size = Size;
+			trans->SetWorldSize(Size);
 		}
 
 		std::string modelName = PropObject.value("name", "<UN-NAMED>");
@@ -284,7 +285,7 @@ static std::vector<ObjectHandle> loadSceneVersion1(
 		if (Object.find("color") != Object.end())
 			cm->Tint = getColorFromJson(Object["color"]);
 
-		ct->Size = getVector3FromJson(Object["size"]);
+		ct->SetWorldSize(getVector3FromJson(Object["size"]));
 
 		if (Object.find("material") != Object.end())
 		{
@@ -569,6 +570,9 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 			if (Version < 2.13f && propName == "MetallnessFactor")
 				propName = "MetalnessFactor";
 
+			if (Version < 2.14f && propName == "LocalSize")
+				continue; // handle in `LocalTransform` branch
+
 			const nlohmann::json& memberValue = propIt.value();
 
 			const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
@@ -606,10 +610,22 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
             else
             {
                 Reflection::GenericValue assignment = castJsonToGeneric(propName, propType, memberValue);
+				glm::vec3 localSize = { 1.f, 1.f, 1.f };
+
+				if (Version < 2.14f && propName == "LocalTransform")
+				{
+					const auto& localSizeItem = item.find("LocalSize");
+
+					if (localSizeItem != item.end()) // if not found, default size
+						localSize = getVector3FromJson(localSizeItem.value());
+				}
 
                 try
                 {
                     newObject->SetPropertyValue(propName, assignment);
+
+					if (localSize != glm::vec3(1.f, 1.f, 1.f))
+						newObject->SetPropertyValue("LocalSize", localSize);
                 }
                 catch (const std::runtime_error& err)
                 {
@@ -939,7 +955,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
 							+ std::to_string((int32_t)ymd.year());
 	
 	std::string contents = std::string("PHOENIXF\n")
-							+ "#Version 2.13\n"
+							+ "#Version 2.14\n"
 							+ "#Asset Scene\n"
 							+ "#Date " + dateStr + "\n"
 							+ "#SceneName " + SceneName + "\n"

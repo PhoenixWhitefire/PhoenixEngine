@@ -225,6 +225,7 @@ declare extern type Matrix with
   function ExtractAngles(self): ( vector )
   function Inverse(self): ( Matrix )
   function Lerp(self, Target: Matrix, Delta: number): ( Matrix )
+  function ScaleBy(self, Scale: vector): (  )
   function __add(self, Param_1: vector): ( Matrix )
   __mul: ((self: Matrix, b: Matrix) -> Matrix) & ((self: Matrix, v: vector) -> vector)
   function __sub(self, Param_1: vector): ( Matrix )
@@ -247,6 +248,7 @@ declare extern type Matrix with
   Forward: vector
   Position: vector
   Right: vector
+  Scale: vector
   Up: vector
 end
 declare Matrix: {
@@ -254,8 +256,7 @@ declare Matrix: {
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
   new: ((  ) -> (Matrix)) & (( C1R1: number, C1R2: number, C1R3: number, C1R4: number, C2R1: number, C2R2: number, C2R3: number, C2R4: number, C3R1: number, C3R2: number, C3R3: number, C3R4: number, C4R1: number, C4R2: number, C4R3: number, C4R4: number ) -> (Matrix)),
   rotated: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
-  rotatedXYZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
-  rotatedYXZ: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
+  scaled: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Scale: vector ) -> (Matrix)),
   translated: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
 }
 declare extern type Mutex with
@@ -273,10 +274,10 @@ end
 export type GameObject = {
   Enabled: boolean,
   Name: string,
-  read ObjectId: number ,
+  read ObjectId: number,
   Parent: GameObject?,
   Serializes: boolean,
-  read TreeEnabled: boolean ,
+  read TreeEnabled: boolean,
 
   AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   AddTag: (self: GameObject, Tag: string) -> (),
@@ -329,9 +330,9 @@ export type EcAssetManager = {
   UnloadTexture: (self: EcAssetManager, Texture: string) -> (),
 }
 export type EcBone = {
-  read IsActive: boolean ,
-  read SkeletalBoneId: number ,
-  read TargetMesh: GameObject ,
+  read IsActive: boolean,
+  read SkeletalBoneId: number,
+  read TargetMesh: GameObject,
   Transform: Matrix,
 }
 export type EcCamera = {
@@ -349,9 +350,9 @@ export type EcCollections = {
   GetTagged: (self: EcCollections, Tag: string) -> { GameObject },
 }
 export type EcDataModel = {
-  read AreScriptsBound: boolean ,
+  read AreScriptsBound: boolean,
   LiveScripts: string,
-  read Time: number ,
+  read Time: number,
   VM: string,
 
   BindToClose: (self: EcDataModel, Callback: () -> ()) -> (),
@@ -365,7 +366,7 @@ export type EcDeveloperTools = {
   DocumentationShown: boolean,
   ExplorerShown: boolean,
   InfoShown: boolean,
-  read Initialized: boolean ,
+  read Initialized: boolean,
   MaterialsShown: boolean,
   PropertiesShown: boolean,
   RendererShown: boolean,
@@ -373,6 +374,7 @@ export type EcDeveloperTools = {
   SettingsShown: boolean,
   ShadersShown: boolean,
 
+  CloseTextDocuments: (self: EcDeveloperTools) -> (),
   GetExplorerSelections: (self: EcDeveloperTools) -> { GameObject },
   GetToolNames: (self: EcDeveloperTools) -> { string },
   Initialize: (self: EcDeveloperTools) -> (),
@@ -398,14 +400,14 @@ export type EcDirectionalLight = {
   Shadows: boolean,
 }
 export type EcEngine = {
-  read BoundDataModel: GameObject ,
-  read CommitHash: string ,
-  read CommitTag: string ,
-  read Framerate: number ,
+  read BoundDataModel: GameObject,
+  read CommitHash: string,
+  read CommitTag: string,
+  read Framerate: number,
   FramerateCap: number,
-  read IsHeadless: boolean ,
-  read TargetPlatform: string ,
-  read Version: string ,
+  read IsHeadless: boolean,
+  read TargetPlatform: string,
+  read Version: string,
 
   BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
   GetCliArguments: (self: EcEngine) -> { string },
@@ -423,12 +425,12 @@ export type EcEnvironment = {
   Skybox: string,
 }
 export type EcHistory = {
-  read ActionHistorySize: number ,
-  read CanRedo: boolean ,
-  read CanUndo: boolean ,
-  read CurrentActionName: string? ,
-  read CurrentWaypoint: number ,
-  read IsRecordingAction: boolean ,
+  read ActionHistorySize: number,
+  read CanRedo: boolean,
+  read CanUndo: boolean,
+  read CurrentActionName: string?,
+  read CurrentWaypoint: number,
+  read IsRecordingAction: boolean,
   TargetDataModel: GameObject,
 
   ClearHistory: (self: EcHistory) -> (),
@@ -489,8 +491,8 @@ export type EcPhysics = {
 export type EcPlayerInput = {
   Cursor: EnumCursor,
   CursorMode: EnumCursorMode,
-  read IsKeyboardSunk: boolean ,
-  read IsMouseSunk: boolean ,
+  read IsKeyboardSunk: boolean,
+  read IsMouseSunk: boolean,
 
   GetCursorPosition: (self: EcPlayerInput) -> (vector),
   IsKeyPressed: (self: EcPlayerInput, Key: EnumKey) -> boolean,
@@ -539,9 +541,9 @@ export type EcScriptEngine = {
   SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
 }
 export type EcSound = {
-  read FinishedLoading: boolean ,
-  read Length: number ,
-  read LoadSucceeded: boolean ,
+  read FinishedLoading: boolean,
+  read Length: number,
+  read LoadSucceeded: boolean,
   Looped: boolean,
   Playing: boolean,
   Position: number,
@@ -562,8 +564,8 @@ export type EcSpotLight = {
 export type EcTransform = {
   LocalSize: vector,
   LocalTransform: Matrix,
-  Size: vector ,
-  Transform: Matrix ,
+  Size: vector,
+  Transform: Matrix,
 
   OnScriptMoved: EventSignal<(Matrix, Matrix)>,
 }
