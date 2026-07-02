@@ -331,15 +331,15 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize then
-        GizmoContainer.Transform = target.Transform
+        local scale = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 20
+        local gtrans = Matrix.translated(target.Transform.Position) * Matrix.rotated(target.Transform:ExtractAngles()) * Matrix.scaled(scale)
+        GizmoContainer.Transform = gtrans
 
         for direction, piece in GizmoPieces do
             local trans = Matrix.lookAt(direction * 0.75, vector.create(0.0001, 0, 0)) * Matrix.rotated(math.rad(90), 0, 0)
             piece[1].LocalTransform, piece[2].LocalTransform = trans, trans
         end
     end
-
-    --GizmoContainer.Size = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 60
 
     GizmoPrevTarget = target
     GizmoPrevTargetTransform = target.Transform

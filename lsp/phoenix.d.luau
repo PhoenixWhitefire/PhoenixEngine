@@ -182,6 +182,8 @@ declare plugin: {
 	ProjectWorkspace: GameObject & EcWorkspace,
 }?
 
+-- Finish intro --
+
 type Services = {
   Engine: EcEngine,
   PlayerInput: EcPlayerInput,
@@ -202,11 +204,13 @@ declare extern type AtomicInteger with
   function Get(self): ( number )
   function Set(self, Value: number): (  )
 end
+
 declare extern type Color with
   B: number
   G: number
   R: number
 end
+
 declare Color: {
   new: (( R: number, G: number, B: number ) -> (Color)) & (( Color: vector ) -> (Color))
 }
@@ -215,6 +219,9 @@ declare extern type EventConnection with
   Connected: boolean
   Signal: unknown
 end
+
+
+
 declare GameObject: {
   fromComponents: (<T>(Components: { T & keyof<Components> }) -> GameObject & IntersectComponents<T>),
   fromId: (( Id: number ) -> (GameObject?)),
@@ -251,6 +258,7 @@ declare extern type Matrix with
   Scale: vector
   Up: vector
 end
+
 declare Matrix: {
   identity: Matrix,
   lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
@@ -264,11 +272,13 @@ declare extern type Mutex with
   function TryLock(self): ( boolean )
   function Unlock(self): (  )
 end
+
 declare extern type SharedBuffer with
   Pull: (SharedBuffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> buffer
   Push: (SharedBuffer, Source: buffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> ()
   Size: number
 end
+
 
 
 export type GameObject = {
@@ -281,7 +291,7 @@ export type GameObject = {
 
   AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   AddTag: (self: GameObject, Tag: string) -> (),
-  AsComponent: <T>(self: GameObject: GameObject, Component: T & keyof<Components>) -> (GameObject & index<Components, T>)?,
+  AsComponent: <T>(self: GameObject, Component: T & keyof<Components>) -> (GameObject & index<Components, T>)?,
   Destroy: (self: GameObject) -> (),
   Duplicate: <T>(self: GameObject & T) -> GameObject & T,
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
@@ -303,20 +313,24 @@ export type GameObject = {
   OnTreeEnabledChanged: EventSignal<(boolean)>,
   OnWorkspaceChanged: EventSignal<(GameObject, GameObject)>,
 }
+
 export type EcAnimationAsset = {
   Animation: string,
 }
+
 export type EcAnimationState = {
   Looped: boolean,
   Playing: boolean,
   Time: number,
   Weight: number,
 }
+
 export type EcAnimator = {
   Animating: boolean,
 
   LoadAnimation: (self: EcAnimator, EcAnimationAsset) -> EcAnimationState,
 }
+
 export type EcAssetManager = {
 
   GetMeshData: (self: EcAssetManager, Id: string) -> MeshAssetData,
@@ -330,16 +344,19 @@ export type EcAssetManager = {
   UnloadMesh: (self: EcAssetManager, Mesh: string) -> (),
   UnloadTexture: (self: EcAssetManager, Texture: string) -> (),
 }
+
 export type EcBone = {
   read IsActive: boolean,
   read SkeletalBoneId: number,
   read TargetMesh: GameObject,
   Transform: Matrix,
 }
+
 export type EcCamera = {
   FieldOfView: number,
   UseSimpleController: boolean,
 }
+
 export type EcCollections = {
 
   GetCollections: (self: EcCollections) -> { string },
@@ -350,6 +367,7 @@ export type EcCollections = {
   GetTagRemovedSignal: (self: EcCollections, Tag: string) -> EventSignal<GameObject>,
   GetTagged: (self: EcCollections, Tag: string) -> { GameObject },
 }
+
 export type EcDataModel = {
   read AreScriptsBound: boolean,
   LiveScripts: string,
@@ -363,6 +381,7 @@ export type EcDataModel = {
   Closing: EventSignal<()>,
   OnFrameBegin: EventSignal<(number)>,
 }
+
 export type EcDeveloperTools = {
   DocumentationShown: boolean,
   ExplorerShown: boolean,
@@ -386,6 +405,7 @@ export type EcDeveloperTools = {
   SetExplorerSelections: (self: EcDeveloperTools, Selections: { GameObject }) -> (),
   SetToolEnabled: (self: EcDeveloperTools, ToolName: string, Enabled: boolean) -> (),
 }
+
 export type EcDirectionalLight = {
   Brightness: number,
   Direction: vector,
@@ -400,6 +420,7 @@ export type EcDirectionalLight = {
   ShadowViewSizeV: number,
   Shadows: boolean,
 }
+
 export type EcEngine = {
   read BoundDataModel: GameObject,
   read CommitHash: string,
@@ -417,6 +438,7 @@ export type EcEngine = {
   SetConfigValue: (self: EcEngine, Key: string, Value: JsonEncodable) -> (),
   ShowMessageBox: (self: EcEngine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> number,
 }
+
 export type EcEnvironment = {
   AmbientLight: Color,
   Fog: boolean,
@@ -425,6 +447,7 @@ export type EcEnvironment = {
   PostProcess: boolean,
   Skybox: string,
 }
+
 export type EcHistory = {
   read ActionHistorySize: number,
   read CanRedo: boolean,
@@ -446,14 +469,17 @@ export type EcHistory = {
   TryBeginAction: (self: EcHistory, Name: string) -> (number?),
   Undo: (self: EcHistory) -> (),
 }
+
 export type EcInterface = {
 }
+
 export type EcLogging = {
 
   Write: (self: EcLogging, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
 
   OnMessaged: EventSignal<(number, EnumLogType, string, string, unknown)>,
 }
+
 export type EcMesh = {
   CastsShadows: boolean,
   FaceCulling: EnumFaceCulling,
@@ -464,13 +490,16 @@ export type EcMesh = {
   Tint: Color,
   Transparency: number,
 }
+
 export type EcModel = {
   ImportPath: string,
 }
+
 export type EcNetwork = {
 
   MakeHttpRequestAsync: (self: EcNetwork, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> { Ok: boolean, Status: number, Headers: { [string]: string }, Body: string },
 }
+
 export type EcParticleEmitter = {
   Emitting: boolean,
   Image: string,
@@ -479,6 +508,7 @@ export type EcParticleEmitter = {
   ParticlesAreAttached: boolean,
   Rate: number,
 }
+
 export type EcPhysics = {
   DebugCollisionAabbs: boolean,
   DebugContactPoints: boolean,
@@ -489,6 +519,7 @@ export type EcPhysics = {
 
   SetSimulationForcePaused: (self: EcPhysics, Paused: boolean) -> (),
 }
+
 export type EcPlayerInput = {
   Cursor: EnumCursor,
   CursorMode: EnumCursorMode,
@@ -505,11 +536,13 @@ export type EcPlayerInput = {
   MouseButtonEvent: EventSignal<(MouseButtonInputEvent)>,
   ScrollEvent: EventSignal<(ScrollInputEvent)>,
 }
+
 export type EcPointLight = {
   Brightness: number,
   LightColor: Color,
   Range: number,
 }
+
 export type EcRenderer = {
   DebugWireframeRendering: boolean,
   IsFullscreen: boolean,
@@ -519,6 +552,7 @@ export type EcRenderer = {
   SetShaderTextureVariable: (self: EcRenderer, Shader: string, Variable: string, TexturePath: string, InLinearColorSpace: boolean) -> (),
   SetShaderVariable: ((_: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),
 }
+
 export type EcRigidBody = {
   AngularVelocity: vector,
   CollisionType: EnumCollisionType,
@@ -532,6 +566,7 @@ export type EcRigidBody = {
   PhysicsRotations: boolean,
   Restitution: number,
 }
+
 export type EcScriptEngine = {
 
   CloseVM: (self: EcScriptEngine, VmName: string) -> (),
@@ -541,6 +576,7 @@ export type EcScriptEngine = {
   RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string) -> (boolean, string?),
   SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
 }
+
 export type EcSound = {
   read FinishedLoading: boolean,
   read Length: number,
@@ -556,12 +592,14 @@ export type EcSound = {
 
   OnLoaded: EventSignal<(boolean)>,
 }
+
 export type EcSpotLight = {
   Angle: number,
   Brightness: number,
   LightColor: Color,
   Range: number,
 }
+
 export type EcTransform = {
   LocalSize: vector,
   LocalTransform: Matrix,
@@ -570,31 +608,38 @@ export type EcTransform = {
 
   OnScriptMoved: EventSignal<(Matrix, Matrix)>,
 }
+
 export type EcTreeLink = {
   Target: GameObject?,
 }
+
 export type EcUIButton = {
 
   OnClicked: EventSignal<()>,
 }
+
 export type EcUIFrame = {
   BackgroundColor: Color,
   BackgroundTransparency: number,
 }
+
 export type EcUIImage = {
   Image: string,
   ImageTint: Color,
   ImageTransparency: number,
 }
+
 export type EcUIText = {
   Text: string,
 }
+
 export type EcUITransform = {
   Position: vector,
   Rotation: number,
   Size: vector,
   ZIndex: number,
 }
+
 export type EcWorkspace = {
   SceneCamera: GameObject & EcCamera & EcTransform,
 
@@ -603,6 +648,7 @@ export type EcWorkspace = {
   ScreenPointToVector: (self: EcWorkspace, ScreenPoint: vector, Length: number?) -> (vector),
   WorldToScreenPoint: (self: EcWorkspace, WorldPoint: vector) -> (vector, number),
 }
+
 
 
 
@@ -680,6 +726,7 @@ type Creatables = {
   AnimationState: EcAnimationState,
   ScriptEngine: EcScriptEngine,
 }
+
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with
   read Cube: EnumCollisionType
@@ -687,6 +734,7 @@ declare extern type EnumCollisionType_INTERNAL extends Enum with
   read Hulls: EnumCollisionType
   read MeshComponent: EnumCollisionType
 end
+
 declare extern type EnumCursor extends EnumItem with end
 declare extern type EnumCursor_INTERNAL extends Enum with
   read Arrow: EnumCursor
@@ -700,6 +748,7 @@ declare extern type EnumCursor_INTERNAL extends Enum with
   read ResizeAll: EnumCursor
   read NotAllowed: EnumCursor
 end
+
 declare extern type EnumCursorMode extends EnumItem with end
 declare extern type EnumCursorMode_INTERNAL extends Enum with
   read Normal: EnumCursorMode
@@ -707,12 +756,14 @@ declare extern type EnumCursorMode_INTERNAL extends Enum with
   read Disabled: EnumCursorMode
   read Captured: EnumCursorMode
 end
+
 declare extern type EnumFaceCulling extends EnumItem with end
 declare extern type EnumFaceCulling_INTERNAL extends Enum with
   read None: EnumFaceCulling
   read Back: EnumFaceCulling
   read Front: EnumFaceCulling
 end
+
 declare extern type EnumFileSystemEvent extends EnumItem with end
 declare extern type EnumFileSystemEvent_INTERNAL extends Enum with
   read Added: EnumFileSystemEvent
@@ -721,6 +772,7 @@ declare extern type EnumFileSystemEvent_INTERNAL extends Enum with
   read Renamed_Old: EnumFileSystemEvent
   read Renamed_New: EnumFileSystemEvent
 end
+
 declare extern type EnumImGuiColor extends EnumItem with end
 declare extern type EnumImGuiColor_INTERNAL extends Enum with
   read Text: EnumImGuiColor
@@ -787,12 +839,14 @@ declare extern type EnumImGuiColor_INTERNAL extends Enum with
   read NavWindowingDimBg: EnumImGuiColor
   read ModalWindowDimBg: EnumImGuiColor
 end
+
 declare extern type EnumInputAction extends EnumItem with end
 declare extern type EnumInputAction_INTERNAL extends Enum with
   read Released: EnumInputAction
   read Pressed: EnumInputAction
   read Repeated: EnumInputAction
 end
+
 declare extern type EnumKey extends EnumItem with end
 declare extern type EnumKey_INTERNAL extends Enum with
   read Space: EnumKey
@@ -915,6 +969,7 @@ declare extern type EnumKey_INTERNAL extends Enum with
   read RightAlt: EnumKey
   read RightSuper: EnumKey
 end
+
 declare extern type EnumLogType extends EnumItem with end
 declare extern type EnumLogType_INTERNAL extends Enum with
   read None: EnumLogType
@@ -922,12 +977,14 @@ declare extern type EnumLogType_INTERNAL extends Enum with
   read Warning: EnumLogType
   read Error: EnumLogType
 end
+
 declare extern type EnumMouseButton extends EnumItem with end
 declare extern type EnumMouseButton_INTERNAL extends Enum with
   read Left: EnumMouseButton
   read Right: EnumMouseButton
   read Middle: EnumMouseButton
 end
+
 declare extern type EnumValueType extends EnumItem with end
 declare extern type EnumValueType_INTERNAL extends Enum with
   read Boolean: EnumValueType
@@ -966,7 +1023,9 @@ declare Enum: {
   [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "FileSystemEvent" | "ImGuiColor" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumFileSystemEvent_INTERNAL | EnumImGuiColor_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
 }
 
+
 declare _RUNTIME: _RUNTIME
+
 declare debug: {
 	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,
 	info: (level: number, s: string) -> string,
@@ -976,6 +1035,7 @@ declare debug: {
   zoneend: ((  ) -> ()),
   zonetext: (( Text: string ) -> ())
 }
+
 declare fs: {
   copy: (( From: string, To: string ) -> ()),
   cwd: ((  ) -> (string)),
@@ -1005,6 +1065,7 @@ declare fs: {
   watch: (( Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> () ) -> (() -> ())),
   write: (( Path: string, Contents: string | buffer, CreateDirectories: boolean? ) -> ())
 }
+
 declare imgui: {
   anyitemactive: ((  ) -> (boolean)),
   begin: (( WindowTitle: string, WindowFlags: string?, HasCloseButton: boolean? ) -> (boolean, boolean)),
@@ -1088,10 +1149,12 @@ declare imgui: {
   windowposition: ((  ) -> (vector)),
   windowsize: ((  ) -> (vector))
 }
+
 declare json: {
   encode: (( Value: JsonEncodable, Indent: number? ) -> (string)),
   parse: (( Json: string ) -> (JsonDecodable))
 }
+
 declare parallel: {
   atomicinteger: (( InitialValue: number? ) -> (AtomicInteger)),
   desynchronize: ((  ) -> ()),
@@ -1101,6 +1164,7 @@ declare parallel: {
   synchronize: ((  ) -> ()),
   synchronized: ((  ) -> (boolean))
 }
+
 declare task: {
   defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
   delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
@@ -1109,6 +1173,7 @@ declare task: {
   setglobal: (( Coroutine: thread, Global: string, Value: unknown ) -> ()),
   wait: (( SleepTime: number? ) -> (number))
 }
+
 
 
 declare _VMNAME: string

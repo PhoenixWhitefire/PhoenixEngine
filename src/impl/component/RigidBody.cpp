@@ -147,7 +147,7 @@ const Reflection::StaticPropertyMap& RigidBodyComponentManager::GetProperties()
 				EcRigidBody* crb = static_cast<EcRigidBody*>(p);
 				crb->SetHullsFile(gv.AsString());
 			}
-		)
+		),
 	};
 
 	return props;
@@ -162,8 +162,8 @@ void EcRigidBody::RecomputeAabb()
 		return;
 
 	const glm::mat4& transform = ct->Transform;
-	glm::vec3 glmsize = {};
-	DecomposeTRS(transform, nullptr, nullptr, &glmsize);
+	//glm::vec3 glmsize = {};
+	//DecomposeTRS(transform, nullptr, nullptr, &glmsize);
 
 	std::array<glm::vec3, 8> verts;
 
@@ -171,7 +171,7 @@ void EcRigidBody::RecomputeAabb()
 	for (int x : {-1, 1})
 		for (int y : {-1, 1})
 			for (int z : {-1, 1})
-				verts[i++] = transform * glm::vec4(glmsize * glm::vec3(x, y, z), 1.f);
+				verts[i++] = transform * glm::vec4(x, y, z, 1.f);
 
 	glm::vec3 max = glm::vec3(-FLT_MAX);
 	glm::vec3 min = glm::vec3( FLT_MAX);

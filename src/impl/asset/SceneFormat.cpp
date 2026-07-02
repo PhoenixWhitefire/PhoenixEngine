@@ -502,7 +502,7 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 		return {};
 	}
 
-	std::string_view sceneName = jsonData.value("SceneName", "<UNNAMED SCENE>");
+	std::string sceneName = jsonData.value("SceneName", "<UNNAMED SCENE>");
 
 	if (jsonData.find("GameObjects") == jsonData.end())
 	{
@@ -570,7 +570,7 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 			if (Version < 2.13f && propName == "MetallnessFactor")
 				propName = "MetalnessFactor";
 
-			if (Version < 2.14f && propName == "LocalSize")
+			if (Version < 2.14f && propName == "LocalSize" && item.find("LocalTransform") != item.end())
 				continue; // handle in `LocalTransform` branch
 
 			const nlohmann::json& memberValue = propIt.value();

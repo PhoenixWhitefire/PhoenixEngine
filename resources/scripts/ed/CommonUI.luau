@@ -1227,7 +1227,6 @@ function CommonUI.RenderViewport(DeltaTime: number)
     end
 
     PluginManager.OnUpdate(DeltaTime, State.CurrentStage)
-    CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
     HistoryView.Render()
     TagViewer.Render()
 

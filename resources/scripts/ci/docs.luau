@@ -245,6 +245,8 @@ declare plugin: {
 	ProjectDatamodel: GameObject & EcDataModel,
 	ProjectWorkspace: GameObject & EcWorkspace,
 }?
+
+-- Finish intro --
 ]]
 
 definitionsFile ..= "\ntype Services = {\n"
@@ -864,7 +866,9 @@ local function documentDatatype(name)
 	end
 
 	if name ~= "GameObject" and name ~= "EventSignal" then
-		definitionsFile ..= "end\n"
+		definitionsFile ..= "end\n\n"
+	else
+		definitionsFile ..= "\n"
 	end
 
 	datatypes ..= "\n" .. dumpLibMembers(dt.Library, apiDump.ScriptEnv.Datatypes[name].Library, name)
@@ -914,9 +918,9 @@ for _, k in orderedComponents do
 	components ..= dumpReflectionApi(v, vd, k, isExternType)
 
 	if isExternType then
-		definitionsFile ..= "end\n"
+		definitionsFile ..= "end\n\n"
 	else
-		definitionsFile ..= "}\n"
+		definitionsFile ..= "}\n\n"
 	end
 end
 
@@ -965,6 +969,7 @@ for _, name in orderedLibraries do
 		for _, e in orderedMemberNames do
 			local n = Enum[e]
 
+			definitionsFile ..= "\n"
 			definitionsFile ..= `declare extern type Enum{e} extends EnumItem with end\n`
 			definitionsFile ..= `declare extern type Enum{e}_INTERNAL extends Enum with\n`
 			namesUnion ..= ` | "{e}"`
@@ -1032,6 +1037,8 @@ for _, name in orderedLibraries do
 		enumList ..= `  [{namesUnion}]: {typesUnion}\n}\n\n`
 		definitionsFile ..= enumList
 	end
+
+	definitionsFile ..= "\n"
 end
 
 definitionsFile ..= "\n\n"
