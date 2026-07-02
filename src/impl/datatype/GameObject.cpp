@@ -1,6 +1,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "datatype/GameObject.hpp"
+#include "Reflection.hpp"
 #include "component/Transform.hpp"
 #include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
@@ -184,7 +185,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
-					RAISE_RT("Invalid component type '{}'", inputs[0].AsStringView());
+					RAISE_RT("Invalid component '{}'", inputs[0].AsStringView());
 
 				GameObject* g = static_cast<GameObject*>(p);
 				return { GameObject::s_ToGenericValue(g->FindChildWithComponent(ec)) };
@@ -212,7 +213,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
-					RAISE_RT("Invalid component");
+					RAISE_RT("Invalid component '{}'", inputs[0].AsStringView());
 
 				for (const ReflectorRef& ref : static_cast<GameObject*>(p)->Components)
 					if (ref.Type == ec)
@@ -229,7 +230,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
-					RAISE_RT("Invalid component");
+					RAISE_RT("Invalid component '{}'", inputs[0].AsStringView());
 
 				GameObject* obj = static_cast<GameObject*>(p);
 				obj->AddComponent(ec);
@@ -245,12 +246,30 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
 				if (ec == EntityComponent::None)
-					RAISE_RT("Invalid component");
+					RAISE_RT("Invalid component '{}'", inputs[0].AsStringView());
 
 				GameObject* obj = static_cast<GameObject*>(p);
 				obj->RemoveComponent(ec);
 
 				return {};
+			}
+		} },
+
+		{ "AsComponent", Reflection::MethodDescriptor{
+			{ Reflection::ValueType::String },
+			{ REFLECTION_OPTIONAL(GameObject) },
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
+				if (ec == EntityComponent::None)
+					RAISE_RT("Invalid component '{}'", inputs[0].AsStringView());
+
+				GameObject* obj = static_cast<GameObject*>(p);
+
+				if (std::find_if(obj->Components.begin(), obj->Components.end(), [ec](const auto& a) { return a.Type == ec; }) == obj->Components.end())
+					return { Reflection::GenericValue::Null() };
+				else
+					return { obj->ToGenericValue() };
 			}
 		} },
 

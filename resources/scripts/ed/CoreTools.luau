@@ -196,7 +196,7 @@ local function keepGizmoInView(target: GameObject & EcTransform, ViewportRenderP
     GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, cam.Transform.Forward))
 end
 
-function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
+local function update(Project: Types.Project, EditorPreferences, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
     if not Project.Workspace then
         return
     end
@@ -428,6 +428,18 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences, ViewportRen
         if EditorPreferences.KeepGizmoInView then
             keepGizmoInView(target, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
         end
+    end
+end
+
+function CoreTools.Update(Project: Types.Project, EditorPreferences: { read KeepGizmoInView: boolean }, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
+    debug.zonebegin("CoreTools.Update")
+
+    local success, err = pcall(update, Project, EditorPreferences, ViewportRenderPosition, ViewportRenderSize, DeltaTime)
+
+    debug.zoneend()
+
+    if not success then
+        error(err)
     end
 end
 

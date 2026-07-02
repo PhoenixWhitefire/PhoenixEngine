@@ -25,6 +25,10 @@
           "Description": "Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag",
           "ParameterNames": "Tag"
         },
+        "AsComponent": {
+          "Description": "Returns `nil` if the component does not exist on the object, and, in Luau, a narrowed type if it does",
+          "Type": "<T>(self: GameObject, Component: T & keyof<Components>) : (GameObject & index<Components, T>)?"
+        },
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it",
         "Duplicate": {
           "Description": "Creates a duplicate of the Object",
@@ -36,8 +40,7 @@
         },
         "FindChildWithComponent": {
           "Description": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
-          "ParameterNames": "Component",
-          "Type": "(keyof<Creatables>) : GameObject"
+          "Type": "<T>(self, T & keyof<Components>) : GameObject & index<Components, T>"
         },
         "ForEachChild": {
           "Description": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",

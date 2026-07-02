@@ -120,7 +120,7 @@ local function loadPlugin_(Path, ParentPath: string?)
                 data:OnLoad()
             end
         else
-            warn(`PluginManager: Failed to load-execute plugin '{ Path }', returned value was { data }`)
+            warn(`PluginManager: Failed to execute plugin '{ Path }': { data }`)
         end
 
         fs.removealias("plugin")
@@ -200,9 +200,17 @@ end
 function PluginManager.OnUpdate(DeltaTime: number, CurrentStage: EditorStage)
     for _, plugin in PluginManager.Plugins do
         if getPluginSettings(plugin).Enabled and plugin.OnUpdate and table.find(plugin.ActiveStages, CurrentStage) then
+            debug.zonebegin(plugin.Name)
+
             setPluginAlias(plugin.ParentPath)
-            plugin:OnUpdate(DeltaTime)
+            local s, e = pcall(plugin.OnUpdate, plugin, DeltaTime)
             fs.removealias("plugin")
+
+            if not s then
+                warn(`Plugin '{ plugin.Name }' errored on update: { e }`)
+            end
+
+            debug.zoneend()
         end
     end
 

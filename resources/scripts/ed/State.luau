@@ -345,9 +345,8 @@ local function openProject_(State: StateType, ManualPath: string?)
     end
 
     assert(State.Project.DataModel)
+    State.Project.Workspace = State.Project.DataModel:FindChildWithComponent("Workspace")
 
-    -- TODO luau
-    State.Project.Workspace = assert(State.Project.DataModel :: any):FindChildWithComponent("Workspace")
     if not State.Project.Workspace then
         local newWorkspace = GameObject.new("Workspace")
 
@@ -357,7 +356,7 @@ local function openProject_(State: StateType, ManualPath: string?)
         newWorkspace.Name = "Workspace"
         newWorkspace.SceneCamera.Name = "Camera"
 
-        State.Project.Workspace = newWorkspace;
+        State.Project.Workspace = newWorkspace
         warn("Re-created Workspace")
     end
 

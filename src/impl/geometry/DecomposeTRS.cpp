@@ -19,7 +19,7 @@ bool DecomposeTRS(const glm::mat4& Matrix, glm::vec3* Translation, glm::quat* Ro
 
     if (Rotation)
         *Rotation = rotation;
-    
+
     if (Scale)
         *Scale = scale;
 

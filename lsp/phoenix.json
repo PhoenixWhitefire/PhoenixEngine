@@ -1804,6 +1804,9 @@
   "@phoenix/globaltype/GameObject.AddTag": {
     "documentation": "Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag"
   },
+  "@phoenix/globaltype/GameObject.AsComponent": {
+    "documentation": "Returns `nil` if the component does not exist on the object, and, in Luau, a narrowed type if it does"
+  },
   "@phoenix/globaltype/GameObject.Destroy": {
     "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
   },

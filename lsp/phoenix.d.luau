@@ -281,10 +281,11 @@ export type GameObject = {
 
   AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   AddTag: (self: GameObject, Tag: string) -> (),
+  AsComponent: <T>(self: GameObject: GameObject, Component: T & keyof<Components>) -> (GameObject & index<Components, T>)?,
   Destroy: (self: GameObject) -> (),
   Duplicate: <T>(self: GameObject & T) -> GameObject & T,
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
-  FindChildWithComponent: (self: GameObject, Component: keyof<Creatables>) -> GameObject,
+  FindChildWithComponent: <T>(self: GameObject, T & keyof<Components>) -> GameObject & index<Components, T>,
   ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
   ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
   GetChildren: (self: GameObject) -> { GameObject },
