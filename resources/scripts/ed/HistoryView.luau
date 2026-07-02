@@ -1,6 +1,8 @@
 -- HistoryView.luau, 17/12/2025
 local History = game:GetService("History")
 
+local ErrorMessage = require("./ErrorMessage")
+
 local Viewer = {}
 Viewer.Open = false
 
@@ -84,7 +86,7 @@ function Viewer.Render()
     end
 
     if imgui.beginpopup("ActionContextMenu") then
-        if imgui.menuitem("Go to here") then
+        if ContextMenuTargetId ~= History.CurrentWaypoint and imgui.menuitem("Go to here") then
             local dir = math.sign(ContextMenuTargetId - History.CurrentWaypoint)
 
             if dir ~= 0 then
@@ -111,6 +113,17 @@ function Viewer.Render()
                 end
             end
         end
+
+        if ContextMenuTargetId == History.CurrentWaypoint and imgui.menuitem("Force finish") then
+            local s, e = pcall(function()
+                History:FinishAction(History.CurrentWaypoint)
+            end)
+
+            if not s then
+                ErrorMessage.Push(tostring(e))
+            end
+        end
+        imgui.setitemtooltip("This can cause the original source of the action to error!")
 
         imgui.endpopup()
     end

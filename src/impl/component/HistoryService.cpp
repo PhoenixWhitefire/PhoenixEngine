@@ -174,7 +174,7 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
                 return history->CanRedo();
             },
             nullptr
-        )
+        ),
     };
 
     return props;

@@ -610,30 +610,44 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
             else
             {
                 Reflection::GenericValue assignment = castJsonToGeneric(propName, propType, memberValue);
-				glm::vec3 localSize = { 1.f, 1.f, 1.f };
+				glm::vec3 size = { 1.f, 1.f, 1.f };
+				// older files might use the world-space ones
+				bool isLocal = propName == "LocalTransform";
 
-				if (Version < 2.14f && propName == "LocalTransform")
+				if (Version < 2.14f && (propName == "LocalTransform" || propName == "Transform"))
 				{
-					const auto& localSizeItem = item.find("LocalSize");
+					const auto& sizeItem = item.find(isLocal ? "LocalSize" : "Size");
 
-					if (localSizeItem != item.end()) // if not found, default size
-						localSize = getVector3FromJson(localSizeItem.value());
+					if (sizeItem != item.end()) // if not found, default size
+						size = getVector3FromJson(sizeItem.value());
 				}
 
                 try
                 {
                     newObject->SetPropertyValue(propName, assignment);
-
-					if (localSize != glm::vec3(1.f, 1.f, 1.f))
-						newObject->SetPropertyValue("LocalSize", localSize);
                 }
                 catch (const std::runtime_error& err)
                 {
                     SF_WARN(
-                        "Failed to set {} Property '{}' of '{}' to '{}': {}",
+                        "Failed to set {} property '{}' of '{}' to '{}': {}",
                         Reflection::TypeAsString(propType), propName, name, assignment.ToString(), err.what()
                     );
                 }
+
+				if (size != glm::vec3(1.f, 1.f, 1.f))
+				{
+					try
+					{
+						newObject->SetPropertyValue(isLocal ? "LocalSize" : "Size", size);
+					}
+					catch (const std::runtime_error& err)
+					{
+						SF_WARN(
+							"Failed to migrate {} of '{}' to ({}, {}, {}): {}",
+							isLocal ? "LocalSize" : "Size", name, size.x, size.y, size.z, err.what()
+						);
+					}
+				}
             }
 		}
 	}

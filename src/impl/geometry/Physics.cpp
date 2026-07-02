@@ -225,6 +225,8 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 
 		//if (arb->PhysicsDynamics && !brb->PhysicsDynamics)
 		{
+			glm::mat4 trans = at->Transform;
+
 			if (vn > 0.f)
 			{
 			    float j = -(1.f + arb->Restitution) * vn;
@@ -242,7 +244,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 			// position correction to prevent sinking
 			if (points.PenetrationDepth < 0.1f)
 			{
-				at->Transform[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 2.f, 0.f);
+				trans[3] += glm::vec4(points.Normal * -points.PenetrationDepth * 2.f, 0.f);
 				arb->LinearVelocity += points.Normal * -points.PenetrationDepth * 64.f;
 			}
 
@@ -251,8 +253,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 
 			arb->AngularVelocity -= arb->AngularVelocity * arb->Friction * 0.1f * DeltaTime;
 
-			at->SetWorldTransform(at->Transform);
-			arb->RecomputeAabb();
+			at->SetWorldTransform(trans);
 
 			if (phys->DebugContactPoints)
 			{

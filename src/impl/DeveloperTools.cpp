@@ -4060,7 +4060,7 @@ static void renderProperties()
                     propertyTooltip(propName, propToComponent[propName], propDesc->Type);
 
                     ImGui::SetCursorPosX(halfWidth);
-                    ImGui::TextUnformatted("<DIFFERENT>");
+                    ImGui::TextUnformatted("~");
                 }
                 else
                 {
@@ -4390,7 +4390,9 @@ static void renderProperties()
                         glm::degrees(rotrads.z)
                     };
 
-                    if (pos[0] != pos[0] || pos[1] != pos[1] || pos[2] != pos[2] || rotdegs[0] != rotdegs[0] || rotdegs[1] != rotdegs[1] || rotdegs[2] != rotdegs[2])
+                    if (!isfinite(pos[0]) || !isfinite(pos[1]) || !isfinite(pos[2])
+                        || !isfinite(rotdegs[0]) || !isfinite(rotdegs[1]) || !isfinite(rotdegs[2])
+                    )
                     {
                         newVal = glm::mat4(1.f);
                         valueWasEditedManual = true;
