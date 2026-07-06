@@ -116,30 +116,12 @@ local function runCurrentCommand()
     CommandBarPostRun = true
 end
 
-PlayerInput.KeyEvent:Connect(function(event)
-    if event.Action ~= Enum.InputAction.Pressed or PlayerInput.IsKeyboardSunk then
+local function handleCommandBarActions(event)
+    if not CommandBarActive then
         return
     end
 
     local key = event.Key
-
-    if key == Enum.Key.F5 and not History.CurrentActionName then
-        if State.CurrentStage == "ProjectEditing" then
-            State.ChangeStageTo("ProjectPlaying")
-        elseif State.CurrentStage == "ProjectPlaying" then
-            State.ChangeStageTo("ProjectEditing")
-        end
-    end
-
-    if key == Enum.Key.One then
-        CoreTools.SetGizmoMode(1)
-    elseif key == Enum.Key.Two then
-        CoreTools.SetGizmoMode(2)
-    end
-
-    if not CommandBarActive then
-        return
-    end
 
     if key == Enum.Key.Enter then
         runCurrentCommand()
@@ -161,6 +143,34 @@ PlayerInput.KeyEvent:Connect(function(event)
 
             CommandBarBlinkFrame = 1
         end
+    end
+end
+
+PlayerInput.KeyEvent:Connect(function(event)
+    if event.Action ~= Enum.InputAction.Pressed then
+        return
+    end
+
+    handleCommandBarActions(event)
+
+    if PlayerInput.IsKeyboardSunk then
+        return
+    end
+
+    local key = event.Key
+
+    if key == Enum.Key.F5 and not History.CurrentActionName then
+        if State.CurrentStage == "ProjectEditing" then
+            State.ChangeStageTo("ProjectPlaying")
+        elseif State.CurrentStage == "ProjectPlaying" then
+            State.ChangeStageTo("ProjectEditing")
+        end
+    end
+
+    if key == Enum.Key.One then
+        CoreTools.SetGizmoMode(1)
+    elseif key == Enum.Key.Two then
+        CoreTools.SetGizmoMode(2)
     end
 end)
 

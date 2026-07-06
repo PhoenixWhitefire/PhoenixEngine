@@ -77,7 +77,7 @@ void main()
 	data_out.TextureUV = VertexUV;
 	data_out.Transparency = InstanceTransparency;
 	data_out.RenderMatrix = Phoenix_RenderMatrix;
-	data_out.ModelPosition = getMatrixScale(Phoenix_Transform) * vec3(skin * vec4(VertexPosition, 1.f));
+	data_out.ModelPosition = vec3(skin * vec4(VertexPosition, 1.f));
 	data_out.WorldPosition = vec3(trans * vec4(data_out.ModelPosition, 1.0f));
 	data_out.Transform = trans;
 	data_out.RelativeToDirecLight = Phoenix_DirectionalLightProjection * vec4(data_out.WorldPosition, 1.f);
