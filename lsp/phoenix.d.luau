@@ -117,6 +117,7 @@ type function IntersectComponents(ty: type)
 		for _, t in ty:components() do
 			local found = false
 
+            -- Note: can't do direct index check because types won't be rawequal
 			for i, c in Components:properties() do
 				if i:value() == t:value() then
 					table.insert(results, c.read)
@@ -134,7 +135,6 @@ type function IntersectComponents(ty: type)
 	end
 
 	error(`expected singleton or union, got {ty.tag}`)
-
 	return types.never
 end
 
@@ -223,7 +223,7 @@ end
 
 
 declare GameObject: {
-  fromComponents: (<T>(Components: { T & keyof<Components> }) -> GameObject & IntersectComponents<T>),
+  fromComponents: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>),
   fromId: (( Id: number ) -> (GameObject?)),
   new: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
   validComponents: { string }

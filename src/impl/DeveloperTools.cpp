@@ -5645,8 +5645,6 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
             ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
 
             ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
-            //int initialStatus = lua_status(L);
-            // L->status = LUA_OK; // avoid hitting assertion due to potential calls to `__tostring` metamethods
             
             switch (Section)
             {
@@ -5660,12 +5658,13 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
                     for (int i = 1; i < 256; i++)
                     {
                         luaL_checkstack(L, 3, "get local");
+                        int prev = lua_gettop(L);
+
                         const char* name = lua_getlocal(L, l, i);
+                        if (lua_gettop(L) == prev)
+                            break; // no local here
 
-                        if (!name)
-                            break; // TODO are they contiguous?
-
-                        lua_pushstring(L, name);
+                        lua_pushstring(L, name ? name : std::format("[l{}]", l).c_str());
                         lua_pushvalue(L, -2);
 
                         if (debugVariable(L) && lua_setlocal(L, l, i))
@@ -5690,7 +5689,7 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
                     if (!nameCstr)
                         break;
 
-                    std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[upvalue{}]", i);
+                    std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[u{}]", i);
 
                     lua_pushstring(L, name.c_str());
                     lua_pushvalue(L, -2);
@@ -5743,7 +5742,6 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
             [[unlikely]] default: { assert(false); }
 
             }
-            //L->status = initialStatus;
             ImGui::EndChild();
         }
         ImGui::End();

@@ -73,7 +73,7 @@ end
 type _RUNTIME = {
     --- The runtime name, strictly lowercase.
     --- For example, "lune", "zune", "seal", "eryx", "lute", etc
-    read name: Not<"glapglop">,
+    read name: Not<"phoenix">,
 
     --- Version of the runtime itself (not the version of the Luau)
     --- One, both, or neither of `semantic` and `git` may be specified.
@@ -181,6 +181,7 @@ type function IntersectComponents(ty: type)
 		for _, t in ty:components() do
 			local found = false
 
+            -- Note: can't do direct index check because types won't be rawequal
 			for i, c in Components:properties() do
 				if i:value() == t:value() then
 					table.insert(results, c.read)
@@ -198,7 +199,6 @@ type function IntersectComponents(ty: type)
 	end
 
 	error(`expected singleton or union, got {ty.tag}`)
-
 	return types.never
 end
 
@@ -260,7 +260,8 @@ definitionsFile ..= "}\n\n"
 local documentationData = {}
 
 local GameObjectOverrides = {
-	fromComponents = "(<T>(Components: { T & keyof<Components> }) -> GameObject & IntersectComponents<T>)",
+	-- TODO luau should really be `read T & keyof<Components>` but that's resulting in `never` (?)
+	fromComponents = "(<T>(Components: { read T | \"\" }) -> GameObject & IntersectComponents<T>)",
 	new = "(<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>)",
 	--FindChildWithComponent = "<T>(self, ComponentName: keyof<Components> & T) -> (GameObject & index<Components, T>)?",
 }
