@@ -114,7 +114,7 @@ PHOENIXF
         ]
       ],
       "Material": "@base/materials/unlit.mtl",
-      "MeshAsset": "meshes/arrow/Cone.hxmesh",
+      "MeshAsset": "./resources/meshes/arrow/Cone.hxmesh",
       "Name": "Cone",
       "Parent": 1,
       "PhysicsCollisions": false,
@@ -158,7 +158,7 @@ PHOENIXF
         ]
       ],
       "Material": "@base/materials/unlit.mtl",
-      "MeshAsset": "meshes/arrow/Cylinder.hxmesh",
+      "MeshAsset": "./resources/meshes/arrow/Cylinder.hxmesh",
       "Name": "Cylinder",
       "Parent": 1,
       "PhysicsCollisions": false,
@@ -277,7 +277,7 @@ PHOENIXF
         ]
       ],
       "Material": "@base/materials/unlit.mtl",
-      "MeshAsset": "meshes/arrow/Cone.hxmesh",
+      "MeshAsset": "./resources/meshes/arrow/Cone.hxmesh",
       "Name": "Cone",
       "Parent": 5,
       "PhysicsCollisions": false,
@@ -321,7 +321,7 @@ PHOENIXF
         ]
       ],
       "Material": "@base/materials/unlit.mtl",
-      "MeshAsset": "meshes/arrow/Cylinder.hxmesh",
+      "MeshAsset": "./resources/meshes/arrow/Cylinder.hxmesh",
       "Name": "Cylinder",
       "Parent": 5,
       "PhysicsCollisions": false,
@@ -440,7 +440,7 @@ PHOENIXF
         ]
       ],
       "Material": "@base/materials/unlit.mtl",
-      "MeshAsset": "meshes/arrow/Cone.hxmesh",
+      "MeshAsset": "./resources/meshes/arrow/Cone.hxmesh",
       "Name": "Cone",
       "Parent": 9,
       "PhysicsCollisions": false,
@@ -484,7 +484,7 @@ PHOENIXF
         ]
       ],
       "Material": "@base/materials/unlit.mtl",
-      "MeshAsset": "meshes/arrow/Cylinder.hxmesh",
+      "MeshAsset": "./resources/meshes/arrow/Cylinder.hxmesh",
       "Name": "Cylinder",
       "Parent": 9,
       "PhysicsCollisions": false,
