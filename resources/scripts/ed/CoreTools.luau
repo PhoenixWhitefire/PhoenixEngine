@@ -22,31 +22,51 @@ local GizmoContainer = GameObject.new("Model")
 local GizmoPrevTarget: (GameObject & EcTransform)? = nil
 local GizmoPrevTargetTransform = Matrix.identity
 local GizmoPrevTargetSize = vector.zero
-local GizmoPieceToDirection: { [GameObject & EcMesh]: vector } = {}
-local GizmoPieces = {
-    [vector.create( 1,  0,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create(-1,  0,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create( 0,  1,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create( 0, -1,  0)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create( 0,  0,  1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") },
-    [vector.create( 0,  0, -1)] = { GameObject.new("Mesh"), GameObject.new("Mesh") }
+local GizmoPieceToDirection: { [GameObject]: vector } = {}
+local ShadowMeshes = {}
+
+local MoveGizmo = assert(AssetManager:LoadScene("./resources/scenes/movegizmo.hxscene"))[1] :: (GameObject & EcTransform & EcModel)?
+assert(MoveGizmo)
+
+local ScaleGizmo = assert(AssetManager:LoadScene("./resources/scenes/scalegizmo.hxscene"))[1] :: (GameObject & EcTransform & EcModel)?
+assert(ScaleGizmo)
+
+local Axes = {
+    X = vector.create(1, 0, 0),
+    Y = vector.create(0, 1, 0),
+    Z = vector.create(0, 0, 1)
 }
 
-for direction, piece in GizmoPieces do
-    local col = Color.new(math.abs(direction.x), math.abs(direction.y), math.abs(direction.z))
-    piece[1].Tint, piece[2].Tint = col, col
-    piece[1].Material, piece[2].Material = "unlit", "unlit"
-    piece[1].Size, piece[2].Size = vector.one * 0.25, vector.one * 0.25
-    piece[1].Name, piece[2].Name = `Gizmo_{direction}_1`, `Gizmo_{direction}_2`
-    piece[1].MeshAsset, piece[2].MeshAsset = "!Cone", "!Cone"
-    piece[1].Parent, piece[2].Parent = GizmoContainer, GizmoContainer
+for _, gizmo in { MoveGizmo, ScaleGizmo } do
+    for _, axis in { "X", "Y", "Z" } do
+        local group = gizmo:FindChild(axis)
+        assert(group)
 
-    piece[2].Transparency = 0.5
+        local clickable = group:FindChild("Clickable")
+        assert(clickable and clickable:HasComponent("Transform") and clickable:HasComponent("RigidBody"))
 
-    GizmoPieceToDirection[piece[1]] = direction
-    GizmoPieceToDirection[piece[2]] = direction
+        GizmoPieceToDirection[clickable] = Axes[axis]
+        GizmoPieceToDirection[group] = Axes[axis]
+    end
+
+    for _, d in gizmo:GetDescendants() do
+        local mesh = d:AsComponent("Mesh")
+        if mesh then
+            local shadow = mesh:Duplicate()
+            shadow.Name ..= "_Shadow"
+            ShadowMeshes[shadow] = mesh
+
+            -- TODO luau
+            assert(shadow:AsComponent("Mesh")).Transparency = 0.5
+            shadow.Parent = mesh.Parent
+        end
+    end
+
+    gizmo.Parent = GizmoContainer
 end
 
+MoveGizmo.Enabled = true
+ScaleGizmo.Enabled = false
 GizmoContainer.Name = "GizmoContainer"
 
 local DefaultCameraModelColors: { [string]: Color } = {}
@@ -56,6 +76,12 @@ for _, g in CoreTools.CameraModel:GetChildren() do
         local m = g :: EcMesh
         DefaultCameraModelColors[g.Name] = m.Tint
     end
+end
+
+function CoreTools.SetGizmoMode(Mode: number)
+    GizmoMode = Mode
+    MoveGizmo.Enabled = Mode == 1
+    ScaleGizmo.Enabled = Mode == 2
 end
 
 function CoreTools.RenderControls(TabButtonControl: (string, string, boolean?, boolean?, string?, string?) -> boolean)
@@ -70,13 +96,7 @@ function CoreTools.RenderControls(TabButtonControl: (string, string, boolean?, b
 	local gizmoMode, changed = imgui.combo("Gizmo", { "Move", "Scale" }, GizmoMode)
 
     if changed then
-        GizmoMode = gizmoMode
-
-        local shape = if gizmoMode == 1 then "!Cone" else "!Sphere"
-
-        for _, ps in GizmoPieces do
-            ps[1].MeshAsset, ps[2].MeshAsset = shape, shape
-        end
+        CoreTools.SetGizmoMode(gizmoMode)
     end
 
     imgui.setcursorposition(s.x, s.y + 24)
@@ -96,11 +116,13 @@ function CoreTools.OnEditorStageChanged(NewStage)
     end
 end
 
+type GizmoDragHandle = (GameObject & EcModel & { Cone: EcMesh, Cylinder: EcMesh })?
+
 local PrevDragMousePos: vector? = nil
 local IsSurfaceDragging = false
 local IsGizmoDragging = false
 local GizmoDragAxis = vector.zero
-local GizmoDragHandle: (GameObject & EcMesh & EcTransform)? = nil
+local GizmoDragHandle: GizmoDragHandle = nil
 local GizmoDragStartWorldPoint = nil
 local GizmoDragStartObjectPosition = nil
 local GizmoDragStartTransform = nil
@@ -108,6 +130,7 @@ local GizmoDragStartSize = vector.one
 local GizmoDragPlaneNormal = nil
 local BeganSurfaceDragAction: number? = nil
 local BeganGizmoDragAction: number? = nil
+local PrevCamPos = workspace.SceneCamera.Transform.Position
 
 local function roundTo(n: number, x: number): number
     return math.round(n / x) * x
@@ -190,10 +213,10 @@ local function keepGizmoInView(target: GameObject & EcTransform, ViewportRenderP
         GizmoDragStartObjectPosition = target.Transform.Position
     end
 
-    local axisLocal = assert(GizmoPieceToDirection[GizmoDragHandle])
-    local rotOnly = target.Transform - target.Transform.Position
-    local axisWorld = vector.normalize(rotOnly * axisLocal)
-    GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, cam.Transform.Forward))
+    -- local axisLocal = assert(GizmoPieceToDirection[GizmoDragHandle])
+    -- local rotOnly = target.Transform - target.Transform.Position
+    -- local axisWorld = vector.normalize(rotOnly * axisLocal)
+    -- GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, cam.Transform.Forward))
 end
 
 local function update(Project: Types.Project, EditorPreferences, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
@@ -202,7 +225,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     local selections = DeveloperTools:GetExplorerSelections()
-    local target: (GameObject & EcTransform)? = (if selections[1] and selections[1]:HasComponent("Transform") then selections[1] else nil) :: any
+    local target: (GameObject & EcTransform)? = selections[1] and selections[1]:AsComponent("Transform")
 
     if IsSurfaceDragging or IsGizmoDragging then
         if GizmoPrevTarget and (not target or target ~= GizmoPrevTarget) then
@@ -330,15 +353,11 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
         return
     end
 
-    if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize then
-        local scale = vector.one * vector.magnitude(workspace.SceneCamera.Transform.Position - GizmoContainer.Transform.Position) / workspace.SceneCamera.FieldOfView * 20
+    if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize or cam.Transform.Position ~= PrevCamPos then
+        local scale = vector.one * vector.magnitude(cam.Transform.Position - target.Transform.Position) * math.rad(cam.FieldOfView) / 20
         local gtrans = Matrix.translated(target.Transform.Position) * Matrix.rotated(target.Transform:ExtractAngles()) * Matrix.scaled(scale)
         GizmoContainer.Transform = gtrans
-
-        for direction, piece in GizmoPieces do
-            local trans = Matrix.lookAt(direction * 0.75, vector.create(0.0001, 0, 0)) * Matrix.rotated(math.rad(90), 0, 0)
-            piece[1].LocalTransform, piece[2].LocalTransform = trans, trans
-        end
+        PrevCamPos = cam.Transform.Position
     end
 
     GizmoPrevTarget = target
@@ -347,8 +366,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
 
     if tryingToInteract then
         if not IsGizmoDragging and gizmoHit and vector.magnitude(gizmoHit.Position - cam.Transform.Position) < camHitDistance then
-            assert(gizmoHit.Object:HasComponent("Mesh"))
-            local hit: GameObject & EcMesh & EcTransform = gizmoHit.Object :: any
+            local hit = gizmoHit.Object
 
             PrevDragMousePos = cpos
 
@@ -358,7 +376,8 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
             local axisWorld = vector.normalize(rotOnly * axisLocal)
 
             GizmoDragAxis = assert(GizmoPieceToDirection[hit])
-            GizmoDragHandle = hit
+            GizmoDragHandle = assert(hit.Parent):AsComponent("Model") :: GizmoDragHandle
+            assert(GizmoDragHandle)
 
             GizmoDragStartTransform = target.Transform
             GizmoDragStartObjectPosition = target.Transform.Position
@@ -369,21 +388,29 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
 
             GizmoDragStartWorldPoint = rayPlaneIntersect(camPos, mouseVector, target.Transform.Position, GizmoDragPlaneNormal)
 
-            for p, _ in GizmoPieceToDirection do
-                p.Transparency = 0.8
+            for _, d in (if GizmoMode == 1 then MoveGizmo else ScaleGizmo):GetDescendants() do
+                local mesh = d:AsComponent("Mesh")
+                if mesh then
+                    mesh.Transparency = 0.8
+                end
             end
 
-            GizmoDragHandle.Transparency = 0
+            GizmoDragHandle.Cylinder.Transparency = 0
+            GizmoDragHandle.Cone.Transparency = 0
             IsGizmoDragging = true
         end
 
     else
-        IsGizmoDragging = false
-
-        for _, pcs in GizmoPieces do
-            pcs[1].Transparency = 0
-            pcs[2].Transparency = 0.5
+        if IsGizmoDragging then
+            for _, d in (if GizmoMode == 1 then MoveGizmo else ScaleGizmo):GetDescendants() do
+                local mesh = d:AsComponent("Mesh")
+                if mesh then
+                    mesh.Transparency = if ShadowMeshes[mesh] then 0.5 else 0
+                end
+            end
         end
+
+        IsGizmoDragging = false
 
         if BeganGizmoDragAction then
             History:FinishAction(BeganGizmoDragAction)
@@ -415,11 +442,17 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
         if GizmoMode == 1 then
             target.Transform = GizmoDragStartTransform * Matrix.translated(move)
         else
-            local newSize = GizmoDragStartSize + GizmoPieceToDirection[GizmoDragHandle] * amount * math.sign(delta.x + delta.y + delta.z)
+            assert(GizmoPieceToDirection[GizmoDragHandle], GizmoDragHandle:GetFullName())
+            local adjust = not PlayerInput:IsKeyPressed(Enum.Key.LeftShift)
+
+            local newSize = GizmoDragStartSize + GizmoPieceToDirection[GizmoDragHandle] * (if adjust then amount else amount * 2) * math.sign(delta.x + delta.y + delta.z)
 
             if newSize.x > 0 and newSize.y > 0 and newSize.z > 0 then
+                if adjust then
+                    target.Transform = GizmoDragStartTransform * Matrix.translated(move * 0.5)
+                end
+
                 target.Size = newSize
-                target.Transform = GizmoDragStartTransform * Matrix.translated(move * 0.5)
             end
         end
 
@@ -439,7 +472,7 @@ function CoreTools.Update(Project: Types.Project, EditorPreferences: { read Keep
     debug.zoneend()
 
     if not success then
-        error(err)
+        warn(err)
     end
 end
 

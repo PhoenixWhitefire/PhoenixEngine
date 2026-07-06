@@ -116,12 +116,14 @@ local function runCurrentCommand()
     CommandBarPostRun = true
 end
 
-PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
-    if kie.Action ~= Enum.InputAction.Pressed then
+PlayerInput.KeyEvent:Connect(function(event)
+    if event.Action ~= Enum.InputAction.Pressed or PlayerInput.IsKeyboardSunk then
         return
     end
 
-    if kie.Key == Enum.Key.F5 then
+    local key = event.Key
+
+    if key == Enum.Key.F5 and not History.CurrentActionName then
         if State.CurrentStage == "ProjectEditing" then
             State.ChangeStageTo("ProjectPlaying")
         elseif State.CurrentStage == "ProjectPlaying" then
@@ -129,20 +131,26 @@ PlayerInput.KeyEvent:Connect(function(kie: KeyInputEvent)
         end
     end
 
+    if key == Enum.Key.One then
+        CoreTools.SetGizmoMode(1)
+    elseif key == Enum.Key.Two then
+        CoreTools.SetGizmoMode(2)
+    end
+
     if not CommandBarActive then
         return
     end
 
-    if kie.Key == Enum.Key.Enter then
+    if key == Enum.Key.Enter then
         runCurrentCommand()
     elseif #CommandBarHistory > 0 then
-        if kie.Key == Enum.Key.Up and CommandBarHistoryCursor > 1 then
+        if key == Enum.Key.Up and CommandBarHistoryCursor > 1 then
             CommandBarHistoryCursor -= 1
             CommandBarCommand = assert(CommandBarHistory[CommandBarHistoryCursor])
             CommandBarBlinkFrame = 1
         end
 
-        if kie.Key == Enum.Key.Down and CommandBarHistoryCursor <= #CommandBarHistory then
+        if key == Enum.Key.Down and CommandBarHistoryCursor <= #CommandBarHistory then
             CommandBarHistoryCursor += 1
 
             if CommandBarHistoryCursor > #CommandBarHistory then

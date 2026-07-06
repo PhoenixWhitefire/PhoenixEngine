@@ -22,6 +22,7 @@ local State = require("@ed/State")
 local Types = require("@ed/Types")
 
 local ProjectClosedByDataModelConnection = nil
+local LastSelectedInEditMode = {}
 local EditorCam = workspace.SceneCamera
 
 local VisualizationsChangedConnections: { [GameObject]: {
@@ -73,52 +74,7 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
             end
         end
 
-        for _, reimportable in Collections:GetTagged(Configuration.ReimportableModelTag) :: { GameObject & EcModel & EcTransform } do
-            if not reimportable:HasComponent("Model") or not reimportable:HasComponent("Transform") then
-                continue
-            end
-
-            Reimport.WatchModel(reimportable)
-        end
-
-        for path, watcher in Reimport.Watchers do
-            assert(watcher)
-
-            if Reimport.ModelModifiedTimes[path] and Reimport.ModelModifiedTimes[path] < fs.lastwritten(path) then
-                print(`Re-importing { path }`)
-
-                local success, importedOrError = pcall(function()
-                    return AssetManager:ImportModel(path)
-                end)
-
-                if not success then
-                    Logging:Write(`Re-import failed on Project open: { importedOrError }`, Enum.LogType.Error)
-                    continue
-                end
-
-                assert(typeof(importedOrError) == "GameObject")
-
-                local action = History:TryBeginAction("Auto re-import on Project open")
-
-                for _, model in watcher.Models :: { GameObject & EcModel } do
-                    -- preserve tags, name, parent, object ID, treelinks
-
-                    for _, child in model:GetChildren() do
-                        child.Parent = nil -- Allow undo
-                    end
-
-                    for _, newChild in importedOrError:GetChildren() do
-                        newChild:Duplicate().Parent = model
-                    end
-                end
-
-                if action then
-                    History:FinishAction(action)
-                end
-
-                Reimport.ModelModifiedTimes[path] = fs.lastwritten(path)
-            end
-        end
+        Reimport.CheckAll()
 
         ProjectClosedByDataModelConnection = State.Project.DataModel.Closing:Connect(function()
             assert(ProjectClosedByDataModelConnection)
@@ -131,6 +87,9 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
         for _, name in Preferences.DevToolsOpen do
             DeveloperTools:SetToolEnabled(name, true)
         end
+    elseif PreviousStage == "ProjectPlaying" then
+        DeveloperTools:SetExplorerSelections(LastSelectedInEditMode)
+        table.clear(LastSelectedInEditMode)
     end
 
     for _, g in Collections:GetObjectsWithComponent("Camera", State.Project.DataModel) do
@@ -189,6 +148,7 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
     CoreTools.VisualizationsContainer.Enabled = false
 
     if NextStage == "ProjectPlaying" then
+        LastSelectedInEditMode = DeveloperTools:GetExplorerSelections()
         DeveloperTools:SaveTextDocuments()
 
         if Preferences.ClearOutputOnPlaytest then

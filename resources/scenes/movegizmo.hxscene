@@ -1,0 +1,534 @@
+PHOENIXF
+#Version 2.14
+#Asset Scene
+#Date 6-7-2026
+#SceneName SaveToFileAction_MoveGizmo
+
+{
+  "GameObjects": [
+    {
+      "$_components": [
+        "Model",
+        "Transform"
+      ],
+      "$_objectId": 0,
+      "LocalTransform": [
+        [
+          0.5,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.5,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.5,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Name": "MoveGizmo"
+    },
+    {
+      "$_components": [
+        "Model",
+        "Transform"
+      ],
+      "$_objectId": 1,
+      "$_tags": [
+        "Ed_ReimportableModel"
+      ],
+      "ImportPath": "meow",
+      "LocalTransform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          6.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Name": "Y",
+      "Parent": 0
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 2,
+      "FaceCulling": 2,
+      "LocalTransform": [
+        [
+          0.4000000059604645,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.699999988079071,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.4000000059604645,
+          0.0
+        ],
+        [
+          0.0,
+          2.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/unlit.mtl",
+      "MeshAsset": "meshes/arrow/Cone.hxmesh",
+      "Name": "Cone",
+      "Parent": 1,
+      "PhysicsCollisions": false,
+      "Tint": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 3,
+      "LocalTransform": [
+        [
+          -0.10999999940395355,
+          0.0,
+          -9.616505813880849e-09,
+          -0.0
+        ],
+        [
+          0.0,
+          -3.0,
+          -0.0,
+          -0.0
+        ],
+        [
+          9.616505813880849e-09,
+          0.0,
+          -0.10999999940395355,
+          -0.0
+        ],
+        [
+          0.0,
+          -1.5,
+          0.0,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/unlit.mtl",
+      "MeshAsset": "meshes/arrow/Cylinder.hxmesh",
+      "Name": "Cylinder",
+      "Parent": 1,
+      "PhysicsCollisions": false,
+      "Tint": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "$_components": [
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 4,
+      "LocalTransform": [
+        [
+          0.800000011920929,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          7.199999809265137,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.800000011920929,
+          0.0
+        ],
+        [
+          0.0,
+          -0.8999999761581421,
+          0.0,
+          1.0
+        ]
+      ],
+      "Name": "Clickable",
+      "Parent": 1
+    },
+    {
+      "$_components": [
+        "Model",
+        "Transform"
+      ],
+      "$_objectId": 5,
+      "$_tags": [
+        "Ed_ReimportableModel"
+      ],
+      "ImportPath": "meow",
+      "LocalTransform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -4.371138828673793e-08,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0,
+          -4.371138828673793e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          6.0,
+          1.0
+        ]
+      ],
+      "Name": "Z",
+      "Parent": 0
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 6,
+      "FaceCulling": 2,
+      "LocalTransform": [
+        [
+          0.4000000059604645,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.699999988079071,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.4000000059604645,
+          0.0
+        ],
+        [
+          0.0,
+          2.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/unlit.mtl",
+      "MeshAsset": "meshes/arrow/Cone.hxmesh",
+      "Name": "Cone",
+      "Parent": 5,
+      "PhysicsCollisions": false,
+      "Tint": [
+        0.0,
+        0.8235292434692383,
+        1.0
+      ]
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 7,
+      "LocalTransform": [
+        [
+          -0.10999999940395355,
+          0.0,
+          -9.616505813880849e-09,
+          -0.0
+        ],
+        [
+          0.0,
+          -3.0,
+          -0.0,
+          -0.0
+        ],
+        [
+          9.616505813880849e-09,
+          0.0,
+          -0.10999999940395355,
+          -0.0
+        ],
+        [
+          0.0,
+          -1.5,
+          0.0,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/unlit.mtl",
+      "MeshAsset": "meshes/arrow/Cylinder.hxmesh",
+      "Name": "Cylinder",
+      "Parent": 5,
+      "PhysicsCollisions": false,
+      "Tint": [
+        0.0,
+        0.8235292434692383,
+        1.0
+      ]
+    },
+    {
+      "$_components": [
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 8,
+      "LocalTransform": [
+        [
+          0.800000011920929,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          7.199999809265137,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.800000011920929,
+          0.0
+        ],
+        [
+          0.0,
+          -0.8999999761581421,
+          0.0,
+          1.0
+        ]
+      ],
+      "Name": "Clickable",
+      "Parent": 5
+    },
+    {
+      "$_components": [
+        "Model",
+        "Transform"
+      ],
+      "$_objectId": 9,
+      "$_tags": [
+        "Ed_ReimportableModel"
+      ],
+      "ImportPath": "meow",
+      "LocalTransform": [
+        [
+          -4.371138828673793e-08,
+          -1.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          -4.371138828673793e-08,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          6.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Name": "X",
+      "Parent": 0
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 10,
+      "FaceCulling": 2,
+      "LocalTransform": [
+        [
+          0.4000000059604645,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.699999988079071,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.4000000059604645,
+          0.0
+        ],
+        [
+          0.0,
+          2.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/unlit.mtl",
+      "MeshAsset": "meshes/arrow/Cone.hxmesh",
+      "Name": "Cone",
+      "Parent": 9,
+      "PhysicsCollisions": false,
+      "Tint": [
+        1.0,
+        0.2598039507865906,
+        0.2598039507865906
+      ]
+    },
+    {
+      "$_components": [
+        "Mesh",
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 11,
+      "LocalTransform": [
+        [
+          -0.10999999940395355,
+          0.0,
+          -9.616505813880849e-09,
+          -0.0
+        ],
+        [
+          0.0,
+          -3.0,
+          -0.0,
+          -0.0
+        ],
+        [
+          9.616505813880849e-09,
+          0.0,
+          -0.10999999940395355,
+          -0.0
+        ],
+        [
+          0.0,
+          -1.5,
+          0.0,
+          1.0
+        ]
+      ],
+      "Material": "@base/materials/unlit.mtl",
+      "MeshAsset": "meshes/arrow/Cylinder.hxmesh",
+      "Name": "Cylinder",
+      "Parent": 9,
+      "PhysicsCollisions": false,
+      "Tint": [
+        1.0,
+        0.2598039507865906,
+        0.2598039507865906
+      ]
+    },
+    {
+      "$_components": [
+        "RigidBody",
+        "Transform"
+      ],
+      "$_objectId": 12,
+      "LocalTransform": [
+        [
+          0.800000011920929,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          7.199999809265137,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.800000011920929,
+          0.0
+        ],
+        [
+          0.0,
+          -0.8999999761581421,
+          0.0,
+          1.0
+        ]
+      ],
+      "Name": "Clickable",
+      "Parent": 9
+    }
+  ],
+  "SceneName": "SaveToFileAction_MoveGizmo"
+}
