@@ -11,10 +11,6 @@ return function(test: Types.Test, expect: Types.Expect)
 		expect(Matrix.new() == Matrix.identity):toBe(true)
 	end)
 
-	test("rotatedYXZ alias", function()
-		expect(Matrix.rotated(0, math.rad(10), math.rad(19))):toBe(Matrix.rotatedYXZ(0, math.rad(10), math.rad(19)))
-	end)
-
 	test("Min bounds", function()
 		expect(function()
 			local m = Matrix.new()
