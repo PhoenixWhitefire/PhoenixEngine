@@ -3,22 +3,20 @@
 
 #include "script/luhx.hpp"
 #include "script/InputEvent.hpp"
+#include "script/UserdataTag.hpp"
 #include "Reflection.hpp"
 
 #define IE_TYPENAME "InputEvent"
 
 void luhx_pushinputevent(lua_State* L, const InputEvent& ie)
 {
-    void* ptr = lua_newuserdata(L, sizeof(InputEvent));
+    void* ptr = lua_newuserdatataggedwithmetatable(L, sizeof(InputEvent), UserdataTag::InputEvent);
     memcpy(ptr, &ie, sizeof(InputEvent));
-
-    luaL_getmetatable(L, IE_TYPENAME);
-    lua_setmetatable(L, -2);
 }
 
 static int ie_index(lua_State* L)
 {
-    const InputEvent* ie = static_cast<InputEvent*>(luaL_checkudata(L, 1, IE_TYPENAME));
+    const InputEvent* ie = static_cast<InputEvent*>(luaL_checkudatatagged(L, 1, UserdataTag::InputEvent));
     const char* k = luaL_checkstring(L, 2);
 
     if (strcmp(k, "Type") == 0)
@@ -75,7 +73,7 @@ static int ie_index(lua_State* L)
 
 static void createmetatable(lua_State* L)
 {
-    luaL_newmetatable(L, IE_TYPENAME);
+    lua_createtable(L, 0, 2);
 
     lua_pushliteral(L, IE_TYPENAME);
     lua_setfield(L, -2, "__type");
@@ -83,7 +81,7 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, ie_index, "InputEvent.__index");
     lua_setfield(L, -2, "__index");
 
-    lua_pop(L, 1);
+    lua_setuserdatametatable(L, UserdataTag::InputEvent, -1);
 }
 
 int luhxopen_InputEvent(lua_State* L)

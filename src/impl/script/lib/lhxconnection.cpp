@@ -2,12 +2,13 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
+#include "script/UserdataTags.hpp"
 
 static int conn_namecall(lua_State* L)
 {
 	if (strcmp(lua_namecallatom(L, nullptr), "Disconnect") == 0)
 	{
-		EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+		EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
 
 		if (ec->ConnectionId == UINT32_MAX)
 			luaL_error(L, "Event Connection was already disconnected!");
@@ -56,7 +57,7 @@ static int conn_namecall(lua_State* L)
 static int conn_index(lua_State* L)
 {
     const char* k = luaL_checkstring(L, 2);
-	EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+	EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, "EventConnection", UserdataTag::EventConnection);
 
 	if (strcmp(k, "Connected") == 0)
 		lua_pushboolean(L, ec->ConnectionId != UINT32_MAX);
@@ -74,11 +75,11 @@ static int conn_index(lua_State* L)
 
 static int conn_tostring(lua_State* L)
 {
-    EventConnectionData* ec = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
+    EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
 	lua_pushinteger(L, ec->SignalRef);
 	lua_gettable(L, LUA_REGISTRYINDEX);
 
-	EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, -1, "EventSignal");
+	EventSignalData* ev = (EventSignalData*)luaL_checkudatatagged(L, -1, UserdataTag::EventSignal);
 	GameObject* obj = GameObjectManager::Get()->FindById(ev->Reflector.Id);
 
 	std::string source = ev->Reflector.Type == EntityComponent::None
@@ -91,8 +92,8 @@ static int conn_tostring(lua_State* L)
 
 static int conn_eq(lua_State* L)
 {
-	EventConnectionData* a = (EventConnectionData*)luaL_checkudata(L, 1, "EventConnection");
-	EventConnectionData* b = (EventConnectionData*)luaL_checkudata(L, 2, "EventConnection");
+	EventConnectionData* a = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
+	EventConnectionData* b = (EventConnectionData*)luaL_checkudatatagged(L, 2, UserdataTag::EventConnection);
 
 	lua_pushboolean(
 		L,
@@ -105,9 +106,9 @@ static int conn_eq(lua_State* L)
 
 static void createmetatable(lua_State* L)
 {
-    luaL_newmetatable(L, "EventConnection");
+    lua_createtable(L, 0, 5);
 
-    lua_pushstring(L, "EventConnection");
+    lua_pushliteral(L, "EventConnection");
 	lua_setfield(L, -2, "__type");
 
     lua_pushcfunction(L, conn_namecall, "__namecall");
@@ -122,7 +123,7 @@ static void createmetatable(lua_State* L)
 	lua_pushcfunction(L, conn_eq, "EventConnection.__eq");
 	lua_setfield(L, -2, "__eq");
 
-	lua_pop(L, 1);
+	lua_setuserdatametatable(L, UserdataTag::EventConnection, -1);
 }
 
 int luhxopen_EventConnection(lua_State* L)

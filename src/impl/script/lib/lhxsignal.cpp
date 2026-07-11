@@ -3,6 +3,7 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
+#include "script/UserdataTag.hpp"
 
 void luhx_pushsignal(
     lua_State* L,
@@ -12,15 +13,12 @@ void luhx_pushsignal(
     uint32_t RestrictToDataModel
 )
 {
-    EventSignalData* ev = (EventSignalData*)lua_newuserdata(L, sizeof(EventSignalData));
+    EventSignalData* ev = (EventSignalData*)lua_newuserdatataggedwithmetatable(L, sizeof(EventSignalData), UserdataTag::EventSignal);
     *ev = {};
     ev->Reflector = Reflector;
     ev->EventName = EventName;
     ev->Event = Event;
     ev->RestrictDataModel = RestrictToDataModel;
-
-    luaL_getmetatable(L, "EventSignal");
-    lua_setmetatable(L, -2);
 }
 
 static void queueEvent(
@@ -134,7 +132,7 @@ static int sig_namecall(lua_State* L)
     {
         luaL_checktype(L, 2, LUA_TFUNCTION);
 
-        EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+        EventSignalData* ev = (EventSignalData*)luaL_checkudatatagged(L, 1, UserdataTag::EventSignal);
         const Reflection::EventDescriptor* rev = ev->Event;
         int signalRef = lua_ref(L, 1);
 
@@ -215,7 +213,7 @@ static int sig_namecall(lua_State* L)
     }
     else if (strcmp(lua_namecallatom(L, nullptr), "Wait") == 0)
     {
-        EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+        EventSignalData* ev = (EventSignalData*)luaL_checkudatatagged(L, 1, UserdataTag::EventSignal);
         const Reflection::EventDescriptor* rev = ev->Event;
 
         ReflectorRef reflector = ev->Reflector;
@@ -284,8 +282,8 @@ static int sig_namecall(lua_State* L)
 
 static int sig_eq(lua_State* L)
 {
-    EventSignalData* ev1 = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
-    EventSignalData* ev2 = (EventSignalData*)luaL_checkudata(L, 2, "EventSignal");
+    EventSignalData* ev1 = (EventSignalData*)luaL_checkudatatagged(L, 1, UserdataTag::EventSignal);
+    EventSignalData* ev2 = (EventSignalData*)luaL_checkudatatagged(L, 2, UserdataTag::EventSignal);
 
     lua_pushboolean(L, ev1->Event == ev2->Event && ev1->Reflector == ev2->Reflector);
     return 1;
@@ -293,7 +291,7 @@ static int sig_eq(lua_State* L)
 
 static int sig_tostring(lua_State* L)
 {
-    EventSignalData* ev = (EventSignalData*)luaL_checkudata(L, 1, "EventSignal");
+    EventSignalData* ev = (EventSignalData*)luaL_checkudatatagged(L, 1, UserdataTag::EventSignal);
 
     if (ev->Reflector.Type == EntityComponent::None)
     {
@@ -311,7 +309,7 @@ static int sig_tostring(lua_State* L)
 
 static void createmetatable(lua_State* L)
 {
-    luaL_newmetatable(L, "EventSignal");
+    lua_createtable(L, 4);
 
     lua_pushstring(L, "EventSignal");
     lua_setfield(L, -2, "__type");
@@ -325,7 +323,7 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, sig_tostring, "EventSignal.__tostring");
     lua_setfield(L, -2, "__tostring");
 
-    lua_pop(L, 1);
+    lua_setuserdatametatable(L, UserdataTag::EventSignal, -1);
 }
 
 int luhxopen_EventSignal(lua_State* L)

@@ -8,15 +8,13 @@
 #include <glm/gtx/matrix_interpolation.hpp>
 
 #include "script/luhx.hpp"
+#include "script/UserdataTags.hpp"
 #include "geometry/DecomposeTRS.hpp"
 
 void luhx_pushmatrix(lua_State* L, const glm::mat4& mtx)
 {
-    void* ptr = lua_newuserdata(L, sizeof(glm::mat4));
+    void* ptr = lua_newuserdatataggedwithmetatable(L, sizeof(glm::mat4), UserdataTag::Matrix);
     memcpy(ptr, &mtx, sizeof(glm::mat4));
-
-    luaL_getmetatable(L, LUHX_MATRIXLIBNAME);
-    lua_setmetatable(L, -2);
 }
 
 static glm::vec3 checkVectorArg(lua_State* L, int argBaseIndex)
@@ -115,7 +113,7 @@ static const luaL_Reg matrix_funcs[] = {
 
 static int mtx_index(lua_State* L)
 {
-    glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+    glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 	size_t klen = 0;
 	const char* k = luaL_checklstring(L, 2, &klen);
 
@@ -145,7 +143,7 @@ static int mtx_index(lua_State* L)
 			L,
 			[](lua_State* L) -> int
 			{
-				const glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+				const glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 				glm::vec3 angles;
 				glm::extractEulerAngleYXZ(m, angles.y, angles.x, angles.z);
 
@@ -162,7 +160,7 @@ static int mtx_index(lua_State* L)
 			L,
 			[](lua_State* L) -> int
 			{
-				const glm::mat4& m = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+				const glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 
 				luhx_pushmatrix(L, glm::inverse(m));
 				return 1;
@@ -177,8 +175,8 @@ static int mtx_index(lua_State* L)
 			L,
 			[](lua_State* L) -> int
 			{
-				const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
-				const glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, LUHX_MATRIXLIBNAME);
+				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+				const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
 
 				luhx_pushmatrix(L, glm::interpolate(a, b, (float)luaL_checknumber(L, 3)));
 				return 1;
@@ -193,7 +191,7 @@ static int mtx_index(lua_State* L)
 			L,
 			[](lua_State* L) -> int
 			{
-				const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 				glm::vec3 scale = checkVectorArg(L, 2);
 
 				luhx_pushmatrix(L, glm::scale(a, scale));
@@ -223,8 +221,8 @@ static int mtx_index(lua_State* L)
 
 static int mtx_eq(lua_State* L)
 {
-    const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
-	const glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, LUHX_MATRIXLIBNAME);
+    const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+	const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
 
 	lua_pushboolean(L, a == b);
 	return 1;
@@ -232,11 +230,11 @@ static int mtx_eq(lua_State* L)
 
 static int mtx_mul(lua_State* L)
 {
-    const glm::mat4& a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+    const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 
 	if (lua_isuserdata(L, 2))
 	{
-		const glm::mat4& b = *(glm::mat4*)luaL_checkudata(L, 2, LUHX_MATRIXLIBNAME);
+		const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
 		luhx_pushmatrix(L, a * b);
 	}
 	else
@@ -251,7 +249,7 @@ static int mtx_mul(lua_State* L)
 
 static int mtx_add(lua_State* L)
 {
-    glm::mat4 a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+    glm::mat4 a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 	const glm::vec3& v = glm::make_vec3(luaL_checkvector(L, 2));
 
 	a[3] += glm::vec4(v, 0.f);
@@ -262,7 +260,7 @@ static int mtx_add(lua_State* L)
 
 static int mtx_sub(lua_State* L)
 {
-    glm::mat4 a = *(glm::mat4*)luaL_checkudata(L, 1, LUHX_MATRIXLIBNAME);
+    glm::mat4 a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 	const glm::vec3& v = glm::make_vec3(luaL_checkvector(L, 2));
 
 	a[3] -= glm::vec4(v, 0.f);
@@ -273,9 +271,9 @@ static int mtx_sub(lua_State* L)
 
 static void createmetatable(lua_State* L)
 {
-    luaL_newmetatable(L, LUHX_MATRIXLIBNAME);
+    lua_createtable(L, 0, 6);
 
-	lua_pushstring(L, LUHX_MATRIXLIBNAME);
+	lua_pushliteral(L, LUHX_MATRIXLIBNAME);
 	lua_setfield(L, -2, "__type");
 
 	lua_pushcfunction(L, mtx_index, "Matrix.__index");
@@ -293,7 +291,7 @@ static void createmetatable(lua_State* L)
 	lua_pushcfunction(L, mtx_sub, "Matrix.__sub");
 	lua_setfield(L, -2, "__sub");
 
-    lua_pop(L, 1);
+    lua_setuserdatametatable(L, UserdataTag::Matrix, -1);
 }
 
 int luhxopen_Matrix(lua_State* L)

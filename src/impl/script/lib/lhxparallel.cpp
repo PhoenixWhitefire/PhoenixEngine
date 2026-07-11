@@ -527,7 +527,7 @@ int luhxopen_parallel(lua_State* L)
         mtx->ReferenceCount.fetch_sub(1, std::memory_order_relaxed);
     });
 
-    luaL_newmetatable(L, "Mutex");
+    lua_createtable(L, 0, 2);
 
     lua_pushcfunction(L, parallelmutex_namecall, "__namecall"); // leave as SPECIFICALLY `__namecall` for better stack tracebacks
     lua_setfield(L, -2, "__namecall");
@@ -543,7 +543,7 @@ int luhxopen_parallel(lua_State* L)
         mtx->ReferenceCount.fetch_sub(1, std::memory_order_relaxed);
     });
 
-    luaL_newmetatable(L, "SharedBuffer");
+    lua_createtable(L, 0, 3);
 
     lua_pushcfunction(L, sharedbuffer_index, "SharedBuffer.__index");
     lua_setfield(L, -2, "__index");
@@ -562,7 +562,7 @@ int luhxopen_parallel(lua_State* L)
         sint->ReferenceCount.fetch_sub(1, std::memory_order_relaxed);
     });
 
-    luaL_newmetatable(L, "AtomicInteger");
+    lua_createtable(L, 2);
 
     lua_pushcfunction(L, atomicint_namecall, "__namecall"); // leave as SPECIFICALLY `__namecall` for better stack tracebacks
     lua_setfield(L, -2, "__namecall");

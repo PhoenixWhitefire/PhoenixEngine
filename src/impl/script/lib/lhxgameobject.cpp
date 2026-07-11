@@ -4,6 +4,7 @@
 #include "datatype/ComponentDependencies.hpp"
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
+#include "script/UserdataTags.hpp"
 
 #define OBJECT_REG "OBJECT"
 
@@ -35,21 +36,15 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
 
     Object->IncrementHardRefs();
 
-    uint32_t* ptrToObj = (uint32_t*)lua_newuserdatadtor(
+    uint32_t* ptrToObj = (uint32_t*)lua_newuserdatataggedwithmetatable(
         L,
         sizeof(uint32_t),
-        [](void* ptrToId)
-        {
-            GameObjectManager::Get()->FindById(*(uint32_t*)ptrToId)->DecrementHardRefs();
-        }
+		UserdataTag::GameObject
     );
     lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
     lua_pushvalue(L, -2);
 
     *ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-    luaL_getmetatable(L, "GameObject");
-    lua_setmetatable(L, -2);
 
     lua_settable(L, -4);
     lua_remove(L, -2); // remove the registry sub-table
@@ -57,7 +52,7 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
 
 GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
 {
-    uint32_t* idptr = (uint32_t*)luaL_checkudata(L, StackIndex, "GameObject");
+    uint32_t* idptr = (uint32_t*)luaL_checkudatatagged(L, StackIndex, UserdataTag::GameObject);
     return GameObjectManager::Get()->FindById(*idptr);
 }
 
@@ -298,16 +293,16 @@ static int obj_tostring(lua_State* L)
 	if (object)
 		lua_pushstring(L, object->GetFullName().c_str());
 	else
-		lua_pushstring(L, "<!Deleted GameObject!>");
+		lua_pushliteral(L, "<!Deleted GameObject!>");
 
 	return 1;
 };
 
 static void createmetatable(lua_State* L)
 {
-    luaL_newmetatable(L, LUHX_GAMEOBJECTLIBNAME);
+	lua_createtable(L, 0, 5);
 
-    lua_pushstring(L, "GameObject");
+    lua_pushliteral(L, "GameObject");
     lua_setfield(L, -2, "__type");
 
     lua_pushcfunction(L, obj_index, "GameObject.__index");
@@ -322,7 +317,11 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, obj_tostring, "GameObject.__tostring");
     lua_setfield(L, -2, "__tostring");
 
-    lua_pop(L, 1);
+    lua_setuserdatametatable(L, UserdataTag::GameObject, -1);
+	lua_setuserdatadtor(L, UserdataTag::GameObject, [](void* ptrToId)
+    {
+        GameObjectManager::Get()->FindById(*(uint32_t*)ptrToId)->DecrementHardRefs();
+    });
 }
 
 int luhxopen_GameObject(lua_State* L)

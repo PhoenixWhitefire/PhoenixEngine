@@ -9,9 +9,19 @@ struct UserdataTag_
         Mutex = 1,
         SharedBuffer = 2,
         AtomicInteger = 3,
+        Color = 4,
+        EventSignal = 5,
+        EventConnection = 6,
+        GameObject = 7,
+        InputEvent = 8,
+        Matrix = 9,
+        NumberGradient = 10,
+        VectorGradient = 11,
+        ColorGradient = 12,
 
         __count,
         __tag_limit = 127,
+        __invalid = 128,
     };
 };
 
@@ -22,6 +32,15 @@ const std::string_view UserdataTagNames[] = {
     "Mutex",
     "SharedBuffer",
     "AtomicInteger",
+    "Color",
+    "EventSignal",
+    "EventConnection",
+    "GameObject",
+    "InputEvent",
+    "Matrix",
+    "NumberGradient",
+    "VectorGradient",
+    "ColorGradient",
 };
 
 static_assert(std::size(UserdataTagNames) == UserdataTag::__count);

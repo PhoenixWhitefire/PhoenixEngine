@@ -12,13 +12,27 @@
 #include "script/SharedMutex.hpp"
 #include "script/TracyLuau.hpp"
 #include "script/luhx.hpp"
+#include "script/UserdataTags.hpp"
 #include "datatype/Color.hpp"
 #include "DeveloperTools.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
+struct LuauType
+{
+    LuauType(lua_Type BaseType)
+        Type(BaseType)
+    {}
+
+    LuauType(lua_Type BaseType, UserdataTag UserTag)
+        Type(BaseType), Tag(UserTag)
+
+    lua_Type Type = LUA_TNONE;
+    UserdataTag Tag = UserdataTag::__invalid;
+};
+
 // depends on the ordering of `Reflection::ValueType`!!
-static const lua_Type s_ValueTypeToLuauType[] = {
+static const LuauType s_ValueTypeToLuauType[] = {
     LUA_TNIL,
 
     LUA_TBOOLEAN,
@@ -27,23 +41,25 @@ static const lua_Type s_ValueTypeToLuauType[] = {
     LUA_TSTRING,
     LUA_TBUFFER,
 
-    LUA_TUSERDATA, // Color
-    LUA_TVECTOR,   // Vector2
-    LUA_TVECTOR,   // Vector3
-    LUA_TUSERDATA, // Matrix
-    LUA_TUSERDATA, // GameObject
+    { LUA_TUSERDATA, UserdataTag::Color      }, // Color
+    { LUA_TVECTOR,   UserdataTag::__invalid  },   // Vector2
+    { LUA_TVECTOR,   UserdataTag::__invalid  },   // Vector3
+    { LUA_TUSERDATA, UserdataTag::Matrix     }, // Matrix
+    { LUA_TUSERDATA, UserdataTag::GameObject }, // GameObject
 
     LUA_TFUNCTION,
 
     LUA_TTABLE, // Array
     LUA_TTABLE, // Map,
 
-    LUA_TUSERDATA, // EventSignal
-    LUA_TUSERDATA, // InputEvent
-    LUA_TUSERDATA, // NumberGradient
-    LUA_TUSERDATA, // VectorGradient
-    LUA_TUSERDATA, // ColorGradient
+    { LUA_TUSERDATA, UserdataTag::EventSignal    }, // EventSignal
+    { LUA_TUSERDATA, UserdataTag::InputEvent     }, // InputEvent
+    { LUA_TUSERDATA, UserdataTag::NumberGradient }, // NumberGradient
+    { LUA_TUSERDATA, UserdataTag::VectorGradient }, // VectorGradient
+    { LUA_TUSERDATA, UserdataTag::ColorGradient  }, // ColorGradient
 };
+static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
+
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
@@ -1064,6 +1080,7 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
             // dont want the type name to end with `?`
             // it needs to match with the metatable's `__type`
             Reflection::ValueType baseTy = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
+
             luaL_checkudata(L, StackIndex, Reflection::TypeAsString(baseTy).c_str());
         }
         else if (lty == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
@@ -1276,7 +1293,7 @@ int ScriptEngine::L::HandleMethodCall(
         );
     }
 
-    assert(luaL_checkudata(L, 1, "GameObject"));
+    assert(luaL_checkudatatagged(L, 1, UserdataTag::GameObject));
     std::vector<Reflection::GenericValue> inputs;
 
     for (int index = 1; index <= numArgs; index++)

@@ -1,15 +1,13 @@
 #include <lualib.h>
 
 #include "script/luhx.hpp"
+#include "script/UserdataTags.hpp"
 #include "datatype/Color.hpp"
 
 void luhx_pushcolor(lua_State* L, const Color& col)
 {
-	Color* ptr = (Color*)lua_newuserdata(L, sizeof(Color));
+	Color* ptr = (Color*)lua_newuserdatataggedwithmetatable(L, sizeof(Color), UserdataTag::Color);
 	*ptr = col;
-
-	luaL_getmetatable(L, LUHX_COLORLIBNAME);
-	lua_setmetatable(L, -2);
 }
 
 static int color_new(lua_State* L)
@@ -37,15 +35,14 @@ static int color_new(lua_State* L)
 	return 1;
 }
 
-static luaL_Reg color_funcs[] =
-{
+static luaL_Reg color_funcs[] = {
 	{ "new", color_new },
 	{ NULL, NULL }
 };
 
 static int col_index(lua_State* L)
 {
-    Color* vec = (Color*)luaL_checkudata(L, 1, LUHX_COLORLIBNAME);
+    Color* vec = (Color*)luaL_checkudatatagged(L, 1, UserdataTag::Color);
 	size_t ksize = 0;
 	const char* key = luaL_checklstring(L, 2, &ksize);
 
@@ -74,7 +71,7 @@ static int col_index(lua_State* L)
 
 static int col_tostring(lua_State* L)
 {
-	Color* col = (Color*)luaL_checkudata(L, 1, LUHX_COLORLIBNAME);
+	Color* col = (Color*)luaL_checkudatatagged(L, 1, UserdataTag::Color);
 
 	lua_pushfstringL(L, "%.2f, %.2f, %.2f", col->R, col->G, col->B);
 	return 1;
@@ -82,8 +79,8 @@ static int col_tostring(lua_State* L)
 
 static int col_eq(lua_State* L)
 {
-	Color* a = (Color*)luaL_checkudata(L, 1, LUHX_COLORLIBNAME);
-	Color* b = (Color*)luaL_checkudata(L, 2, LUHX_COLORLIBNAME);
+	Color* a = (Color*)luaL_checkudatatagged(L, 1, UserdataTag::Color);
+	Color* b = (Color*)luaL_checkudatatagged(L, 2, UserdataTag::Color);
 
 	lua_pushboolean(L, a->R == b->R && a->G == b->G && a->B == b->B);
 	return 1;
@@ -91,7 +88,7 @@ static int col_eq(lua_State* L)
 
 static void createmetatable(lua_State* L)
 {
-    luaL_newmetatable(L, LUHX_COLORLIBNAME);
+	lua_createtable(L, 0, 4);
 
 	lua_pushcfunction(L, col_index, "Color.__index");
 	lua_setfield(L, -2, "__index");
@@ -105,7 +102,7 @@ static void createmetatable(lua_State* L)
 	lua_pushstring(L, LUHX_COLORLIBNAME);
 	lua_setfield(L, -2, "__type");
 
-	lua_pop(L, 1);
+	lua_setuserdatametatable(L, UserdataTag::Color, -1);
 }
 
 int luhxopen_Color(lua_State* L)
