@@ -60,8 +60,6 @@ static const LuauType s_ValueTypeToLuauType[] = {
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
-static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
-
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
     Log.ErrorF("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
@@ -150,7 +148,7 @@ lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
     }
 
     assert(size_t(rvt & ~Reflection::ValueType::Null) < std::size(s_ValueTypeToLuauType));
-    return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null];
+    return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null].Type;
 }
 
 static int shouldResume_Wait(
@@ -1068,20 +1066,19 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 
     if (!isOptional || givenType != LUA_TNIL)
     {
-        lua_Type lty = ReflectionTypeToLuauType(Type);
+        const LuauType& lty = s_ValueTypeToLuauType[baseTy & ~Reflection::ValueType::Null]
 
         // the literal `if` check inside this function likes to take 190 microseconds sometimes in Debug mode for some reason
         // probably some cache bullshit
         // fuck
-        luaL_checktype(L, StackIndex, lty);
+        luaL_checktype(L, StackIndex, lty.Type);
 
-        if (lty == LUA_TUSERDATA)
+        if (lty.Type == LUA_TUSERDATA)
         {
-            // dont want the type name to end with `?`
-            // it needs to match with the metatable's `__type`
-            Reflection::ValueType baseTy = Reflection::ValueType(Type & ~Reflection::ValueType::Null);
-
-            luaL_checkudata(L, StackIndex, Reflection::TypeAsString(baseTy).c_str());
+            if (lt.Tag == UserdataTag::__invalid)
+                luaL_typeerror(L, StackIndex, Reflection::TypeToString(Type))
+            else
+                luaL_checkudatatagged(L, StackIndex, lty.Tag);
         }
         else if (lty == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
         {
