@@ -156,11 +156,9 @@ static int sig_namecall(lua_State* L)
         lua_xpush(L, eL, 2); // push callback onto eL
         lua_pop(L, 1);
 
-        EventConnectionData* ec = (EventConnectionData*)lua_newuserdata(eL, sizeof(EventConnectionData));
+        EventConnectionData* ec = (EventConnectionData*)lua_newuserdatataggedwithmetatable(eL, sizeof(EventConnectionData), UserdataTag::EventConnection);
         *ec = {};
         //ec->DataModel = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
-        luaL_getmetatable(eL, "EventConnection"); // stack: ec, mt
-        lua_setmetatable(eL, -2); // stack: ec
         lua_xpush(eL, L, -1);
 
         // assign the connection to the Event Thread so it can be used by the Connection Threads

@@ -1,7 +1,7 @@
 PHOENIXF
 #Version 2.14
 #Asset Scene
-#Date 6-7-2026
+#Date 13-7-2026
 #SceneName SaveToFileAction_ScaleGizmo
 
 {
@@ -49,7 +49,7 @@ PHOENIXF
       "$_tags": [
         "Ed_ReimportableModel"
       ],
-      "ImportPath": "meow",
+      "ImportPath": "/home/erinv/Documents/3d/arrow.glb",
       "LocalTransform": [
         [
           1.0,
@@ -212,7 +212,7 @@ PHOENIXF
       "$_tags": [
         "Ed_ReimportableModel"
       ],
-      "ImportPath": "meow",
+      "ImportPath": "/home/erinv/Documents/3d/arrow.glb",
       "LocalTransform": [
         [
           1.0,
@@ -283,7 +283,7 @@ PHOENIXF
       "PhysicsCollisions": false,
       "Tint": [
         0.0,
-        0.8235292434692383,
+        0.6176471710205078,
         1.0
       ]
     },
@@ -327,7 +327,7 @@ PHOENIXF
       "PhysicsCollisions": false,
       "Tint": [
         0.0,
-        0.8235292434692383,
+        0.6176471710205078,
         1.0
       ]
     },
@@ -375,7 +375,7 @@ PHOENIXF
       "$_tags": [
         "Ed_ReimportableModel"
       ],
-      "ImportPath": "meow",
+      "ImportPath": "/home/erinv/Documents/3d/arrow.glb",
       "LocalTransform": [
         [
           -4.371138828673793e-08,
