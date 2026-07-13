@@ -166,8 +166,8 @@ const Reflection::StaticMethodMap& NetworkComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "MakeHttpRequestAsync", Reflection::MethodDescriptor{
-            { Reflection::ValueType::Map },
-            { Reflection::ValueType::Map },
+            REFLECTION_SPAN({ Reflection::ValueType::Map }),
+            REFLECTION_SPAN({ Reflection::ValueType::Map }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::promise<std::vector<Reflection::GenericValue>>*
             {
                 std::promise<std::vector<Reflection::GenericValue>>* prom = new std::promise<std::vector<Reflection::GenericValue>>;

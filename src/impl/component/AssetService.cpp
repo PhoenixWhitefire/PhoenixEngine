@@ -115,8 +115,8 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "GetMeshData", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::Map },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::Map }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 MeshProvider* meshProvider = MeshProvider::Get();
@@ -164,7 +164,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "SetMeshData", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::Any },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::Any }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -186,7 +186,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "SaveMesh", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -201,8 +201,8 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "ImportModel", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::GameObject },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const std::string& path = std::string(inputs[0].AsStringView());
@@ -213,8 +213,8 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "LoadScene", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(String) },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(String) }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 bool readSuccess = true;
@@ -239,8 +239,8 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "SaveScene", Reflection::MethodDescriptor{
-            { Reflection::ValueType::Array, Reflection::ValueType::String },
-            { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
+            REFLECTION_SPAN({ Reflection::ValueType::Array, Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 std::vector<GameObject*> objects;
@@ -262,7 +262,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "QueueLoadTexture", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, REFLECTION_OPTIONAL(Boolean) },
+            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(Boolean) }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -274,7 +274,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "UnloadTexture", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -287,7 +287,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "UnloadMesh", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -299,7 +299,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
         } },
 
         { "UnloadMaterial", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {

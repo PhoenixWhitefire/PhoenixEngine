@@ -3,7 +3,7 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
-#include "script/UserdataTag.hpp"
+#include "script/UserdataTags.hpp"
 
 void luhx_pushsignal(
     lua_State* L,
@@ -309,7 +309,7 @@ static int sig_tostring(lua_State* L)
 
 static void createmetatable(lua_State* L)
 {
-    lua_createtable(L, 4);
+    lua_createtable(L, 0, 4);
 
     lua_pushstring(L, "EventSignal");
     lua_setfield(L, -2, "__type");
@@ -323,7 +323,7 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, sig_tostring, "EventSignal.__tostring");
     lua_setfield(L, -2, "__tostring");
 
-    lua_setuserdatametatable(L, UserdataTag::EventSignal, -1);
+    lua_setuserdatametatable(L, UserdataTag::EventSignal);
 }
 
 int luhxopen_EventSignal(lua_State* L)

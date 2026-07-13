@@ -103,9 +103,9 @@ const Reflection::StaticPropertyMap& DataModelComponentManager::GetProperties()
 const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
-        { "GetService", {
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::GameObject },
+        { "GetService", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 std::string service = std::string(inputs[0].AsStringView());
@@ -137,8 +137,8 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
             }
         } },
 
-        { "BindToClose", {
-            { Reflection::ValueType::Function },
+        { "BindToClose", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Function }),
             {},
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -152,7 +152,7 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
         } },
 
         { "Close", Reflection::MethodDescriptor{
-            { REFLECTION_OPTIONAL(Integer) },
+            REFLECTION_SPAN({ REFLECTION_OPTIONAL(Integer) }),
             {},
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {

@@ -291,7 +291,7 @@ static void createmetatable(lua_State* L)
 	lua_pushcfunction(L, mtx_sub, "Matrix.__sub");
 	lua_setfield(L, -2, "__sub");
 
-    lua_setuserdatametatable(L, UserdataTag::Matrix, -1);
+    lua_setuserdatametatable(L, UserdataTag::Matrix);
 }
 
 int luhxopen_Matrix(lua_State* L)

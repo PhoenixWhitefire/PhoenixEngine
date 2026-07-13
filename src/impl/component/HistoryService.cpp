@@ -183,7 +183,7 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
 const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
-        { "EnableRecording", {
+        { "EnableRecording", Reflection::MethodDescriptor{
             {},
             {},
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
@@ -195,9 +195,9 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "TryBeginAction", {
-            { Reflection::ValueType::String },
-            { REFLECTION_OPTIONAL(Integer) },
+        { "TryBeginAction", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ REFLECTION_OPTIONAL(Integer) }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 History* history = History::Get();
@@ -210,8 +210,8 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "FinishAction", {
-            { Reflection::ValueType::Integer },
+        { "FinishAction", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Integer }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -222,8 +222,8 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "DiscardAction", {
-            { Reflection::ValueType::Integer },
+        { "DiscardAction", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Integer }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -234,7 +234,7 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "ClearHistory", {
+        { "ClearHistory", Reflection::MethodDescriptor{
             {},
             {},
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
@@ -246,9 +246,9 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "GetCannotUndoReason", {
+        { "GetCannotUndoReason", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 History* history = History::Get();
@@ -256,9 +256,9 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "GetCannotRedoReason", {
+        { "GetCannotRedoReason", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 History* history = History::Get();
@@ -266,7 +266,7 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "Undo", {
+        { "Undo", Reflection::MethodDescriptor{
             {},
             {},
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
@@ -278,7 +278,7 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "Redo", {
+        { "Redo", Reflection::MethodDescriptor{
             {},
             {},
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
@@ -290,9 +290,9 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "GetCurrentActionData", {
+        { "GetCurrentActionData", Reflection::MethodDescriptor{
             {},
-            { REFLECTION_OPTIONAL(Map) },
+            REFLECTION_SPAN({ REFLECTION_OPTIONAL(Map) }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 History* history = History::Get();
@@ -305,9 +305,9 @@ const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
             }
         } },
 
-        { "GetActionData", {
-            { Reflection::ValueType::Integer },
-            { Reflection::ValueType::Map },
+        { "GetActionData", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Integer }),
+            REFLECTION_SPAN({ Reflection::ValueType::Map }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 History* history = History::Get();

@@ -29,7 +29,7 @@
 #define REFLECTION_EVENT(c, n, ...) { \
     #n, \
     { \
-        { __VA_ARGS__ }, \
+        { __VA_OPT__(REFLECTION_SPAN({ __VA_ARGS__ })) }, \
         [](void* p, const Reflection::EventCallback& Callback) \
         -> uint32_t \
         { \
@@ -60,6 +60,12 @@
 } \
 
 #define REFLECTION_OPTIONAL(ty) (Reflection::ValueType)(Reflection::ValueType::ty + Reflection::ValueType::Null)
+
+// bleh
+#define REFLECTION_SPAN(...) ([]() -> std::span<const Reflection::ValueType> { \
+    static constexpr Reflection::ValueType array[] = __VA_ARGS__; \
+    return array; \
+}())
 
 #define REFLECTION_GV_SSO sizeof(glm::mat4)
 
@@ -237,8 +243,8 @@ namespace Reflection
     struct MethodDescriptor
     {
         MethodDescriptor(
-            const std::vector<ValueType>& Inputs,
-            const std::vector<ValueType>& Outputs,
+            const std::span<const ValueType>& Inputs,
+            const std::span<const ValueType>& Outputs,
             const MethodFunction Func
         )
         : Inputs(Inputs),
@@ -248,8 +254,8 @@ namespace Reflection
         }
 
         MethodDescriptor(
-            const std::vector<ValueType>& Inputs,
-            const std::vector<ValueType>& Outputs,
+            const std::span<const ValueType>& Inputs,
+            const std::span<const ValueType>& Outputs,
             const YieldingMethodFunction YieldFunc
         )
         : Inputs(Inputs),
@@ -259,8 +265,8 @@ namespace Reflection
         {
         }
 
-        std::vector<ValueType> Inputs;
-        std::vector<ValueType> Outputs;
+        const std::span<const ValueType> Inputs;
+        const std::span<const ValueType> Outputs;
 
         YieldingMethodFunction YieldFunc = nullptr;
         MethodFunction Func = nullptr;
@@ -270,7 +276,7 @@ namespace Reflection
 
     struct EventDescriptor
     {
-        std::vector<ValueType> CallbackInputs;
+        const std::span<const ValueType> CallbackInputs;
 
         EventConnectFunction Connect;
         EventDisconnectFunction Disconnect;

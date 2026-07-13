@@ -29,7 +29,7 @@ public:
     std::vector<Reflection::EventCallback> ComponentDeletedCallbacks;
 
     Reflection::EventDescriptor ComponentCreatedEvent = Reflection::EventDescriptor{
-        .CallbackInputs = { Reflection::ValueType::GameObject },
+        .CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
         .Connect = [this](void*, const Reflection::EventCallback& Callback)
             {
                 return Reflection::EventConnect(ComponentCreatedCallbacks, Callback);
@@ -40,7 +40,7 @@ public:
             },
     };
     Reflection::EventDescriptor ComponentDeletedEvent = Reflection::EventDescriptor{
-        .CallbackInputs = { Reflection::ValueType::GameObject },
+        .CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
         .Connect = [this](void*, const Reflection::EventCallback& Callback)
             {
                 return Reflection::EventConnect(ComponentDeletedCallbacks, Callback);

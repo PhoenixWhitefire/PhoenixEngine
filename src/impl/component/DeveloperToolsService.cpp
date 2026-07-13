@@ -95,7 +95,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
         } },
 
         { "SetExplorerRoot", Reflection::MethodDescriptor{
-            { Reflection::ValueType::GameObject },
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -106,7 +106,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
         } },
 
         { "SetExplorerSelections", Reflection::MethodDescriptor{
-            { Reflection::ValueType::Array },
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -125,7 +125,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
 
         { "GetExplorerSelections", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::Array },
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 const auto& sels = DeveloperTools::GetExplorerSelections();
@@ -142,7 +142,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
 
         { "GetToolNames", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::Array },
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 std::vector<Reflection::GenericValue> out;
@@ -156,7 +156,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
         } },
 
         { "SetToolEnabled", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::Boolean },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::Boolean }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -168,8 +168,8 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
         } },
 
         { "IsToolEnabled", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::Boolean },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::Boolean }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 return { *getTool(inputs[0].AsStringView()) };
@@ -177,7 +177,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
         } },
 
         { "OpenTextDocument", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) },
+            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {

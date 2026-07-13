@@ -16,7 +16,7 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
     static const Reflection::StaticMethodMap methods = {
         { "GetCollections", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::Array },
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 std::vector<Reflection::GenericValue> tags;
@@ -28,8 +28,8 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetTagged", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::Array },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 GameObjectManager* ObjectManager = GameObjectManager::Get();
@@ -53,8 +53,8 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetTagAddedSignal", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::EventSignal },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::EventSignal }),
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const std::string tag = inputs[0].AsString();
@@ -73,8 +73,8 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetTagRemovedSignal", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::EventSignal },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::EventSignal }),
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const std::string tag = inputs[0].AsString();
@@ -93,8 +93,8 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetObjectsWithComponent", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) },
-            { Reflection::ValueType::Array },
+            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) }),
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const EcCollections* collections = static_cast<EcCollections*>(p);
@@ -118,8 +118,8 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetComponentCreatedSignal", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) },
-            { Reflection::ValueType::EventSignal },
+            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) }),
+            REFLECTION_SPAN({ Reflection::ValueType::EventSignal }),
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const EcCollections* collections = static_cast<EcCollections*>(p);
@@ -149,8 +149,8 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
         } },
 
         { "GetComponentDeletedSignal", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) },
-            { Reflection::ValueType::EventSignal },
+            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(GameObject) }),
+            REFLECTION_SPAN({ Reflection::ValueType::EventSignal }),
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const EcCollections* collections = static_cast<EcCollections*>(p);

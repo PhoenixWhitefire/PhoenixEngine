@@ -21,13 +21,14 @@
 struct LuauType
 {
     LuauType(lua_Type BaseType)
-        Type(BaseType)
+        : Type(BaseType)
     {}
 
     LuauType(lua_Type BaseType, UserdataTag UserTag)
-        Type(BaseType), Tag(UserTag)
+        : Type(BaseType), Tag(UserTag)
+    {}
 
-    lua_Type Type = LUA_TNONE;
+    int Type = LUA_TNONE;
     UserdataTag Tag = UserdataTag::__invalid;
 };
 
@@ -148,7 +149,7 @@ lua_Type ScriptEngine::ReflectionTypeToLuauType(Reflection::ValueType rvt)
     }
 
     assert(size_t(rvt & ~Reflection::ValueType::Null) < std::size(s_ValueTypeToLuauType));
-    return s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null].Type;
+    return (lua_Type)s_ValueTypeToLuauType[rvt & ~Reflection::ValueType::Null].Type;
 }
 
 static int shouldResume_Wait(
@@ -1066,7 +1067,7 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 
     if (!isOptional || givenType != LUA_TNIL)
     {
-        const LuauType& lty = s_ValueTypeToLuauType[baseTy & ~Reflection::ValueType::Null]
+        const LuauType& lty = s_ValueTypeToLuauType[Type & ~Reflection::ValueType::Null];
 
         // the literal `if` check inside this function likes to take 190 microseconds sometimes in Debug mode for some reason
         // probably some cache bullshit
@@ -1075,12 +1076,12 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 
         if (lty.Type == LUA_TUSERDATA)
         {
-            if (lt.Tag == UserdataTag::__invalid)
-                luaL_typeerror(L, StackIndex, Reflection::TypeToString(Type))
+            if (lty.Tag == UserdataTag::__invalid)
+                luaL_typeerror(L, StackIndex, Reflection::TypeAsString(Type).c_str());
             else
                 luaL_checkudatatagged(L, StackIndex, lty.Tag);
         }
-        else if (lty == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
+        else if (lty.Type == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
         {
             luaL_argcheck(L, luaL_checkvector(L, StackIndex)[2] == 0.f, StackIndex, "Z component must be 0");
         }
@@ -1225,7 +1226,7 @@ int ScriptEngine::L::HandleMethodCall(
     lua_getinfo(L, 1, "sl", &ar);
     Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("Script:{},Line:{}", ar.short_src, ar.currentline) };
 
-    const std::vector<Reflection::ValueType>& paramTypes = func->Inputs;
+    const std::span<const Reflection::ValueType>& paramTypes = func->Inputs;
     int numArgs = lua_gettop(L) - 1;
     assert(numArgs >= 0);
     // missing parameter declarations?
@@ -1436,7 +1437,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
     assert(dmObject);
     // need to do that before `lua_yield` because of thread chicanery idk how it works
 
-    lua_yield(L, NumResults);
+    int yieldResult = lua_yield(L, NumResults);
     lua_pushthread(L);
 
     YieldedCoroutine yc = YieldedCoroutine{
@@ -1464,7 +1465,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
     else
         YieldedCorosOverride->push_back(yc);
 
-    return -1; // like `lua_yield`
+    return yieldResult; // will probably always be -1 but just in case
 }
 
 void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)

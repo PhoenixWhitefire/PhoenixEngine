@@ -562,7 +562,7 @@ int luhxopen_parallel(lua_State* L)
         sint->ReferenceCount.fetch_sub(1, std::memory_order_relaxed);
     });
 
-    lua_createtable(L, 2);
+    lua_createtable(L, 0, 2);
 
     lua_pushcfunction(L, atomicint_namecall, "__namecall"); // leave as SPECIFICALLY `__namecall` for better stack tracebacks
     lua_setfield(L, -2, "__namecall");

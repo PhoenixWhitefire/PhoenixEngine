@@ -8,7 +8,7 @@ const Reflection::StaticMethodMap& LoggingComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "Write", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::Integer, REFLECTION_OPTIONAL(String) },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::Integer, REFLECTION_OPTIONAL(String) }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {

@@ -104,7 +104,7 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "BindDataModel", Reflection::MethodDescriptor{
-            { Reflection::ValueType::GameObject },
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -116,8 +116,8 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
         } },
 
         { "ShowMessageBox", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(Integer) },
-            { Reflection::ValueType::Integer },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(String), REFLECTION_OPTIONAL(Integer) }),
+            REFLECTION_SPAN({ Reflection::ValueType::Integer }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 std::string title = inputs[0].AsString();
@@ -154,7 +154,7 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
 
         { "GetCliArguments", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::Array },
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 Engine* engine = Engine::Get();
@@ -170,8 +170,8 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
         } },
 
         { "GetConfigValue", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
-            { Reflection::ValueType::Any },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::Any }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 return { JsonToGeneric(EngineJsonConfig[inputs[0].AsStringView()]) };
@@ -179,7 +179,7 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
         } },
 
         { "SetConfigValue", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::Any },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::Any }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -191,7 +191,7 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
 
         { "SaveConfig", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::Boolean, Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::Boolean, Reflection::ValueType::String }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 std::string error;

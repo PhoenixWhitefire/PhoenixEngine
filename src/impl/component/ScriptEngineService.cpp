@@ -8,7 +8,7 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "CreateVM", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -19,7 +19,7 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
         } },
 
         { "CloseVM", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -33,8 +33,8 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
         } },
 
         { "RunInVM", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String) },
-            { Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::String, REFLECTION_OPTIONAL(String) }),
+            REFLECTION_SPAN({ Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 const std::string vmName = std::string(inputs[0].AsStringView());
@@ -100,8 +100,8 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
         } },
 
         { "CompileToBytecode", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer), REFLECTION_OPTIONAL(Integer) },
-            { Reflection::ValueType::Buffer },
+            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer), REFLECTION_OPTIONAL(Integer) }),
+            REFLECTION_SPAN({ Reflection::ValueType::Buffer }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 int optLevel = inputs.size() > 1 ? (int)inputs[1].AsInteger() : -1;
@@ -116,7 +116,7 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
         } },
 
         { "SetVMAllowedExecutionTime", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String, Reflection::ValueType::Double },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::Double }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -147,7 +147,7 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
 
 
         { "DetachDebuggerFromVM", Reflection::MethodDescriptor{
-            { Reflection::ValueType::String },
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {

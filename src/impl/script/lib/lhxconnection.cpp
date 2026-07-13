@@ -57,7 +57,7 @@ static int conn_namecall(lua_State* L)
 static int conn_index(lua_State* L)
 {
     const char* k = luaL_checkstring(L, 2);
-	EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, "EventConnection", UserdataTag::EventConnection);
+	EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
 
 	if (strcmp(k, "Connected") == 0)
 		lua_pushboolean(L, ec->ConnectionId != UINT32_MAX);
@@ -123,7 +123,7 @@ static void createmetatable(lua_State* L)
 	lua_pushcfunction(L, conn_eq, "EventConnection.__eq");
 	lua_setfield(L, -2, "__eq");
 
-	lua_setuserdatametatable(L, UserdataTag::EventConnection, -1);
+	lua_setuserdatametatable(L, UserdataTag::EventConnection);
 }
 
 int luhxopen_EventConnection(lua_State* L)

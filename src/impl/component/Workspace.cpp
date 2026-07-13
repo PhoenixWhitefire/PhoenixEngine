@@ -82,9 +82,9 @@ const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
 const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap funcs = {
-		{ "ScreenPointToVector", {
-			{ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) },
-			{ Reflection::ValueType::Vector3 },
+		{ "ScreenPointToVector", Reflection::MethodDescriptor{
+			REFLECTION_SPAN({ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) }),
+			REFLECTION_SPAN({ Reflection::ValueType::Vector3 }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 			-> std::vector<Reflection::GenericValue>
 			{
@@ -100,9 +100,9 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 			}
 		} },
 
-		{ "WorldToScreenPoint", {
-			{ Reflection::ValueType::Vector3 },
-			{ Reflection::ValueType::Vector2, Reflection::ValueType::Double },
+		{ "WorldToScreenPoint", Reflection::MethodDescriptor{
+			REFLECTION_SPAN({ Reflection::ValueType::Vector3 }),
+			REFLECTION_SPAN({ Reflection::ValueType::Vector2, Reflection::ValueType::Double }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 			-> std::vector<Reflection::GenericValue>
 			{
@@ -139,9 +139,9 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 			}
 		} },
 
-		{ "Raycast", {
-			{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) },
-			{ REFLECTION_OPTIONAL(Map) },
+		{ "Raycast", Reflection::MethodDescriptor{
+			REFLECTION_SPAN({ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) }),
+			REFLECTION_SPAN({ REFLECTION_OPTIONAL(Map) }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 			-> std::vector<Reflection::GenericValue>
 			{
@@ -187,9 +187,9 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 			}
 		} },
 
-		{ "GetObjectsInAabb", {
-			{ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) },
-			{ Reflection::ValueType::Array },
+		{ "GetObjectsInAabb", Reflection::MethodDescriptor{
+			REFLECTION_SPAN({ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) }),
+			REFLECTION_SPAN({ Reflection::ValueType::Array }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
 			-> std::vector<Reflection::GenericValue>
 			{

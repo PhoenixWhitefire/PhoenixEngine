@@ -65,74 +65,16 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 		{ "GetFullName", Reflection::MethodDescriptor{
 			{},
-			{ Reflection::ValueType::String },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				return { static_cast<GameObject*>(p)->GetFullName() };
 			}
 		} },
 
-		{ "ForEachChild", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::Function },
-			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& gv) -> std::vector<Reflection::GenericValue>
-			{
-				const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
-
-				static_cast<GameObject*>(p)->ForEachChild(
-					// damn
-					[gf](const ObjectHandle& g)
-					-> bool
-					{
-						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
-						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
-
-						if (rets.size() == 0)
-							return true;
-						else
-							return rets[0].AsBoolean();
-					}
-				);
-
-				(*gf.Cleanup)();
-				delete gf.Func;
-				delete gf.Cleanup;
-				return {};
-			}
-		} },
-
-		{ "ForEachDescendant", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::Function },
-			{},
-			[](void* p, const std::vector<Reflection::GenericValue>& gv) -> std::vector<Reflection::GenericValue>
-			{
-				const Reflection::GenericFunction& gf = gv.at(0).AsFunction(); // damn
-
-				static_cast<GameObject*>(p)->ForEachDescendant(
-					// damn
-					[gf](const ObjectHandle& g)
-					-> bool
-					{
-						std::vector<Reflection::GenericValue> rets = (*gf.Func)({ g->ToGenericValue() }); // damn
-						PHX_ENSURE_MSG(rets.size() <= 1, "`:ForEachChild` expects none or one return value");
-
-						if (rets.size() == 0)
-							return true;
-						else
-							return rets[0].AsBoolean();
-					}
-				);
-
-				(*gf.Cleanup)();
-				delete gf.Func;
-				delete gf.Cleanup;
-				return {};
-			}
-		} },
-
 		{ "GetChildren", Reflection::MethodDescriptor{
 			{},
-			{ Reflection::ValueType::Array },
+			REFLECTION_SPAN({ Reflection::ValueType::Array }),
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> retval;
@@ -146,7 +88,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 		{ "GetDescendants", Reflection::MethodDescriptor{
 			{},
-			{ Reflection::ValueType::Array },
+			REFLECTION_SPAN({ Reflection::ValueType::Array }),
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> retval;
@@ -160,7 +102,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 		{ "Duplicate", Reflection::MethodDescriptor{
 			{},
-			{ Reflection::ValueType::GameObject },
+			REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* g = static_cast<GameObject*>(p);
@@ -169,8 +111,8 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 
 		{ "FindChild", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
-			{ REFLECTION_OPTIONAL(GameObject) },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
+			REFLECTION_SPAN({ REFLECTION_OPTIONAL(GameObject) }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* g = static_cast<GameObject*>(p);
@@ -179,8 +121,8 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 
 		{ "FindChildWithComponent", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
-			{ REFLECTION_OPTIONAL(GameObject) },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
+			REFLECTION_SPAN({ REFLECTION_OPTIONAL(GameObject) }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
@@ -194,7 +136,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 		{ "GetComponents", Reflection::MethodDescriptor{
 			{},
-			{ Reflection::ValueType::Array },
+			REFLECTION_SPAN({ Reflection::ValueType::Array }),
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				std::vector<Reflection::GenericValue> ret;
@@ -207,8 +149,8 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 
 		{ "HasComponent", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
-			{ Reflection::ValueType::Boolean },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
+			REFLECTION_SPAN({ Reflection::ValueType::Boolean }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
@@ -224,7 +166,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 
 		{ "AddComponent", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
 			{},
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
@@ -240,7 +182,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 
 		{ "RemoveComponent", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
 			{},
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
@@ -256,8 +198,8 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 
 		{ "AsComponent", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
-			{ REFLECTION_OPTIONAL(GameObject) },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
+			REFLECTION_SPAN({ REFLECTION_OPTIONAL(GameObject) }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
 				EntityComponent ec = FindComponentTypeByName(inputs[0].AsStringView());
@@ -274,7 +216,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 
 		{ "AddTag", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
 			{},
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
@@ -285,7 +227,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			}
 		} },
 		{ "RemoveTag", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
 			{},
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
@@ -296,8 +238,8 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 			}
 		} },
 		{ "HasTag", Reflection::MethodDescriptor{
-			{ Reflection::ValueType::String },
-			{ Reflection::ValueType::Boolean },
+			REFLECTION_SPAN({ Reflection::ValueType::String }),
+			REFLECTION_SPAN({ Reflection::ValueType::Boolean }),
 			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* obj = static_cast<GameObject*>(p);
@@ -307,7 +249,7 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 		} },
 		{ "GetTags", Reflection::MethodDescriptor{
 			{},
-			{ Reflection::ValueType::Array },
+			REFLECTION_SPAN({ Reflection::ValueType::Array }),
 			[](void* p, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
 			{
 				GameObject* obj = static_cast<GameObject*>(p);
@@ -1248,32 +1190,36 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 
 		uint16_t id = static_cast<uint16_t>(Collections.size());
 		CollectionNameToId[Name] = id;
-		Collections.push_back(Collection{ .AddedEvent = { .Descriptor = new Reflection::EventDescriptor }, .RemovedEvent = { .Descriptor = new Reflection::EventDescriptor } });
+		Collections.push_back(Collection{
+			.AddedEvent = { .Descriptor = new Reflection::EventDescriptor{
+				.CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
+				.Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
+				{
+					Collections[id].AddedEvent.Callbacks.push_back(Callback);
+					return (uint32_t)Collections[id].AddedEvent.Callbacks.size() - 1;
+				},
+				.Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
+				{
+					Collections[id].AddedEvent.Callbacks[ConnectionId].Callback = nullptr;
+				},
+			} },
+			.RemovedEvent = { .Descriptor = new Reflection::EventDescriptor{
+				.CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
+				.Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
+				{
+					Collections[id].RemovedEvent.Callbacks.push_back(Callback);
+					return (uint32_t)Collections[id].RemovedEvent.Callbacks.size() - 1;
+				},
+				.Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
+				{
+					Collections[id].RemovedEvent.Callbacks[ConnectionId].Callback = nullptr;
+				},
+			} }
+		});
 
 		Collection& collection = Collections[id];
 		collection.Name = Name;
 		collection.Id = id;
-
-		collection.AddedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
-		collection.RemovedEvent.Descriptor->CallbackInputs = { Reflection::ValueType::GameObject };
-		collection.AddedEvent.Descriptor->Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
-		{
-			Collections[id].AddedEvent.Callbacks.push_back(Callback);
-			return (uint32_t)Collections[id].AddedEvent.Callbacks.size() - 1;
-		};
-		collection.AddedEvent.Descriptor->Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
-		{
-			Collections[id].AddedEvent.Callbacks[ConnectionId].Callback = nullptr;
-		};
-		collection.RemovedEvent.Descriptor->Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
-		{
-			Collections[id].RemovedEvent.Callbacks.push_back(Callback);
-			return (uint32_t)Collections[id].RemovedEvent.Callbacks.size() - 1;
-		};
-		collection.RemovedEvent.Descriptor->Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
-		{
-			Collections[id].RemovedEvent.Callbacks[ConnectionId].Callback = nullptr;
-		};
 
 		return collection;
 	}

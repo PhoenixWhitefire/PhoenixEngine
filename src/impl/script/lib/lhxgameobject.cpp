@@ -41,13 +41,16 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
         sizeof(uint32_t),
 		UserdataTag::GameObject
     );
-    lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
-    lua_pushvalue(L, -2);
+
+    lua_pushinteger(L, *(const int32_t*)&Object->ObjectId); // key
+    lua_pushvalue(L, -2);                                   // value
 
     *ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
     lua_settable(L, -4);
     lua_remove(L, -2); // remove the registry sub-table
+
+	// leave object at stack top
 }
 
 GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
@@ -279,7 +282,7 @@ static int obj_namecall(lua_State* L)
 	}
 	catch (const std::runtime_error& err)
 	{
-		luaL_error(L, "Error while invoking method '%s' of %s: %s", k, g->GetFullName().c_str(), err.what());
+		luaL_error(L, "%s:%s: %s", g->GetFullName().c_str(), k, err.what());
 	}
 
 	// Note: May be -1 for yielding
@@ -317,10 +320,16 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, obj_tostring, "GameObject.__tostring");
     lua_setfield(L, -2, "__tostring");
 
-    lua_setuserdatametatable(L, UserdataTag::GameObject, -1);
-	lua_setuserdatadtor(L, UserdataTag::GameObject, [](void* ptrToId)
+    lua_setuserdatametatable(L, UserdataTag::GameObject);
+	lua_setuserdatadtor(L, UserdataTag::GameObject, [](lua_State*, void* ptrToId)
     {
-        GameObjectManager::Get()->FindById(*(uint32_t*)ptrToId)->DecrementHardRefs();
+		GameObjectManager* objectManager = GameObjectManager::Get();
+		uint32_t targetId = *(uint32_t*)ptrToId;
+
+		GameObject* target = objectManager->FindById(targetId);
+		assert(target);
+
+		target->DecrementHardRefs();
     });
 }
 

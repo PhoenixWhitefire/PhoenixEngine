@@ -3,7 +3,7 @@
 
 #include "script/luhx.hpp"
 #include "script/InputEvent.hpp"
-#include "script/UserdataTag.hpp"
+#include "script/UserdataTags.hpp"
 #include "Reflection.hpp"
 
 #define IE_TYPENAME "InputEvent"
@@ -81,7 +81,7 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, ie_index, "InputEvent.__index");
     lua_setfield(L, -2, "__index");
 
-    lua_setuserdatametatable(L, UserdataTag::InputEvent, -1);
+    lua_setuserdatametatable(L, UserdataTag::InputEvent);
 }
 
 int luhxopen_InputEvent(lua_State* L)

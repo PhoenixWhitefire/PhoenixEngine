@@ -102,7 +102,7 @@ static void createmetatable(lua_State* L)
 	lua_pushstring(L, LUHX_COLORLIBNAME);
 	lua_setfield(L, -2, "__type");
 
-	lua_setuserdatametatable(L, UserdataTag::Color, -1);
+	lua_setuserdatametatable(L, UserdataTag::Color);
 }
 
 int luhxopen_Color(lua_State* L)

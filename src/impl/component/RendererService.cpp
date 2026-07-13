@@ -75,7 +75,7 @@ const Reflection::StaticMethodMap& RendererComponentManager::GetMethods()
     static const Reflection::StaticMethodMap methods = {
         { "SetShaderVariable", Reflection::MethodDescriptor{
             // Name of shader program, name of uniform, value, optional type of value (`Vector2` and `Vector3` are just `vector` in scripts)
-            { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any, REFLECTION_OPTIONAL(Integer) },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Any, REFLECTION_OPTIONAL(Integer) }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
@@ -128,7 +128,7 @@ const Reflection::StaticMethodMap& RendererComponentManager::GetMethods()
 
         { "SetShaderTextureVariable", Reflection::MethodDescriptor{
             // Name of shader program, name of uniform, value, path to texture
-            { Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Boolean },
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Boolean }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {

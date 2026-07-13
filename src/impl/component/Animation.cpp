@@ -180,8 +180,8 @@ const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "LoadAnimation", Reflection::MethodDescriptor{
-            { Reflection::ValueType::GameObject }, // `AnimationAsset`
-            { Reflection::ValueType::GameObject }, // `AnimationState`
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `AnimationAsset`
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `AnimationState`
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 EcAnimator* ea = static_cast<EcAnimator*>(p);

@@ -97,8 +97,8 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "IsKeyPressed", Reflection::MethodDescriptor{
-            { Reflection::ValueType::Integer },
-            { Reflection::ValueType::Boolean },
+            REFLECTION_SPAN({ Reflection::ValueType::Integer }),
+            REFLECTION_SPAN({ Reflection::ValueType::Boolean }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 return { UserInput::IsKeyDown((int)inputs[0].AsInteger()) };
@@ -106,8 +106,8 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
         } },
 
         { "IsMouseButtonPressed", Reflection::MethodDescriptor{
-            { Reflection::ValueType::Integer },
-            { Reflection::ValueType::Boolean },
+            REFLECTION_SPAN({ Reflection::ValueType::Integer }),
+            REFLECTION_SPAN({ Reflection::ValueType::Boolean }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 return { UserInput::IsMouseButtonDown((int)inputs[0].AsInteger()) };
@@ -116,7 +116,7 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
 
         { "GetCursorPosition", Reflection::MethodDescriptor{
             {},
-            { Reflection::ValueType::Vector2 },
+            REFLECTION_SPAN({ Reflection::ValueType::Vector2 }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
                 double x = 0;
@@ -128,7 +128,7 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
         } },
 
         { "SetViewportInputRect", Reflection::MethodDescriptor{
-            { Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 },
+            REFLECTION_SPAN({ Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
