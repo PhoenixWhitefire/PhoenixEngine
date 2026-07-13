@@ -886,6 +886,9 @@
           }
         }
       },
+      "ColorGradient": {
+        "Description": "Not implemented"
+      },
       "EventConnection": {
         "Description": "A connection to an Event",
         "Members": {
@@ -947,6 +950,9 @@
             "Type": "{ string }"
           }
         }
+      },
+      "InputEvent": {
+        "Description": "This is a union of `KeyInputEvent`, `MouseInputEvent`, and `ScrollInputEvent`"
       },
       "Matrix": {
         "Description": [
@@ -1145,6 +1151,9 @@
           ":Unlock": "Unlocks the mutex"
         }
       },
+      "NumberGradient": {
+        "Description": "Not implemented"
+      },
       "SharedBuffer": {
         "Description": "A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`",
         "Members": {
@@ -1161,6 +1170,9 @@
             "Type": "number"
           }
         }
+      },
+      "VectorGradient": {
+        "Description": "Not implemented"
       }
     },
     "Globals": {

@@ -344,6 +344,8 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 end
 
 local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string)
+    libm = libm or docComments.ScriptEnv.Datatypes[libname].Library
+
     if not t then
         return ""
     end
@@ -934,6 +936,10 @@ definitionsFile ..= "\n"
 for _, name in orderedLibraries do
     local lib = docComments.ScriptEnv.Libraries[name]
     libraries ..= `### \`{ name }\`\n`
+
+    if not lib then
+        lib = docComments.ScriptEnv.Datatypes[name].Library
+    end
 
     if not lib then
         docWarn(`The '{ name }' library has no documentation`)

@@ -2200,11 +2200,6 @@ nlohmann::json ScriptEngine::DumpApiToJson()
         json["Datatypes"][name] = nlohmann::json::object();
     }
 
-    nlohmann::json& eventSignal = json["Datatypes"]["EventSignal"];
-    eventSignal = nlohmann::json::object();
-    nlohmann::json& eventConnection = json["Datatypes"]["EventConnection"];
-    eventConnection = nlohmann::json::object();
-
     lua_close(base);
     luhxVM.Close();
 

@@ -211,9 +211,9 @@ declare extern type Color with
   R: number
 end
 
-declare Color: {
-  new: (( R: number, G: number, B: number ) -> (Color)) & (( Color: vector ) -> (Color))
-}
+declare extern type ColorGradient with
+end
+
 declare extern type EventConnection with
   function Disconnect(self): (  )
   Connected: boolean
@@ -222,12 +222,9 @@ end
 
 
 
-declare GameObject: {
-  fromComponents: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>),
-  fromId: (( Id: number ) -> (GameObject?)),
-  new: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
-  validComponents: { string }
-}
+declare extern type InputEvent with
+end
+
 declare extern type Matrix with
   function ExtractAngles(self): ( vector )
   function Inverse(self): ( Matrix )
@@ -259,24 +256,22 @@ declare extern type Matrix with
   Up: vector
 end
 
-declare Matrix: {
-  identity: Matrix,
-  lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
-  new: ((  ) -> (Matrix)) & (( C1R1: number, C1R2: number, C1R3: number, C1R4: number, C2R1: number, C2R2: number, C2R3: number, C2R4: number, C3R1: number, C3R2: number, C3R3: number, C3R4: number, C4R1: number, C4R2: number, C4R3: number, C4R4: number ) -> (Matrix)),
-  rotated: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
-  scaled: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Scale: vector ) -> (Matrix)),
-  translated: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
-}
 declare extern type Mutex with
   function Lock(self): (  )
   function TryLock(self): ( boolean )
   function Unlock(self): (  )
 end
 
+declare extern type NumberGradient with
+end
+
 declare extern type SharedBuffer with
   Pull: (SharedBuffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> buffer
   Push: (SharedBuffer, Source: buffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> ()
   Size: number
+end
+
+declare extern type VectorGradient with
 end
 
 
@@ -296,8 +291,6 @@ export type GameObject = {
   Duplicate: <T>(self: GameObject & T) -> GameObject & T,
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
   FindChildWithComponent: <T>(self: GameObject, T & keyof<Components>) -> GameObject & index<Components, T>,
-  ForEachChild: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
-  ForEachDescendant: (self: GameObject, Callback: (Object: GameObject) -> boolean?) -> (),
   GetChildren: (self: GameObject) -> { GameObject },
   GetComponents: (self: GameObject) -> keyof<Creatables>,
   GetDescendants: (self: GameObject) -> { GameObject },
@@ -726,6 +719,10 @@ type Creatables = {
   AnimationState: EcAnimationState,
   ScriptEngine: EcScriptEngine,
 }
+declare Color: {
+  new: (( R: number, G: number, B: number ) -> (Color)) & (( Color: vector ) -> (Color))
+}
+
 
 declare extern type EnumCollisionType extends EnumItem with end
 declare extern type EnumCollisionType_INTERNAL extends Enum with
@@ -1023,6 +1020,22 @@ declare Enum: {
   [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "FileSystemEvent" | "ImGuiColor" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumFileSystemEvent_INTERNAL | EnumImGuiColor_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
 }
 
+
+declare GameObject: {
+  fromComponents: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>),
+  fromId: (( Id: number ) -> (GameObject?)),
+  new: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
+  validComponents: { string }
+}
+
+declare Matrix: {
+  identity: Matrix,
+  lookAt: (( Eye: vector, Target: vector ) -> (Matrix)),
+  new: ((  ) -> (Matrix)) & (( C1R1: number, C1R2: number, C1R3: number, C1R4: number, C2R1: number, C2R2: number, C2R3: number, C2R4: number, C3R1: number, C3R2: number, C3R3: number, C3R4: number, C4R1: number, C4R2: number, C4R3: number, C4R4: number ) -> (Matrix)),
+  rotated: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
+  scaled: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Scale: vector ) -> (Matrix)),
+  translated: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
+}
 
 declare _RUNTIME: _RUNTIME
 
