@@ -501,7 +501,7 @@ static void traverseHierarchy(
 
 				RendererScene.RenderList.push_back(RenderItem{
 					.RenderMeshId = cubeMesh,
-					.Transform = glm::translate(glm::scale(glm::mat4(1.f), rb->CollisionAabb.Size), rb->CollisionAabb.Position),
+					.Transform = glm::translate(glm::mat4(1.f), rb->CollisionAabb.Position) * glm::scale(glm::mat4(1.f), rb->CollisionAabb.Size),
 					.MaterialId = boxframeMaterial,
 					.TintColor = glm::vec3(1.f, 1.f, 0.f),
 					.Transparency = 0.f,

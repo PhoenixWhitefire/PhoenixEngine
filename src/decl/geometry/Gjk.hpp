@@ -55,6 +55,7 @@ namespace Gjk
     };
 
     SupportPoint Support(const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Direction);
+	SupportPoint Support(const EcRigidBody* A, const glm::vec3& Point, const glm::vec3& Direction);
     bool SameDirection(const glm::vec3& A, const glm::vec3& B);
     Result FindIntersection(const EcRigidBody* A, const EcRigidBody* B);
 

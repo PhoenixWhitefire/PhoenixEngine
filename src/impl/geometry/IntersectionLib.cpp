@@ -223,9 +223,10 @@ static void addIfUniqueEdge(
 		edges.emplace_back(faces[a], faces[b]);
 }
 
-static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRigidBody* A, const EcRigidBody* B)
+static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Point = glm::vec3(0.f))
 {
 	ZoneScoped;
+	assert(A);
 
 	std::vector<Gjk::SupportPoint> polytope = { Simp.begin(), Simp.end() };
 	std::vector<size_t> faces = {
@@ -245,7 +246,7 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 		minNormal = glm::vec3(normals[minFace]);
 		minDistance = normals[minFace].w;
 
-		Gjk::SupportPoint support = Gjk::Support(A, B, minNormal);
+		Gjk::SupportPoint support = B ?  Gjk::Support(A, B, minNormal) : Gjk::Support(A, Point, minNormal);
 		float sDistance = glm::dot(minNormal, support.P);
 
 		if (abs(sDistance - minDistance) > 0.001f)
@@ -349,6 +350,8 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 IntersectionLib::CollisionPoints IntersectionLib::Gjk(const EcRigidBody* A, const EcRigidBody* B)
 {
 	ZoneScoped;
+	assert(A);
+	assert(B);
 
 	Gjk::Result result = Gjk::FindIntersection(A, B);
 
@@ -361,21 +364,13 @@ IntersectionLib::CollisionPoints IntersectionLib::Gjk(const EcRigidBody* A, cons
 IntersectionLib::CollisionPoints IntersectionLib::GjkRay(const EcRigidBody* A, const glm::vec3& Origin, const glm::vec3& Direction, float Distance, Gjk::RaycastResult* RayResult)
 {
 	ZoneScoped;
+	assert(A);
+	assert(RayResult);
 
 	*RayResult = Gjk::FindRayIntersection(A, Origin, Direction, Distance);
 
 	if (!RayResult->HasIntersection)
 		return CollisionPoints{ .HasCollision = false };
-	else
-	{
-		// hacky
-		EcTransform trans;
-		trans.Transform = glm::translate(glm::scale(glm::mat4(1.f), glm::vec3(0.001f)), RayResult->Point);
 
-		EcRigidBody sphere;
-		sphere.CollisionType = EnCollisionType::Sphere;
-		sphere.CurTransform = &trans;
-
-		return epa(RayResult->Simp, A, &sphere);
-	}
+	return epa(RayResult->Simp, A, nullptr, RayResult->Point);
 }

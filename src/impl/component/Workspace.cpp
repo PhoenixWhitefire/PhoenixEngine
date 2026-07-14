@@ -358,8 +358,8 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
     GameObject* hitObject = nullptr;
     float closestHit = FLT_MAX;
 
-    //float rayDistance = glm::length(Vector);
-    //glm::vec3 rayDirection = Vector / rayDistance;
+    float rayDistance = glm::length(Vector);
+    glm::vec3 rayDirection = Vector / rayDistance;
 
     hashTraceRay(this, Origin, roundToGrid(Origin), roundToGrid(Origin + Vector), Vector, [&](const std::vector<uint32_t>& CellObjects) -> bool
     {
@@ -414,7 +414,6 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 
                 if (hit.Occurred)
                 {
-                    /*
                     crb->CurTransform = ct;
 
                     Gjk::RaycastResult rayResult;
@@ -425,15 +424,14 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
                         rayDistance,
                         &rayResult
                     );
-                    */
 
-                    if (hit.Time < closestHit /* rayResult.HasIntersection */)
+                    if (rayResult.HasIntersection)
                     {
-                        intersection.Position = hit.Position; //rayResult.Point;
-                        intersection.Normal = hit.Normal; //-rhit.Normal;
-                        intersection.Time = hit.Time; //rayResult.Time;
+                        intersection.Position = rayResult.Point;
+                        intersection.Normal = -rhit.Normal;
+                        intersection.Time = rayResult.Time;
 
-                        closestHit = hit.Time; //rayResult.Time;
+                        closestHit = rayResult.Time;
                         hitObject = p;
                     }
 

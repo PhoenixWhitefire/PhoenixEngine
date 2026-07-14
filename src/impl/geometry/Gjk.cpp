@@ -136,6 +136,13 @@ SupportPoint Gjk::Support(const EcRigidBody* A, const EcRigidBody* B, const glm:
     return SupportPoint{ .P = pA - pB, .A = pA, .B = pB };
 }
 
+SupportPoint Gjk::Support(const EcRigidBody* A, const glm::vec3& Point, const glm::vec3& Direction)
+{
+	glm::vec3 pA = findFurthestPoint(A, Direction);
+
+    return SupportPoint{ .P = pA - Point, .A = pA, .B = Point };
+}
+
 bool Gjk::SameDirection(const glm::vec3& direction, const glm::vec3& ao)
 {
     return glm::dot(direction, ao) > 0.f;
@@ -295,6 +302,40 @@ Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
     }
 }
 
+static glm::vec3 closestPointOnSimplex(Simplex& simp)
+{
+	switch (simp.size())
+	{
+	case 1:
+		return simp[0].P;
+
+	case 2:
+	{
+		glm::vec3 a = simp[0].P;
+		glm::vec3 ab = simp[0].P - a;
+		float t = -glm::dot(a, ab) / glm::dot(ab, ab);
+		return a + t * ab;
+	}
+
+	case 3:
+	{
+		glm::vec3 a = simp[0].P;
+		glm::vec3 n = glm::cross(simp[1].P - a, simp[2].P - a);
+		float denom = glm::dot(n, n);
+
+		if (denom < 1e-10f)
+			return a; // please
+
+		return (glm::dot(a, n) / denom) * n;
+	}
+
+	[[unlikely]] default: assert(false);
+	}
+
+	assert(false);
+	return glm::vec3(0.f);
+}
+
 RaycastResult Gjk::FindRayIntersection(const EcRigidBody* A, const glm::vec3& Origin, const glm::vec3& Direction, float Distance)
 {
 	float t = 0.f;
@@ -308,7 +349,7 @@ RaycastResult Gjk::FindRayIntersection(const EcRigidBody* A, const glm::vec3& Or
 	};
 	s.P = s.A - s.B;
 
-	RaycastResult result;
+	RaycastResult result = {};
 	result.Simp.push_front(s);
 	result.HasIntersection = false;
 	dir = -s.P;
@@ -328,17 +369,20 @@ RaycastResult Gjk::FindRayIntersection(const EcRigidBody* A, const glm::vec3& Or
 			result.HasIntersection = true;
 			result.Time = t;
 			result.Point = point;
-			result.Normal = glm::normalize(dir);
+			// `result.Normal` will be computed via EPA in `IntersectionLib.cpp`
 
 			return result; // intersection
 		}
 
-		float dist = glm::dot(dir, Direction);
+		glm::vec3 v = closestPointOnSimplex(result.Simp);
+		dir = -v;
 
-		if (dist < 0.0001f)
+		float dist = glm::dot(v, Direction);
+
+		if (dist > -0.0001f)
 			return result; // no intersection
 
-		float step = glm::dot(dir, dir) / dist;
+		float step = glm::dot(v, v) / -dist;
 
 		if (step <= 0.00001f)
 			return result; // no intersection
