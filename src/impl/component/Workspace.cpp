@@ -14,66 +14,66 @@ static ObjectHandle s_FallbackCamera;
 
 static ObjectHandle createCamera()
 {
-	ObjectHandle camera = GameObjectManager::s_Create("Camera");
-	camera->FindComponent<EcCamera>()->UseSimpleController = true;
-	camera->Name = "FallbackCamera";
+    ObjectHandle camera = GameObjectManager::s_Create("Camera");
+    camera->FindComponent<EcCamera>()->UseSimpleController = true;
+    camera->Name = "FallbackCamera";
 
-	return camera;
+    return camera;
 }
 
 uint32_t WorkspaceComponentManager::CreateComponent(GameObject* Object)
 {
-	uint32_t id = ComponentManager<EcWorkspace>::CreateComponent(Object);
-	m_Components[id].Object = Object;
-	m_Components[id].Object->OwningWorkspace = Object->ObjectId;
-	Object->EvaluateOwners();
+    uint32_t id = ComponentManager<EcWorkspace>::CreateComponent(Object);
+    m_Components[id].Object = Object;
+    m_Components[id].Object->OwningWorkspace = Object->ObjectId;
+    Object->EvaluateOwners();
 
     return id;
 }
 
 void WorkspaceComponentManager::DeleteComponent(uint32_t Id)
 {
-	EcWorkspace& wp = m_Components[Id];
+    EcWorkspace& wp = m_Components[Id];
 
-	if (uint32_t sceneCamId = wp.m_SceneCameraId; sceneCamId != PHX_GAMEOBJECT_NULL_ID && sceneCamId != s_FallbackCamera->ObjectId)
-	{
-		GameObjectManager::Get()->FindById(sceneCamId)->DecrementHardRefs();
-		wp.m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
-	}
+    if (uint32_t sceneCamId = wp.m_SceneCameraId; sceneCamId != PHX_GAMEOBJECT_NULL_ID && sceneCamId != s_FallbackCamera->ObjectId)
+    {
+        GameObjectManager::Get()->FindById(sceneCamId)->DecrementHardRefs();
+        wp.m_SceneCameraId = PHX_GAMEOBJECT_NULL_ID;
+    }
 
-	if (wp.Object->OwningDataModel == wp.Object->ObjectId)
+    if (wp.Object->OwningDataModel == wp.Object->ObjectId)
         wp.Object->EvaluateOwners();
 
-	ComponentManager<EcWorkspace>::DeleteComponent(Id);
+    ComponentManager<EcWorkspace>::DeleteComponent(Id);
 }
-	
+
 void WorkspaceComponentManager::Shutdown()
 {
-	s_FallbackCamera.Clear();
-	ComponentManager<EcWorkspace>::Shutdown();
+    s_FallbackCamera.Clear();
+    ComponentManager<EcWorkspace>::Shutdown();
 }
 
 const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
-		{ "SceneCamera", Reflection::PropertyDescriptor{
-			.Name = "SceneCamera",
-			.Get = [](void* p)
-			-> Reflection::GenericValue
-			{
-				const ObjectHandle& cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
+        { "SceneCamera", Reflection::PropertyDescriptor{
+            .Name = "SceneCamera",
+            .Get = [](void* p)
+            -> Reflection::GenericValue
+            {
+                const ObjectHandle& cam = static_cast<EcWorkspace*>(p)->GetSceneCamera();
 
-				if (cam->ObjectId != s_FallbackCamera->ObjectId)
-					return cam->ToGenericValue();
-				else
-					return {}; // Null
-			},
-			.Set = [](void* p, const Reflection::GenericValue& gv)
-			{
-				static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObjectManager::Get()->FromGenericValue(gv));
-			},
-			.Type = REFLECTION_OPTIONAL(GameObject),
-		} }
+                if (cam->ObjectId != s_FallbackCamera->ObjectId)
+                    return cam->ToGenericValue();
+                else
+                    return {}; // Null
+            },
+            .Set = [](void* p, const Reflection::GenericValue& gv)
+            {
+                static_cast<EcWorkspace*>(p)->SetSceneCamera(GameObjectManager::Get()->FromGenericValue(gv));
+            },
+            .Type = REFLECTION_OPTIONAL(GameObject),
+        } }
     };
 
     return props;
@@ -82,251 +82,251 @@ const Reflection::StaticPropertyMap& WorkspaceComponentManager::GetProperties()
 const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap funcs = {
-		{ "ScreenPointToVector", Reflection::MethodDescriptor{
-			REFLECTION_SPAN({ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) }),
-			REFLECTION_SPAN({ Reflection::ValueType::Vector3 }),
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-			-> std::vector<Reflection::GenericValue>
-			{
-				EcWorkspace* w = static_cast<EcWorkspace*>(p);
+        { "ScreenPointToVector", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Vector2, REFLECTION_OPTIONAL(Double) }),
+            REFLECTION_SPAN({ Reflection::ValueType::Vector3 }),
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs)
+            -> std::vector<Reflection::GenericValue>
+            {
+                EcWorkspace* w = static_cast<EcWorkspace*>(p);
 
-				glm::vec2 point = inputs[0].AsVector2();
-				float length = 1.f;
+                glm::vec2 point = inputs[0].AsVector2();
+                float length = 1.f;
 
-				if (inputs.size() > 1)
-					length = (float)inputs[1].AsDouble();
+                if (inputs.size() > 1)
+                    length = (float)inputs[1].AsDouble();
 
-				return { w->ScreenPointToVector(point, length) };
-			}
-		} },
+                return { w->ScreenPointToVector(point, length) };
+            }
+        } },
 
-		{ "WorldToScreenPoint", Reflection::MethodDescriptor{
-			REFLECTION_SPAN({ Reflection::ValueType::Vector3 }),
-			REFLECTION_SPAN({ Reflection::ValueType::Vector2, Reflection::ValueType::Double }),
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-			-> std::vector<Reflection::GenericValue>
-			{
-				Engine* engine = Engine::Get();
-				EcWorkspace* ew = static_cast<EcWorkspace*>(p);
-				EcCamera* cam = ew->GetSceneCamera()->FindComponent<EcCamera>();
+        { "WorldToScreenPoint", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Vector3 }),
+            REFLECTION_SPAN({ Reflection::ValueType::Vector2, Reflection::ValueType::Double }),
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs)
+            -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+                EcWorkspace* ew = static_cast<EcWorkspace*>(p);
+                EcCamera* cam = ew->GetSceneCamera()->FindComponent<EcCamera>();
 
-				glm::vec3 point = inputs[0].AsVector3();
-				ImVec2 viewportSize = engine->GetViewportInputRectSize();
+                glm::vec3 point = inputs[0].AsVector3();
+                ImVec2 viewportSize = engine->GetViewportInputRectSize();
 
-				const glm::mat4& trans = cam->GetWorldTransform();
+                const glm::mat4& trans = cam->GetWorldTransform();
 
-				glm::mat4 projection = glm::perspective(
-					glm::radians(cam->FieldOfView),
-					viewportSize.x / viewportSize.y,
-					cam->NearPlane,
-					cam->FarPlane
-				);
+                glm::mat4 projection = glm::perspective(
+                    glm::radians(cam->FieldOfView),
+                    viewportSize.x / viewportSize.y,
+                    cam->NearPlane,
+                    cam->FarPlane
+                );
 
-				glm::vec3 position = glm::vec3(trans[3]);
-				glm::vec3 forwardVec = glm::vec3(trans[2]);
+                glm::vec3 position = glm::vec3(trans[3]);
+                glm::vec3 forwardVec = glm::vec3(trans[2]);
 
-				glm::mat4 view = glm::lookAt(
-					position,
-					position + forwardVec,
-					glm::vec3(trans[1])
-				);
+                glm::mat4 view = glm::lookAt(
+                    position,
+                    position + forwardVec,
+                    glm::vec3(trans[1])
+                );
 
-				glm::vec4 clip = projection * view * glm::vec4(point, 1.f);
-				glm::vec3 ndc = clip / clip.w;
-				glm::vec2 screen = (glm::vec2(ndc) * 0.5f + 0.5f) * glm::vec2(viewportSize.x, viewportSize.y);
+                glm::vec4 clip = projection * view * glm::vec4(point, 1.f);
+                glm::vec3 ndc = clip / clip.w;
+                glm::vec2 screen = (glm::vec2(ndc) * 0.5f + 0.5f) * glm::vec2(viewportSize.x, viewportSize.y);
 
-				return { screen + glm::vec2(engine->ViewportInputPosition.x, engine->ViewportInputPosition.y), ndc.z };
-			}
-		} },
+                return { screen + glm::vec2(engine->ViewportInputPosition.x, engine->ViewportInputPosition.y), ndc.z };
+            }
+        } },
 
-		{ "Raycast", Reflection::MethodDescriptor{
-			REFLECTION_SPAN({ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) }),
-			REFLECTION_SPAN({ REFLECTION_OPTIONAL(Map) }),
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-			-> std::vector<Reflection::GenericValue>
-			{
-				const glm::vec3& origin = inputs[0].AsVector3();
-				const glm::vec3& vector = inputs[1].AsVector3();
+        { "Raycast", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array), REFLECTION_OPTIONAL(Boolean) }),
+            REFLECTION_SPAN({ REFLECTION_OPTIONAL(Map) }),
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs)
+            -> std::vector<Reflection::GenericValue>
+            {
+                const glm::vec3& origin = inputs[0].AsVector3();
+                const glm::vec3& vector = inputs[1].AsVector3();
 
-				std::vector<GameObject*> filterList;
+                std::vector<GameObject*> filterList;
 
-				if (inputs.size() > 2)
-				{
-					const std::span<Reflection::GenericValue>& filterListGv = inputs[2].AsArray();
-					filterList.reserve(filterListGv.size());
+                if (inputs.size() > 2)
+                {
+                    const std::span<Reflection::GenericValue>& filterListGv = inputs[2].AsArray();
+                    filterList.reserve(filterListGv.size());
 
-					for (const Reflection::GenericValue& gv : filterListGv)
-						filterList.push_back(GameObjectManager::Get()->FromGenericValue(gv));
-				}
+                    for (const Reflection::GenericValue& gv : filterListGv)
+                        filterList.push_back(GameObjectManager::Get()->FromGenericValue(gv));
+                }
 
-				SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, filterList, inputs.size() > 3 ? inputs[3].AsBoolean() : true);
-					
-				if (!result.Occurred)
-					return { Reflection::GenericValue::Null()};
-				else
-				{
-					// TODO make datatypes easier to create
-					// this should definitely be a `SpatialCastResult` datatype
-					std::vector<Reflection::GenericValue> vals;
-					vals.reserve(6);
+                SpatialCastResult result = static_cast<EcWorkspace*>(p)->Raycast(origin, vector, filterList, inputs.size() > 3 ? inputs[3].AsBoolean() : true);
 
-					vals.emplace_back("Object");
-					vals.emplace_back(result.Object->ToGenericValue());
+                if (!result.Occurred)
+                    return { Reflection::GenericValue::Null()};
+                else
+                {
+                    // TODO make datatypes easier to create
+                    // this should definitely be a `SpatialCastResult` datatype
+                    std::vector<Reflection::GenericValue> vals;
+                    vals.reserve(6);
 
-					vals.emplace_back("Position");
-					vals.emplace_back(result.Position);
+                    vals.emplace_back("Object");
+                    vals.emplace_back(result.Object->ToGenericValue());
 
-					vals.emplace_back("Normal");
-					vals.emplace_back(result.Normal);
+                    vals.emplace_back("Position");
+                    vals.emplace_back(result.Position);
 
-					Reflection::GenericValue gv(vals);
-					gv.Type = Reflection::ValueType::Map;
+                    vals.emplace_back("Normal");
+                    vals.emplace_back(result.Normal);
 
-					return { gv };
-				}
-			}
-		} },
+                    Reflection::GenericValue gv(vals);
+                    gv.Type = Reflection::ValueType::Map;
 
-		{ "GetObjectsInAabb", Reflection::MethodDescriptor{
-			REFLECTION_SPAN({ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) }),
-			REFLECTION_SPAN({ Reflection::ValueType::Array }),
-			[](void* p, const std::vector<Reflection::GenericValue>& inputs)
-			-> std::vector<Reflection::GenericValue>
-			{
-				const glm::vec3& position = inputs[0].AsVector3();
-				const glm::vec3& origin = inputs[1].AsVector3();
+                    return { gv };
+                }
+            }
+        } },
 
-				std::vector<GameObject*> ignoreList;
+        { "GetObjectsInAabb", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Vector3, Reflection::ValueType::Vector3, REFLECTION_OPTIONAL(Array) }),
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs)
+            -> std::vector<Reflection::GenericValue>
+            {
+                const glm::vec3& position = inputs[0].AsVector3();
+                const glm::vec3& origin = inputs[1].AsVector3();
 
-				if (inputs.size() > 2)
-				{
-					const std::span<Reflection::GenericValue>& ignorelistgv = inputs[2].AsArray();
-					ignoreList.reserve(ignorelistgv.size());
+                std::vector<GameObject*> ignoreList;
 
-					for (const Reflection::GenericValue& gv : ignorelistgv)
-						ignoreList.push_back(GameObjectManager::Get()->FromGenericValue(gv));
-				}
+                if (inputs.size() > 2)
+                {
+                    const std::span<Reflection::GenericValue>& ignorelistgv = inputs[2].AsArray();
+                    ignoreList.reserve(ignorelistgv.size());
 
-				std::vector<GameObject*> objects = static_cast<EcWorkspace*>(p)->GetObjectsInAabb(position, origin, ignoreList);
+                    for (const Reflection::GenericValue& gv : ignorelistgv)
+                        ignoreList.push_back(GameObjectManager::Get()->FromGenericValue(gv));
+                }
 
-				std::vector<Reflection::GenericValue> gv(objects.size());
-				for (size_t i = 0; i < objects.size(); i++)
-					gv[i] = objects[i]->ToGenericValue();
+                std::vector<GameObject*> objects = static_cast<EcWorkspace*>(p)->GetObjectsInAabb(position, origin, ignoreList);
 
-				return { Reflection::GenericValue(gv) };
-			}
-		} }
-	};
+                std::vector<Reflection::GenericValue> gv(objects.size());
+                for (size_t i = 0; i < objects.size(); i++)
+                    gv[i] = objects[i]->ToGenericValue();
+
+                return { Reflection::GenericValue(gv) };
+            }
+        } }
+    };
     return funcs;
 }
 
 glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
 {
-	Engine* engine = Engine::Get();
+    Engine* engine = Engine::Get();
 
-	float x = point.x;
-	float y = point.y;
-	x = x - engine->ViewportInputPosition.x;
-	y = y - engine->ViewportInputPosition.y;
+    float x = point.x;
+    float y = point.y;
+    x = x - engine->ViewportInputPosition.x;
+    y = y - engine->ViewportInputPosition.y;
 
-	ImVec2 viewportSize = engine->GetViewportInputRectSize();
+    ImVec2 viewportSize = engine->GetViewportInputRectSize();
 
-	// thinmatrix 27/12/2024
-	// https://www.youtube.com/watch?v=DLKN0jExRIM
-	double nx = (2.0 * x) / viewportSize.x - 1.0;
-	double ny = 1.0 - (2.0 * y) / viewportSize.y;
+    // thinmatrix 27/12/2024
+    // https://www.youtube.com/watch?v=DLKN0jExRIM
+    double nx = (2.0 * x) / viewportSize.x - 1.0;
+    double ny = 1.0 - (2.0 * y) / viewportSize.y;
 
-	glm::vec4 clipCoords = { nx, ny, -1.f, 1.f };
+    glm::vec4 clipCoords = { nx, ny, -1.f, 1.f };
 
-	EcCamera* cam = GetSceneCamera()->FindComponent<EcCamera>();
-	const glm::mat4& trans = cam->GetWorldTransform();
+    EcCamera* cam = GetSceneCamera()->FindComponent<EcCamera>();
+    const glm::mat4& trans = cam->GetWorldTransform();
 
-	glm::mat4 projectionMatrixInv = glm::inverse(glm::perspective(
-		glm::radians(cam->FieldOfView),
-		viewportSize.x / viewportSize.y,
-		cam->NearPlane,
-		cam->FarPlane
-	));
+    glm::mat4 projectionMatrixInv = glm::inverse(glm::perspective(
+        glm::radians(cam->FieldOfView),
+        viewportSize.x / viewportSize.y,
+        cam->NearPlane,
+        cam->FarPlane
+    ));
 
-	glm::vec4 eyeCoords = projectionMatrixInv * clipCoords;
-	eyeCoords.z = -1.f, eyeCoords.w = 0.f;
+    glm::vec4 eyeCoords = projectionMatrixInv * clipCoords;
+    eyeCoords.z = -1.f, eyeCoords.w = 0.f;
 
-	glm::vec3 position = glm::vec3(trans[3]);
-	glm::vec3 forwardVec = glm::vec3(trans[2]);
+    glm::vec3 position = glm::vec3(trans[3]);
+    glm::vec3 forwardVec = glm::vec3(trans[2]);
 
-	glm::mat4 viewMatrixInv = glm::inverse(glm::lookAt(
-		position,
-		position + forwardVec,
-		glm::vec3(trans[1])
-	));
+    glm::mat4 viewMatrixInv = glm::inverse(glm::lookAt(
+        position,
+        position + forwardVec,
+        glm::vec3(trans[1])
+    ));
 
-	return glm::normalize(glm::vec3(viewMatrixInv * eyeCoords)) * length;
+    return glm::normalize(glm::vec3(viewMatrixInv * eyeCoords)) * length;
 }
 
 static int roundNToGrid(float x)
 {
-	return int(glm::round(x / SPATIAL_HASH_GRID_SIZE) * SPATIAL_HASH_GRID_SIZE);
+    return int(glm::round(x / SPATIAL_HASH_GRID_SIZE) * SPATIAL_HASH_GRID_SIZE);
 }
 
 static glm::ivec3 roundToGrid(const glm::vec3& v)
 {
-	return glm::ivec3(roundNToGrid(v.x), roundNToGrid(v.y), roundNToGrid(v.z));
+    return glm::ivec3(roundNToGrid(v.x), roundNToGrid(v.y), roundNToGrid(v.z));
 }
 
 static void hashTraceRay(
-	const EcWorkspace* cw,
-	const glm::vec3& rayStart,
-	const glm::ivec3& rayStartCell,
-	const glm::ivec3& rayEndCell,
-	const glm::vec3& rayVector,
-	const std::function<bool(const std::vector<uint32_t>&)> TestHits
+    const EcWorkspace* cw,
+    const glm::vec3& rayStart,
+    const glm::ivec3& rayStartCell,
+    const glm::ivec3& rayEndCell,
+    const glm::vec3& rayVector,
+    const std::function<bool(const std::vector<uint32_t>&)> TestHits
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	glm::ivec3 step = glm::sign(rayVector) * SPATIAL_HASH_GRID_SIZE;
-	glm::vec3 rayDir = glm::normalize(rayVector);
+    glm::ivec3 step = glm::sign(rayVector) * SPATIAL_HASH_GRID_SIZE;
+    glm::vec3 rayDir = glm::normalize(rayVector);
 
-	glm::vec3 tDelta = glm::vec3(
-		rayDir.x != 0.f ? std::abs(1.f / rayDir.x) * SPATIAL_HASH_GRID_SIZE : FLT_MAX,
-		rayDir.y != 0.f ? std::abs(1.f / rayDir.y) * SPATIAL_HASH_GRID_SIZE : FLT_MAX,
-		rayDir.z != 0.f ? std::abs(1.f / rayDir.z) * SPATIAL_HASH_GRID_SIZE : FLT_MAX
-	);
+    glm::vec3 tDelta = glm::vec3(
+        rayDir.x != 0.f ? std::abs(1.f / rayDir.x) * SPATIAL_HASH_GRID_SIZE : FLT_MAX,
+        rayDir.y != 0.f ? std::abs(1.f / rayDir.y) * SPATIAL_HASH_GRID_SIZE : FLT_MAX,
+        rayDir.z != 0.f ? std::abs(1.f / rayDir.z) * SPATIAL_HASH_GRID_SIZE : FLT_MAX
+    );
 
-	glm::vec3 tmax;
+    glm::vec3 tmax;
 
-	for (int i = 0; i < 3; i++)
-	{
-		if (step[i] > 0)
-			tmax[i] = ((rayStartCell[i] + 1) - rayStart[i]) / rayDir[i];
-		else if (step[i] < 0)
-			tmax[i] = (rayStartCell[i] - rayStart[i]) / rayDir[i];
-		else
-			tmax[i] = FLT_MAX;
-	}
+    for (int i = 0; i < 3; i++)
+    {
+        if (step[i] > 0)
+            tmax[i] = ((rayStartCell[i] + 1) - rayStart[i]) / rayDir[i];
+        else if (step[i] < 0)
+            tmax[i] = (rayStartCell[i] - rayStart[i]) / rayDir[i];
+        else
+            tmax[i] = FLT_MAX;
+    }
 
-	glm::ivec3 currentCell = rayStartCell;
-	int depth = 0;
+    glm::ivec3 currentCell = rayStartCell;
+    int depth = 0;
 
-	while (true)
-	{
-		const auto& cellIt = cw->SpatialHash.find(currentCell);
+    while (true)
+    {
+        const auto& cellIt = cw->SpatialHash.find(currentCell);
 
-		if (cellIt != cw->SpatialHash.end() && TestHits(cellIt->second))
-			return; // hit something
+        if (cellIt != cw->SpatialHash.end() && TestHits(cellIt->second))
+            return; // hit something
 
-		if (currentCell == rayEndCell)
-			return;
+        if (currentCell == rayEndCell)
+            return;
 
-		if (tmax.x < tmax.y)
+        if (tmax.x < tmax.y)
         {
-			if (tmax.x < tmax.z)
-			{
+            if (tmax.x < tmax.z)
+            {
                 currentCell.x += step.x;
                 tmax.x += tDelta.x;
             }
-			else
-			{
+            else
+            {
                 currentCell.z += step.z;
                 tmax.z += tDelta.z;
             }
@@ -334,209 +334,209 @@ static void hashTraceRay(
         else
         {
             if (tmax.y < tmax.z)
-			{
+            {
                 currentCell.y += step.y;
                 tmax.y += tDelta.y;
             }
-			else
-			{
+            else
+            {
                 currentCell.z += step.z;
                 tmax.z += tDelta.z;
             }
         }
 
-		if (++depth > 1024)
-			return;
-	}
+        if (++depth > 1024)
+            return;
+    }
 }
 
 SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3& Vector, const std::vector<GameObject*>& FilterList, bool FilterIsIgnoreList) const
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	IntersectionLib::Intersection intersection;
-	GameObject* hitObject = nullptr;
-	float closestHit = FLT_MAX;
+    IntersectionLib::Intersection intersection;
+    GameObject* hitObject = nullptr;
+    float closestHit = FLT_MAX;
 
-	//float rayDistance = glm::length(Vector);
-	//glm::vec3 rayDirection = Vector / rayDistance;
+    //float rayDistance = glm::length(Vector);
+    //glm::vec3 rayDirection = Vector / rayDistance;
 
-	hashTraceRay(this, Origin, roundToGrid(Origin), roundToGrid(Origin + Vector), Vector, [&](const std::vector<uint32_t>& CellObjects) -> bool
-	{
-		ZoneScopedN("VisitCell");
+    hashTraceRay(this, Origin, roundToGrid(Origin), roundToGrid(Origin + Vector), Vector, [&](const std::vector<uint32_t>& CellObjects) -> bool
+    {
+        ZoneScopedN("VisitCell");
 
-		for (uint32_t oid : CellObjects)
-		{
-			GameObject* p = GameObjectManager::Get()->FindById(oid);
-			if (!p || p->IsDestructionPending || p->OwningWorkspace != Object->ObjectId)
-				continue;
+        for (uint32_t oid : CellObjects)
+        {
+            GameObject* p = GameObjectManager::Get()->FindById(oid);
+            if (!p || p->IsDestructionPending || p->OwningWorkspace != Object->ObjectId)
+                continue;
 
-			if (FilterIsIgnoreList)
-			{
-				bool skip = false;
+            if (FilterIsIgnoreList)
+            {
+                bool skip = false;
 
-				for (const GameObject* ignore : FilterList)
-					if (p == ignore || p->IsDescendantOf(ignore))
-					{
-						skip = true;
-						break;
-					}
+                for (const GameObject* ignore : FilterList)
+                    if (p == ignore || p->IsDescendantOf(ignore))
+                    {
+                        skip = true;
+                        break;
+                    }
 
-				if (skip)
-					continue;
-			}
-			else
-			{
-				bool found = false;
+                if (skip)
+                    continue;
+            }
+            else
+            {
+                bool found = false;
 
-				for (const GameObject* accept : FilterList)
-					if (p == accept || p->IsDescendantOf(accept))
-					{
-						found = true;
-						break;
-					}
+                for (const GameObject* accept : FilterList)
+                    if (p == accept || p->IsDescendantOf(accept))
+                    {
+                        found = true;
+                        break;
+                    }
 
-				if (!found)
-					continue;
-			}
+                if (!found)
+                    continue;
+            }
 
-			EcTransform* ct = p->FindComponent<EcTransform>();
-			EcRigidBody* crb = ct ? p->FindComponent<EcRigidBody>() : nullptr;
+            EcTransform* ct = p->FindComponent<EcTransform>();
+            EcRigidBody* crb = ct ? p->FindComponent<EcRigidBody>() : nullptr;
 
-			if (crb)
-			{
-				IntersectionLib::Intersection hit = IntersectionLib::RayAabb(
-					Origin,
-					Vector,
-					crb->CollisionAabb.Position,
-					crb->CollisionAabb.Size - glm::vec3(2.f)
-				);
+            if (crb)
+            {
+                IntersectionLib::Intersection hit = IntersectionLib::RayAabb(
+                    Origin,
+                    Vector,
+                    crb->CollisionAabb.Position,
+                    crb->CollisionAabb.Size - glm::vec3(2.f)
+                );
 
-				if (hit.Occurred)
-				{
-					/*
-					crb->CurTransform = ct;
+                if (hit.Occurred)
+                {
+                    /*
+                    crb->CurTransform = ct;
 
-					Gjk::RaycastResult rayResult;
-					IntersectionLib::CollisionPoints rhit = IntersectionLib::GjkRay(
-						crb,
-						Origin,
-						rayDirection,
-						rayDistance,
-						&rayResult
-					);
-					*/
+                    Gjk::RaycastResult rayResult;
+                    IntersectionLib::CollisionPoints rhit = IntersectionLib::GjkRay(
+                        crb,
+                        Origin,
+                        rayDirection,
+                        rayDistance,
+                        &rayResult
+                    );
+                    */
 
-					if (hit.Time < closestHit /* rayResult.HasIntersection */)
-					{
-						intersection.Position = hit.Position; //rayResult.Point;
-						intersection.Normal = hit.Normal; //-rhit.Normal;
-						intersection.Time = hit.Time; //rayResult.Time;
+                    if (hit.Time < closestHit /* rayResult.HasIntersection */)
+                    {
+                        intersection.Position = hit.Position; //rayResult.Point;
+                        intersection.Normal = hit.Normal; //-rhit.Normal;
+                        intersection.Time = hit.Time; //rayResult.Time;
 
-						closestHit = hit.Time; //rayResult.Time;
-						hitObject = p;
-					}
+                        closestHit = hit.Time; //rayResult.Time;
+                        hitObject = p;
+                    }
 
-					crb->CurTransform = nullptr;
-				}
-			}
-		}
+                    crb->CurTransform = nullptr;
+                }
+            }
+        }
 
-		if (hitObject)
-			return true; // hit something, no need to keep traversing the hash
-		else
-			return false; // keep checking for collisions further down our hash
-	});
+        if (hitObject)
+            return true; // hit something, no need to keep traversing the hash
+        else
+            return false; // keep checking for collisions further down our hash
+    });
 
-	SpatialCastResult result;
+    SpatialCastResult result;
 
-	if (hitObject)
-	{
-		result.Occurred = true;
-		result.Object = hitObject;
-		result.Position = intersection.Position;
-		result.Normal = intersection.Normal;
-	}
+    if (hitObject)
+    {
+        result.Occurred = true;
+        result.Object = hitObject;
+        result.Position = intersection.Position;
+        result.Normal = intersection.Normal;
+    }
 
-	return result;
+    return result;
 }
 
 std::vector<GameObject*> EcWorkspace::GetObjectsInAabb(const glm::vec3& Position, const glm::vec3& Size, const std::vector<GameObject*>& IgnoreList) const
 {
-	IntersectionLib::Intersection intersection;
-	std::vector<GameObject*> hits;
+    IntersectionLib::Intersection intersection;
+    std::vector<GameObject*> hits;
 
-	for (const ObjectHandle& p : Object->GetDescendants())
-	{
-		if (std::find(IgnoreList.begin(), IgnoreList.end(), p) != IgnoreList.end())
-			continue;
+    for (const ObjectHandle& p : Object->GetDescendants())
+    {
+        if (std::find(IgnoreList.begin(), IgnoreList.end(), p) != IgnoreList.end())
+            continue;
     
-		EcTransform* object = p->FindComponent<EcTransform>();
+        EcTransform* object = p->FindComponent<EcTransform>();
     
-		if (object)
-		{
-			glm::vec3 bpos = object->Transform[3];
-			glm::vec3 bsize = {};
-			DecomposeTRS(object->Transform, nullptr, nullptr, &bsize);
+        if (object)
+        {
+            glm::vec3 bpos = object->Transform[3];
+            glm::vec3 bsize = {};
+            DecomposeTRS(object->Transform, nullptr, nullptr, &bsize);
 
-			IntersectionLib::Intersection hit = IntersectionLib::AabbAabb(
-				Position,
-				Size,
-				bpos,
-				bsize
-			);
+            IntersectionLib::Intersection hit = IntersectionLib::AabbAabb(
+                Position,
+                Size,
+                bpos,
+                bsize
+            );
         
-			if (hit.Occurred)
-				hits.push_back(p.Dereference());
-		}
-	}
+            if (hit.Occurred)
+                hits.push_back(p.Dereference());
+        }
+    }
 
-	return hits;
+    return hits;
 }
 
 ObjectHandle EcWorkspace::GetSceneCamera() const
 {
-	if (!s_FallbackCamera.HasValue())
-		s_FallbackCamera = createCamera();
+    if (!s_FallbackCamera.HasValue())
+        s_FallbackCamera = createCamera();
 
-	ObjectHandle sceneCam = GameObjectManager::Get()->FindById(m_SceneCameraId);
+    ObjectHandle sceneCam = GameObjectManager::Get()->FindById(m_SceneCameraId);
 
-	if (sceneCam && !sceneCam->FindComponent<EcCamera>())
-	{
-		Log.Warning("Scene Camera lost its Camera component!");
-		sceneCam = nullptr;
-	}
+    if (sceneCam && !sceneCam->FindComponent<EcCamera>())
+    {
+        Log.Warning("Scene Camera lost its Camera component!");
+        sceneCam = nullptr;
+    }
 
-	return sceneCam ? sceneCam : s_FallbackCamera;
+    return sceneCam ? sceneCam : s_FallbackCamera;
 }
 
 void EcWorkspace::SetSceneCamera(const ObjectHandle& NewCam)
 {
-	if (NewCam && !NewCam->FindComponent<EcCamera>())
-		RAISE_RT("Must have a Camera component!");
+    if (NewCam && !NewCam->FindComponent<EcCamera>())
+        RAISE_RT("Must have a Camera component!");
 
-	if (const ObjectHandle& prevCam = GetSceneCamera())
-	{
-		if (prevCam != NewCam)
-		{
-			prevCam->FindComponent<EcCamera>()->IsSceneCamera = false;
-			if (prevCam->ObjectId != s_FallbackCamera->ObjectId)
-				prevCam->DecrementHardRefs();
-		}
-	}
+    if (const ObjectHandle& prevCam = GetSceneCamera())
+    {
+        if (prevCam != NewCam)
+        {
+            prevCam->FindComponent<EcCamera>()->IsSceneCamera = false;
+            if (prevCam->ObjectId != s_FallbackCamera->ObjectId)
+                prevCam->DecrementHardRefs();
+        }
+    }
 
-	m_SceneCameraId = NewCam ? NewCam->ObjectId : UINT32_MAX;
+    m_SceneCameraId = NewCam ? NewCam->ObjectId : UINT32_MAX;
 
-	if (NewCam)
-	{
-		NewCam->FindComponent<EcCamera>()->IsSceneCamera = true;
-		if (NewCam->ObjectId != s_FallbackCamera->ObjectId)
-			NewCam->IncrementHardRefs();
-	}
+    if (NewCam)
+    {
+        NewCam->FindComponent<EcCamera>()->IsSceneCamera = true;
+        if (NewCam->ObjectId != s_FallbackCamera->ObjectId)
+            NewCam->IncrementHardRefs();
+    }
 }
 
 void EcWorkspace::UpdateSoundListener() const
 {
-	SoundComponentManager* soundManager = (SoundComponentManager*)SoundComponentManager::Get();
-	soundManager->UpdateListener(GetSceneCamera()->FindComponent<EcCamera>()->GetWorldTransform());
+    SoundComponentManager* soundManager = (SoundComponentManager*)SoundComponentManager::Get();
+    soundManager->UpdateListener(GetSceneCamera()->FindComponent<EcCamera>()->GetWorldTransform());
 }
