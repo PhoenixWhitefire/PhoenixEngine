@@ -2328,7 +2328,15 @@ static void renderFunctionSignature(const nlohmann::json::const_iterator& member
 
 static void renderFunctionSignature(const nlohmann::json::const_iterator& memberIt)
 {
-    renderFunctionSignature(memberIt, funcArgumentDefsToString(memberIt.value().value("In", nlohmann::json())), memberIt.value().value("Out", ""));
+    const nlohmann::json& member = memberIt.value();
+
+    if (member.type() == nlohmann::json::value_t::string)
+        renderFunctionSignature(memberIt, "", "");
+    else
+    {
+        assert(member.type() == nlohmann::json::value_t::object);
+        renderFunctionSignature(memberIt, funcArgumentDefsToString(member.value("In", nlohmann::json())), member.value("Out", ""));
+    }
 }
 
 // events do not have a signature function, it's done directly inside `renderDocumentationViewer`
@@ -2342,7 +2350,8 @@ static void renderApiMemberBulletpoint(const nlohmann::json::const_iterator& mem
     else
         renderFunctionSignature(memberIt);
 
-    renderDescription(member.value("Description", nlohmann::json()), nCharsPerLine);
+    renderDescription(member, nCharsPerLine);
+    ImGui::NewLine();
 }
 
 static void renderDocumentationViewer()
@@ -2705,11 +2714,11 @@ static void renderDocumentationViewer()
 
             if (const auto& dumpedType = ApiDumpJson["ScriptEnv"]["Globals"][memberIt.key()]; dumpedType != "function")
                 renderPropertySignature(memberIt.key(), dumpedType);
-
             else
                 renderFunctionSignature(memberIt);
 
             renderDescription(member["Description"], nCharsPerLine);
+            ImGui::NewLine();
         }
 
         break;

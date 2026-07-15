@@ -1006,14 +1006,14 @@
           },
           "lookAt": {
             "Description": "Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`",
-            "In": "Eye: vector, Target: vector",
+            "In": "Eye: vector, Target: vector, Up: vector?",
             "Out": "Matrix"
           },
           "new": {
             "Description": "Returns a new identity matrix when given no arguments, and a matrix with each individual cell set when given 16 number arguments",
             "Out": "Matrix",
             "Overloads": [
-              "C1R1: number, C1R2: number, C1R3: number, C1R4: number, C2R1: number, C2R2: number, C2R3: number, C2R4: number, C3R1: number, C3R2: number, C3R3: number, C3R4: number, C4R1: number, C4R2: number, C4R3: number, C4R4: number"
+              "C1R1: number, C2R1: number, C3R1: number, C4R1: number, C1R2: number, C2R2: number, C3R2: number, C4R2: number, C1R3: number, C2R3: number, C3R3: number, C4R3: number, C1R4: number, C2R4: number, C3R4: number, C4R4: number"
             ]
           }
         },
@@ -2491,7 +2491,7 @@
         "Members": {
           "atomicinteger": {
             "Description": "Creates/finds an atomic integer with a matching ID",
-            "In": "InitialValue: number?",
+            "In": "Id: string, InitialValue: number?",
             "Out": "AtomicInteger"
           },
           "desynchronize": {
@@ -2557,18 +2557,6 @@
             "Description": "Yields the thread for the specified number of seconds. Default is `0`",
             "In": "SleepTime: number?",
             "Out": "number"
-          },
-          "_pfork": {
-            "Description": [
-              "Obtuse rubber goose",
-              "Re-executes a copy of the script from the beginning in Parallel, then calls the global function given to it, passing arguments",
-              "Returns `true` if this is parallel execution, or `false` if this is the serial execution",
-              "In the parallel execution, the script cannot yield",
-              "Using this API will likely result in a crash or memory corruption, as no thread synchronization is used",
-              "After the function has run, the callback will be invoked with the return values",
-              "Callback can be omitted by providing `nil`"
-            ],
-            "Type": "<A..., R...>(fn: (A...) -> (R...), callback: ((R...) -> ())?, A...) -> boolean"
           }
         }
       }

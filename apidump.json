@@ -416,13 +416,54 @@
   "ScriptEnv": {
     "Datatypes": {
       "AtomicInteger": {},
-      "Color": {},
+      "Color": {
+        "Library": {
+          "new": "function"
+        },
+        "Metatable": {
+          "__eq": "function",
+          "__index": "function",
+          "__tostring": "function",
+          "__type": "string"
+        }
+      },
       "ColorGradient": {},
       "EventConnection": {},
       "EventSignal": {},
-      "GameObject": {},
+      "GameObject": {
+        "Library": {
+          "fromComponents": "function",
+          "fromId": "function",
+          "new": "function",
+          "validComponents": "table"
+        },
+        "Metatable": {
+          "__index": "function",
+          "__namecall": "function",
+          "__newindex": "function",
+          "__tostring": "function",
+          "__type": "string"
+        }
+      },
       "InputEvent": {},
-      "Matrix": {},
+      "Matrix": {
+        "Library": {
+          "identity": "Matrix",
+          "lookAt": "function",
+          "new": "function",
+          "rotated": "function",
+          "scaled": "function",
+          "translated": "function"
+        },
+        "Metatable": {
+          "__add": "function",
+          "__eq": "function",
+          "__index": "function",
+          "__mul": "function",
+          "__sub": "function",
+          "__type": "string"
+        }
+      },
       "Mutex": {},
       "NumberGradient": {},
       "SharedBuffer": {},
@@ -436,9 +477,6 @@
       "workspace": "GameObject & EcWorkspace"
     },
     "Libraries": {
-      "Color": {
-        "new": "function"
-      },
       "Enum": {
         "CollisionType": {
           "Cube": 0,
@@ -700,20 +738,6 @@
           "Vector3": 8,
           "VectorGradient": 17
         }
-      },
-      "GameObject": {
-        "fromComponents": "function",
-        "fromId": "function",
-        "new": "function",
-        "validComponents": "table"
-      },
-      "Matrix": {
-        "identity": "Matrix",
-        "lookAt": "function",
-        "new": "function",
-        "rotated": "function",
-        "scaled": "function",
-        "translated": "function"
       },
       "_RUNTIME": {
         "name": "string",

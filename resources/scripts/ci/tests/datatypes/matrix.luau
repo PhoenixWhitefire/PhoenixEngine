@@ -23,13 +23,16 @@ return function(test: Types.Test, expect: Types.Expect)
 			local _x = m.C5R1
 		end):toThrow()
 	end)
-	test("Manual cell assign", function()
-		expect(function()
-			local m = Matrix.new(1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3)
-			assert(m.C1R1 == 1)
-			assert(m.C1R4 == 2)
-			assert(m.C4R4 == 3)
-		end).never:toThrow()
+	test(".new order", function()
+		local mtx = Matrix.new(
+			 1,  2,  3,  4,
+			 5,  6,  7,  8,
+			 9, 10, 11, 12,
+			13, 14, 15, 16
+		)
+		expect(mtx.C1R1):toBe(1)
+		expect(mtx.C4R1):toBe(4)
+		expect(mtx.C4R4):toBe(16)
 	end)
 
 	test("ExtractAngles", function()

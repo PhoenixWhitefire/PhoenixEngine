@@ -2172,21 +2172,26 @@ nlohmann::json ScriptEngine::DumpApiToJson()
                     lua_pop(luhx, 1);
                 }
 
-                if (luaL_getmetatable(luhx, k.c_str()) == LUA_TTABLE)
+                if (const auto& tagIt = std::find(std::begin(UserdataTagNames), std::end(UserdataTagNames), k); tagIt != std::end(UserdataTagNames))
                 {
                     json["Datatypes"][k]["Library"] = lib;
 
-                    lua_pushnil(luhx);
-                    while (lua_next(luhx, -2))
+                    lua_getuserdatametatable(luhx, (int)std::distance(UserdataTagNames, tagIt));
+
+                    if (!lua_isnil(luhx, -1))
                     {
-                        json["Datatypes"][k]["Metatable"][luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
-                        lua_pop(luhx, 1);
+                        lua_pushnil(luhx);
+                        while (lua_next(luhx, -2))
+                        {
+                            json["Datatypes"][k]["Metatable"][luaL_checkstring(luhx, -2)] = luaL_typename(luhx, -1);
+                            lua_pop(luhx, 1);
+                        }
                     }
+
+                    lua_pop(luhx, 1);
                 }
                 else
                     json["Libraries"][k] = lib;
-
-                lua_pop(luhx, 1);
             }
         }
 
@@ -2197,7 +2202,8 @@ nlohmann::json ScriptEngine::DumpApiToJson()
     for (int dei = UserdataTag::__start; dei < UserdataTag::__count; dei++)
     {
         const std::string_view& name = UserdataTagNames[dei];
-        json["Datatypes"][name] = nlohmann::json::object();
+        if (json["Datatypes"].find(name) == json["Datatypes"].end())
+            json["Datatypes"][name] = nlohmann::json::object();
     }
 
     lua_close(base);

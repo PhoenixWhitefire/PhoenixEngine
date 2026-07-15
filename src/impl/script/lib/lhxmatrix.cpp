@@ -36,15 +36,6 @@ static glm::vec3 checkVectorArg(lua_State* L, int argBaseIndex)
 	}
 }
 
-static int matrix_translated(lua_State* L)
-{
-    glm::mat4 m = glm::mat4(1.f);
-	m[3] = glm::vec4(checkVectorArg(L, 1), 1.f);
-
-    luhx_pushmatrix(L, m);
-    return 1;
-}
-
 static int matrix_new(lua_State* L)
 {
     glm::mat4 mat = { 1.f };
@@ -54,17 +45,26 @@ static int matrix_new(lua_State* L)
         if (lua_gettop(L) != 16)
             luaL_error(L, "Matrix.new may only be called with 0 or 16 arguments");
 
-		for (int c = 0; c < 4; c++)
+		for (int r = 1; r <= 4; r++)
 		{
-			for (int r = 0; r < 4; r++)
+			for (int c = 1; c <= 4; c++)
 			{
-				float v = (double)luaL_checknumber(L, c * 4 + r + 1);
-				mat[c][r] = v;
+				float v = (float)luaL_checknumber(L, (r - 1) * 4 + c);
+				mat[c - 1][r - 1] = v;
 			}
 		}
     }
 
     luhx_pushmatrix(L, mat);
+    return 1;
+}
+
+static int matrix_translated(lua_State* L)
+{
+    glm::mat4 m = { 1.f };
+	m[3] = glm::vec4(checkVectorArg(L, 1), 1.f);
+
+    luhx_pushmatrix(L, m);
     return 1;
 }
 

@@ -717,7 +717,7 @@
     "documentation": "* An atomic integer, which can be accessed from multiple threads with an ID through `parallel.atomicinteger`"
   },
   "@phoenix/global/Color": {
-    "documentation": ""
+    "documentation": "* An RGB color"
   },
   "@phoenix/global/Color.new": {
     "documentation": "* Returns a Color with the provided R, G, and B values\n* Values are expected to be in the range 0 to 1\n* This datatype is not hash consed! Two separate value-identical colors are not `rawequal` and will not behave as expected when used as table keys"
@@ -1028,7 +1028,7 @@
     "documentation": "* An Event that can be connected to\n* This datatype is not hash consed! Two separate value-identical signals are not `rawequal` and will not behave as expected when used as table keys (e.g. `rawequal(game.OnFrameBegin, game.OnFrameBegin) == false`)"
   },
   "@phoenix/global/GameObject": {
-    "documentation": ""
+    "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page\n* This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
   },
   "@phoenix/global/GameObject.fromComponents": {
     "documentation": "* Creates an Object with only the specified Components"
@@ -1046,7 +1046,7 @@
     "documentation": "* This is a union of `KeyInputEvent`, `MouseInputEvent`, and `ScrollInputEvent`"
   },
   "@phoenix/global/Matrix": {
-    "documentation": ""
+    "documentation": "* A 4x4 transformation matrix\n* This datatype is not hash consed! Two separate value-identical matrices are not `rawequal` and will not behave as expected when used as table keys"
   },
   "@phoenix/global/Matrix.identity": {
     "documentation": "* An identity matrix, the same value as what gets returned with `.new()` with no arguments"
