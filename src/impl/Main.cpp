@@ -562,7 +562,7 @@ static void crashHandler(int argc, char** argv)
 		int signal = WTERMSIG(status);
 		tinyfd_messageBox(
 			"Oops",
-			"The game has crashed. Consider sending the core dump and logs :)\n\n"
+			"The game has crashed. Consider sending the core dump and logs :3\n\n"
 				"Log files will be recorded to the " CRASHED_DIR " directory. If it already exists, it will be overwritten.",
 			"ok",
 			"error",
