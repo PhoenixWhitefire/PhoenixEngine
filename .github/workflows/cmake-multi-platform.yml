@@ -127,6 +127,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         mv "x64/${{ matrix.build_type }}/PhoenixEngine" "./PhoenixEngine"
+        mv "x64/${{ matrix.build_type }}/PhoenixEngine.debug" "./PhoenixEngine.debug"
         mv ".github/wiki" "./wiki"
 
     - name: Upload build artifact (Windows)

@@ -4,7 +4,7 @@ set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
 
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:ReleaseTSan>:-O3>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:ReleaseAUSan>:-O3>)
-target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-O3>)
+target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Release>:-O3 -g>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:DebugTSan>:-O0>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:DebugTSan>:-g3>)
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:Debug>:-O0>)
@@ -62,3 +62,20 @@ add_link_options($<$<CONFIG:ReleaseTSan>:-flto>)
 add_link_options($<$<CONFIG:DebugTSan>:-fsanitize=thread>)
 add_link_options($<$<CONFIG:Release>:-flto>)
 add_link_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)
+
+if (NOT CMAKE_OBJCOPY)
+	set(CMAKE_OBJCOPY objcopy)
+endif()
+
+set(TARGET_FILE_NAME "$<TARGET_FILE:PhoenixEngine>")
+
+add_custom_command(TARGET PhoenixEngine POST_BUILD
+	COMMAND "$<$<CONFIG:Release>:${CMAKE_OBJCOPY};--only-keep-debug;${TARGET_FILE_NAME};${TARGET_FILE_NAME}.debug>"
+	COMMAND "$<$<CONFIG:Release>:${CMAKE_OBJCOPY};--strip-debug;${TARGET_FILE_NAME}>"
+
+	COMMAND "$<$<CONFIG:Release>:${CMAKE_OBJCOPY};--add-gnu-debuglink=${TARGET_FILE_NAME}.debug;${TARGET_FILE_NAME}>"
+
+	COMMAND_EXPAND_LISTS
+
+	VERBATIM
+)
