@@ -20,11 +20,13 @@
 
 #include "Memory.hpp"
 
+#define MEMORY_CHECK_MAGIC uint8_t(/* 1 */ 225)
+
 struct alignas(std::max_align_t) AllocHeader
 {
 	uint32_t Size = UINT32_MAX;
 	uint8_t Category = UINT8_MAX;
-	uint8_t Check = 222; // you probably do not know what this in reference to
+	uint8_t Check = MEMORY_CHECK_MAGIC;
 	uint8_t Padding[sizeof(std::max_align_t) - 6];
 };
 
@@ -67,8 +69,8 @@ void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 
 	// in case someone passes in a pointer that wasn't alloc'd by `::Alloc` and doesn't immediately segfault,
 	// hold their hand and tell them they're
-	if (header->Check != 222)
-		throw std::runtime_error("Tried `::GetPointerInfo` on an address not allocated by the Memory tracker");
+	if (header->Check != MEMORY_CHECK_MAGIC)
+		throw std::runtime_error("Tried `::GetPointerInfo` on unmanaged address '{}'", Pointer);
 
 	if (Size)
 		*Size = header->Size;

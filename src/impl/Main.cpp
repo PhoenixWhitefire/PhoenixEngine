@@ -20,43 +20,6 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-// `return 1` to indicate exit failure
-// technically we should never fail to exit gracefully though, we are
-// just indicating a fatal error occurred that forced the engine to
-// quit
-#define PHX_MAIN_HANDLECRASH(c) catch (c Error) { handleCrash(Error, #c); return 1; }
-
-#define PHX_MAIN_HANDLECRASH_WHAT(c) catch (c Error) { handleCrash(Error.what(), #c); return 1; }
-
-#ifdef NDEBUG
-
-#define PHX_MAIN_CRASHHANDLERS                                                   \
-PHX_MAIN_HANDLECRASH(const std::string&)                                         \
-PHX_MAIN_HANDLECRASH(std::string_view)                                           \
-PHX_MAIN_HANDLECRASH(const char*)                                                \
-catch (const std::bad_alloc& AllocError)                                         \
-{                                                                                \
-	handleCrash(                                                                 \
-		"System may have run out of memory: " + std::string(AllocError.what()),  \
-		"std::bad_alloc"                                                         \
-	);                                                                           \
-	return 1;                                                                    \
-}                                                                                \
-PHX_MAIN_HANDLECRASH_WHAT(const std::runtime_error&)                             \
-PHX_MAIN_HANDLECRASH_WHAT(const std::exception&)                                 \
-catch (...)                                                                      \
-{                                                                                \
-	handleCrash("Unknown error", "Unknown (really helpful I know)");             \
-	return 1;                                                                    \
-}                                                                                \
-
-#else
-
-// (when running with a debugger) take me straight to the exception location
-#define PHX_MAIN_CRASHHANDLERS catch (void*) { assert(false); }
-
-#endif
-
 #include <filesystem>
 #include <csignal>
 #include <chrono>
@@ -527,7 +490,6 @@ int main(int argc, char** argv)
     Log.InfoF("Now: {:%F %T %Z}", now);
     processCliArgs(argc, argv);
 
-    try
     {
         Engine engine;
         Logging::IsGameObjectManagerAlive = true;
@@ -554,7 +516,6 @@ int main(int argc, char** argv)
         DeveloperTools::Shutdown();
         engine.Shutdown();
     }
-    PHX_MAIN_CRASHHANDLERS;
 
     Logging::IsGameObjectManagerAlive = false;
     Log.InfoF("The exit code is {}", s_ExitCode);
