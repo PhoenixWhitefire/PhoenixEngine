@@ -259,7 +259,15 @@ static void init()
 	std::vector<ObjectHandle> roots;
 
 	if (!ScriptTool)
-		roots = SceneFormat::Deserialize(FileRW::ReadFile(mapFile), &worldLoadSuccess);
+	{
+		bool fileRead = true;
+		std::string fileContentsOrError = FileRW::ReadFile(mapFile, &fileRead);
+
+		if (!fileRead)
+			RAISE_RT("Failed to read root scene file '{}': {}", mapFile, fileContentsOrError);
+
+		roots = SceneFormat::Deserialize(fileContentsOrError, &worldLoadSuccess);
+	}
 	else
 	{
 		ObjectHandle dm = GameObjectManager::s_Create(EntityComponent::DataModel);
@@ -465,6 +473,36 @@ static void installCrashSignalHandlers()
 #endif
 }
 
+#define EXCEPTION_MESSAGE_PREFIX "Terminate called with std::exception: "
+
+static void terminateHandler()
+{
+	std::exception_ptr exception = std::current_exception();
+
+	if (exception)
+	{
+		try
+		{
+			std::rethrow_exception(exception);
+		}
+		catch (const std::exception& error)
+		{
+			Log.ErrorF(EXCEPTION_MESSAGE_PREFIX "{}", error.what());
+		}
+		catch (...)
+		{
+			Log.ErrorF("Terminate called with exception of unknown type");
+		}
+	}
+	else
+	{
+		Log.ErrorF("Terminate called without active exception");
+	}
+
+	Logging::Save();
+	std::abort(); // default terminate behavior, still want to generate coredump
+}
+
 static void unsetQuitSignalHandlers()
 {
     std::signal(SIGINT, SIG_DFL);
@@ -483,6 +521,7 @@ extern "C" void handleQuitSignal(int signal)
 
 static void application(int argc, char** argv)
 {
+	std::set_terminate(terminateHandler);
 	installCrashSignalHandlers();
 	processCliArgs(argc, argv);
 
@@ -559,11 +598,24 @@ static void crashHandler(int argc, char** argv)
 	{
 		s_ExitCode = 1;
 
+		std::string exceptionMessage = "Unknown error.";
+
+		bool logReadSuccess = true;
+		std::string logFileContents = FileRW::ReadFile("./" APP_LOG, &logReadSuccess);
+
+		const std::string_view marker = EXCEPTION_MESSAGE_PREFIX;
+
+		if (size_t pos = logFileContents.find(marker); pos != std::string::npos && pos < logFileContents.size() - marker.size())
+			exceptionMessage = logFileContents.substr(pos + marker.size(), logFileContents.size() - (pos + marker.size()));
+
 		int signal = WTERMSIG(status);
 		tinyfd_messageBox(
 			"Oops",
-			"The game has crashed. Consider sending the core dump and logs :3\n\n"
-				"Log files will be recorded to the " CRASHED_DIR " directory. If it already exists, it will be overwritten.",
+			std::format(
+				"The game has crashed. Consider sending the core dump and logs :3\n\n{}\n"
+					"Log files will be recorded to the " CRASHED_DIR " directory. If it already exists, it will be overwritten.",
+				exceptionMessage
+			).c_str(),
 			"ok",
 			"error",
 			1
