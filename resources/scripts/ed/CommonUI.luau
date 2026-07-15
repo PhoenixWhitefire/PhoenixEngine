@@ -153,7 +153,7 @@ PlayerInput.KeyEvent:Connect(function(event)
 
     handleCommandBarActions(event)
 
-    if PlayerInput.IsKeyboardSunk then
+    if PlayerInput.IsKeyboardSunk or State.CurrentStage ~= "ProjectEditing" then
         return
     end
 
@@ -175,7 +175,7 @@ PlayerInput.KeyEvent:Connect(function(event)
 end)
 
 PlayerInput.ScrollEvent:Connect(function(sie: ScrollInputEvent)
-    if PlayerInput.IsMouseSunk then
+    if PlayerInput.IsMouseSunk or State.CurrentStage ~= "ProjectEditing" then
         return
     end
 
