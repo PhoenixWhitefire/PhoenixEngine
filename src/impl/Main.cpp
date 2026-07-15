@@ -24,6 +24,11 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include <csignal>
 #include <chrono>
 
+#ifdef __GNUG__
+#include <sys/wait.h>
+#include <fcntl.h>
+#endif
+
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 
@@ -188,38 +193,6 @@ static void doApiDump()
 	Log.Info("API dump finished");
 }
 
-#ifdef NDEBUG
-static void handleCrash(const std::string_view& Error, const std::string_view& ExceptionType)
-{
-	s_ExitCode = 1;
-
-	// Log Size Limit Exceeded Throwing Exception
-	if (!Error.starts_with("LSLETE"))
-	{
-		Log.AppendF(
-			"CRASH - {}: {}",
-			ExceptionType, Error
-		);
-		Logging::Save();
-	}
-
-	std::string errMessage = std::format(
-		"An unexpected error occurred, and the application will now close. Details: \n\n{}\n\n{}",
-		Error,
-		"If this is the first time this has happened, please re-try. Otherwise, contact the developers."
-	);
-
-	// can fail, write to stderr if so 18/01/2025
-	tinyfd_messageBox(
-		"Fatal Error",
-		errMessage.c_str(),
-		"ok",
-		"error",
-		1
-	);
-}
-#endif
-
 static const char* MapFileFromArgs = nullptr;
 static const char* ScriptTool = nullptr;
 
@@ -363,6 +336,17 @@ static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)
 
 static bool DoApiDump = false;
 
+#define CRASHED_DIR "crash/"
+#define CRASHED_APP_LOG CRASHED_DIR "application.txt"
+#define CRASHED_HANDLER_LOG CRASHED_DIR "handler.txt"
+#define CRASHED_APP_TRACE CRASHED_DIR "trace.txt"
+
+#define APP_TRACE "application-crash-trace.txt"
+#define APP_LOG "log.txt"
+#define HANDLER_LOG "crash-handler-tmp.txt"
+
+#define APPLICATION_ARG "--application"
+
 static void processCliArgs(int argc, char** argv)
 {
 	for (int i = 1; i < argc; i++)
@@ -431,6 +415,10 @@ static void processCliArgs(int argc, char** argv)
 		{
 			glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
 		}
+		else if (strcmp(v, APPLICATION_ARG) == 0)
+		{
+			// Handler in `main`
+		}
 		else
 		{
 			Log.InfoF("Argument '{}' was not processed by Engine", v);
@@ -443,6 +431,39 @@ static void processCliArgs(int argc, char** argv)
 #else
 #define IS_HEADLESS_STR "No"
 #endif
+
+#ifdef __GNUG__
+
+extern "C" void handleCrashSignal(int signal);
+extern "C" void handleCrashSignal(int sig)
+{
+	// create a basic trace back in case the system won't generate a coredump
+	void* frames[64];
+	int n = backtrace(frames, 64);
+
+	int traceDescriptor = open(APP_TRACE, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
+	if (traceDescriptor >= 0)
+	{
+		backtrace_symbols_fd(frames, n, traceDescriptor);
+		close(traceDescriptor);
+	}
+
+	signal(sig, SIG_DFL);
+	raise(sig); // re-raise so normal coredump is still generated if possible
+}
+
+#endif
+
+static void installCrashSignalHandlers()
+{
+#ifdef __GNUG__
+
+	for (int sig : { SIGSEGV, SIGABRT, SIGILL, SIGBUS })
+		signal(sig, handleCrashSignal);
+
+#endif
+}
 
 static void unsetQuitSignalHandlers()
 {
@@ -460,35 +481,10 @@ extern "C" void handleQuitSignal(int signal)
     engine->Close();
 }
 
-int main(int argc, char** argv)
+static void application(int argc, char** argv)
 {
-    Logging::Initialize();
-    Log.Info("Application startup");
-	
-    Log.InfoF("Phoenix Engine"
-        "\n\tVersion: {}"
-        "\n\tCommit: {}"
-        "\n\tTag: {}"
-        "\n\tTarget platform: " PHX_TARGET_PLATFORM
-        "\n\tTarget compiler: " PHX_TARGET_COMPILER
-        "\n\tBuild type: " PHX_BUILD_TYPE
-        "\n\tBuild date: {} @ {}"
-        "\n\tHeadless: " IS_HEADLESS_STR,
-        GetEngineVersion(), GetEngineCommitHash(), GetEngineCommitTag(), GetEngineBuildDate(), GetEngineBuildTime()
-    );
-
-    Log.Info("Command line: &&");
-
-    for (int i = 0; i < argc; i++)
-        if (i < argc - 1)
-            Log.AppendF(" {}&&", argv[i]);
-        else
-            Log.AppendF(" {}", argv[i]);
-
-    auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
-
-    Log.InfoF("Now: {:%F %T %Z}", now);
-    processCliArgs(argc, argv);
+	installCrashSignalHandlers();
+	processCliArgs(argc, argv);
 
     {
         Engine engine;
@@ -519,8 +515,201 @@ int main(int argc, char** argv)
 
     Logging::IsGameObjectManagerAlive = false;
     Log.InfoF("The exit code is {}", s_ExitCode);
-    Log.Info("Application shutdown");
+}
+
+static void crashHandler(int argc, char** argv)
+{
+#ifdef __GNUG__
+	pid_t pid = fork();
+	if (pid < 0)
+	{
+		tinyfd_messageBox("Failed to launch", "fork failed", "ok", "error", 1);
+		Log.Error("`fork` failed: {}", strerror(errno));
+		s_ExitCode = 1;
+
+		return;
+	}
+
+	if (pid == 0)
+	{
+		std::vector<char*> newArguments;
+		newArguments.push_back(const_cast<char*>(argv[0]));
+		newArguments.push_back(const_cast<char*>(APPLICATION_ARG));
+
+		for (int i = 1; i < argc; i++)
+			newArguments.push_back(argv[i]);
+
+		newArguments.push_back(nullptr);
+
+		Log.Info("Launching application\n\n");
+		execv("/proc/self/exe", newArguments.data());
+
+		tinyfd_messageBox("Failed to launch", "execv failed", "ok", "error", 1);
+		Log.Error("`execv` failed: {}", strerror(errno));
+		s_ExitCode = 1;
+
+		return;
+	}
+
+	int status = 0;
+	waitpid(pid, &status, 0);
+	Log.Append("\n\n");
+
+	if (WIFSIGNALED(status))
+	{
+		s_ExitCode = 1;
+
+		int signal = WTERMSIG(status);
+		tinyfd_messageBox(
+			"Oops",
+			"The game has crashed. Consider sending the core dump and logs :)\n\n"
+				"Log files will be recorded to the " CRASHED_DIR " directory. If it already exists, it will be overwritten.",
+			"ok",
+			"error",
+			1
+		);
+		Log.ErrorF("Application crashed: {}", strsignal(signal));
+		Logging::Save();
+
+		if (std::filesystem::is_directory(CRASHED_DIR))
+		{
+			std::error_code ec;
+			std::filesystem::remove_all(CRASHED_DIR, ec);
+
+			if (ec)
+			{
+				std::string error = std::format("Error removing the pre-existing " CRASHED_DIR " directory: {}", ec.message());
+				tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "warning", 1);
+				Log.Error(error);
+
+				return;
+			}
+		}
+
+		if (!std::filesystem::is_directory(CRASHED_DIR))
+		{
+			std::error_code mkdirEc;
+			std::filesystem::create_directory(CRASHED_DIR, mkdirEc);
+
+			if (mkdirEc)
+			{
+				std::string error = std::format("Failed to create " CRASHED_DIR " directory: {}", mkdirEc.message());
+				tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+				Log.Error(error);
+
+				return;
+			}
+		}
+
+		std::error_code appLogCopyEc;
+		std::filesystem::copy(APP_LOG, CRASHED_APP_LOG, appLogCopyEc);
+
+		if (appLogCopyEc)
+		{
+			std::string error = std::format("Failed to copy application log file: {}", appLogCopyEc.message());
+			tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+			Log.Error(error);
+
+			return;
+		}
+
+		Logging::Save();
+
+		std::error_code handlerLogCopyEc;
+		std::filesystem::copy(HANDLER_LOG, CRASHED_HANDLER_LOG, handlerLogCopyEc);
+
+		if (handlerLogCopyEc)
+		{
+			std::string error = std::format("Failed to copy crash handler log file: {}", handlerLogCopyEc.message());
+			tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+			Log.Error(error);
+
+			return;
+		}
+
+		Logging::LogFile = "./" CRASHED_HANDLER_LOG;
+		Logging::Save(); // re-open handle
+
+		if (std::filesystem::is_regular_file(APP_TRACE))
+		{
+			std::error_code ec;
+			std::filesystem::rename(APP_TRACE, CRASHED_APP_TRACE, ec);
+
+			if (ec)
+			{
+				std::string error = std::format("Failed to move backtrace: {}", ec.message());
+				tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+				Log.Error(error);
+
+				return;
+			}
+		}
+
+		Log.Info("Created crash files successfully");
+	}
+#else
+	(void)argc;
+	(void)argv;
+#endif
+}
+
+int main(int argc, char** argv)
+{
+	bool isCrashHandler = true;
+
+#ifdef __GNUG__
+
+	for (int i = 0; i < argc; i++)
+	{
+		if (strcmp(argv[i], APPLICATION_ARG) == 0)
+			isCrashHandler = false;
+	}
+
+#else
+
+	isCrashHandler = false;
+
+#endif
+
+	Logging::LogFile = isCrashHandler ? "./" HANDLER_LOG : "./" APP_LOG;
+
+    Logging::Initialize();
+    Log.Info(isCrashHandler ? "Crash handler startup" : "Application startup");
+
+    Log.InfoF("Phoenix Engine"
+        "\n\tVersion: {}"
+        "\n\tCommit: {}"
+        "\n\tTag: {}"
+        "\n\tTarget platform: " PHX_TARGET_PLATFORM
+        "\n\tTarget compiler: " PHX_TARGET_COMPILER
+        "\n\tBuild type: " PHX_BUILD_TYPE
+        "\n\tBuild date: {} @ {}"
+        "\n\tHeadless: " IS_HEADLESS_STR,
+        GetEngineVersion(), GetEngineCommitHash(), GetEngineCommitTag(), GetEngineBuildDate(), GetEngineBuildTime()
+    );
+
+    Log.Info("Command line: &&");
+
+    for (int i = 0; i < argc; i++)
+        if (i < argc - 1)
+            Log.AppendF(" {}&&", argv[i]);
+        else
+            Log.AppendF(" {}", argv[i]);
+
+    auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
+
+    Log.InfoF("Now: {:%F %T %Z}", now);
+
+	if (isCrashHandler)
+		crashHandler(argc, argv);
+	else
+		application(argc, argv);
+
+    Log.Info(isCrashHandler ? "Crash handler shutdown" : "Application shutdown");
     Logging::Save();
+
+	if (isCrashHandler)
+		std::filesystem::remove(HANDLER_LOG);
 
     return s_ExitCode;
 }

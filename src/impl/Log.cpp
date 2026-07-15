@@ -33,7 +33,7 @@ void Logging::Save()
 
 	LogHandle << ProgramLog;
 	LogHandle.close();
-	LogHandle.open("./log.txt", std::ios_base::app);
+	LogHandle.open(LogFile, std::ios_base::app);
 
 	ProgramLog.clear();
 }
@@ -195,11 +195,10 @@ void Logging::Context::Write(const std::string_view& Message, MessageType Type, 
 void Logging::Initialize()
 {
 	ZoneScoped;
-
 	MainThreadId = std::this_thread::get_id();
 
-	PHX_CHECK(FileRW::WriteFile("./log.txt", ""));
-	LogHandle.open("./log.txt", std::ios_base::app);
+	PHX_CHECK(FileRW::WriteFile(LogFile, ""));
+	LogHandle.open(LogFile, std::ios_base::app);
 
 	Log = Context{ .ContextExtraTags = "LogContext:Main" };
 }

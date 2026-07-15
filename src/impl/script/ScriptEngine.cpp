@@ -117,7 +117,6 @@ ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
     VMs[Name] = LuauVM{
         .Name = Name,
         .MainThread = L::CreateMainThread(Name),
-        .AllowedExecutionTime = DefaultVMAllowedExecutionTime,
     };
 
     return VMs[Name];
@@ -130,7 +129,6 @@ ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
     ParallelVM* vm = new ParallelVM;
     vm->Name = name;
     vm->MainThread = L::CreateMainThread(name);
-    vm->AllowedExecutionTime = DefaultVMAllowedExecutionTime;
 
     L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(vm->MainThread);
     vmud->PVM = vm;
@@ -1928,15 +1926,15 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     cb->interrupt = [](lua_State* L, int GcState)
         {
             StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-            LuauVM& vm = vmud->PVM ? *vmud->PVM : VMs[vmud->VM];
 
-            if (GetRunningTime() - vmud->LastResumed > vm.AllowedExecutionTime)
+            if (GetRunningTime() - vmud->LastResumed > vmud->AllowedExecutionTime)
             {
                 vmud->LastResumed = GetRunningTime() + 0.5; // interrupt may recurse due to GC
-                luaL_error(L, "Script VM was timed-out for running for more than %lf seconds without yielding (GC: %i)", vm.AllowedExecutionTime, GcState);
+                luaL_error(L, "Script VM was timed-out for running for more than %lf seconds without yielding (GC: %i)", vmud->AllowedExecutionTime, GcState);
             }
         };
 
+    vmud->AllowedExecutionTime = DefaultVMAllowedExecutionTime;
     vmud->LastResumed = GetRunningTime();
     vmud->VM = VmName;
     lua_setthreaddata(state, vmud);

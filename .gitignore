@@ -25,6 +25,7 @@ editor/
 projects/
 compile_commands.json
 build/
+crash/
 
 # Shortcuts
 *.lnk

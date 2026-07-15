@@ -140,7 +140,8 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
                 else
                     lvm = &vmit->second;
 
-                lvm->AllowedExecutionTime = inputs[1].AsDouble();
+                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lvm->MainThread);
+                vmud->AllowedExecutionTime = inputs[1].AsDouble();
                 return {};
             }
         } },

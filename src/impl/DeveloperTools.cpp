@@ -5757,28 +5757,28 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
 
         if (ImGui::Begin("Callstack"))
         {
-            std::vector<std::string_view> vmNames;
-            vmNames.reserve(ScriptEngine::VMs.size());
+            std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>> vms;
+            vms.reserve(ScriptEngine::VMs.size());
 
-            for (auto& [ name, _ ] : ScriptEngine::VMs)
-                vmNames.emplace_back(name);
+            for (auto& [ name, vm ] : ScriptEngine::VMs)
+                vms.emplace_back(name, vm);
 
-            if (CurrentVMIndex >= (int)vmNames.size())
+            if (CurrentVMIndex >= (int)vms.size())
                 CurrentVMIndex = 0;
 
             ImGui::Combo("##", &CurrentVMIndex, [](void* vmsPtr, int index) -> const char*
                 {
-                    const auto vms = (std::vector<std::string_view>*)vmsPtr;
-                    return vms->at(index).data();
-                }, &vmNames, (int)vmNames.size());
+                    const auto vms = (std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>>*)vmsPtr;
+                    return vms->at(index).first.data();
+                }, &vms, (int)vms.size());
 
-            const ScriptEngine::LuauVM& vm = ScriptEngine::VMs[std::string(vmNames[CurrentVMIndex])];
+            const ScriptEngine::LuauVM& vm = vms[CurrentVMIndex].second;
 
             size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
             if (numCoroutineIdChars < 3)
                 numCoroutineIdChars = 3;
 
-            const auto renderCoroutine = [&L, ar, vm, vmNames, &currfuncindex, numCoroutineIdChars](lua_State* coroutine)
+            const auto renderCoroutine = [&L, ar, vm, vms, &currfuncindex, numCoroutineIdChars](lua_State* coroutine)
             {
                 ImGui::PushID(coroutine);
 
@@ -5911,7 +5911,7 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
                     }
                     else
                     {
-                        tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vmNames[CurrentVMIndex]));
+                        tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vms[CurrentVMIndex].first));
                     }
 
                     tab->DebuggerCurrentLine = targetLine;

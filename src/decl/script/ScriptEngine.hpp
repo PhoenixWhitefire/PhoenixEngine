@@ -97,7 +97,6 @@ namespace ScriptEngine
         std::vector<SharedMutex*> LockedSharedMutexes;
         std::string Name;
         lua_State* MainThread = nullptr;
-        double AllowedExecutionTime = 10.0;
     };
 
     struct ParallelVM : public LuauVM
@@ -179,6 +178,7 @@ namespace ScriptEngine::L
         std::vector<lua_State*> Coroutines; // Only populated for the main thread
         std::vector<std::string> YieldBlockers;
         std::stack<std::string> UnfinishedProfilerZones;
+        double AllowedExecutionTime = 10.0;
         double LastResumed = 0.f;
         ParallelVM* PVM = nullptr;
         bool DebuggerAttached = false;

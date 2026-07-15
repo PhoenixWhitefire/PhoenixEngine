@@ -75,6 +75,8 @@ namespace Logging
 
 	// Only accessed by main thread because log event script callbacks are only processed on main thread
 	inline bool IsGameObjectManagerAlive = false;
+	// Only set at startup
+	inline std::string LogFile = "./log.txt";
 };
 
 thread_local inline Logging::Context Log;

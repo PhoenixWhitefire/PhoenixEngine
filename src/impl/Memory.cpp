@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <format>
 #include <stdexcept>
 
 #include "Memory.hpp"
@@ -70,7 +71,7 @@ void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 	// in case someone passes in a pointer that wasn't alloc'd by `::Alloc` and doesn't immediately segfault,
 	// hold their hand and tell them they're
 	if (header->Check != MEMORY_CHECK_MAGIC)
-		throw std::runtime_error("Tried `::GetPointerInfo` on unmanaged address '{}'", Pointer);
+		throw std::runtime_error(std::format("Tried `::GetPointerInfo` on unmanaged address '{}'", Pointer));
 
 	if (Size)
 		*Size = header->Size;
