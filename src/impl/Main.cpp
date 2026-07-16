@@ -25,6 +25,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include <chrono>
 
 #ifdef __GNUG__
+#include <sys/prctl.h>
 #include <sys/wait.h>
 #include <fcntl.h>
 #endif
@@ -442,7 +443,7 @@ static void processCliArgs(int argc, char** argv)
 
 #ifdef __GNUG__
 
-extern "C" void handleCrashSignal(int signal);
+extern "C" void handleCrashSignal(int sig);
 extern "C" void handleCrashSignal(int sig)
 {
 	// create a basic trace back in case the system won't generate a coredump
@@ -459,6 +460,14 @@ extern "C" void handleCrashSignal(int sig)
 
 	signal(sig, SIG_DFL);
 	raise(sig); // re-raise so normal coredump is still generated if possible
+}
+
+static int LauncherPendingSignalToForward = 0;
+
+extern "C" void launcherForwardSignal(int sig);
+extern "C" void launcherForwardSignal(int sig)
+{
+	LauncherPendingSignalToForward = sig;
 }
 
 #endif
@@ -559,8 +568,10 @@ static void application(int argc, char** argv)
 static void launcher(int argc, char** argv)
 {
 #ifdef __GNUG__
-	pid_t pid = fork();
-	if (pid < 0)
+	pid_t launcherPid = getpid();
+	pid_t appPid = fork();
+
+	if (appPid < 0)
 	{
 		tinyfd_messageBox("Failed to launch", "fork failed", "ok", "error", 1);
 		Log.Error("`fork` failed: {}", strerror(errno));
@@ -569,10 +580,21 @@ static void launcher(int argc, char** argv)
 		return;
 	}
 
-	if (pid == 0)
+	if (appPid == 0)
 	{
+		prctl(PR_SET_PDEATHSIG, SIGKILL);
+
+		if (getppid() != launcherPid)
+		{
+			Logging::LogFile = "./" APP_LOG;
+			Log.Error("Launcher killed before application could initialize");
+			Logging::Save();
+
+			std::abort();
+		}
+
 		std::vector<char*> newArguments;
-		newArguments.push_back(const_cast<char*>(argv[0]));
+		newArguments.push_back(argv[0]);
 		newArguments.push_back(const_cast<char*>(APPLICATION_ARG));
 
 		for (int i = 1; i < argc; i++)
@@ -584,22 +606,51 @@ static void launcher(int argc, char** argv)
 		Logging::Save();
 		execv("/proc/self/exe", newArguments.data());
 
+		Logging::LogFile = "./" APP_LOG;
+
 		tinyfd_messageBox("Failed to launch", "execv failed", "ok", "error", 1);
 		Log.Error("`execv` failed: {}", strerror(errno));
-		s_ExitCode = 1;
+		Logging::Save();
 
-		return;
+		std::abort();
 	}
 
+	struct sigaction sa = {};
+	sa.sa_handler = launcherForwardSignal;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+
+	sigaction(SIGTERM, &sa, nullptr);
+	signal(SIGINT, SIG_IGN); // terminal will broadcast it anyway
+
 	int status = 0;
-	waitpid(pid, &status, 0);
+	while (waitpid(appPid, &status, 0) == -1 && errno == EINTR)
+	{
+		if (LauncherPendingSignalToForward != 0)
+		{
+			int sig = LauncherPendingSignalToForward;
+			LauncherPendingSignalToForward = 0;
+			kill(appPid, sig);
+		}
+
+		continue;
+	}
+
 	Log.Append("\n\n");
 
 	if (WIFSIGNALED(status))
 	{
 		s_ExitCode = 1;
 
-		std::string exceptionMessage = "Unknown error.";
+		int signal = WTERMSIG(status);
+
+		if (signal == SIGKILL)
+		{
+			Log.Warning("Application killed");
+			return;
+		}
+
+		std::string exceptionMessage = "Unknown error.\n";
 
 		bool logReadSuccess = true;
 		std::string logFileContents = FileRW::ReadFile("./" APP_LOG, &logReadSuccess);
@@ -609,7 +660,6 @@ static void launcher(int argc, char** argv)
 		if (size_t pos = logFileContents.find(marker); pos != std::string::npos && pos < logFileContents.size() - marker.size())
 			exceptionMessage = logFileContents.substr(pos + marker.size(), logFileContents.size() - (pos + marker.size()));
 
-		int signal = WTERMSIG(status);
 		tinyfd_messageBox(
 			"Oops",
 			std::format(
@@ -700,6 +750,11 @@ static void launcher(int argc, char** argv)
 
 		Log.Info("Created crash files successfully");
 	}
+	else
+	{
+		s_ExitCode = WEXITSTATUS(status);
+	}
+
 #else
 	(void)argc;
 	(void)argv;
