@@ -1569,6 +1569,7 @@ static void renderMaterialEditor()
 }
 
 static std::vector<ObjectHandle> Selections;
+static std::vector<ObjectHandle> PrevSelections;
 static std::vector<ObjectHandle> VisibleTree;
 static std::vector<ObjectHandle> VisibleTreeWip;
 static ObjectHandle LastSelected;
@@ -1976,7 +1977,16 @@ static void recursiveIterateTree(const ObjectHandle& current)
 
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
         {
-            ImGui::SetDragDropPayload("Explorer_DragGameObject", &object->ObjectId, sizeof(uint32_t));
+            std::vector<uint32_t> draggingVec;
+
+            if (Selections.size() == 1 && std::find(PrevSelections.begin(), PrevSelections.end(), Selections[0]) != PrevSelections.end())
+                Selections = PrevSelections;
+
+            draggingVec.reserve(Selections.size());
+            for (const ObjectHandle& selected : Selections)
+                draggingVec.push_back(selected->ObjectId);
+
+            ImGui::SetDragDropPayload("Explorer_DragGameObject", draggingVec.data(), sizeof(uint32_t) * Selections.size());
             ImGui::Text("Moving %s", object->Name.c_str());
             ImGui::EndDragDropSource();
             nodeClicked = object;
@@ -1987,21 +1997,31 @@ static void recursiveIterateTree(const ObjectHandle& current)
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
             {
                 History::ScopedAction action = { "DragAndDropObject" };
-                uint32_t child = *(uint32_t*)payload->Data;
+                uint32_t* objects = (uint32_t*)payload->Data;
+                int count = payload->DataSize / sizeof(uint32_t);
 
                 try
                 {
-                    if (GameObject* dragging = GameObjectManager::Get()->FindById(child))
+                    Selections.clear();
+
+                    for (int index = 0; index < count; index++)
                     {
-                        dragging->SetParent(object);
-                        if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
+                        uint32_t objectId = objects[index];
+
+                        if (GameObject* dragging = GameObjectManager::Get()->FindById(objectId))
                         {
-                            ExplorerShouldSeekToCurrentSelection = true;
-                            ExplorerShouldSeekToCurrentSelection_Frame = true;
+                            dragging->SetParent(object);
+                            if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
+                            {
+                                ExplorerShouldSeekToCurrentSelection = true;
+                                ExplorerShouldSeekToCurrentSelection_Frame = true;
+                            }
+
+                            Selections.emplace_back(dragging);
                         }
+                        else
+                            setErrorMessage("Object was deleted");
                     }
-                    else
-                        setErrorMessage("Object was deleted");
                 }
                 catch (const std::runtime_error& e)
                 {
@@ -2090,7 +2110,10 @@ static void recursiveIterateTree(const ObjectHandle& current)
     });
 
     if (nodeClicked)
+    {
+        PrevSelections = Selections;
         onTreeItemClicked(nodeClicked);
+    }
 }
 
 static bool resetConflictedProperty(const char* /* PropName */, char* Buf = nullptr)
@@ -4973,11 +4996,14 @@ void DeveloperTools::Frame(double DeltaTime)
 void DeveloperTools::SetExplorerRoot(const ObjectHandle NewRoot)
 {
     ExplorerRoot = NewRoot;
+    Selections.clear();
+    PrevSelections.clear();
 }
 
 void DeveloperTools::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
 {
     Selections = NewSelections;
+    PrevSelections.clear();
 
     if (NewSelections.size() > 0)
     {
@@ -5029,6 +5055,7 @@ void DeveloperTools::Shutdown()
     ObjectInsertionTarget.Clear();
     PrevEditSelections.clear();
     Selections.clear();
+    PrevSelections.clear();
     VisibleTree.clear();
     VisibleTreeWip.clear();
     PickerTargets.clear();
