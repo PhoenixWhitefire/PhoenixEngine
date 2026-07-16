@@ -346,12 +346,12 @@ static bool DoApiDump = false;
 
 #define CRASHED_DIR "crash/"
 #define CRASHED_APP_LOG CRASHED_DIR "application.txt"
-#define CRASHED_HANDLER_LOG CRASHED_DIR "handler.txt"
+#define CRASHED_LAUNCHER_LOG CRASHED_DIR "launcher.txt"
 #define CRASHED_APP_TRACE CRASHED_DIR "trace.txt"
 
 #define APP_TRACE "application-crash-trace.txt"
 #define APP_LOG "log.txt"
-#define HANDLER_LOG "crash-handler-tmp.txt"
+#define LAUNCHER_LOG "launcher-tmp.txt"
 
 #define APPLICATION_ARG "--application"
 
@@ -556,7 +556,7 @@ static void application(int argc, char** argv)
     Log.InfoF("The exit code is {}", s_ExitCode);
 }
 
-static void crashHandler(int argc, char** argv)
+static void launcher(int argc, char** argv)
 {
 #ifdef __GNUG__
 	pid_t pid = fork();
@@ -581,6 +581,7 @@ static void crashHandler(int argc, char** argv)
 		newArguments.push_back(nullptr);
 
 		Log.Info("Launching application\n\n");
+		Logging::Save();
 		execv("/proc/self/exe", newArguments.data());
 
 		tinyfd_messageBox("Failed to launch", "execv failed", "ok", "error", 1);
@@ -668,7 +669,7 @@ static void crashHandler(int argc, char** argv)
 		Logging::Save();
 
 		std::error_code handlerLogCopyEc;
-		std::filesystem::copy(HANDLER_LOG, CRASHED_HANDLER_LOG, handlerLogCopyEc);
+		std::filesystem::copy(LAUNCHER_LOG, CRASHED_LAUNCHER_LOG, handlerLogCopyEc);
 
 		if (handlerLogCopyEc)
 		{
@@ -679,7 +680,7 @@ static void crashHandler(int argc, char** argv)
 			return;
 		}
 
-		Logging::LogFile = "./" CRASHED_HANDLER_LOG;
+		Logging::LogFile = "./" CRASHED_LAUNCHER_LOG;
 		Logging::Save(); // re-open handle
 
 		if (std::filesystem::is_regular_file(APP_TRACE))
@@ -707,26 +708,26 @@ static void crashHandler(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-	bool isCrashHandler = true;
+	bool isLauncher = true;
 
 #ifdef __GNUG__
 
 	for (int i = 0; i < argc; i++)
 	{
 		if (strcmp(argv[i], APPLICATION_ARG) == 0)
-			isCrashHandler = false;
+			isLauncher = false;
 	}
 
 #else
 
-	isCrashHandler = false;
+	isLauncher = false;
 
 #endif
 
-	Logging::LogFile = isCrashHandler ? "./" HANDLER_LOG : "./" APP_LOG;
+	Logging::LogFile = isLauncher ? "./" LAUNCHER_LOG : "./" APP_LOG;
 
     Logging::Initialize();
-    Log.Info(isCrashHandler ? "Crash handler startup" : "Application startup");
+    Log.Info(isLauncher ? "Launcher startup" : "Application startup");
 
     Log.InfoF("Phoenix Engine"
         "\n\tVersion: {}"
@@ -752,16 +753,16 @@ int main(int argc, char** argv)
 
     Log.InfoF("Now: {:%F %T %Z}", now);
 
-	if (isCrashHandler)
-		crashHandler(argc, argv);
+	if (isLauncher)
+		launcher(argc, argv);
 	else
 		application(argc, argv);
 
-    Log.Info(isCrashHandler ? "Crash handler shutdown" : "Application shutdown");
+    Log.Info(isLauncher ? "Launcher shutdown" : "Application shutdown");
     Logging::Save();
 
-	if (isCrashHandler)
-		std::filesystem::remove(HANDLER_LOG);
+	if (isLauncher)
+		std::filesystem::remove(LAUNCHER_LOG);
 
     return s_ExitCode;
 }

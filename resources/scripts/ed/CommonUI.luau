@@ -153,7 +153,7 @@ PlayerInput.KeyEvent:Connect(function(event)
 
     handleCommandBarActions(event)
 
-    if PlayerInput.IsKeyboardSunk or State.CurrentStage ~= "ProjectEditing" then
+    if PlayerInput.IsKeyboardSunk then
         return
     end
 
@@ -167,6 +167,10 @@ PlayerInput.KeyEvent:Connect(function(event)
         end
     end
 
+    if State.CurrentStage ~= "ProjectEditing" then
+        return
+    end
+
     if key == Enum.Key.One then
         CoreTools.SetGizmoMode(1)
     elseif key == Enum.Key.Two then
@@ -174,15 +178,15 @@ PlayerInput.KeyEvent:Connect(function(event)
     end
 end)
 
-PlayerInput.ScrollEvent:Connect(function(sie: ScrollInputEvent)
+PlayerInput.ScrollEvent:Connect(function(scroll)
     if PlayerInput.IsMouseSunk or State.CurrentStage ~= "ProjectEditing" then
         return
     end
 
     if not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then
-        workspace.SceneCamera.FieldOfView -= sie.Delta.y * 5
+        workspace.SceneCamera.FieldOfView -= scroll.Delta.y * 5
     else
-        workspace.SceneCamera.Transform += workspace:ScreenPointToVector(PlayerInput:GetCursorPosition()) * sie.Delta.y * 5
+        workspace.SceneCamera.Transform += workspace:ScreenPointToVector(PlayerInput:GetCursorPosition()) * scroll.Delta.y * 5
     end
 end)
 
