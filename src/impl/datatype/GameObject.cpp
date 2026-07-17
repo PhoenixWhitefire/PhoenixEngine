@@ -408,8 +408,19 @@ void GameObject::DecrementHardRefs()
 void GameObject::Destroy()
 {
 	ZoneScoped;
-
 	assert(Valid);
+
+	// Editor: Operation needs to be undo-able
+	if (History* history = History::Get(); history->IsRecordingEnabled
+		&& (OwningDataModel == history->TargetDataModel || ObjectId == history->TargetDataModel)
+	)
+	{
+		for (const ObjectHandle& child : this->GetChildren())
+			child->Destroy();
+
+		SetParent(nullptr); // children OwningDataModel should not change until they all detach
+		return;
+	}
 
 	if (!IsDestructionPending)
 	{
@@ -568,7 +579,7 @@ void GameObject::SetParent(const ObjectHandle& newParent)
 			newParent ? newParent->GetFullName() : "nil"
 		);
 	
-	if (newParent != this)
+	if (newParent.Reference.TargetId != this->ObjectId)
 	{
 		if (newParent && newParent->IsDescendantOf(this))
 			RAISE_RT(
@@ -895,6 +906,9 @@ void GameObject::RemoveComponent(EntityComponent Type)
 			{
 				for (const auto& [ name, prop ] : manager->GetProperties())
 				{
+					if (!prop.Serializes || !prop.Set)
+						continue;
+
 					Reflection::GenericValue val = GetPropertyValue(name);
 
 					// We need to keep track of all of the properties to restore
@@ -1031,6 +1045,9 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 
 	if (const Reflection::PropertyDescriptor* prop = FindProperty(PropName, &ref))
 	{
+		if (!prop->Set)
+			RAISE_RT("{} of {} is read-only!", PropName, GetFullName());
+
 		if (History* history = History::Get(); history->IsRecordingEnabled
 			&& (OwningDataModel == history->TargetDataModel || ObjectId == history->TargetDataModel)
 		)

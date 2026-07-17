@@ -351,10 +351,11 @@ local function openProject_(State: StateType, ManualPath: string?)
         local newWorkspace = GameObject.new("Workspace")
 
         newWorkspace.SceneCamera = GameObject.new("Camera")
-        newWorkspace.SceneCamera.Parent = State.Project.Workspace
+        newWorkspace.SceneCamera.Parent = newWorkspace
 
         newWorkspace.Name = "Workspace"
         newWorkspace.SceneCamera.Name = "Camera"
+        newWorkspace.Parent = State.Project.DataModel
 
         State.Project.Workspace = newWorkspace
         warn("Re-created Workspace")
@@ -522,6 +523,7 @@ local State: StateType = {
             warn("Failed to open project: " .. tostring(err))
 
             Engine:ShowMessageBox("Failed to open project", errorMessage, "ok", "error")
+            State.CurrentStage = "SelectProject"
         end, State, ManualPath)
 
         PlayerInput.Cursor = Enum.Cursor.Arrow

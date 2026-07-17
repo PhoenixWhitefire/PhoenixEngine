@@ -1340,7 +1340,7 @@ void Engine::Shutdown()
 	}
 
 	DataModelRef->Destroy();
-	WorkspaceRef->Destroy();
+	PrimaryDataModel.Clear();
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
 

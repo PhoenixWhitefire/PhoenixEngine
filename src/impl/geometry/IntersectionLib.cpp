@@ -182,13 +182,26 @@ static std::pair<std::vector<glm::vec4>, size_t> getFaceNormals(const std::vecto
 		glm::vec3 b = polytope[faces[i + 1]].P;
 		glm::vec3 c = polytope[faces[i + 2]].P;
 
-		glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
-		float distance = glm::dot(normal, a);
+		glm::vec3 crossProduct = glm::cross(b - a, c - a);
+		float crossLengthSquared = glm::dot(crossProduct, crossProduct);
+		glm::vec3 normal = {};
+		float distance = 0.f;
 
-		if (distance < 0)
+		if (crossLengthSquared < 1e-10f)
 		{
-			distance *= -1;
-			normal *= -1;
+			normal = glm::vec3(0.f, 1.f, 0.f);
+			distance = FLT_MAX;
+		}
+		else
+		{
+			normal = glm::normalize(crossProduct);
+			distance = glm::dot(normal, a);
+
+			if (distance < 0)
+			{
+				distance *= -1;
+				normal *= -1;
+			}
 		}
 
 		normals.emplace_back(normal, distance);
@@ -327,16 +340,26 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 
 	float denom = d00 * d11 - d01 * d01;
 
-	float v = (d11 * d20 - d01 * d21) / denom;
-	float w = (d00 * d21 - d01 * d20) / denom;
-	float u = 1.f - v - w;
+	IntersectionLib::CollisionPoints points = {};
 
-	glm::vec3 contactA = (u * a.A) + (v * b.A) + (w * c.A);
-	glm::vec3 contactB = (u * a.B) + (v * b.B) + (w * c.B);
+	if (std::abs(denom) < 1e-10f)
+	{
+		points.A = a.A;
+		points.B = a.B;
+	}
+	else
+	{
+		float v = (d11 * d20 - d01 * d21) / denom;
+		float w = (d00 * d21 - d01 * d20) / denom;
+		float u = 1.f - v - w;
 
-	IntersectionLib::CollisionPoints points;
-	points.A = contactA;
-	points.B = contactB;
+		glm::vec3 contactA = (u * a.A) + (v * b.A) + (w * c.A);
+		glm::vec3 contactB = (u * a.B) + (v * b.B) + (w * c.B);
+
+		points.A = contactA;
+		points.B = contactB;
+	}
+
 	points.Normal = minNormal;
 	points.PenetrationDepth = minDistance + 0.001f;
 	points.HasCollision = true;

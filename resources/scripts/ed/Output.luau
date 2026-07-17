@@ -21,6 +21,7 @@ type LogMessageItem = {
     CanInteract: boolean,
     Tooltip: string,
 }
+
 type LogMessage = {
     Closed: boolean,
     Message: { LogMessageItem },
@@ -277,15 +278,21 @@ function Output.Render()
                                             -- TODO luau cast
                                             DeveloperTools:SetExplorerSelections({ v :: any })
                                         end
+
+                                        if next(t, k) then
+                                            imgui.sameline()
+                                            imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+                                            imgui.text(",")
+                                        end
                                     else
-                                        local vts = tostring(v) .. ","
+                                        local vts = tostring(v)
                                         if type(v) == "string" then
-                                            vts = `"{ v }",`
+                                            vts = `"{ v }"`
                                         elseif type(v) ~= "number" and type(v) ~= "boolean" then
-                                            vts = `[{ v }],`
+                                            vts = `[{ v }]`
                                         end
 
-                                        imgui.text(vts)
+                                        imgui.text(vts .. if next(t, k) then "," else "")
                                     end
                                 end
                             end
