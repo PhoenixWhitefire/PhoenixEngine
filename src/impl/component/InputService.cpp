@@ -33,10 +33,14 @@ const Reflection::StaticPropertyMap& PlayerInputComponentManager::GetProperties(
             [](void*, const Reflection::GenericValue& gv)
             {
                 int newMode = (int)gv.AsInteger();
-                if (newMode == GLFW_CURSOR_DISABLED)
-                    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
-                else
-                    ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+
+                if (GImGui)
+                {
+                    if (newMode == GLFW_CURSOR_DISABLED)
+                        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+                    else
+                        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+                }
 
                 glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, newMode);
             }
@@ -47,7 +51,7 @@ const Reflection::StaticPropertyMap& PlayerInputComponentManager::GetProperties(
             Boolean,
             [](void*) -> Reflection::GenericValue
             {
-                return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureKeyboard || DeveloperTools::FocusedOnTextDocument };
+                return { UserInput::ShouldIgnoreUIInputSinking() ? false : (GImGui && ImGui::GetIO().WantCaptureKeyboard) || DeveloperTools::FocusedOnTextDocument };
             },
             nullptr
         ),
@@ -57,7 +61,7 @@ const Reflection::StaticPropertyMap& PlayerInputComponentManager::GetProperties(
             Boolean,
             [](void*) -> Reflection::GenericValue
             {
-                return { UserInput::ShouldIgnoreUIInputSinking() ? false : ImGui::GetIO().WantCaptureMouse };
+                return { UserInput::ShouldIgnoreUIInputSinking() ? false : (GImGui && ImGui::GetIO().WantCaptureMouse) };
             },
             nullptr
         ),

@@ -1627,7 +1627,7 @@ static void initRequireConfig(luarequire_Configuration* config)
         {
             std::filesystem::path* curpath = (std::filesystem::path*)ctx;
 
-            if (curpath->has_parent_path())
+            if (curpath->has_parent_path() && *curpath != curpath->root_path())
             {
                 *curpath = curpath->parent_path();
                 return NAVIGATE_SUCCESS;
@@ -1709,8 +1709,10 @@ static void initRequireConfig(luarequire_Configuration* config)
     config->get_cache_key = config->get_chunkname;
     config->get_config_status = [](lua_State*, void* ctx)
         {
-            bool hasConfigScript = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".config.luau");
-            bool hasLuauRc = std::filesystem::is_regular_file(*(std::filesystem::path*)ctx / ".luaurc");
+            const std::filesystem::path& curpath = *(std::filesystem::path*)ctx;
+
+            bool hasConfigScript = std::filesystem::is_regular_file(curpath / ".config.luau");
+            bool hasLuauRc = std::filesystem::is_regular_file(curpath / ".luaurc");
             
             if (hasConfigScript && hasLuauRc)
                 return CONFIG_AMBIGUOUS;

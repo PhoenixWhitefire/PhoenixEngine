@@ -106,7 +106,8 @@ local function createNewProject_(State: StateType)
         end
     end
 
-    State.Project.Name = name .. nameIndex
+    name = name .. nameIndex
+    State.Project.Name = name
     State.Project.IsTempPath = true
 
     local fullPath = `{ Preferences.ProjectsDirectory }/{ State.Project.Name }`
@@ -161,6 +162,7 @@ local function createNewProject_(State: StateType)
     local camera = GameObject.new("Camera")
     local dl = GameObject.new("DirectionalLight")
 
+    dm.Name = name
     projWp.Name = "Workspace"
     camera.Name = "Camera"
     dl.Name = "DirectionalLight"

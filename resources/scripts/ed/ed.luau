@@ -223,6 +223,10 @@ function State.ChangeStageTo(NewStage: Types.Stage)
     PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
     CoreTools.OnEditorStageChanged(NewStage)
     StageUpdateConnection = targetDm.OnFrameBegin:Connect(function(dt)
+        if Engine.IsHeadless then
+            return
+        end
+
         stageUpdate(State, dt)
     end)
 
@@ -288,13 +292,29 @@ if loadProjectIndex then
         if fs.isdirectory(checkPath) then
             State:OpenProject(name)
         else
-            Engine:ShowMessageBox(
-                "Project not found",
-                `'{ name }' passed through the '--project' launch argument was not found in your Projects directory.`
-                .. `\nTried path: '{ checkPath }'`,
-                "ok",
-                "error"
-            )
+            if not Engine.IsHeadless then
+                Engine:ShowMessageBox(
+                    "Project not found",
+                    `'{ name }' passed through the '--project' launch argument was not found in your Projects directory.`
+                    .. `\nTried path: '{ checkPath }'`,
+                    "ok",
+                    "error"
+                )
+            end
+
+            game:Close(1)
+            return
         end
+    end
+
+    if table.find(Engine:GetCliArguments(), "--playtest") then
+        State.ChangeStageTo("ProjectPlaying")
+    end
+end
+
+if Engine.IsHeadless then
+    if StageUpdateConnection then
+        StageUpdateConnection:Disconnect()
+        StageUpdateConnection = nil
     end
 end
