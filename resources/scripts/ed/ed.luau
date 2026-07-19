@@ -196,11 +196,17 @@ local function stageUpdate(State, DeltaTime)
 end
 
 local StageUpdateConnection: EventConnection?
+local IsSessionJustPlaytest = false
 
 function State.ChangeStageTo(NewStage: Types.Stage)
     assert(NewStage ~= "None" and NewStage ~= "Update")
     assert(State.CurrentStage ~= "Update")
     assert(Stages[NewStage], NewStage)
+
+    if IsSessionJustPlaytest and NewStage ~= "ProjectPlaying" then
+        game:Close()
+        return
+    end
 
     if StageUpdateConnection then
         StageUpdateConnection:Disconnect()
@@ -309,6 +315,7 @@ if loadProjectIndex then
 
     if table.find(Engine:GetCliArguments(), "--playtest") then
         State.ChangeStageTo("ProjectPlaying")
+        IsSessionJustPlaytest = true
     end
 end
 
