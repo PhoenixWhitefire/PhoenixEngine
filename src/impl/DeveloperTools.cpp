@@ -2116,12 +2116,27 @@ static void recursiveIterateTree(const ObjectHandle& current)
     }
 }
 
-static bool resetConflictedProperty(const char* /* PropName */, char* Buf = nullptr)
+static bool resetConflictedProperty(const char* /* PropName */, char* Buf = nullptr, bool IsBoolean = false)
 {
     char dbuf[2] = { 0 };
     Buf = Buf ? Buf : dbuf;
 
-    bool reset = ImGui::InputText("##", Buf, 2);
+    bool reset = false;
+
+    if (IsBoolean)
+    {
+        ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, true);
+
+        bool b = false;
+        reset = ImGui::Checkbox("##", &b);
+        
+        ImGui::PopItemFlag();
+    }
+    else
+    {
+        reset = ImGui::InputText("##", Buf, 2);
+    }
+
     ImGui::SetItemTooltip("Start typing here to reset this conflicting property to a default");
 
     return reset;
@@ -4246,7 +4261,7 @@ static void renderProperties()
             {
                 if (doConflict)
                 {
-                    if (resetConflictedProperty(propNameCStr))
+                    if (resetConflictedProperty(propNameCStr, nullptr, true))
                         newVal = false;
                 }
                 else
@@ -4391,30 +4406,30 @@ static void renderProperties()
 
             case Reflection::ValueType::Matrix:
             {
+                History* history = History::Get();
+
+                static uint32_t prevObject = PHX_GAMEOBJECT_NULL_ID;
+                static size_t curWaypoint = history->GetCurrentWaypoint();
+
                 if (!doConflict)
                 {
                     ImGui::SetCursorPos(cursorStart);
                     ImGui::NewLine(); // need to put this on a new line to prevent UI overlapping
 
+                    static glm::vec3 trans = {};
+                    static glm::quat rotquat = {};
+                    static glm::vec3 scale = {};
+
                     glm::mat4 mat = curVal.AsMatrix();
-                    glm::vec3 scale = {};
-                    DecomposeTRS(mat, nullptr, nullptr, &scale);
 
-                    float pos[3] = {
-                        mat[3][0],
-                        mat[3][1],
-                        mat[3][2]
-                    };
+                    if (Selections[0]->ObjectId != prevObject || history->GetCurrentWaypoint() != curWaypoint)
+                    {
+                        DecomposeTRS(mat, &trans, &rotquat, &scale);
+                        prevObject = Selections[0]->ObjectId;
+                        curWaypoint = history->GetCurrentWaypoint();
+                    }
 
-                    // PLEASE GOD JUST WORK ALREADY
-                    // 21/09/2024
-                    glm::vec3 rotrads;
-
-                    glm::extractEulerAngleYXZ(mat, rotrads.y, rotrads.x, rotrads.z);
-
-                    //mat = glm::rotate(mat, -rotrads[0], glm::vec3(1.f, 0.f, 0.f));
-                    //mat = glm::rotate(mat, -rotrads[1], glm::vec3(0.f, 1.f, 0.f));
-                    //mat = glm::rotate(mat, -rotrads[2], glm::vec3(0.f, 0.f, 1.f));
+                    glm::vec3 rotrads = glm::eulerAngles(rotquat);
 
                     float rotdegs[3] = {
                         glm::degrees(rotrads.x),
@@ -4422,32 +4437,45 @@ static void renderProperties()
                         glm::degrees(rotrads.z)
                     };
 
-                    if (!isfinite(pos[0]) || !isfinite(pos[1]) || !isfinite(pos[2])
-                        || !isfinite(rotdegs[0]) || !isfinite(rotdegs[1]) || !isfinite(rotdegs[2])
-                    )
-                    {
-                        newVal = glm::mat4(1.f);
-                        valueWasEditedManual = true;
-                        break;
-                    }
-
                     ImGui::Indent();
 
-                    ImGui::InputFloat3("Position", pos);
+                    ImGui::TextUnformatted("Translation");
+                    ImGui::SameLine();
+                    ImGui::SetCursorPosX(halfWidth);
+                    ImGui::SetNextItemWidth(halfWidth);
+
+                    ImGui::InputFloat3("##T", glm::value_ptr(trans));
                     valueWasEditedManual |= ImGui::IsItemEdited();
                     deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
 
-                    ImGui::InputFloat3("Rotation", rotdegs);
+                    ImGui::TextUnformatted("Rotation");
+                    ImGui::SameLine();
+                    ImGui::SetCursorPosX(halfWidth);
+                    ImGui::SetNextItemWidth(halfWidth);
+
+                    ImGui::InputFloat3("##R", rotdegs);
+                    valueWasEditedManual |= ImGui::IsItemEdited();
+                    deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
+
+                    ImGui::TextUnformatted("Scale");
+                    ImGui::SameLine();
+                    ImGui::SetCursorPosX(halfWidth);
+                    ImGui::SetNextItemWidth(halfWidth);
+
+                    ImGui::InputFloat3("##S", glm::value_ptr(scale));
                     ImGui::Unindent();
 
-                    glm::mat4 rotMtx = glm::eulerAngleYXZ(glm::radians(rotdegs[1]), glm::radians(rotdegs[0]), glm::radians(rotdegs[2]));
-                    mat = glm::translate(glm::mat4(1.f), glm::make_vec3(pos)) * rotMtx * glm::scale(glm::mat4(1.f), scale);
+                    rotquat = glm::quat(glm::vec3(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2])));
+
+                    mat = glm::translate(glm::mat4(1.f), glm::make_vec3(trans)) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale);
 
                     newVal = mat;
                 }
                 else
+                {
                     if (resetConflictedProperty(propNameCStr))
                         newVal = glm::mat4(1.f);
+                }
 
                 break;
             }

@@ -2008,20 +2008,26 @@
   "@phoenix/globaltype/Matrix.Lerp": {
     "documentation": "* Linearly interpolates to the given Matrix\n"
   },
-  "@phoenix/globaltype/Matrix.Position": {
-    "documentation": "* The position of the Matrix in world-space\n"
-  },
   "@phoenix/globaltype/Matrix.Right": {
     "documentation": "* The Right basis vector of the Matrix\n"
   },
   "@phoenix/globaltype/Matrix.Scale": {
     "documentation": "* The current scale of the Matrix\n"
   },
-  "@phoenix/globaltype/Matrix.ScaleBy": {
-    "documentation": "* Scales the matrix by the given vector\n"
+  "@phoenix/globaltype/Matrix.Translation": {
+    "documentation": "* The translation of the Matrix\n"
   },
   "@phoenix/globaltype/Matrix.Up": {
     "documentation": "* The Up basis vector of the Matrix\n"
+  },
+  "@phoenix/globaltype/Matrix.WithRotation": {
+    "documentation": "* Constructs a new Matrix with the current Matrix's Translation and Scale, and with the provided Rotation\n"
+  },
+  "@phoenix/globaltype/Matrix.WithScale": {
+    "documentation": "* Constructs a new Matrix with the current Matrix's Translation and Rotation, and with the provided Scale\n"
+  },
+  "@phoenix/globaltype/Matrix.WithTranslation": {
+    "documentation": "* Constructs a new Matrix with the current Matrix's Rotation and Scale, and with the provided Translation\n"
   },
   "@phoenix/globaltype/Matrix.__add": {
     "documentation": "* Add a `vector` to a Matrix to directly offset its position by world space\n"

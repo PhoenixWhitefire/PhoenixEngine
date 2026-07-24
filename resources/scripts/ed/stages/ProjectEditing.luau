@@ -132,7 +132,7 @@ function ProjectEditing.Render(DeltaTime: number)
             continue
         end
 
-        local transparency = math.clamp(0.5 / vector.magnitude(vis.Transform.Position - workspace.SceneCamera.Transform.Position)^4, 0, 1)
+        local transparency = math.clamp(0.5 / vector.magnitude(vis.Transform.Translation - workspace.SceneCamera.Transform.Translation)^4, 0, 1)
 
         for _, g in vis:GetChildren() do
             if g:HasComponent("Mesh") then

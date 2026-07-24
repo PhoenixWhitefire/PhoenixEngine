@@ -1031,9 +1031,20 @@
             "In": "Target: Matrix, Delta: number",
             "Out": "Matrix"
           },
-          ":ScaleBy": {
-            "Description": "Scales the matrix by the given vector",
-            "In": "Scale: vector"
+          ":WithRotation": {
+            "Description": "Constructs a new Matrix with the current Matrix's Translation and Scale, and with the provided Rotation",
+            "In": "Rotation: vector",
+            "Out": "Matrix"
+          },
+          ":WithScale": {
+            "Description": "Constructs a new Matrix with the current Matrix's Translation and Rotation, and with the provided Scale",
+            "In": "Scale: vector",
+            "Out": "Matrix"
+          },
+          ":WithTranslation": {
+            "Description": "Constructs a new Matrix with the current Matrix's Rotation and Scale, and with the provided Translation",
+            "In": "Translation: vector",
+            "Out": "Matrix"
           },
           ":__add": {
             "Description": "Add a `vector` to a Matrix to directly offset its position by world space",
@@ -1117,16 +1128,16 @@
             "Description": "The Forward basis vector of the Matrix",
             "Type": "vector"
           },
-          "Position": {
-            "Description": "The position of the Matrix in world-space",
-            "Type": "vector"
-          },
           "Right": {
             "Description": "The Right basis vector of the Matrix",
             "Type": "vector"
           },
           "Scale": {
             "Description": "The current scale of the Matrix",
+            "Type": "vector"
+          },
+          "Translation": {
+            "Description": "The translation of the Matrix",
             "Type": "vector"
           },
           "Up": {

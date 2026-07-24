@@ -16,7 +16,7 @@ type SavedEditorCamera = {
 }
 
 function EditorCameraTransform.Save(EditorCam: EcCamera & EcTransform)
-    local position = EditorCam.Transform.Position
+    local position = EditorCam.Transform.Translation
     local rotation = EditorCam.Transform:ExtractAngles()
 
     local savedCamTrans: SavedEditorCamera = {

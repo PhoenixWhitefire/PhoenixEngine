@@ -238,7 +238,9 @@ declare extern type Matrix with
   function ExtractAngles(self): ( vector )
   function Inverse(self): ( Matrix )
   function Lerp(self, Target: Matrix, Delta: number): ( Matrix )
-  function ScaleBy(self, Scale: vector): (  )
+  function WithRotation(self, Rotation: vector): ( Matrix )
+  function WithScale(self, Scale: vector): ( Matrix )
+  function WithTranslation(self, Translation: vector): ( Matrix )
   function __add(self, Param_1: vector): ( Matrix )
   __mul: ((self: Matrix, b: Matrix) -> Matrix) & ((self: Matrix, v: vector) -> vector)
   function __sub(self, Param_1: vector): ( Matrix )
@@ -259,9 +261,9 @@ declare extern type Matrix with
   C4R3: number
   C4R4: number
   Forward: vector
-  Position: vector
   Right: vector
   Scale: vector
+  Translation: vector
   Up: vector
 end
 

@@ -117,7 +117,7 @@ static int mtx_index(lua_State* L)
 	size_t klen = 0;
 	const char* k = luaL_checklstring(L, 2, &klen);
 
-	if (strcmp(k, "Position") == 0)
+	if (strcmp(k, "Translation") == 0)
 		luhx_pushvector3(L, glm::vec3(m[3]));
 
 	else if (strcmp(k, "Scale") == 0)
@@ -185,7 +185,47 @@ static int mtx_index(lua_State* L)
 		);
 	}
 
-	else if (strcmp(k, "ScaleBy") == 0)
+	else if (strcmp(k, "WithTranslation") == 0)
+	{
+		lua_pushcfunction(
+			L,
+			[](lua_State* L) -> int
+			{
+				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+				glm::vec3 trans = checkVectorArg(L, 2);
+
+				glm::vec3 scale = {};
+				glm::quat rotquat = {};
+				DecomposeTRS(a, nullptr, &rotquat, &scale);
+
+				luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale));
+				return 1;
+			},
+			"Matrix.WithTranslation"
+		);
+	}
+
+	else if (strcmp(k, "WithRotation") == 0)
+	{
+		lua_pushcfunction(
+			L,
+			[](lua_State* L) -> int
+			{
+				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+				glm::vec3 rot = checkVectorArg(L, 2);
+
+				glm::vec3 trans = {};
+				glm::vec3 scale = {};
+				DecomposeTRS(a, &trans, nullptr, &scale);
+
+				luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::eulerAngleYXZ(rot.y, rot.x, rot.z) * glm::scale(glm::mat4(1.f), scale));
+				return 1;
+			},
+			"Matrix.WithRotation"
+		);
+	}
+
+	else if (strcmp(k, "WithScale") == 0)
 	{
 		lua_pushcfunction(
 			L,
@@ -194,10 +234,14 @@ static int mtx_index(lua_State* L)
 				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 				glm::vec3 scale = checkVectorArg(L, 2);
 
-				luhx_pushmatrix(L, glm::scale(a, scale));
+				glm::vec3 trans = {};
+				glm::quat rotquat = {};
+				DecomposeTRS(a, &trans, nullptr, &scale);
+
+				luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale));
 				return 1;
 			},
-			"Matrix.ScaleBy"
+			"Matrix.WithScale"
 		);
 	}
 

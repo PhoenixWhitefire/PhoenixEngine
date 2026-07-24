@@ -130,7 +130,7 @@ local GizmoDragStartSize = vector.one
 local GizmoDragPlaneNormal = nil
 local BeganSurfaceDragAction: number? = nil
 local BeganGizmoDragAction: number? = nil
-local PrevCamPos = workspace.SceneCamera.Transform.Position
+local PrevCamPos = workspace.SceneCamera.Transform.Translation
 
 local function roundTo(n: number, x: number): number
     return math.round(n / x) * x
@@ -196,7 +196,7 @@ local function keepGizmoInView(target: GameObject & EcTransform, ViewportRenderP
     local dx, dy = 0, 0
 
     for _, v in GizmoPieceToDirection do
-        local tdx, tdy = findDxDyToKeepOnScreen(v / 2 + target.Transform.Position, ViewportRenderPosition, ViewportRenderSize)
+        local tdx, tdy = findDxDyToKeepOnScreen(v / 2 + target.Transform.Translation, ViewportRenderPosition, ViewportRenderSize)
 
         if math.abs(tdx) > math.abs(dx) then
             dx = tdx
@@ -210,7 +210,7 @@ local function keepGizmoInView(target: GameObject & EcTransform, ViewportRenderP
     cam.Transform *= Matrix.rotated(0, 0, -cam.Transform:ExtractAngles().z)
 
     if dx ~= 0 or dy ~= 0 then
-        GizmoDragStartObjectPosition = target.Transform.Position
+        GizmoDragStartObjectPosition = target.Transform.Translation
     end
 
     -- local axisLocal = assert(GizmoPieceToDirection[GizmoDragHandle])
@@ -237,7 +237,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     local tryingToInteract = not PlayerInput.IsMouseSunk and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 
     local cam = workspace.SceneCamera
-    local camPos = cam.Transform.Position
+    local camPos = cam.Transform.Translation
     local cpos = PlayerInput:GetCursorPosition()
 
     local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
@@ -246,7 +246,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
                         then workspace:Raycast(camPos, mouseVector, { CoreTools.VisualizationsContainer }, false)
                         else nil
     local camObj = if cameraHit then assert(cameraHit.Object.Parent) :: GameObject & EcTransform else nil
-    local camHitDistance = if cameraHit then vector.magnitude(cameraHit.Position - cam.Transform.Position) else math.huge
+    local camHitDistance = if cameraHit then vector.magnitude(cameraHit.Position - cam.Transform.Translation) else math.huge
 
     if camObj then
         if camObj.Enabled then
@@ -257,7 +257,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     if cameraHit and CoreTools.HoveringOverCamera ~= camObj and camObj then
-        local hidden = vector.magnitude(workspace.SceneCamera.Transform.Position - camObj.Transform.Position) < 0.5
+        local hidden = vector.magnitude(workspace.SceneCamera.Transform.Translation - camObj.Transform.Translation) < 0.5
 
         for _, g in camObj:GetChildren() do
             if g:HasComponent("Mesh") then
@@ -304,9 +304,9 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     if PlayerInput:IsKeyPressed(Enum.Key.F) and not PlayerInput.IsKeyboardSunk then
-        local pos = target.Transform.Position - (cam.Transform.Forward * math.max(target.Size.x, target.Size.y, target.Size.z) * 1.5)
+        local pos = target.Transform.Translation - (cam.Transform.Forward * math.max(target.Size.x, target.Size.y, target.Size.z) * 1.5)
         -- TODO fix 180* flip
-        cam.Transform = Matrix.lookAt(pos, target.Transform.Position) * Matrix.rotated(0, math.pi, 0)
+        cam.Transform = Matrix.lookAt(pos, target.Transform.Translation) * Matrix.rotated(0, math.pi, 0)
     end
 
     local gizmoHit = if tryingToInteract
@@ -316,7 +316,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     if tryingToInteract and not IsGizmoDragging and not gizmoHit then
         local worldHit = Project.Workspace:Raycast(camPos, mouseVector, if IsSurfaceDragging then { target } else {})
 
-        if worldHit and (not camObj or vector.magnitude(worldHit.Position - cam.Transform.Position) < camHitDistance) and (IsSurfaceDragging or worldHit.Object == target) then
+        if worldHit and (not camObj or vector.magnitude(worldHit.Position - cam.Transform.Translation) < camHitDistance) and (IsSurfaceDragging or worldHit.Object == target) then
             assert(worldHit)
 
             if not IsSurfaceDragging then
@@ -353,11 +353,11 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
         return
     end
 
-    if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize or cam.Transform.Position ~= PrevCamPos then
-        local scale = vector.one * vector.magnitude(cam.Transform.Position - target.Transform.Position) * math.rad(cam.FieldOfView) / 20
-        local gtrans = Matrix.translated(target.Transform.Position) * Matrix.rotated(target.Transform:ExtractAngles()) * Matrix.scaled(scale)
+    if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize or cam.Transform.Translation ~= PrevCamPos then
+        local scale = vector.one * vector.magnitude(cam.Transform.Translation - target.Transform.Translation) * math.rad(cam.FieldOfView) / 20
+        local gtrans = Matrix.translated(target.Transform.Translation) * Matrix.rotated(target.Transform:ExtractAngles()) * Matrix.scaled(scale)
         GizmoContainer.Transform = gtrans
-        PrevCamPos = cam.Transform.Position
+        PrevCamPos = cam.Transform.Translation
     end
 
     GizmoPrevTarget = target
@@ -365,7 +365,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     GizmoPrevTargetSize = target.Size
 
     if tryingToInteract then
-        if not IsGizmoDragging and gizmoHit and vector.magnitude(gizmoHit.Position - cam.Transform.Position) < camHitDistance then
+        if not IsGizmoDragging and gizmoHit and vector.magnitude(gizmoHit.Position - cam.Transform.Translation) < camHitDistance then
             local hit = gizmoHit.Object
 
             PrevDragMousePos = cpos
