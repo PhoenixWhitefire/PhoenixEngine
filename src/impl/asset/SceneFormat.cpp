@@ -573,8 +573,16 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 			if (Version < 2.14f && propName == "LocalSize" && item.find("LocalTransform") != item.end())
 				continue; // handle in `LocalTransform` branch
 
-			const nlohmann::json& memberValue = propIt.value();
+			if (propName == "LocalSize")
+			{
+				EcTransform* ct = newObject->FindComponent<EcTransform>();
+				assert(ct);
 
+				ct->SetLocalSize(getVector3FromJson(propIt.value()));
+				continue;
+			}
+
+			const nlohmann::json& memberValue = propIt.value();
 			const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
 
 			if (!prop)
@@ -636,17 +644,13 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 
 				if (size != glm::vec3(1.f, 1.f, 1.f))
 				{
-					try
-					{
-						newObject->SetPropertyValue(isLocal ? "LocalSize" : "Size", size);
-					}
-					catch (const std::runtime_error& err)
-					{
-						SF_WARN(
-							"Failed to migrate {} of '{}' to ({}, {}, {}): {}",
-							isLocal ? "LocalSize" : "Size", name, size.x, size.y, size.z, err.what()
-						);
-					}
+					EcTransform* ct = newObject->FindComponent<EcTransform>();
+					assert(ct);
+
+					if (isLocal)
+						ct->SetLocalSize(size);
+					else
+						ct->SetWorldSize(size);
 				}
             }
 		}

@@ -358,9 +358,7 @@
           "OnScriptMoved": "(Matrix, Matrix)"
         },
         "Properties": {
-          "LocalSize": "Vector3 RUNTIMEONLY",
           "LocalTransform": "Matrix",
-          "Size": "Vector3 RUNTIMEONLY",
           "Transform": "Matrix RUNTIMEONLY"
         }
       },

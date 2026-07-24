@@ -82,28 +82,6 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             .ParallelReadSafe = false, // Physics
         } },
 
-        { "LocalSize", Reflection::PropertyDescriptor{
-            .Name = "LocalSize",
-            .Get = [](void* p) -> Reflection::GenericValue
-            {
-                const EcTransform* ct = static_cast<EcTransform*>(p);
-
-                glm::vec3 scale = {};
-                DecomposeTRS(ct->LocalTransform, nullptr, nullptr, &scale);
-
-                return scale;
-            },
-            .Set = [](void* p, const Reflection::GenericValue& gv)
-            {
-                ZoneScoped;
-
-                EcTransform* ct = static_cast<EcTransform*>(p);
-                ct->SetLocalSize(gv.AsVector3());
-            },
-            .Type = Reflection::ValueType::Vector3,
-            .Serializes = false,
-        } },
-
         { "Transform", Reflection::PropertyDescriptor{
             .Name = "Transform",
             .Get = REFLECTION_PROPERTY_GET_SIMPLE(EcTransform, Transform),
@@ -121,28 +99,6 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
             .Serializes = false,
             .ParallelReadSafe = false, // Physics
         } },
-
-        { "Size", Reflection::PropertyDescriptor{
-            .Name = "Size",
-            .Get = (Reflection::PropertyGetter)[](void* p)->Reflection::GenericValue
-            {
-                const EcTransform* ct = static_cast<EcTransform*>(p);
-
-                glm::vec3 scale = {};
-                DecomposeTRS(ct->Transform, nullptr, nullptr, &scale);
-
-                return scale;
-            },
-            .Set = (Reflection::PropertySetter)[](void* p, const Reflection::GenericValue& gv)
-            {
-                ZoneScoped;
-
-                EcTransform* ct = static_cast<EcTransform*>(p);
-                ct->SetWorldSize(gv.AsVector3());
-            },
-            .Type = Reflection::ValueType::Vector3,
-            .Serializes = false,
-        } }
     };
 
     return props;

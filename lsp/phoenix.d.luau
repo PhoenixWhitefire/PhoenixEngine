@@ -226,9 +226,9 @@ end
 
 
 declare GameObject: {
-  fromComponents: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>),
+  fromComponents: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>) & () -> GameObject,
   fromId: (( Id: number ) -> (GameObject?)),
-  new: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
+  new: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>) & () -> GameObject,
   validComponents: { string }
 }
 declare extern type InputEvent with
@@ -613,9 +613,7 @@ export type EcSpotLight = {
 }
 
 export type EcTransform = {
-  LocalSize: vector,
   LocalTransform: Matrix,
-  Size: vector,
   Transform: Matrix,
 
   OnScriptMoved: EventSignal<(Matrix, Matrix)>,

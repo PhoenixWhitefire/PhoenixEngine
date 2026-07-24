@@ -7,7 +7,6 @@ local AssetManager = game:GetService("AssetManager")
 local Collections = game:GetService("Collections")
 local Physics = game:GetService("Physics")
 local History = game:GetService("History")
-local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
 local EditorCameraTransform = require("@ed/EditorCameraTransform")

@@ -21,7 +21,6 @@ local GizmoMoveIncrement = 0.5
 local GizmoContainer = GameObject.new("Model")
 local GizmoPrevTarget: (GameObject & EcTransform)? = nil
 local GizmoPrevTargetTransform = Matrix.identity
-local GizmoPrevTargetSize = vector.zero
 local GizmoPieceToDirection: { [GameObject]: vector } = {}
 local ShadowMeshes = {}
 
@@ -140,7 +139,6 @@ local function resetGizmo()
     GizmoContainer.Parent = nil
     GizmoPrevTarget = nil
     GizmoPrevTargetTransform = Matrix.identity
-    GizmoPrevTargetSize = vector.zero
     PrevDragMousePos = nil
     GizmoDragStartWorldPoint = nil
     GizmoDragStartObjectPosition = nil
@@ -304,7 +302,8 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     if PlayerInput:IsKeyPressed(Enum.Key.F) and not PlayerInput.IsKeyboardSunk then
-        local pos = target.Transform.Translation - (cam.Transform.Forward * math.max(target.Size.x, target.Size.y, target.Size.z) * 1.5)
+        local size = target.Transform.Scale
+        local pos = target.Transform.Translation - (cam.Transform.Forward * math.max(size.x, size.y, size.z) * 1.5)
         -- TODO fix 180* flip
         cam.Transform = Matrix.lookAt(pos, target.Transform.Translation) * Matrix.rotated(0, math.pi, 0)
     end
@@ -328,7 +327,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
                     BeganSurfaceDragAction = History:TryBeginAction("SurfaceDrag")
                 end
 
-                target.Transform = Matrix.translated(worldHit.Position + worldHit.Normal * target.Size / 2)
+                target.Transform = Matrix.translated(worldHit.Position + worldHit.Normal * target.Transform.Scale / 2)
             end
 
             IsSurfaceDragging = true
@@ -353,7 +352,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
         return
     end
 
-    if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or target.Size ~= GizmoPrevTargetSize or cam.Transform.Translation ~= PrevCamPos then
+    if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or cam.Transform.Translation ~= PrevCamPos then
         local scale = vector.one * vector.magnitude(cam.Transform.Translation - target.Transform.Translation) * math.rad(cam.FieldOfView) / 20
         local gtrans = Matrix.translated(target.Transform.Translation) * Matrix.rotated(target.Transform:ExtractAngles()) * Matrix.scaled(scale)
         GizmoContainer.Transform = gtrans
@@ -362,31 +361,32 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
 
     GizmoPrevTarget = target
     GizmoPrevTargetTransform = target.Transform
-    GizmoPrevTargetSize = target.Size
 
     if tryingToInteract then
         if not IsGizmoDragging and gizmoHit and vector.magnitude(gizmoHit.Position - cam.Transform.Translation) < camHitDistance then
             local hit = gizmoHit.Object
+            -- TODO luau if we leave this unannotated, even though the hover hint says `Matrix`,
+            -- indexing it will result in `never`
+            local targetTrans: Matrix = target.Transform
 
             PrevDragMousePos = cpos
 
             local axisLocal = assert(GizmoPieceToDirection[hit])
-            -- TODO luau manual annotation is luau bug (inferring `never`)
-            local rotOnly: vector = target.Transform - target.Transform.Position
+            local rotOnly = targetTrans - targetTrans.Translation
             local axisWorld = vector.normalize(rotOnly * axisLocal)
 
             GizmoDragAxis = assert(GizmoPieceToDirection[hit])
             GizmoDragHandle = assert(hit.Parent):AsComponent("Model") :: GizmoDragHandle
             assert(GizmoDragHandle)
 
-            GizmoDragStartTransform = target.Transform
-            GizmoDragStartObjectPosition = target.Transform.Position
-            GizmoDragStartSize = target.Size
+            GizmoDragStartTransform = targetTrans
+            GizmoDragStartObjectPosition = targetTrans.Translation
+            GizmoDragStartSize = targetTrans.Scale
 
             local camForward = cam.Transform.Forward
             GizmoDragPlaneNormal = vector.normalize(vector.cross(axisWorld, camForward))
 
-            GizmoDragStartWorldPoint = rayPlaneIntersect(camPos, mouseVector, target.Transform.Position, GizmoDragPlaneNormal)
+            GizmoDragStartWorldPoint = rayPlaneIntersect(camPos, mouseVector, targetTrans.Translation, GizmoDragPlaneNormal)
 
             for _, d in (if GizmoMode == 1 then MoveGizmo else ScaleGizmo):GetDescendants() do
                 local mesh = d:AsComponent("Mesh")
@@ -452,7 +452,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
                     target.Transform = GizmoDragStartTransform * Matrix.translated(move * 0.5)
                 end
 
-                target.Size = newSize
+                target.Transform = target.Transform:WithScale(newSize)
             end
         end
 

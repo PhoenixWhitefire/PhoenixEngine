@@ -932,7 +932,7 @@
         "Library": {
           "fromComponents": {
             "Description": "Creates an Object with only the specified Components",
-            "In": "Components: { string }",
+            "In": "Components: { string }?",
             "Out": "GameObject"
           },
           "fromId": {
@@ -942,7 +942,7 @@
           },
           "new": {
             "Description": "Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)",
-            "In": "MainComponent: string",
+            "In": "MainComponent: string?",
             "Out": "GameObject"
           },
           "validComponents": {

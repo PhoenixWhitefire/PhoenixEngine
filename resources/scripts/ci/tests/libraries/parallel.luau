@@ -8,7 +8,7 @@ local workerId = (...)
 
 if typeof(workerId) == "number" then
     local sharedBuffer = parallel.sharedbuffer("BufferBar", NWORKERS + 4)
-    local int = parallel.atomicinteger(0)
+    local int = parallel.atomicinteger("hi", 0)
 
     local mutex = parallel.mutex("MutexFoo")
 
@@ -37,7 +37,7 @@ local function parallelTests(test: Types.Test, expect: Types.Expect)
         end
 
         local sharedBuffer = parallel.sharedbuffer("BufferBar", NWORKERS + 4)
-        local int = parallel.atomicinteger(0)
+        local int = parallel.atomicinteger("hi", 0)
 
         int:Set(NWORKERS)
 

@@ -261,8 +261,8 @@ local documentationData = {}
 
 local GameObjectOverrides = {
     -- TODO luau should really be `read T & keyof<Components>` but that's resulting in `never` (?)
-    fromComponents = "(<T>(Components: { read T | \"\" }) -> GameObject & IntersectComponents<T>)",
-    new = "(<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>)",
+    fromComponents = "(<T>(Components: { read T | \"\" }) -> GameObject & IntersectComponents<T>) & () -> GameObject",
+    new = "(<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>) & () -> GameObject",
     --FindChildWithComponent = "<T>(self, ComponentName: keyof<Components> & T) -> (GameObject & index<Components, T>)?",
 }
 

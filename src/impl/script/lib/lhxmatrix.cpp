@@ -192,7 +192,7 @@ static int mtx_index(lua_State* L)
 			[](lua_State* L) -> int
 			{
 				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				glm::vec3 trans = checkVectorArg(L, 2);
+				const glm::vec3 trans = checkVectorArg(L, 2);
 
 				glm::vec3 scale = {};
 				glm::quat rotquat = {};
@@ -212,7 +212,7 @@ static int mtx_index(lua_State* L)
 			[](lua_State* L) -> int
 			{
 				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				glm::vec3 rot = checkVectorArg(L, 2);
+				const glm::vec3 rot = checkVectorArg(L, 2);
 
 				glm::vec3 trans = {};
 				glm::vec3 scale = {};
@@ -232,11 +232,11 @@ static int mtx_index(lua_State* L)
 			[](lua_State* L) -> int
 			{
 				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				glm::vec3 scale = checkVectorArg(L, 2);
+				const glm::vec3 scale = checkVectorArg(L, 2);
 
 				glm::vec3 trans = {};
 				glm::quat rotquat = {};
-				DecomposeTRS(a, &trans, nullptr, &scale);
+				DecomposeTRS(a, &trans, &rotquat, nullptr);
 
 				luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale));
 				return 1;

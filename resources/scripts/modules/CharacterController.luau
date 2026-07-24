@@ -60,7 +60,7 @@ function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 7.5
 
 	local character = GameObject.new("Mesh")
-	character.Size = vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3)
+	character.Transform = Matrix.scaled(vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3))
 	character.PhysicsDynamics = true
 	character.PhysicsRotations = false
 	character.Restitution = 0
@@ -81,10 +81,10 @@ function Controller.Update(self: Controller, DeltaTime: number)
 	local moveDirection = self:getMoveDirection()
 	local rotationX, rotationY = self:getRotationVector()
 
-	local charSize = self.Character.Size
+	local charSize = self.Character.Transform.Scale
 
 	local floorRayHit = #workspace:GetObjectsInAabb(
-		self.Character.Transform.Position - vector.create(0, charSize.y / 4, 0),
+		self.Character.Transform.Translation - vector.create(0, charSize.y / 4, 0),
 		vector.create(charSize.x * 1.2, charSize.y / 1.8, charSize.z * 1.2),
 		{ self.Character }
 	) > 0

@@ -334,7 +334,7 @@ local function homeTab(_: number)
                 importedOrError.Parent = State.Project.Workspace
                 DeveloperTools:SetExplorerSelections({ importedOrError })
 
-                local hit = State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, workspace.SceneCamera.Transform.Forward * 50)
+                local hit = State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Translation, workspace.SceneCamera.Transform.Forward * 50)
 
                 if hit then
                     importedOrError.Transform = Matrix.translated(hit.Position)
@@ -1185,12 +1185,11 @@ function CommonUI.RenderViewport(DeltaTime: number)
     if State.CurrentStage == "ProjectEditing" and State.Project.Workspace then
         local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
         local rayresult = if not PlayerInput.IsMouseSunk
-                            then State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Position, mouseVec, { SelectionPart })
+                            then State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Translation, mouseVec, { SelectionPart })
                             else nil
 
         if rayresult then
-            SelectionPart.Transform = rayresult.Object.Transform
-            SelectionPart.Size = rayresult.Object.Size + vector.create(0.05, 0.05, 0.05)
+            SelectionPart.Transform = rayresult.Object.Transform:WithScale(rayresult.Object.Transform.Scale + vector.one * 0.05)
             SelectionPart.Parent = workspace
 
             if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
@@ -1230,13 +1229,13 @@ function CommonUI.RenderViewport(DeltaTime: number)
             local new = SelectionPart:Duplicate()
             -- TODO luau report bug cast
             new = (new :: any)
-            new.Transform, new.Size = sel.Transform, sel.Size + vector.create(0.1, 0.1, 0.1)
+            new.Transform = sel.Transform:WithScale(sel.Transform.Scale + vector.one * 0.1)
             new.Tint = Color.new(84/255, 150/255, 1)
             new.Parent = workspace
             PrevSelections[sel.ObjectId] = new
         else
             local box = PrevSelections[sel.ObjectId]
-            box.Transform, box.Size = sel.Transform, sel.Size
+            box.Transform = sel.Transform
         end
     end
 
