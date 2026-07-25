@@ -315,7 +315,6 @@ void EcSound::Update(double)
 				"Failed to seek to position {} (in seconds) for sound '{}': {} (code {})",
 				NextRequestedPosition, Object->GetFullName(), ma_result_description(result), (int)result
 			);
-		Log.Info("Seeked");
 		NextRequestedPosition = -1.f;
 	}
 
