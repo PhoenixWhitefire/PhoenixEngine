@@ -298,7 +298,9 @@ if loadProjectIndex then
         if fs.isdirectory(checkPath) then
             State:OpenProject(name)
         else
-            if not Engine.IsHeadless then
+            if Engine.IsHeadless then
+                game:Close(1)
+            else
                 Engine:ShowMessageBox(
                     "Project not found",
                     `'{ name }' passed through the '--project' launch argument was not found in your Projects directory.`
@@ -308,7 +310,6 @@ if loadProjectIndex then
                 )
             end
 
-            game:Close(1)
             return
         end
     end

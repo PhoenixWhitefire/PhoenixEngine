@@ -1321,6 +1321,8 @@ void Engine::Shutdown()
 	ZoneScoped;
 	Log.Info("Engine destructing...");
 
+	HistoryInstance.IsRecordingEnabled = false;
+
 	Log.Info("Destroying DataModel...");
 	ComponentManagers.DataModel.NotifyAllOfShutdown();
 	ScriptEngine::StepVMs(); // step event callbacks

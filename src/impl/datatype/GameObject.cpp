@@ -295,7 +295,8 @@ static ObjectHandle cloneRecursive(
 	std::unordered_map<ObjectHandle, ObjectHandle, HandleHasher> OriginalToCloneMap = {}
 )
 {
-	ObjectHandle newObj = GameObjectManager::Get()->Create();
+	GameObjectManager* objectManager = GameObjectManager::Get();
+	ObjectHandle newObj = objectManager->Create();
 
 	for (const ReflectorRef& ref : Root->Components)
 		newObj->AddComponent(ref.Type);
@@ -314,7 +315,7 @@ static ObjectHandle cloneRecursive(
 		overwritesIt->second.clear();
 	}
 
-	std::vector<ObjectHandle> rootDescs = Root->GetDescendants();
+	const std::vector<ObjectHandle> rootDescs = Root->GetDescendants();
 
 	for (auto& it : Root->GetProperties())
 	{
@@ -327,7 +328,7 @@ static ObjectHandle cloneRecursive(
 
 		if (rootVal.Type == Reflection::ValueType::GameObject)
 		{
-			ObjectHandle ref = GameObjectManager::Get()->FromGenericValue(rootVal);
+			ObjectHandle ref = objectManager->FromGenericValue(rootVal);
 			if (!ref.HasValue())
 				continue;
 
@@ -335,13 +336,16 @@ static ObjectHandle cloneRecursive(
 
 			if (otcit != OriginalToCloneMap.end())
 				newObj->SetPropertyValue(it.first, otcit->second->ToGenericValue());
-
 			else
-				if (ref && std::find(rootDescs.begin(), rootDescs.end(), ref) != rootDescs.end())
+			{
+				if (std::find(rootDescs.begin(), rootDescs.end(), ref) != rootDescs.end())
 					OverwritesMap[ref].push_back(std::pair(newObj, it.first));
-		}
 
-		newObj->SetPropertyValue(it.first, rootVal);
+				newObj->SetPropertyValue(it.first, rootVal);
+			}
+		}
+		else
+			newObj->SetPropertyValue(it.first, rootVal);
 	}
 
 	for (const ObjectHandle& ch : Root->GetChildren())
@@ -438,16 +442,19 @@ void GameObject::Destroy()
 		}
 		Tags.clear();
 
+		for (const ReflectorRef& ref : Components)
+		{
+			if (ref.Type == EntityComponent::DataModel)
+			{
+				((EcDataModel*)ref.Referred())->Close();
+				break;
+			}
+		}
+
 		while (!Components.empty())
 			RemoveComponent(Components.back().Type);
 
 		this->SetParent(nullptr);
-
-		for (const ReflectorRef& ref : Components)
-		{
-			if (ref.Type == EntityComponent::DataModel)
-				((EcDataModel*)ref.Referred())->Close();
-		}
 
 		assert(HardRefCount > 0);
 		HardRefCount--;
@@ -574,9 +581,7 @@ void GameObject::SetParent(const ObjectHandle& newParent)
 	if (this->IsDestructionPending)
 		RAISE_RT(
 			"Tried to re-parent {} to {}, but its Parent has been locked due to `:Destroy`",
-
-			GetFullName(),
-			newParent ? newParent->GetFullName() : "nil"
+			GetFullName(), newParent ? newParent->GetFullName() : "nil"
 		);
 	
 	if (newParent.Reference.TargetId != this->ObjectId)
@@ -588,10 +593,12 @@ void GameObject::SetParent(const ObjectHandle& newParent)
 			);
 	}
 	else
+	{
 		RAISE_RT(
 			"Tried to make {} its own parent",
 			GetFullName()
 		);
+	}
 
 	if (newParent.Reference.TargetId == Parent)
 		return;
@@ -687,7 +694,7 @@ void GameObject::SetEnabled(bool Enabled)
 	if (m_Enabled)
 	{
 		if (GameObject* parent = GetParent())
-			TreeEnabled = m_Enabled && parent->TreeEnabled;
+			TreeEnabled = parent->TreeEnabled;
 		else
 			TreeEnabled = true;
 	}
@@ -818,14 +825,14 @@ std::vector<ObjectHandle> GameObject::GetDescendants()
 	return descendants;
 }
 
-GameObject* GameObject::FindChild(const std::string_view& ChildName)
+GameObject* GameObject::FindChild(const std::string_view& TargetName)
 {
 	for (uint32_t id : Children)
 	{
 		GameObject* child = GameObjectManager::Get()->FindById(id);
 		assert(child);
 
-		if (child->Name == ChildName)
+		if (child->Name == TargetName)
 			return child;
 	}
 
@@ -854,7 +861,7 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
 
 	if (FindComponentByType(Type))
 		RAISE_RT("Already have that component");
-	
+
 	IComponentManager* manager = GetComponentManagerByComponentType(Type);
 	Components.emplace_back(manager->CreateComponent(this), Type);
 
@@ -978,6 +985,7 @@ const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string
 
 	return nullptr;
 }
+
 const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_view& FuncName, ReflectorRef* FromComponent)
 {
 	ReflectorRef dummyFc;
@@ -999,6 +1007,7 @@ const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_vie
 
 	return nullptr;
 }
+
 const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view& EventName, ReflectorRef* Handle)
 {
 	ReflectorRef dummyHandle;
@@ -1119,6 +1128,7 @@ Reflection::PropertyMap GameObject::GetProperties() const
 
 	return cumulativeProps;
 }
+
 Reflection::MethodMap GameObject::GetMethods() const
 {
 	Reflection::MethodMap cumulativeFuncs = ComponentApis.Methods;
@@ -1128,6 +1138,7 @@ Reflection::MethodMap GameObject::GetMethods() const
 
 	return cumulativeFuncs;
 }
+
 Reflection::EventMap GameObject::GetEvents() const
 {
 	Reflection::EventMap cumulativeEvents = ComponentApis.Events;

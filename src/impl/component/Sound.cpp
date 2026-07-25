@@ -294,14 +294,16 @@ void EcSound::Update(double)
 	if (playing && !m_PlayRequested)
 	{
 		if (ma_result result = ma_sound_stop(SoundInstance); result != MA_SUCCESS)
-			Log.ErrorF("Failed to play sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
+			Log.ErrorF("Failed to stop sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
 	}
 	else if (!playing && m_PlayRequested)
+	{
 		if (ma_result result = ma_sound_start(SoundInstance); result != MA_SUCCESS)
-			Log.ErrorF("Failed to stop sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
+			Log.ErrorF("Failed to start sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
+	}
 
 	ma_sound_set_looping(SoundInstance, Looped); // TODO doesn't work
-	if (!Looped && Length - Position < 0.05f)
+	if (!Looped && Length - Position < 0.05f && NextRequestedPosition < 0.f)
 		m_PlayRequested = false;
 
 	ma_sound_set_volume(SoundInstance, Volume);
@@ -313,6 +315,7 @@ void EcSound::Update(double)
 				"Failed to seek to position {} (in seconds) for sound '{}': {} (code {})",
 				NextRequestedPosition, Object->GetFullName(), ma_result_description(result), (int)result
 			);
+		Log.Info("Seeked");
 		NextRequestedPosition = -1.f;
 	}
 
