@@ -271,6 +271,7 @@
         },
         "Methods": {
           "GetCursorPosition": "() -> (Vector2)",
+          "GetViewportInputRect": "() -> (Vector2, Vector2)",
           "IsKeyPressed": "(Integer) -> (Boolean)",
           "IsMouseButtonPressed": "(Integer) -> (Boolean)",
           "ResetViewportInputRect": "() -> ()",

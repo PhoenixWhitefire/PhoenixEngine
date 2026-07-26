@@ -540,6 +540,7 @@ export type EcPlayerInput = {
   read IsMouseSunk: boolean,
 
   GetCursorPosition: (self: EcPlayerInput) -> (vector),
+  GetViewportInputRect: (self: EcPlayerInput) -> (vector, vector),
   IsKeyPressed: (self: EcPlayerInput, Key: EnumKey) -> boolean,
   IsMouseButtonPressed: (self: EcPlayerInput, Button: EnumMouseButton) -> boolean,
   ResetViewportInputRect: (self: EcPlayerInput) -> (),

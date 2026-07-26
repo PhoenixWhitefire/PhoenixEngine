@@ -2128,6 +2128,9 @@
   "@phoenix/globaltype/PlayerInput.GetCursorPosition": {
     "documentation": "Returns the current position of the mouse cursor relative to the window as a `vector`"
   },
+  "@phoenix/globaltype/PlayerInput.GetViewportInputRect": {
+    "documentation": "Gets the input rectangle area, returning its position and size"
+  },
   "@phoenix/globaltype/PlayerInput.IsKeyPressed": {
     "documentation": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
   },

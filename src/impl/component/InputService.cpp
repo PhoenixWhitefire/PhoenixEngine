@@ -91,7 +91,7 @@ const Reflection::StaticPropertyMap& PlayerInputComponentManager::GetProperties(
                 DevCursorId = cursor;
                 glfwPollEvents(); // update cursor for the OS if we decide to do some heavy work right after this that doesn't poll events
             }
-        )
+        ),
     };
 
     return props;
@@ -128,6 +128,23 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
                 glfwGetCursorPos(glfwGetCurrentContext(), &x, &y);
 
                 return { glm::vec2(x, y) };
+            }
+        } },
+
+        { "GetViewportInputRect", Reflection::MethodDescriptor{
+            {},
+            REFLECTION_SPAN({ Reflection::ValueType::Vector2, Reflection::ValueType::Vector2 }),
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+
+                if (engine->OverrideDefaultViewportInputRect)
+                    return {
+                        glm::vec2(engine->ViewportInputPosition.x, engine->ViewportInputPosition.y),
+                        glm::vec2(engine->OverrideViewportInputSize.x, engine->OverrideViewportInputSize.y)
+                    };
+                else
+                    return { glm::vec2(0.f, 0.f), glm::vec2((float)engine->WindowSizeX, (float)engine->WindowSizeY) };
             }
         } },
 

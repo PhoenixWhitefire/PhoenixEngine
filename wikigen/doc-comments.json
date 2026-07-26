@@ -591,6 +591,7 @@
         },
         "Methods": {
           "GetCursorPosition": "Returns the current position of the mouse cursor relative to the window as a `vector`",
+          "GetViewportInputRect": "Gets the input rectangle area, returning its position and size",
           "IsKeyPressed": {
             "Description": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed",
             "Type": "(self, Key: EnumKey) : boolean"

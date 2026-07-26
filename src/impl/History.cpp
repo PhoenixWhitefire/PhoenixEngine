@@ -66,7 +66,7 @@ void History::ClearHistory()
 std::optional<size_t> History::TryBeginAction(const std::string& Name)
 {
     if (!IsRecordingEnabled)
-        RAISE_RT("History recording is not enabled!");
+        return std::nullopt;
 
     if (m_CurrentAction.has_value())
     {
