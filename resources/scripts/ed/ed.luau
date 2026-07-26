@@ -25,7 +25,6 @@ type AsIndexerForm<T> = { [keyof<T>]: index<T, keyof<T>> }
 
 Preferences = Preferences :: AsIndexerForm<typeof(Preferences)> & typeof(Preferences)
 
-History:EnableRecording()
 Git.Initialize()
 
 local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else Preferences

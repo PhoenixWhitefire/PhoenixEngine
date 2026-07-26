@@ -83,8 +83,9 @@ static void handleInputs(double deltaTime)
 
 		glm::mat4 camTrans = camera->GetWorldTransform();
 
-		static const glm::vec3 WorldUp{ 0.f, 1.f, 0.f };
-		glm::vec3 camForward = glm::vec3(camTrans[2]);
+		const glm::vec3 WorldUp = { 0.f, 1.f, 0.f };
+		glm::vec3 camForward = -glm::vec3(camTrans[2]);
+		glm::vec3 camRight = glm::normalize(glm::cross(camForward, WorldUp));
 		glm::vec3 camUp = glm::vec3(camTrans[1]);
 
 		if (!GuiIO->WantCaptureKeyboard || UserInput::ShouldIgnoreUIInputSinking())
@@ -94,27 +95,27 @@ static void handleInputs(double deltaTime)
 			if (UserInput::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
 				speed *= 0.5f;
 
-			glm::vec3 position = (glm::vec3)camTrans[3];
+			glm::vec3 move = {};
 
 			if (UserInput::IsKeyDown(GLFW_KEY_W))
-				position += camForward * speed;
-
-			if (UserInput::IsKeyDown(GLFW_KEY_A))
-				position += -glm::normalize(glm::cross(camForward, WorldUp)) * speed;
+				move += camForward * speed;
 
 			if (UserInput::IsKeyDown(GLFW_KEY_S))
-				position += camForward * -speed;
+				move -= camForward * speed;
+
+			if (UserInput::IsKeyDown(GLFW_KEY_A))
+				move -= camRight * speed;
 
 			if (UserInput::IsKeyDown(GLFW_KEY_D))
-				position += glm::normalize(glm::cross(camForward, WorldUp)) * speed;
+				move += camRight * speed;
 
 			if (UserInput::IsKeyDown(GLFW_KEY_Q))
-				position += camUp * -speed;
+				move -= camUp * speed;
 
 			if (UserInput::IsKeyDown(GLFW_KEY_E))
-				position += camUp * speed;
+				move += camUp * speed;
 
-			camTrans[3] = glm::vec4(position, 1.f);
+			camTrans[3] += glm::vec4(move, 0.f);
 		}
 
 		RmbTrigger = false;
@@ -154,12 +155,12 @@ static void handleInputs(double deltaTime)
 			camForward = glm::rotate(camForward, -rotationY, WorldUp);
 
 			glm::vec3 forward = camForward;
-			glm::vec3 right = glm::normalize(glm::cross(WorldUp, forward));
-			glm::vec3 up = glm::cross(forward, right);
+			glm::vec3 right = glm::normalize(glm::cross(forward, WorldUp));
+			glm::vec3 up = glm::cross(right, forward);
 
 			camTrans[0] = glm::vec4(right, 0.f);
 			camTrans[1] = glm::vec4(up, 0.f);
-			camTrans[2] = glm::vec4(camForward, 0.f);
+			camTrans[2] = glm::vec4(-camForward, 0.f);
 		}
 
 		camera->SetWorldTransform(camTrans);

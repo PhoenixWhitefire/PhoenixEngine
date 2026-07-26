@@ -317,6 +317,7 @@ export type GameObject = {
   GetTags: (self: GameObject) -> { string },
   HasComponent: (self: GameObject, Component: keyof<Creatables>) -> boolean,
   HasTag: (self: GameObject, Tag: string) -> (boolean),
+  IsDescendantOf: (self: GameObject, Ancestor: GameObject) -> (boolean),
   RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   RemoveTag: (self: GameObject, Tag: string) -> (),
 
@@ -467,11 +468,11 @@ export type EcHistory = {
   read CurrentActionName: string?,
   read CurrentWaypoint: number,
   read IsRecordingAction: boolean,
+  RecordingEnabled: boolean,
   TargetDataModel: GameObject,
 
   ClearHistory: (self: EcHistory) -> (),
   DiscardAction: (self: EcHistory, Id: number) -> (),
-  EnableRecording: (self: EcHistory) -> (),
   FinishAction: (self: EcHistory, Id: number) -> (),
   GetActionData: (self: EcHistory, Index: number) -> HistoryAction,
   GetCannotRedoReason: (self: EcHistory) -> (string),
@@ -595,9 +596,9 @@ export type EcSound = {
   read LoadSucceeded: boolean,
   Looped: boolean,
   Playing: boolean,
-  Position: number,
   SoundFile: string,
   Speed: number,
+  TimePosition: number,
   Volume: number,
 
   Play: (self: EcSound) -> (),

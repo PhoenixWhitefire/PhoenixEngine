@@ -249,6 +249,12 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     if camObj then
         if camObj.Enabled then
             assert(camObj:HasComponent("Transform"))
+            local corresponding = CoreTools.VisualizationTargets[camObj]
+
+            if corresponding and not corresponding:IsDescendantOf(Project.Workspace) then
+                warn("Oops")
+                camObj:Destroy()
+            end
         else
             camObj = nil
         end
@@ -305,7 +311,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
         local size = target.Transform.Scale
         local pos = target.Transform.Translation - (cam.Transform.Forward * math.max(size.x, size.y, size.z) * 1.5)
         -- TODO fix 180* flip
-        cam.Transform = Matrix.lookAt(pos, target.Transform.Translation) * Matrix.rotated(0, math.pi, 0)
+        cam.Transform = Matrix.lookAt(pos, target.Transform.Translation)
     end
 
     local gizmoHit = if tryingToInteract

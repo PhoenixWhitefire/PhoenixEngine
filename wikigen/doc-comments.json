@@ -76,6 +76,10 @@
           "Description": "Returns whether or not the Object has the given `Collections` tag",
           "ParameterNames": "Tag"
         },
+        "IsDescendantOf": {
+          "Description": "Returns whether or not the Object is a descendant (child or indirect child) of the given object",
+          "ParameterNames": "Ancestor"
+        },
         "MergeWith": {
           "Description": "Merges the Objects together, replacing descendants with the same name",
           "ParameterNames": "With"
@@ -456,7 +460,6 @@
             "Description": "Discards the Action by its ID",
             "ParameterNames": "Id"
           },
-          "EnableRecording": "Enables the main functionality of this service",
           "FinishAction": {
             "Description": "Finishes the Action by its ID. Only one Action may be active at a time",
             "ParameterNames": "Id"
@@ -486,6 +489,7 @@
           "CurrentActionName": "The name of the Action currently being recorded, or `nil` if no recording is in progress",
           "CurrentWaypoint": "The ID of the Action that was last finished",
           "IsRecordingAction": "Whether an Action is currently being recorded by History",
+          "RecordingEnabled": "Whether events will be recorded",
           "TargetDataModel": "The DataModel that History will track"
         }
       },
@@ -720,7 +724,7 @@
           }
         },
         "Methods": {
-          "Play": "Plays the Sound from the beginning"
+          "Play": "Play the Sound from the beginning"
         },
         "Properties": {
           "FinishedLoading": "Whether the Sound has finished loading the `SoundFile`",
@@ -728,9 +732,9 @@
           "LoadSucceeded": "Whether or not the sound loaded successfully",
           "Looped": "Whether playback should loop once it reaches the end",
           "Playing": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)",
-          "Position": "The time-position of playback in number of seconds from the beginning of the file",
           "SoundFile": "The sound file to be played",
           "Speed": "The speed at which the sound plays, within the range of 0.01 to 100",
+          "TimePosition": "The playback position of playback in number of seconds from the beginning of the file",
           "Volume": "The volume at which the sound plays. Must be positive"
         }
       },
@@ -1034,17 +1038,26 @@
           ":WithRotation": {
             "Description": "Constructs a new Matrix with the current Matrix's Translation and Scale, and with the provided Rotation",
             "In": "Rotation: vector",
-            "Out": "Matrix"
+            "Out": "Matrix",
+            "Overloads": [
+              "X: number, Y: number, Z: number"
+            ]
           },
           ":WithScale": {
             "Description": "Constructs a new Matrix with the current Matrix's Translation and Rotation, and with the provided Scale",
             "In": "Scale: vector",
-            "Out": "Matrix"
+            "Out": "Matrix",
+            "Overloads": [
+              "X: number, Y: number, Z: number"
+            ]
           },
           ":WithTranslation": {
             "Description": "Constructs a new Matrix with the current Matrix's Rotation and Scale, and with the provided Translation",
             "In": "Translation: vector",
-            "Out": "Matrix"
+            "Out": "Matrix",
+            "Overloads": [
+              "X: number, Y: number, Z: number"
+            ]
           },
           ":__add": {
             "Description": "Add a `vector` to a Matrix to directly offset its position by world space",

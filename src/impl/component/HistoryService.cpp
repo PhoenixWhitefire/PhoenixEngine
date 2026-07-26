@@ -87,6 +87,21 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
         REFLECTION_PROPERTY(
+            "RecordingEnabled",
+            Boolean,
+            [](void*) -> Reflection::GenericValue
+            {
+                History* history = History::Get();
+                return history->IsRecordingEnabled;
+            },
+            [](void*, const Reflection::GenericValue& gv)
+            {
+                History* history = History::Get();
+                history->IsRecordingEnabled = gv.AsBoolean();
+            }
+        ),
+
+        REFLECTION_PROPERTY(
             "CurrentWaypoint",
             Integer,
             [](void*) -> Reflection::GenericValue
@@ -183,18 +198,6 @@ const Reflection::StaticPropertyMap& HistoryComponentManager::GetProperties()
 const Reflection::StaticMethodMap& HistoryComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
-        { "EnableRecording", Reflection::MethodDescriptor{
-            {},
-            {},
-            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-            {
-                History* history = History::Get();
-                history->IsRecordingEnabled = true;
-
-                return {};
-            }
-        } },
-
         { "TryBeginAction", Reflection::MethodDescriptor{
             REFLECTION_SPAN({ Reflection::ValueType::String }),
             REFLECTION_SPAN({ REFLECTION_OPTIONAL(Integer) }),

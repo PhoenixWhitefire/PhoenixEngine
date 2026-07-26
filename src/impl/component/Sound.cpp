@@ -70,7 +70,7 @@ const Reflection::StaticPropertyMap& SoundComponentManager::GetProperties()
 		),
 
 		REFLECTION_PROPERTY(
-			"Position",
+			"TimePosition",
 			Double,
 			REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Position),
 			[](void* p, const Reflection::GenericValue& gv)

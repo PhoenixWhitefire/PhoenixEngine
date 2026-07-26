@@ -5,6 +5,7 @@
 #include "component/Transform.hpp"
 #include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
+#include "component/Sound.hpp"
 #include "History.hpp"
 #include "Log.hpp"
 
@@ -97,6 +98,18 @@ const Reflection::StaticApi GameObject::s_Api = Reflection::StaticApi{
 
 				// ctor for ValueType::Array
 				return { Reflection::GenericValue(retval) };
+			}
+		} },
+
+		{ "IsDescendantOf", Reflection::MethodDescriptor{
+			REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
+			REFLECTION_SPAN({ Reflection::ValueType::Boolean }),
+			[](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+			{
+				GameObjectManager* objectManager = GameObjectManager::Get();
+
+				GameObject* g = static_cast<GameObject*>(p);
+				return { g->IsDescendantOf(objectManager->FromGenericValue(inputs[0])) };
 			}
 		} },
 
@@ -711,6 +724,9 @@ void GameObject::SetEnabled(bool Enabled)
 
 		REFLECTION_SIGNAL_EVENT(OnTreeEnabledChangedCallbacks, TreeEnabled);
 	}
+
+	if (EcSound* sound = FindComponent<EcSound>())
+		sound->Update(0.0);
 }
 
 Reflection::GenericValue GameObject::s_ToGenericValue(GameObject* Object)

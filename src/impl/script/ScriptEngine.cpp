@@ -1085,7 +1085,7 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
         }
         else if (lty.Type == LUA_TVECTOR && (Type & ~Reflection::ValueType::Null) == Reflection::ValueType::Vector2)
         {
-            luaL_argcheck(L, luaL_checkvector(L, StackIndex)[2] == 0.f, StackIndex, "Z component must be 0");
+            luaL_argcheck(L, luaL_checkvector(L, StackIndex)[2] == 0.f, StackIndex, "vector Z component must be 0 for a 2D vector");
         }
     }
 }

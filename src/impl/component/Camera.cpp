@@ -37,13 +37,9 @@ glm::mat4 EcCamera::GetRenderMatrix(float AspectRatio) const
 		this->NearPlane,
 		this->FarPlane
 	);
-	glm::mat4 viewMatrix = glm::lookAt(
-		glm::vec3(trans[3]),
-		glm::vec3(trans[3]) + glm::vec3(trans[2]),
-		glm::vec3(trans[1])
-	);
+	glm::mat4 viewMatrix = glm::inverse(trans);
 
-	return projectionMatrix * viewMatrix; /* glm::inverse(trans); */
+	return projectionMatrix * viewMatrix;
 }
 
 glm::mat4 EcCamera::GetWorldTransform() const

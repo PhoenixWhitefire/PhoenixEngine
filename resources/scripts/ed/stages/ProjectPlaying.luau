@@ -66,6 +66,7 @@ function ProjectPlaying.Leave(_new)
 
     Engine:BindDataModel(game)
 
+    State.Project.DataModel.Enabled = false -- trigger TreeEnabled changes -> stop playing sounds :)
     State.Project.DataModel:Destroy()
     State.Project.DataModel = State.PlaytestRestoreState
     DeveloperTools:SetExplorerRoot(State.Project.DataModel)

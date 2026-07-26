@@ -733,11 +733,9 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
     glm::mat4 camTrans = sceneCamera->GetWorldTransform();
 
-    glm::mat4 view = glm::lookAt(
-        glm::vec3(0.f),
-        glm::vec3(camTrans[2]),
-        glm::vec3(camTrans[1])
-    );
+    glm::mat4 view = glm::inverse(camTrans);
+	view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+
     glm::mat4 projection = glm::perspective(
         glm::radians(sceneCamera->FieldOfView),
         aspectRatio,
@@ -1327,20 +1325,6 @@ void Engine::Shutdown()
 	ComponentManagers.DataModel.NotifyAllOfShutdown();
 	ScriptEngine::StepVMs(); // step event callbacks
 
-	for (GameObject& obj : ObjectManager.WorldArray)
-	{
-		if (!obj.IsDestructionPending && obj.Valid)
-			obj.Destroy();
-	}
-
-	for (GameObjectManager::Collection& collection : ObjectManager.Collections)
-	{
-		delete collection.AddedEvent.Descriptor;
-		delete collection.RemovedEvent.Descriptor;
-		collection.AddedEvent.Descriptor = nullptr;
-		collection.RemovedEvent.Descriptor = nullptr;
-	}
-
 	DataModelRef->Destroy();
 	PrimaryDataModel.Clear();
 	DataModelRef.Clear();
@@ -1348,6 +1332,15 @@ void Engine::Shutdown()
 
 	Log.Info("Shutting down script engine...");
 	ScriptEngine::Shutdown();
+
+	// Do this after script engine shutdown, as we may have event connections
+	for (GameObjectManager::Collection& collection : ObjectManager.Collections)
+	{
+		delete collection.AddedEvent.Descriptor;
+		delete collection.RemovedEvent.Descriptor;
+		collection.AddedEvent.Descriptor = nullptr;
+		collection.RemovedEvent.Descriptor = nullptr;
+	}
 
 	Log.Info("Shutting down HistoryInstance...");
 	HistoryInstance.Shutdown();

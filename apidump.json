@@ -22,6 +22,7 @@
         "GetTags": "() -> (Array)",
         "HasComponent": "(String) -> (Boolean)",
         "HasTag": "(String) -> (Boolean)",
+        "IsDescendantOf": "(GameObject) -> (Boolean)",
         "RemoveComponent": "(String) -> ()",
         "RemoveTag": "(String) -> ()"
       },
@@ -188,7 +189,6 @@
         "Methods": {
           "ClearHistory": "() -> ()",
           "DiscardAction": "(Integer) -> ()",
-          "EnableRecording": "() -> ()",
           "FinishAction": "(Integer) -> ()",
           "GetActionData": "(Integer) -> (Map)",
           "GetCannotRedoReason": "() -> (String)",
@@ -205,6 +205,7 @@
           "CurrentActionName": "String? READONLY",
           "CurrentWaypoint": "Integer READONLY",
           "IsRecordingAction": "Boolean READONLY",
+          "RecordingEnabled": "Boolean",
           "TargetDataModel": "GameObject"
         }
       },
@@ -339,9 +340,9 @@
           "LoadSucceeded": "Boolean READONLY",
           "Looped": "Boolean",
           "Playing": "Boolean",
-          "Position": "Double",
           "SoundFile": "String",
           "Speed": "Double",
+          "TimePosition": "Double",
           "Volume": "Double"
         }
       },

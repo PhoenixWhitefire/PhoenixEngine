@@ -2892,7 +2892,7 @@ static void renderExplorer()
     }
 
     VisibleTreeWip.clear();
-    recursiveIterateTree(ExplorerRoot.Dereference());
+    recursiveIterateTree(ExplorerRoot);
 
     ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
     rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
@@ -4419,23 +4419,20 @@ static void renderProperties()
                     static glm::vec3 trans = {};
                     static glm::quat rotquat = {};
                     static glm::vec3 scale = {};
+                    static glm::vec3 rotdegs = {};
 
                     glm::mat4 mat = curVal.AsMatrix();
 
                     if (Selections[0]->ObjectId != prevObject || history->GetCurrentWaypoint() != curWaypoint)
                     {
                         DecomposeTRS(mat, &trans, &rotquat, &scale);
+
+                        glm::vec3 rotrads = glm::eulerAngles(rotquat);
+                        rotdegs = { glm::degrees(rotrads.x), glm::degrees(rotrads.y), glm::degrees(rotrads.z) };
+
                         prevObject = Selections[0]->ObjectId;
                         curWaypoint = history->GetCurrentWaypoint();
                     }
-
-                    glm::vec3 rotrads = glm::eulerAngles(rotquat);
-
-                    float rotdegs[3] = {
-                        glm::degrees(rotrads.x),
-                        glm::degrees(rotrads.y),
-                        glm::degrees(rotrads.z)
-                    };
 
                     ImGui::Indent();
 
@@ -4453,7 +4450,7 @@ static void renderProperties()
                     ImGui::SetCursorPosX(halfWidth);
                     ImGui::SetNextItemWidth(halfWidth);
 
-                    ImGui::InputFloat3("##R", rotdegs);
+                    ImGui::InputFloat3("##R", glm::value_ptr(rotdegs));
                     valueWasEditedManual |= ImGui::IsItemEdited();
                     deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
 
@@ -4466,7 +4463,6 @@ static void renderProperties()
                     ImGui::Unindent();
 
                     rotquat = glm::quat(glm::vec3(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2])));
-
                     mat = glm::translate(glm::mat4(1.f), glm::make_vec3(trans)) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale);
 
                     newVal = mat;

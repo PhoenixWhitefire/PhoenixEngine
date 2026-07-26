@@ -435,20 +435,24 @@ std::string Reflection::GenericValue::AsString() const
     if (Type != ValueType::String)
         WRONG_TYPE();
     else
+    {
         if (Size + 1 > REFLECTION_GV_SSO)
             return std::string(Val.Str, Size);
         else
             return std::string(Val.StrSso, Size);
+    }
 }
 std::string_view Reflection::GenericValue::AsStringView() const
 {
     if (Type != ValueType::String)
         WRONG_TYPE();
     else
+    {
         if (Size + 1 > REFLECTION_GV_SSO)
             return std::string_view(Val.Str, Size);
         else
             return std::string_view(Val.StrSso, Size);
+    }
 }
 bool Reflection::GenericValue::AsBoolean() const
 {
@@ -480,9 +484,12 @@ int64_t Reflection::GenericValue::AsInteger() const
 
 glm::vec2 Reflection::GenericValue::AsVector2() const
 {
-    return Type == ValueType::Vector2
-        ? Val.Vec2
-        : WRONG_TYPE();
+    if (Type == ValueType::Vector2)
+        return Val.Vec2;
+    else if (Type == ValueType::Vector3 && Val.Vec3.z == 0.f)
+        return glm::vec2(Val.Vec3.x, Val.Vec3.y);
+    else
+        WRONG_TYPE();
 }
 glm::vec3 Reflection::GenericValue::AsVector3() const
 {

@@ -45,7 +45,8 @@ static int conn_namecall(lua_State* L)
 		}
 
 		assert(lua_mainthread(L) == lua_mainthread(ec->L));
-		lua_unref(L, ec->ThreadRef);
+		lua_unref(L, ec->EThreadRef);
+		lua_unref(L, ec->CThreadRef);
 		lua_unref(L, ec->SpawningThreadRef);
 	}
 	else

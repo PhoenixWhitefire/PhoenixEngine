@@ -88,15 +88,22 @@ static int matrix_lookAt(lua_State* L)
 {
     const float updefault[3] = { 0.f, 1.f, 0.f };
 
-    const float* a = luaL_checkvector(L, 1);
-	const float* b = luaL_checkvector(L, 2);
-    const float* up = luaL_optvector(L, 3, updefault);
+    glm::vec3 eye    = glm::make_vec3(luaL_checkvector(L, 1));
+    glm::vec3 center = glm::make_vec3(luaL_checkvector(L, 2));
+    glm::vec3 up     = glm::make_vec3(luaL_optvector(L, 3, updefault));
 
-	luhx_pushmatrix(
-		L,
-		glm::lookAt(glm::make_vec3(a), glm::make_vec3(b), glm::make_vec3(up))
-	);
-	return 1;
+    glm::vec3 forward = glm::normalize(center - eye);
+	glm::vec3 right   = glm::normalize(glm::cross(forward, up));
+	glm::vec3 newUp    = glm::cross(right, forward);
+
+	glm::mat4 result(1.0f);
+	result[0] = glm::vec4(right,     0.0f);
+	result[1] = glm::vec4(newUp,     0.0f);
+	result[2] = glm::vec4(-forward,  0.0f);
+	result[3] = glm::vec4(eye,       1.0f);
+
+    luhx_pushmatrix(L, result);
+    return 1;
 }
 
 static const luaL_Reg matrix_funcs[] = {
@@ -129,7 +136,7 @@ static int mtx_index(lua_State* L)
 	}
 
 	else if (strcmp(k, "Forward") == 0)
-		luhx_pushvector3(L, glm::vec3(m[2]));
+		luhx_pushvector3(L, -glm::vec3(m[2]));
 
 	else if (strcmp(k, "Up") == 0)
 		luhx_pushvector3(L, glm::vec3(m[1]));

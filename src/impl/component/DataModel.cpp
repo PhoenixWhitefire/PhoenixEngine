@@ -25,8 +25,8 @@ void DataModelComponentManager::DeleteComponent(uint32_t Id)
     EcDataModel& dm = m_Components.at(Id);
     dm.Close();
 
-    for (lua_State* L : dm.Modules)
-        lua_resetthread(L);
+    //for (lua_State* L : dm.Modules)
+    //    lua_resetthread(L);
 
     dm.Modules.clear();
     dm.UnbindServices();

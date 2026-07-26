@@ -79,6 +79,7 @@ struct EventConnectionData
 	lua_State* L = nullptr;
 	uint32_t ConnectionId = UINT32_MAX;
 	int SpawningThreadRef = -1;
-	int ThreadRef = -1;
+	int EThreadRef = -1;
+	int CThreadRef = -1;
 	int SignalRef = -1;
 };

@@ -252,7 +252,7 @@ glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
     eyeCoords.z = -1.f, eyeCoords.w = 0.f;
 
     glm::vec3 position = glm::vec3(trans[3]);
-    glm::vec3 forwardVec = glm::vec3(trans[2]);
+    glm::vec3 forwardVec = -glm::vec3(trans[2]);
 
     glm::mat4 viewMatrixInv = glm::inverse(glm::lookAt(
         position,

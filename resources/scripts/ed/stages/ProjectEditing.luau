@@ -63,6 +63,7 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
     DeveloperTools:SetExplorerSelections({})
     Physics.Simulating = false
     CoreTools.VisualizationsContainer.Enabled = true
+    History.RecordingEnabled = true
 
     if PreviousStage == "SelectProject" then
         EditorCameraTransform.Load(EditorCam)
@@ -145,6 +146,7 @@ end
 function ProjectEditing.Leave(NextStage: Types.Stage)
     EditorCameraTransform.Save(EditorCam)
     CoreTools.VisualizationsContainer.Enabled = false
+    History.RecordingEnabled = false
 
     if NextStage == "ProjectPlaying" then
         LastSelectedInEditMode = DeveloperTools:GetExplorerSelections()

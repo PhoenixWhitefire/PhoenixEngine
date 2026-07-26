@@ -1855,6 +1855,9 @@
   "@phoenix/globaltype/GameObject.HasTag": {
     "documentation": "Returns whether or not the Object has the given `Collections` tag"
   },
+  "@phoenix/globaltype/GameObject.IsDescendantOf": {
+    "documentation": "Returns whether or not the Object is a descendant (child or indirect child) of the given object"
+  },
   "@phoenix/globaltype/GameObject.Name": {
     "documentation": "The name of the Object, usually what was passed into `GameObject.new`"
   },
@@ -1909,9 +1912,6 @@
   "@phoenix/globaltype/History.DiscardAction": {
     "documentation": "Discards the Action by its ID"
   },
-  "@phoenix/globaltype/History.EnableRecording": {
-    "documentation": "Enables the main functionality of this service"
-  },
   "@phoenix/globaltype/History.FinishAction": {
     "documentation": "Finishes the Action by its ID. Only one Action may be active at a time"
   },
@@ -1929,6 +1929,9 @@
   },
   "@phoenix/globaltype/History.IsRecordingAction": {
     "documentation": "Whether an Action is currently being recorded by History"
+  },
+  "@phoenix/globaltype/History.RecordingEnabled": {
+    "documentation": "Whether events will be recorded"
   },
   "@phoenix/globaltype/History.Redo": {
     "documentation": "Forwards the state of the scene to how it was before the last Undo. If `.CanRedo` is `false`, will throw an error"
@@ -2255,19 +2258,19 @@
     "documentation": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
   },
   "@phoenix/globaltype/Sound.Play": {
-    "documentation": "Plays the Sound from the beginning"
+    "documentation": "Play the Sound from the beginning"
   },
   "@phoenix/globaltype/Sound.Playing": {
     "documentation": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)"
-  },
-  "@phoenix/globaltype/Sound.Position": {
-    "documentation": "The time-position of playback in number of seconds from the beginning of the file"
   },
   "@phoenix/globaltype/Sound.SoundFile": {
     "documentation": "The sound file to be played"
   },
   "@phoenix/globaltype/Sound.Speed": {
     "documentation": "The speed at which the sound plays, within the range of 0.01 to 100"
+  },
+  "@phoenix/globaltype/Sound.TimePosition": {
+    "documentation": "The playback position of playback in number of seconds from the beginning of the file"
   },
   "@phoenix/globaltype/Sound.Volume": {
     "documentation": "The volume at which the sound plays. Must be positive"
