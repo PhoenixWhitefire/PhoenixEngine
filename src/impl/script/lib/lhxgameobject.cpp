@@ -24,8 +24,7 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
         lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
     }
 
-    lua_pushinteger(L, *(const int32_t*)&Object->ObjectId);
-    lua_gettable(L, -2); // OBJECT_REG[ObjectId]
+	lua_rawgeti(L, -1, *(const int32_t*)&Object->ObjectId); // OBJECT_REG[ObjectId]
 
     if (!lua_isnil(L, -1))
     {
@@ -41,13 +40,11 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
         sizeof(uint32_t),
 		UserdataTag::GameObject
     );
+	*ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-    lua_pushinteger(L, *(const int32_t*)&Object->ObjectId); // key
-    lua_pushvalue(L, -2);                                   // value
+    lua_pushvalue(L, -2);
+	lua_rawseti(L, -3, *(const int32_t*)&Object->ObjectId);
 
-    *ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
-
-    lua_settable(L, -4);
     lua_remove(L, -2); // remove the registry sub-table
 
 	// leave object at stack top

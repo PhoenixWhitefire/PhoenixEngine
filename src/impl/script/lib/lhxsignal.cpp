@@ -4,6 +4,7 @@
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
+#include "script/LightUserdataTags.hpp"
 
 void luhx_pushsignal(
     lua_State* L,
@@ -164,10 +165,7 @@ static int sig_namecall(lua_State* L)
 
         // assign the connection to the Event Thread so it can be used by the Connection Threads
         // `eL` itself is never resumed, only `cL` or `nL` (`nL` being created per-invocation if the thread yields every time)
-        lua_pushlightuserdata(eL, eL); // stack: ec, lud
-        lua_pushvalue(eL, -2); // stack: ec, lud, ec
-        lua_settable(eL, LUA_ENVIRONINDEX); // stack: ec
-        lua_pop(eL, 1);
+        lua_rawsetptagged(eL, LUA_ENVIRONINDEX, eL, LightUserdataTag::EventConnectionData);
 
         lua_getglobal(L, "game");
         Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);

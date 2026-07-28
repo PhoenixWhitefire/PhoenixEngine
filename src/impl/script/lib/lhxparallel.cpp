@@ -5,6 +5,7 @@
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
+#include "script/LightUserdataTags.hpp"
 #include "script/SharedMutex.hpp"
 #include "ThreadManager.hpp"
 #include "Memory.hpp"
@@ -331,16 +332,7 @@ static int atomicint_namecall(lua_State* L)
 
 static void pushSharedMutex(lua_State* L, SharedMutex* Mutex)
 {
-    lua_getfield(L, LUA_REGISTRYINDEX, PARALLEL_REG);
-    if (lua_isnil(L, -1))
-    {
-        lua_newtable(L);
-        lua_pushvalue(L, -1);
-        lua_setfield(L, LUA_REGISTRYINDEX, PARALLEL_REG);
-    }
-
-    lua_pushlightuserdata(L, Mutex);
-    lua_gettable(L, -2); // PARALLEL_REG[lud]
+    lua_rawgetptagged(L, LUA_REGISTRYINDEX, Mutex, LightUserdataTag::SharedMutexRawEquality);
 
     if (!lua_isnil(L, -1))
     {
@@ -352,27 +344,17 @@ static void pushSharedMutex(lua_State* L, SharedMutex* Mutex)
     Mutex->ReferenceCount.fetch_add(1, std::memory_order_relaxed);
 
     void* ud = lua_newuserdatataggedwithmetatable(L, sizeof(SharedMutex*), UserdataTag::Mutex);
-    lua_pushlightuserdata(L, Mutex);
-    lua_pushvalue(L, -2);
-
     memcpy(ud, &Mutex, sizeof(SharedMutex*));
 
-    lua_settable(L, -4);
-    lua_remove(L, -2); // remove the registry sub-table
+    lua_pushvalue(L, -1);
+    lua_rawsetptagged(L, LUA_REGISTRYINDEX, Mutex, LightUserdataTag::SharedMutexRawEquality);
+
+    // leave ud on stack
 }
 
 static void pushSharedBuffer(lua_State* L, SharedBuffer* Buffer)
 {
-    lua_getfield(L, LUA_REGISTRYINDEX, PARALLEL_REG);
-    if (lua_isnil(L, -1))
-    {
-        lua_newtable(L);
-        lua_pushvalue(L, -1);
-        lua_setfield(L, LUA_REGISTRYINDEX, PARALLEL_REG);
-    }
-
-    lua_pushlightuserdata(L, Buffer);
-    lua_gettable(L, -2); // PARALLEL_REG[lud]
+    lua_rawgetptagged(L, LUA_REGISTRYINDEX, Buffer, LightUserdataTag::SharedBufferRawEquality);
 
     if (!lua_isnil(L, -1))
     {
@@ -384,27 +366,17 @@ static void pushSharedBuffer(lua_State* L, SharedBuffer* Buffer)
     Buffer->ReferenceCount.fetch_add(1, std::memory_order_relaxed);
 
     void* ud = lua_newuserdatataggedwithmetatable(L, sizeof(SharedBuffer*), UserdataTag::SharedBuffer);
-    lua_pushlightuserdata(L, Buffer);
-    lua_pushvalue(L, -2);
-
     memcpy(ud, &Buffer, sizeof(SharedBuffer*));
 
-    lua_settable(L, -4);
-    lua_remove(L, -2); // remove the registry sub-table
+    lua_pushvalue(L, -1);
+    lua_rawsetptagged(L, LUA_REGISTRYINDEX, Buffer, LightUserdataTag::SharedBufferRawEquality);
+
+    // leave ud on stack
 }
 
 static void pushAtomicInt(lua_State* L, SharedAtomicInt* AtomicInt)
 {
-    lua_getfield(L, LUA_REGISTRYINDEX, PARALLEL_REG);
-    if (lua_isnil(L, -1))
-    {
-        lua_newtable(L);
-        lua_pushvalue(L, -1);
-        lua_setfield(L, LUA_REGISTRYINDEX, PARALLEL_REG);
-    }
-
-    lua_pushlightuserdata(L, AtomicInt);
-    lua_gettable(L, -2); // PARALLEL_REG[lud]
+    lua_rawgetptagged(L, LUA_REGISTRYINDEX, AtomicInt, LightUserdataTag::SharedMutexRawEquality);
 
     if (!lua_isnil(L, -1))
     {
@@ -416,13 +388,12 @@ static void pushAtomicInt(lua_State* L, SharedAtomicInt* AtomicInt)
     AtomicInt->ReferenceCount.fetch_add(1, std::memory_order_relaxed);
 
     void* ud = lua_newuserdatataggedwithmetatable(L, sizeof(SharedAtomicInt*), UserdataTag::AtomicInteger);
-    lua_pushlightuserdata(L, AtomicInt);
-    lua_pushvalue(L, -2);
-
     memcpy(ud, &AtomicInt, sizeof(SharedAtomicInt*));
 
-    lua_settable(L, -4);
-    lua_remove(L, -2); // remove the registry sub-table
+    lua_pushvalue(L, -1);
+    lua_rawsetptagged(L, LUA_REGISTRYINDEX, AtomicInt, LightUserdataTag::AtomicIntegerRawEquality);
+
+    // leave ud on stack
 }
 
 static int parallel_mutex(lua_State* L)

@@ -5222,7 +5222,8 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 
     case LUA_TLIGHTUSERDATA:
     {
-        ImGui::Text("%s: (light userdata)", varname.c_str());
+        const char* name = lua_getlightuserdataname(L, lua_lightuserdatatag(L, -1));
+        ImGui::Text("%s: %s", varname.c_str(), name ? name : "(light userdata)");
         break;
     }
 

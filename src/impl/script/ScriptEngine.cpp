@@ -9,10 +9,10 @@
 
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
+#include "script/LightUserdataTags.hpp"
 #include "script/SharedMutex.hpp"
 #include "script/TracyLuau.hpp"
 #include "script/luhx.hpp"
-#include "script/UserdataTags.hpp"
 #include "datatype/Color.hpp"
 #include "DeveloperTools.hpp"
 #include "FileRW.hpp"
@@ -832,33 +832,25 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
     }
     case LUA_TUSERDATA:
     {
-        const char* tname = luaL_typename(L, StackIndex);
-
-        if (strcmp(tname, "Color") == 0)
+        if (const Color* col = (Color*)lua_touserdatatagged(L, StackIndex, UserdataTag::Color))
+            return col->ToGenericValue();
+        else if (const glm::mat4* mtx = (glm::mat4*)lua_touserdatatagged(L, StackIndex, UserdataTag::Matrix))
+            return *mtx;
+        else if (const uint32_t* id = (uint32_t*)lua_touserdatatagged(L, StackIndex, UserdataTag::GameObject))
         {
-            Color col = *(Color*)lua_touserdata(L, StackIndex);
-            return col.ToGenericValue();
-        }
-        else if (strcmp(tname, "Matrix") == 0)
-        {
-            return *(glm::mat4*)lua_touserdata(L, StackIndex);
-        }
-        else if (strcmp(tname, "GameObject") == 0)
-        {
-            uint32_t id = *(uint32_t*)lua_touserdata(L, StackIndex);
-            Reflection::GenericValue gv = id;
+            Reflection::GenericValue gv = *id;
             gv.Type = Reflection::ValueType::GameObject;
 
-            if (id != PHX_GAMEOBJECT_NULL_ID)
+            if (*id != PHX_GAMEOBJECT_NULL_ID)
             {
                 // TODO GVOBJECT decremented in destructor of GenericValue
-                GameObjectManager::Get()->FindById(id)->IncrementHardRefs();
+                GameObjectManager::Get()->FindById(*id)->IncrementHardRefs();
             }
 
             return gv;
         }
         else
-            luaL_error(L, "Couldn't convert a '%s' userdata to a GenericValue (unrecognized)", tname);
+            luaL_error(L, "Couldn't convert a %s to a GenericValue (unrecognized)", lua_getuserdataname(L, lua_userdatatag(L, -1)));
     }
     case LUA_TFUNCTION:
     {
@@ -1472,21 +1464,25 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 
 void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
 {
+    assert(false && "NOT IMPLEMENTED");
+
     // if we dont do this then comparison will not work
     // ex: `game.Close == game.Close`
 
-    lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
-    lua_rawget(L, LUA_ENVIRONINDEX);
+    //Reflection::MethodDescriptor* methodMut =
+    //lua_rawgetptagged(L, LUA_REGISTRYINDEX, const_cast<Reflection::MethodDescriptor*>(Method), LightUserdataTag::GameObjectMethod);
 
     if (lua_isnil(L, -1))
     {
         lua_pop(L, 1); // remove `nil`, stack empty
 
+        // TODO WTF is this doing??
+        /*
         static_assert(sizeof(Reflector) <= sizeof(void*));
         void* data = nullptr;
         memcpy(&data, &Reflector, sizeof(Reflector));
 
-        lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));
+        lua_pushlightuserdatatagged(L, const_cast<Reflection::MethodDescriptor*>(Method));
         lua_pushlightuserdata(L, data);
 
         lua_pushcclosure(
@@ -1510,9 +1506,10 @@ void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescripto
 
         lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));  // stack: closure, lud
         lua_pushvalue(L, -2);                                                 // stack: closure, lud, closure
-        lua_settable(L, LUA_ENVIRONINDEX);                                    // map closure (value) to lud (key)
+        lua_rawsetptagged(L, LUA_REGISTERINDEX, );                                    // map closure (value) to lud (key)
 
         // stack is now just closure
+        */
     }
     // value we fetch from `_ENVIRON` will be closure that was pushed earlier
 }
@@ -1857,9 +1854,11 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
         requirePath
     );
 
-    lua_pushinteger(state, 67);
-    lua_pushlightuserdatatagged(state, requirePath, 67);
-    lua_settable(state, LUA_ENVIRONINDEX);
+    lua_pushlightuserdatatagged(state, requirePath, LightUserdataTag::RequirerContext);
+    lua_rawseti(state, LUA_ENVIRONINDEX, 67);
+
+    for (uint8_t i = LightUserdataTag::__start; i < LightUserdataTag::__count; i++)
+        lua_setlightuserdataname(state, i, LightUserdataTagNames[i].data());
 
     GameObjectManager* ObjectManager = GameObjectManager::Get();
 
@@ -1949,9 +1948,12 @@ void ScriptEngine::LuauVM::Close()
 {
     lua_State* L = MainThread;
 
-    lua_pushinteger(L, 67);
-    lua_gettable(L, LUA_ENVIRONINDEX);
-    delete (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, 67);
+    lua_rawgeti(L, LUA_ENVIRONINDEX, 67);
+
+    if (std::filesystem::path* path = (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, LightUserdataTag::RequirerContext))
+        delete path;
+    else
+        Log.Error("Could not free requirer context data");
 
     for (auto it = YieldedCoroutines.begin(); it != YieldedCoroutines.end(); it++)
     {

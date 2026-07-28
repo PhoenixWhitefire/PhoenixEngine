@@ -28,7 +28,7 @@ struct UserdataTag_
 using UserdataTag = UserdataTag_::UdT;
 
 const std::string_view UserdataTagNames[] = {
-    "<INVALID>", // 0
+    "<UDINVALID>", // 0
     "Mutex",
     "SharedBuffer",
     "AtomicInteger",
