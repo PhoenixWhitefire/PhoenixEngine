@@ -48,13 +48,12 @@ function Viewer.Render()
     end
 
     local shouldRender, open = imgui.begin("History Viewer", "", true)
+    Viewer.Open = open
 
-    if not shouldRender then
+    if not shouldRender or not open then
         imgui.endw()
         return
     end
-
-    Viewer.Open = open
 
     local currentAction = History:GetCurrentActionData()
 

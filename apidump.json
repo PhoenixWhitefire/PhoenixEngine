@@ -432,8 +432,8 @@
       "EventSignal": {},
       "GameObject": {
         "Library": {
-          "fromComponents": "function",
           "fromId": "function",
+          "fromTemplate": "function",
           "new": "function",
           "validComponents": "table"
         },

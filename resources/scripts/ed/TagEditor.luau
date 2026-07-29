@@ -11,12 +11,12 @@ function Viewer.Render()
     end
 
     local shouldRender, open = imgui.begin("Collections", nil, true)
-    if not shouldRender then
+    Viewer.Open = open
+
+    if not shouldRender or not open then
         imgui.endw()
         return
     end
-
-    Viewer.Open = open
 
     local tags = Collections:GetCollections()
     table.sort(tags)

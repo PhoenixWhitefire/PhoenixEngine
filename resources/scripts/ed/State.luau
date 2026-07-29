@@ -39,9 +39,9 @@ type StateType = {
 }
 
 local EditorCam = assert(workspace.SceneCamera)
-local WorkspaceLink = GameObject.new("TreeLink")
-local InterfaceLink = GameObject.new("TreeLink")
-local ServicesLink = GameObject.new("TreeLink")
+local WorkspaceLink = GameObject.fromTemplate("TreeLink")
+local InterfaceLink = GameObject.fromTemplate("TreeLink")
+local ServicesLink = GameObject.fromTemplate("TreeLink")
 WorkspaceLink.Name = "WorkspaceLink"
 InterfaceLink.Name = "InterfaceLink"
 ServicesLink.Name = "ServicesLink"
@@ -157,10 +157,10 @@ local function createNewProject_(State: StateType)
     fs.copy("@_editres/scripts/defaultconfig.luau", "@_projres/scripts/.config.luau")
     fs.copy(Configuration.GetLogo(), "@project/icon.png")
 
-    local dm = GameObject.new("DataModel")
-    local projWp = GameObject.new("Workspace")
-    local camera = GameObject.new("Camera")
-    local dl = GameObject.new("DirectionalLight")
+    local dm = GameObject.fromTemplate("DataModel")
+    local projWp = GameObject.fromTemplate("Workspace")
+    local camera = GameObject.fromTemplate("Camera")
+    local dl = GameObject.fromTemplate("DirectionalLight")
 
     dm.Name = name
     projWp.Name = "Workspace"
@@ -342,7 +342,7 @@ local function openProject_(State: StateType, ManualPath: string?)
     end
 
     if not State.Project.DataModel then
-        State.Project.DataModel = GameObject.new("DataModel")
+        State.Project.DataModel = GameObject.fromTemplate("DataModel")
         print("Re-created DataModel")
     end
 
@@ -350,9 +350,9 @@ local function openProject_(State: StateType, ManualPath: string?)
     State.Project.Workspace = State.Project.DataModel:FindChildWithComponent("Workspace")
 
     if not State.Project.Workspace then
-        local newWorkspace = GameObject.new("Workspace")
+        local newWorkspace = GameObject.fromTemplate("Workspace")
 
-        newWorkspace.SceneCamera = GameObject.new("Camera")
+        newWorkspace.SceneCamera = GameObject.fromTemplate("Camera")
         newWorkspace.SceneCamera.Parent = newWorkspace
 
         newWorkspace.Name = "Workspace"
@@ -365,7 +365,7 @@ local function openProject_(State: StateType, ManualPath: string?)
 
     assert(State.Project.Workspace)
     if not State.Project.Workspace.SceneCamera then
-        local cam = GameObject.new("Camera")
+        local cam = GameObject.fromTemplate("Camera")
         cam.Name = "Camera"
         cam.Parent = State.Project.Workspace
         State.Project.Workspace.SceneCamera = cam

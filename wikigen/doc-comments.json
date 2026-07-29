@@ -935,19 +935,19 @@
           "This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
         ],
         "Library": {
-          "fromComponents": {
-            "Description": "Creates an Object with only the specified Components",
-            "In": "Components: { string }?",
-            "Out": "GameObject"
-          },
           "fromId": {
             "Description": "Finds an Object by its internal ID. Do not rely on the ID",
             "In": "Id: number",
             "Out": "GameObject?"
           },
-          "new": {
+          "fromTemplate": {
             "Description": "Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)",
-            "In": "MainComponent: string?",
+            "In": "Template: string",
+            "Out": "GameObject"
+          },
+          "new": {
+            "Description": "Creates an Object with only the specified Components, or a blank Object if no table is given",
+            "In": "Components: { string }?",
             "Out": "GameObject"
           },
           "validComponents": {

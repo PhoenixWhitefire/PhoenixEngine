@@ -59,7 +59,7 @@ end
 function Controller.InitDefault(self: Controller, CharacterHeight)
 	CharacterHeight = CharacterHeight or 7.5
 
-	local character = GameObject.new("Mesh")
+	local character = GameObject.fromTemplate("Mesh")
 	character.Transform = Matrix.scaled(vector.create(CharacterHeight / 3, CharacterHeight, CharacterHeight / 3))
 	character.PhysicsDynamics = true
 	character.PhysicsRotations = false

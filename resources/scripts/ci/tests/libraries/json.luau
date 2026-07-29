@@ -58,7 +58,7 @@ return function(test: Types.Test, expect: Types.Expect)
 	end)
 	test("Value types", function()
 		expect(function()
-			json.encode({ GameObject.fromComponents({ "AnimationAsset" }), vector.zero })
+			json.encode({ GameObject.new({ "AnimationAsset" }), vector.zero })
 		end):toThrow("Cannot serialize 'GameObject'")
 	end)
 end

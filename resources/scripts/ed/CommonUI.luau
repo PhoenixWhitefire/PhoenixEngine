@@ -67,7 +67,7 @@ for _, tool in DeveloperTools:GetToolNames() do
     end
 end
 
-local SelectionPart = GameObject.new("Mesh")
+local SelectionPart = GameObject.fromTemplate("Mesh")
 SelectionPart.Material = "boxframe"
 SelectionPart.Tint = Color.new(166/255, 200/255, 1)
 SelectionPart.PhysicsCollisions = false
@@ -235,14 +235,25 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
 
     imgui.pushstylecolor(Enum.ImGuiColor.ChildBg, backgroundColor)
 
+    local imagePos = imgui.cursorposition()
+    imgui.setcursorposition(imagePos + vector.create(10, 10))
+    imgui.pushstylecolor(Enum.ImGuiColor.Button, { 0, 0, 0, 0 })
+    imgui.pushstylecolor(Enum.ImGuiColor.ButtonActive, { 0, 0, 0, 0 })
+    imgui.pushstylecolor(Enum.ImGuiColor.ButtonHovered, { 0, 0, 0, 0 })
+
+    local clicked, hovered = imgui.button(`##{ Id }`, 100, 95), imgui.itemhovered()
+
+    imgui.popstylecolor()
+    imgui.popstylecolor()
+    imgui.popstylecolor()
+    imgui.setcursorposition(imagePos)
+
     imgui.beginchild(Text .. "_Selection", vector.create(120, 150) * sf, "b")
 
-    local clicked, hovered = false, false
     local cpos = imgui.cursorposition()
     imgui.setcursorposition(cpos.x + 2, cpos.y)
 
     imgui.image(Icon, vector.create(100, 100) * sf, false, tint, false)
-    clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
     imgui.text(Text)
     clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
@@ -975,6 +986,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
         imgui.endmenu()
     end
 
+    HoveringOverMenuBar = HoveringOverMenuBar or imgui.itemhovered()
+
     if OpenGitCommitMenu then
         imgui.openpopup("Commit")
         OpenGitCommitMenu = false
@@ -1039,6 +1052,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
             if imgui.menuitem(if CurrentRibbonTab == i then `[{tab.Name}]` else tab.Name) then
                 CurrentRibbonTab = i
             end
+
+            HoveringOverMenuBar = HoveringOverMenuBar or imgui.itemhovered()
         end
 
         if (HoveringOverMenuBar or HoveringOverRibbonTab or TabButtonHovering ~= nil or WindowHovering)
@@ -1051,8 +1066,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
             imgui.setnextwindowposition(0, 16 * sf)
             imgui.setnextwindowsize(windowWidth, TAB_HEIGHT)
 
-            imgui.begin("RibbonTabContents", "nt | nr | nm | nc | ns | nd | h")
-            HoveringOverRibbonTab = imgui.windowhovered() or imgui.anyitemactive()
+            imgui.begin("Ribbon", "nt | nr | nm | nc | ns | nd | h")
+            HoveringOverRibbonTab = HoveringOverMenuBar or imgui.windowhovered() or imgui.anyitemactive()
             RibbonTabs[CurrentRibbonTab].Renderer(dt)
             imgui.endw()
 

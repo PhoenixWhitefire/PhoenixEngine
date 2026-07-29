@@ -58,34 +58,9 @@ GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
 
 static int gameobject_new(lua_State* L)
 {
-	size_t len = 0;
-	const char* component = luaL_optlstring(L, 1, nullptr, &len);
-
-	if (!component)
-	{
-		luhx_pushgameobject(L, GameObjectManager::Get()->Create().Dereference());
-		return 1;
-	}
-
-	EntityComponent ec = FindComponentTypeByName(std::string_view(component, len));
-	if (ec == EntityComponent::None)
-		luaL_error(L, "Invalid component name '%s'", component);
-
-	ObjectHandle newObject = GameObjectManager::s_Create(ec);
-	newObject->Name = std::string(component, len);
-
-	for (EntityComponent ec : GetCommonDependenciesForComponent(ec))
-		newObject->AddComponent(ec);
-
-	luhx_pushgameobject(L, newObject.Dereference());
-	return 1;
-}
-
-static int gameobject_fromComponents(lua_State* L)
-{
     ObjectHandle newObject = GameObjectManager::Get()->Create();
 
-	if (lua_type(L, 1) != LUA_TNONE)
+	if (lua_gettop(L) == 1)
 	{
 		luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table for argument 1, or 0 arguments");
 
@@ -113,6 +88,25 @@ static int gameobject_fromComponents(lua_State* L)
 	return 1;
 }
 
+static int gameobject_fromTemplate(lua_State* L)
+{
+	size_t len = 0;
+	const char* component = luaL_checklstring(L, 1, &len);
+
+	EntityComponent ec = FindComponentTypeByName(std::string_view(component, len));
+	if (ec == EntityComponent::None)
+		luaL_error(L, "Invalid component name '%s'", component);
+
+	ObjectHandle newObject = GameObjectManager::s_Create(ec);
+	newObject->Name = std::string(component, len);
+
+	for (EntityComponent ec : GetCommonDependenciesForComponent(ec))
+		newObject->AddComponent(ec);
+
+	luhx_pushgameobject(L, newObject.Dereference());
+	return 1;
+}
+
 static int gameobject_fromId(lua_State* L)
 {
 	int oid = luaL_checkinteger(L, 1);
@@ -124,7 +118,7 @@ static int gameobject_fromId(lua_State* L)
 static const luaL_Reg gameobject_funcs[] = {
     { "new", gameobject_new },
 	{ "fromId", gameobject_fromId },
-	{ "fromComponents", gameobject_fromComponents },
+	{ "fromTemplate", gameobject_fromTemplate },
     { NULL, NULL }
 };
 

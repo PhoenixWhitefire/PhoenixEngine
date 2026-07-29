@@ -86,8 +86,19 @@ local function renderProjectSelectorTiles(Projects: { string } | { State.CachedP
             ProjectContextMenuTarget = i
         end
 
+        local imagePos = imgui.cursorposition()
+        imgui.pushstylecolor(Enum.ImGuiColor.Button, { 0, 0, 0, 0 })
+        imgui.pushstylecolor(Enum.ImGuiColor.ButtonActive, { 0, 0, 0, 0 })
+        imgui.pushstylecolor(Enum.ImGuiColor.ButtonHovered, { 0, 0, 0, 0 })
+
+        clicked, hovered = imgui.button(`##{ projName }`, 250, 245), imgui.itemhovered()
+
+        imgui.popstylecolor()
+        imgui.popstylecolor()
+        imgui.popstylecolor()
+        imgui.setcursorposition(imagePos)
+
         imgui.image(`{ Preferences.ProjectsDirectory }/{ projName }/icon.png`, vector.create(250, 250))
-        clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
         imgui.setcursorposition(cpos.x, cpos.y + 250)
         imgui.text(projName)
         clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()

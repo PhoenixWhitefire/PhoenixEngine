@@ -5,7 +5,7 @@ local History = game:GetService("History")
 
 local CoreTools = {}
 CoreTools.HoveringOverCamera = nil :: (GameObject & EcTransform)?
-CoreTools.VisualizationsContainer = GameObject.new("Model")
+CoreTools.VisualizationsContainer = GameObject.fromTemplate("Model")
 CoreTools.VisualizationsContainer.Parent = workspace
 CoreTools.VisualizationTargets = {} :: { [GameObject & EcTransform]: GameObject }
 
@@ -18,7 +18,7 @@ local GizmoActive = true
 local GizmoMode = 1
 local GizmoMoveIncrement = 0.5
 
-local GizmoContainer = GameObject.new("Model")
+local GizmoContainer = GameObject.fromTemplate("Model")
 local GizmoPrevTarget: (GameObject & EcTransform)? = nil
 local GizmoPrevTargetTransform = Matrix.identity
 local GizmoPieceToDirection: { [GameObject]: vector } = {}

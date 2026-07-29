@@ -1466,7 +1466,7 @@ static void renderMaterialEditor()
     if (MtlPreviewScene.RenderList[0].RenderMeshId == 0)
         MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath("!Cube");
 
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemActivated())
         ImGui::OpenPopup("SelectPreviewShape");
 
     if (ImGui::BeginPopup("SelectPreviewShape"))
@@ -1981,6 +1981,10 @@ static void recursiveIterateTree(const ObjectHandle& current)
 
         bool open = ImGui::TreeNodeEx(object->Name.c_str(), flags, "%s", "");
 
+        nodeClicked = ImGui::IsItemActivated() ? object : nodeClicked;
+        openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
+        isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
+
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
         {
             std::vector<uint32_t> draggingVec;
@@ -2038,10 +2042,6 @@ static void recursiveIterateTree(const ObjectHandle& current)
             ImGui::EndDragDropTarget();
         }
 
-        nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
-        openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
-        isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
-
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() - style.IndentSpacing * 0.6f + 1.5f);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
@@ -2054,14 +2054,14 @@ static void recursiveIterateTree(const ObjectHandle& current)
             ImVec4(),
             object->TreeEnabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : (object->GetEnabled() ? ImVec4(.6f, .6f, .6f, 1.f) : ImVec4(.4f, .4f, .4f, 1.f))
         );
-        nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+        nodeClicked = ImGui::IsItemActivated() ? object : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
         ImGui::SameLine();
         ImGui::TextUnformatted(object->Name.c_str());
 
-        nodeClicked = ImGui::IsItemClicked() ? object : nodeClicked;
+        nodeClicked = ImGui::IsItemActivated() ? object : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
@@ -2091,7 +2091,7 @@ static void recursiveIterateTree(const ObjectHandle& current)
             // the above call to `::Button` will always
             // return false, ig this does something different
             // with the ordering 15/12/2024
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemActivated())
             {
                 ObjectInsertionTarget = object;
                 ImGui::OpenPopup(45);
@@ -2423,7 +2423,7 @@ static void renderDocumentationViewer()
     const ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow;
 
     bool sectionOpen = ImGui::TreeNodeEx("Game Object", (DocumentationViewerSection == 0 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemActivated())
     {
         DocumentationViewerSection = 0;
         DocumentationViewerSubPage = 0;
@@ -2439,7 +2439,7 @@ static void renderDocumentationViewer()
             float startX = ImGui::GetCursorPosX();
             bool popen = ImGui::TreeNodeEx(s_EntityComponentNames[i].data(), flags, "                           ");
 
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemActivated())
             {
                 DocumentationViewerSection = 0;
                 DocumentationViewerSubPage = i;
@@ -2453,7 +2453,7 @@ static void renderDocumentationViewer()
                 ImVec2(16, 16)
             );
 
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemActivated())
             {
                 DocumentationViewerSection = 0;
                 DocumentationViewerSubPage = i;
@@ -2463,7 +2463,7 @@ static void renderDocumentationViewer()
 
             ImGui::TextUnformatted(s_EntityComponentNames[i].data());
 
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemActivated())
             {
                 DocumentationViewerSection = 0;
                 DocumentationViewerSubPage = i;
@@ -2483,7 +2483,7 @@ static void renderDocumentationViewer()
     }
 
     sectionOpen = ImGui::TreeNodeEx("Datatypes", (DocumentationViewerSection == 1 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemActivated())
     {
         DocumentationViewerSection = 1;
         DocumentationViewerSubPageName = "";
@@ -2500,7 +2500,7 @@ static void renderDocumentationViewer()
 
             bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
 
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemActivated())
             {
                 DocumentationViewerSection = 1;
                 DocumentationViewerSubPageName = it.key();
@@ -2520,7 +2520,7 @@ static void renderDocumentationViewer()
     }
 
     sectionOpen = ImGui::TreeNodeEx("Libraries", (DocumentationViewerSection == 2 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemActivated())
     {
         DocumentationViewerSection = 2;
         DocumentationViewerSubPageName = "";
@@ -2537,7 +2537,7 @@ static void renderDocumentationViewer()
 
             bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
 
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemActivated())
             {
                 DocumentationViewerSection = 2;
                 DocumentationViewerSubPageName = it.key();
@@ -2551,7 +2551,7 @@ static void renderDocumentationViewer()
     }
 
     sectionOpen = ImGui::TreeNodeEx("Globals", ImGuiTreeNodeFlags_Leaf | NodeFlags | (DocumentationViewerSection == 3 ? ImGuiTreeNodeFlags_Selected : 0));
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemActivated())
     {
         DocumentationViewerSection = 3;
         DocumentationViewerSubPage = 0;
@@ -2567,7 +2567,7 @@ static void renderDocumentationViewer()
     }
 
     sectionOpen = ImGui::TreeNodeEx("Enums", (DocumentationViewerSection == 4 ? ImGuiTreeNodeFlags_Selected : 0) | NodeFlags);
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemActivated())
     {
         DocumentationViewerSection = 4;
         DocumentationViewerSubPage = -1;
@@ -2585,7 +2585,7 @@ static void renderDocumentationViewer()
 
             bool popen = ImGui::TreeNodeEx(it.key().c_str(), flags);
 
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemActivated())
             {
                 DocumentationViewerSection = 4;
                 DocumentationViewerSubPageName = it.key();
@@ -3934,7 +3934,7 @@ static void renderProperties()
         ImGui::SeparatorText(sepStr.c_str());
 
         static bool ShowComponents = false;
-        if (ImGui::IsItemClicked())
+        if (ImGui::IsItemActivated())
             ShowComponents = !ShowComponents;
 
         ImGui::PushID(static_cast<uint32_t>(115111116109));
@@ -3962,7 +3962,7 @@ static void renderProperties()
                 RemoveComponentPopupTarget = ec;
                 ImGui::OpenPopup("RemoveComponent");
             }
-            else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+            else if (ImGui::IsItemActivated())
             {
                 DeveloperTools::DocumentationShown = true;
                 DocumentationViewerSection = 0;
@@ -5837,7 +5837,7 @@ void renderDebugger()
                 "%s",
                 treeNodeIdentifier.c_str()
             );
-            bool switchTo = ImGui::IsItemClicked() && lua_stackdepth(coroutine) > 0;
+            bool switchTo = ImGui::IsItemActivated() && lua_stackdepth(coroutine) > 0;
             ImGui::PopStyleColor();
             ImGui::SetItemTooltip("%s", identifier.c_str());
 

@@ -101,10 +101,10 @@ static int imgui_begin(lua_State* L)
     bool hasCloseButton = luaL_optboolean(L, 3, false);
 
     bool open = true;
-	lua_pushboolean(L, ImGui::Begin(title, hasCloseButton ? &open : nullptr, strToWindowFlags(L, flagsstr)));
+    lua_pushboolean(L, ImGui::Begin(title, hasCloseButton ? &open : nullptr, strToWindowFlags(L, flagsstr)));
     lua_pushboolean(L, open);
 
-	return 2;
+    return 2;
 }
 
 static int imgui_end(lua_State*)
@@ -125,7 +125,7 @@ static int imgui_setitemtooltip(lua_State* L)
 {
     ImGui::SetItemTooltip("%s", luaL_checkstring(L, 1));
 
-	return 0;
+    return 0;
 }
 
 static int imgui_settooltip(lua_State* L)
@@ -139,7 +139,7 @@ static int imgui_itemhovered(lua_State* L)
 {
     lua_pushboolean(L, ImGui::IsItemHovered());
 
-	return 1;
+    return 1;
 }
 
 static int imgui_itemactive(lua_State* L)
@@ -209,15 +209,18 @@ static int imgui_itemclicked(lua_State* L)
         && (ImGuiMouseButton_Middle      == GLFW_MOUSE_BUTTON_MIDDLE)
     );
 
-    lua_pushboolean(L, ImGui::IsItemClicked(button));
-	return 1;
+    if (button == ImGuiMouseButton_Left)
+        lua_pushboolean(L, ImGui::IsItemActivated());
+    else
+        lua_pushboolean(L, ImGui::IsItemClicked(button));
+    return 1;
 }
 
 static int imgui_text(lua_State* L)
 {
     ImGui::TextUnformatted(luaL_checkstring(L, 1));
 
-	return 0;
+    return 0;
 }
 
 static int imgui_image(lua_State* L)
@@ -225,8 +228,8 @@ static int imgui_image(lua_State* L)
     TextureManager* texManager = TextureManager::Get();
     bool linearSmoothed = luaL_optboolean(L, 5, true);
 
-	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 1), true, false);
-	const Texture& texture = texManager->GetTextureResource(resId);
+    uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 1), true, false);
+    const Texture& texture = texManager->GetTextureResource(resId);
 
     ImVec2 texSize = ImVec2(texture.Width, texture.Height);
     ImVec2 uv0 = ImVec2(0.f, luaL_optboolean(L, 3, false) ? 1.f : 0.f);
@@ -282,8 +285,8 @@ static int imgui_imagebutton(lua_State* L)
 {
     TextureManager* texManager = TextureManager::Get();
     bool linearSmoothed = luaL_optboolean(L, 4, true);
-	uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 2), true, false);
-	const Texture& texture = texManager->GetTextureResource(resId);
+    uint32_t resId = texManager->LoadFromPath(luaL_checkstring(L, 2), true, false);
+    const Texture& texture = texManager->GetTextureResource(resId);
 
     ImVec2 imgSize = ImVec2(texture.Width, texture.Height);
 
@@ -311,24 +314,24 @@ static int imgui_imagebutton(lua_State* L)
 static int imgui_inputstring(lua_State* L)
 {
     const char* name = luaL_checkstring(L, 1);
-	std::string value = luaL_checkstring(L, 2);
+    std::string value = luaL_checkstring(L, 2);
     value.reserve(value.size() + 64);
-	bool changed = ImGui::InputText(name, &value, luaL_optboolean(L, 3, false) ? ImGuiInputTextFlags_Password : 0);
+    bool changed = ImGui::InputText(name, &value, luaL_optboolean(L, 3, false) ? ImGuiInputTextFlags_Password : 0);
 
-	lua_pushlstring(L, value.data(), value.size());
+    lua_pushlstring(L, value.data(), value.size());
     lua_pushboolean(L, changed);
-	return 2;
+    return 2;
 }
 
 static int imgui_inputnumber(lua_State* L)
 {
     const char* name = luaL_checkstring(L, 1);
-	double value = luaL_checknumber(L, 2);
-	bool changed = ImGui::InputDouble(name, &value);
+    double value = luaL_checknumber(L, 2);
+    bool changed = ImGui::InputDouble(name, &value);
 
-	lua_pushnumber(L, value);
+    lua_pushnumber(L, value);
     lua_pushboolean(L, changed);
-	return 2;
+    return 2;
 }
 
 static int imgui_button(lua_State* L)
@@ -355,11 +358,11 @@ static int imgui_urllink(lua_State* L)
 static int imgui_checkbox(lua_State* L)
 {
     const char* title = luaL_checkstring(L, 1);
-	bool curval = luaL_checkboolean(L, 2);
-	bool pressed = ImGui::Checkbox(title, &curval);
+    bool curval = luaL_checkboolean(L, 2);
+    bool pressed = ImGui::Checkbox(title, &curval);
 
-	lua_pushboolean(L, curval);
-	lua_pushboolean(L, pressed);
+    lua_pushboolean(L, curval);
+    lua_pushboolean(L, pressed);
 
     return 2;
 }

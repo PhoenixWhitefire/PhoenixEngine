@@ -35,6 +35,44 @@ function applyThemeByName(Name: string)
     applyTheme(GetThemeData(Name), Name)
 end
 
+type Components = {
+    Mesh: { Asset: string },
+    Transform: { Position: vector },
+}
+
+type GameObject = {
+    Name: string,
+}
+
+type function findComponentsFromUnionRecursive(un: type): { type }
+    local results = {}
+
+    for _, t in un:components() do
+        if t:is("union") then
+            for _, inner in findComponentsFromUnionRecursive(t) do
+                table.insert(results, inner)
+            end
+        else
+            local found = false
+
+            -- Note: can't do direct index check because types won't be rawequal
+            for i, c in Components:properties() do
+                if i:value() == t:value() then
+                    table.insert(results, c.read)
+                    found = true
+                    break
+                end
+            end
+
+            if not found then
+                --error(`invalid component '{t:value()}'`)
+            end
+        end
+    end
+
+    return results
+end
+
 return function(Name: string)
     xpcall(applyThemeByName, function(err)
         ErrorMessage.Push(`Failed to apply theme: { err }`)

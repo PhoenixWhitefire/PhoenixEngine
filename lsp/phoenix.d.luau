@@ -101,20 +101,15 @@ end
 declare extern type EnumItem with
 end
 
-type function IntersectComponents(ty: type)
-    if ty:is("singleton") then
-        for i, c in Components:properties() do
-            if i:value() == ty:value() then
-                return c.read
+type function findComponentsFromUnionRecursive(un: type): { type }
+    local results = {}
+
+    for _, t in un:components() do
+        if t:is("union") then
+            for _, inner in findComponentsFromUnionRecursive(t) do
+                table.insert(results, inner)
             end
-        end
-
-        error(`invalid component '{ty:value()}'`)
-
-    elseif ty:is("union") then
-        local results = {}
-
-        for _, t in ty:components() do
+        else
             local found = false
 
             -- Note: can't do direct index check because types won't be rawequal
@@ -126,10 +121,27 @@ type function IntersectComponents(ty: type)
                 end
             end
 
-            if not found then
+            if not found and t:value() ~= "" then
                 error(`invalid component '{t:value()}'`)
             end
         end
+    end
+
+    return results
+end
+
+type function IntersectComponents(ty: type)
+    if ty:is("singleton") then
+        for i, c in Components:properties() do
+            if i:value() == ty:value() then
+                return c.read
+            end
+        end
+
+        error(`invalid component '{ty:value()}'`)
+
+    elseif ty:is("union") then
+        local results = findComponentsFromUnionRecursive(ty)
 
         return types.intersectionof(table.unpack(results))
     end
@@ -226,9 +238,9 @@ end
 
 
 declare GameObject: {
-  fromComponents: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>) & () -> GameObject,
   fromId: (( Id: number ) -> (GameObject?)),
-  new: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>) & () -> GameObject,
+  fromTemplate: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
+  new: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>) & () -> GameObject,
   validComponents: { string }
 }
 declare extern type InputEvent with

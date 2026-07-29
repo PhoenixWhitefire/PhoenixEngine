@@ -40,7 +40,7 @@ function ProjectPlaying.Enter(_prev)
     assert(projWp)
 
     if not projWp.SceneCamera then
-        projWp.SceneCamera = GameObject.new("Camera")
+        projWp.SceneCamera = GameObject.fromTemplate("Camera")
         projWp.SceneCamera.Parent = projWp
         projWp.SceneCamera.Name = "Camera"
         warn("Created playtest camera")
