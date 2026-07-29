@@ -182,5 +182,7 @@ namespace ScriptEngine::L
         double LastResumed = 0.f;
         ParallelVM* PVM = nullptr;
         bool DebuggerAttached = false;
+        bool BeingDebugged = false;
+        bool DebuggerResume = false;
     };
 };

@@ -23,7 +23,6 @@
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <tinyfiledialogs.h>
 #include <lualib.h>
-#include <luau/VM/src/lstate.h>
 #include <chrono>
 #include <set>
 
@@ -44,6 +43,7 @@
 #include "component/Model.hpp"
 
 #include "script/ScriptEngine.hpp"
+#include "script/UserdataTags.hpp"
 #include "geometry/DecomposeTRS.hpp"
 
 #include "GlobalJsonConfig.hpp"
@@ -546,6 +546,9 @@ static bool textEditorAskSaveFileAs(
 
 static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 {
+    if (!Tab.HasUnderlyingFile || !std::filesystem::is_regular_file(Tab.FilePath))
+        return;
+
     std::filesystem::file_time_type lwt = std::filesystem::last_write_time(Tab.FilePath);
     std::chrono::time_point<std::chrono::system_clock> systemTime = std::chrono::clock_cast<std::chrono::system_clock>(lwt);
 
@@ -560,7 +563,10 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
         );
 
         if (choice == 0)
+        {
+            Tab.WasEdited = false;
             return;
+        }
     }
 
     Tab.LastSynced = std::chrono::system_clock::now() + std::chrono::milliseconds(10);
@@ -4992,6 +4998,8 @@ static void renderRendererSettings()
         DeveloperTools::RendererShown = false;
 }
 
+void renderDebugger();
+
 void DeveloperTools::Frame(double DeltaTime)
 {
     ZoneScopedC(tracy::Color::DarkSeaGreen);
@@ -5015,6 +5023,7 @@ void DeveloperTools::Frame(double DeltaTime)
     renderDocumentationViewer();
     renderInfo(DeltaTime);
     renderRendererSettings();
+    renderDebugger();
 }
 
 void DeveloperTools::SetExplorerRoot(const ObjectHandle NewRoot)
@@ -5151,7 +5160,7 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
     }
 
     const char* vtn = luaL_typename(L, -1);
-    constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DrawLinesFull;
+    constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull;
     bool changed = false;
 
     switch (lua_type(L, -1))
@@ -5243,16 +5252,12 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
         {
             if (!CanEdit || lua_type(L, -1) == LUA_TUSERDATA)
             {
-                int prevStatus = lua_status(L);
-
-                L->status = LUA_OK;
-                valueString = luaL_tolstring(L, -1, nullptr);
-                L->status = prevStatus;
-
-                lua_pop(L, 1);
-
-                if (lua_type(L, -1) == LUA_TSTRING)
-                    valueString = std::format("\"{}\"", valueString);
+                if (const uint32_t* id = (uint32_t*)lua_touserdatatagged(L, -1, UserdataTag::GameObject))
+                    valueString = GameObjectManager::Get()->FindById(*id)->GetFullName();
+                else if (const Color* color = (Color*)lua_touserdatatagged(L, -1, UserdataTag::Color))
+                    valueString = std::format("{}, {}, {}", color->R, color->G, color->B);
+                else
+                    valueString = std::format("({})", luaL_typename(L, -1));
             }
             else
             {
@@ -5359,11 +5364,19 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
     return changed;
 }
 
+// static int DebuggerStackStart = 0;
+static std::string errorMessage;
+static std::string breakReason;
+static lua_State* debuggerL = nullptr;
+static lua_Debug debuggerAr = {};
+static DebugBreakReason debuggerReason = DebugBreakReason::BrokeIntoDebugger;
+static ScriptEngine::L::StateUserdata* corUd = nullptr;
+static int currfuncindex = 0;
+static bool s_CallstackJumpToCurrentThread = false;
+static int CurrentVMIndex = 0;
 static bool InDebugger = false;
-static ImGuiContext* debuggerContext = nullptr;
-static ImGuiContext* prevContext = nullptr;
-static int prevCursorMode = GLFW_CURSOR_NORMAL;
-static int DebuggerStackStart = 0;
+static bool DebuggerFirstFrame = false;
+static bool DebuggerSecondFrame = true;
 
 static void resetScriptTimeouts()
 {
@@ -5386,10 +5399,583 @@ static void resetScriptTimeouts()
     }
 }
 
-void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Reason)
+static void singleStep(DebugBreakReason Reason, lua_State* L, ScriptEngine::L::StateUserdata* lud, const lua_Debug& ar)
+{
+    lud->DebuggerResume = true;
+
+    if (Reason == DebugBreakReason::DebuggerStep)
+    {
+        assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+        if (currfuncindex != 0)
+            lua_pop(L, 1); // pop our function from `lua_getinfo`
+
+        //s_WasF7Down = true;
+        return;
+    }
+    else if (Reason == DebugBreakReason::Breakpoint)
+    {
+        lua_breakpoint(L, -1, ar.currentline, false); // please
+    }
+
+    static int s_PrevLine = 0;
+    s_PrevLine = ar.currentline;
+
+    lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
+        {
+            if (ar->currentline > s_PrevLine)
+            {
+                s_PrevLine = ar->currentline;
+                lua_break(L);
+
+                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+                vmud->BeingDebugged = true;
+
+                DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::DebuggerStep);
+                currfuncindex = 0; // TODO
+            }
+        };
+
+    lua_singlestep(L, true);
+}
+
+static void stepInto(DebugBreakReason Reason, lua_State* L, ScriptEngine::L::StateUserdata* lud, const lua_Debug& ar)
+{
+    lud->DebuggerResume = true;
+
+    if (Reason == DebugBreakReason::DebuggerStep)
+    {
+        assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
+        if (currfuncindex != 0)
+            lua_pop(L, 1); // pop our function from `lua_getinfo`
+
+        return;
+    }
+    else if (Reason == DebugBreakReason::Breakpoint)
+    {
+        lua_breakpoint(L, -1, ar.currentline, false); // please
+    }
+
+    static int s_PrevLine = 0;
+    s_PrevLine = ar.currentline;
+
+    lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
+        {
+            if (ar->currentline != s_PrevLine)
+            {
+                s_PrevLine = ar->currentline;
+                lua_break(L);
+
+                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+                vmud->BeingDebugged = true;
+
+                DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::DebuggerStep);
+                currfuncindex = 0; // TODO
+            }
+        };
+
+    lua_singlestep(L, true);
+}
+
+static bool isSteppable(const ScriptEngine::L::StateUserdata* vmud, DebugBreakReason Reason, lua_State* L)
+{
+    if (!vmud->DebuggerAttached)
+        tinyfd_messageBox("Cannot step", "The selected coroutine cannot be stepped because the Debugger was detached", "ok", "error", 1);
+    else if (Reason == DebugBreakReason::Error)
+        tinyfd_messageBox("Cannot step", "Errors cannot be stepped", "ok", "error", 1);
+    else if (lua_stackdepth(L) == 0)
+        tinyfd_messageBox("Cannot step", "The selected coroutine cannot be stepped because it has already exited", "ok", "error", 1);
+    else
+        return true;
+
+    return false;
+}
+
+static void processDebuggerAction()
+{
+    DebugBreakReason Reason = debuggerReason;
+    lua_State*& L = debuggerL;
+    lua_Debug& ar = debuggerAr;
+
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
+    ScriptEngine::L::StateUserdata* lud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(debuggerL);
+
+    if (s_QueuedDebuggerAction == TextEditor::DebugAction::Continue || s_QueuedDebuggerAction == TextEditor::DebugAction::Stop /*|| ImGui::IsKeyDown(ImGuiKey_F5)*/)
+    {
+        s_QueuedDebuggerAction.reset();
+
+        lua_callbacks(L)->debugstep = nullptr;
+        DeveloperTools::LeaveDebugger();
+    }
+
+    static bool s_WasF7Down = false;
+    static bool s_WasF8Down = false;
+    bool isF7Down = false; //ImGui::IsKeyDown(ImGuiKey_F7) && running;
+    bool isF8Down = false; //ImGui::IsKeyDown(ImGuiKey_F8) && running;
+
+    if (isF8Down)
+    {
+        if (s_WasF8Down)
+            isF8Down = false;
+
+        s_WasF8Down = true;
+    }
+    else
+        s_WasF8Down = false;
+
+    if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error
+        && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down))
+    )
+    {
+        s_QueuedDebuggerAction.reset();
+
+        if (isSteppable(vmud, Reason, L))
+            singleStep(Reason, L, lud, ar);
+    }
+
+    s_WasF7Down = isF7Down;
+
+    if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
+    {
+        s_QueuedDebuggerAction.reset();
+
+        if (isSteppable(vmud, Reason, L))
+            stepInto(Reason, L, lud, ar);
+    }
+}
+
+void renderDebugger()
+{
+    if (!InDebugger)
+        return;
+
+    ZoneScoped;
+    resetScriptTimeouts();
+
+    lua_State*& L = debuggerL;
+    lua_Debug& ar = debuggerAr;
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+
+    if (!vmud->BeingDebugged)
+    {
+        Log.Error("VM stopped being debugged but Debugger was not exited!");
+        DeveloperTools::LeaveDebugger();
+
+        return;
+    }
+
+    if (DebuggerFirstFrame)
+    {
+        ImGui::SetNextWindowFocus();
+        DebuggerFirstFrame = false;
+        DebuggerSecondFrame = true;
+    }
+
+    if (DebuggerSecondFrame)
+    {
+        invokeTextEditor(ar.short_src ? ar.short_src : "!InlineDocument:Unknown source");
+        DebuggerSecondFrame = false;
+    }
+
+    if (ImGui::Begin("Debugger"))
+    {
+        if (ImGui::IsWindowAppearing())
+            DebuggerFirstFrame = true;
+
+        ImGui::TextUnformatted(breakReason.data());
+
+        ImGui::Text("Script: %s", ar.short_src);
+        ImGui::Text("Line: %i", ar.currentline);
+        ImGui::Text("In: %s", ar.name ? ar.name : "<anonymous function>");
+        ImGui::TextUnformatted(errorMessage.c_str());
+        ImGui::SetItemTooltip("%s", errorMessage.c_str());
+        ImGui::Text("VM: %s", corUd->VM.c_str());
+
+        if (vmud->DebuggerAttached)
+        {
+            if (ImGui::Button("Detach Debugger for this VM"))
+            {
+                lua_Callbacks* cb = lua_callbacks(L);
+                vmud->DebuggerAttached = false;
+
+                cb->debugbreak = nullptr;
+                cb->debugprotectederror = nullptr;
+                cb->debugstep = nullptr;
+                cb->debuginterrupt = [](lua_State*, lua_Debug* ar)
+                    {
+                        lua_resume((lua_State*)ar->userdata, nullptr, 0);
+                    };
+            }
+        }
+        else
+        {
+            ImGui::Text("The Debugger has been detached for %s.", corUd->VM.c_str());
+        }
+    }
+    ImGui::End();
+
+    if (lua_stackdepth(L) > 0 && ImGui::Begin("Watch"))
+    {
+        static int Section = 0;
+        ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
+
+        ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
+            
+        switch (Section)
+        {
+        case 0:
+        {
+            for (int l = 0; l < lua_stackdepth(L); l++)
+            {
+                ImGui::Text("---LEVEL %i---", l);
+                ImGui::PushID(l);
+
+                for (int i = 1; i < 256; i++)
+                {
+                    luaL_checkstack(L, 3, "get local");
+                    int prev = lua_gettop(L);
+
+                    const char* name = lua_getlocal(L, l, i);
+                    if (lua_gettop(L) == prev)
+                        break; // no local here
+
+                    lua_pushstring(L, name ? name : std::format("[l{}]", l).c_str());
+                    lua_pushvalue(L, -2);
+
+                    if (debugVariable(L) && lua_setlocal(L, l, i))
+                        lua_pop(L, 1);
+                    else
+                        lua_pop(L, 2);
+
+                    lua_pop(L, 1);
+                };
+
+                ImGui::PopID();
+            }
+
+            break;
+        }
+        case 1:
+        {
+            for (int i = 1; i < ar.nupvals; i++)
+            {
+                const char* nameCstr = lua_getupvalue(L, currfuncindex, i);
+
+                if (!nameCstr)
+                    break;
+
+                std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[u{}]", i);
+
+                lua_pushstring(L, name.c_str());
+                lua_pushvalue(L, -2);
+
+                if (debugVariable(L) && lua_setupvalue(L, currfuncindex, i))
+                    lua_pop(L, 1);
+                else
+                    lua_pop(L, 2);
+
+                lua_pop(L, 1);
+            }
+
+            break;
+        }
+        case 2:
+        {
+            lua_pushstring(L, "Environment");
+            lua_pushvalue(L, LUA_ENVIRONINDEX);
+            debugVariable(L);
+
+            lua_pop(L, 2);
+            break;
+        }
+        case 3:
+        {
+            lua_pushstring(L, "Registry");
+            lua_pushvalue(L, LUA_REGISTRYINDEX);
+            debugVariable(L);
+
+            lua_pop(L, 2);
+            break;
+        }
+        case 4:
+        {
+            if (lua_costatus(lua_mainthread(L), L) != LUA_CONOR)
+            {
+                for (int i = 1; i <= lua_gettop(L); i++)
+                {
+                    lua_pushinteger(L, i);
+                    lua_pushvalue(L, i);
+                    if (debugVariable(L))
+                    {
+                        lua_remove(L, -2);
+                        lua_remove(L, -2);
+                    }
+
+                    lua_pop(L, 2);
+                }
+            }
+            else
+                ImGui::TextUnformatted("Coroutine resumed another coroutine, no stack is available");
+
+            break;
+        }
+        [[unlikely]] default: { assert(false); }
+
+        }
+        ImGui::EndChild();
+    }
+    if (lua_stackdepth(L) > 0)
+        ImGui::End();
+
+    if (ImGui::Begin("Callstack"))
+    {
+        std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>> vms;
+        vms.reserve(ScriptEngine::VMs.size());
+
+        for (auto& [ name, vm ] : ScriptEngine::VMs)
+            vms.emplace_back(name, vm);
+
+        if (CurrentVMIndex >= (int)vms.size())
+            CurrentVMIndex = 0;
+
+        /*
+        ImGui::Combo("##", &CurrentVMIndex, [](void* vmsPtr, int index) -> const char*
+            {
+                const auto vms = (std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>>*)vmsPtr;
+                return vms->at(index).first.data();
+            }, &vms, (int)vms.size());
+        */
+
+        const ScriptEngine::LuauVM& vm = vms[CurrentVMIndex].second;
+
+        size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
+        if (numCoroutineIdChars < 3)
+            numCoroutineIdChars = 3;
+
+        const auto renderCoroutine = [&L, vm, vms, numCoroutineIdChars](lua_State* coroutine)
+        {
+            ImGui::PushID(coroutine);
+
+            lua_Debug car = {};
+
+            int li = 0;
+            bool getInfoSuccess = lua_getinfo(coroutine, li, "slnfu", &car);
+
+            while (!car.short_src || (strcmp(car.short_src, "[C]") == 0))
+            {
+                if (getInfoSuccess)
+                    lua_pop(coroutine, 1);
+                li++;
+
+                if (!lua_getinfo(coroutine, li, "slnfu", &car))
+                {
+                    getInfoSuccess = lua_getinfo(coroutine, 0, "slnfu", &car);
+                    car.short_src = nullptr;
+                    break;
+                }
+                else
+                    getInfoSuccess = true;
+            }
+
+            const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
+            std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
+            std::string targetFile = car.short_src ? car.short_src : "";
+            int targetLine = ar.currentline;
+
+            if (targetFile.size() == 0)
+            {
+                if (size_t pathBegin = identifier.find('.'); pathBegin != std::string::npos)
+                {
+                    std::string_view fromPathOnwards = { identifier.begin() + pathBegin, identifier.end() };
+
+                    if (size_t pathEnd = fromPathOnwards.find(".luau"); pathEnd != std::string::npos)
+                    {
+                        targetFile = std::string(identifier.begin() + pathBegin, identifier.begin() + pathBegin + pathEnd + strlen(".luau"));
+
+                        if (size_t lineBegin = fromPathOnwards.find(':'); lineBegin != std::string::npos)
+                        {
+                                std::string_view fromLineOnwards = { fromPathOnwards.begin() + lineBegin, fromPathOnwards.end() };
+
+                            if (size_t lineEnd = fromLineOnwards.find('\n'); lineEnd != std::string::npos)
+                                targetLine = std::stoi(std::string(fromLineOnwards.begin() + 1, fromLineOnwards.begin() + lineEnd));
+                        }
+                    }
+                }
+            }
+
+            bool noSourceInformation = false;
+
+            if (identifier.size() == 2) // ":0"
+            {
+                identifier = "<coroutine>";
+                noSourceInformation = true;
+            }
+
+            if (size_t pathStartLoc = identifier.find("scripts/"); pathStartLoc != std::string::npos)
+                identifier = { identifier.begin() + pathStartLoc, identifier.end() };
+
+            if (size_t newlLoc = identifier.find('\n'); newlLoc != std::string::npos && newlLoc != 0)
+                identifier = { identifier.begin(), identifier.begin() + newlLoc };
+
+            if (!car.short_src && lua_mainthread(coroutine) != coroutine) // means we are showing the spawn trace and not the actual current call frame
+                identifier = "Spawned from " + identifier;
+
+            if (coroutine == vm.MainThread || noSourceInformation || lua_stackdepth(coroutine) == 0)
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5, 0.5, 0.5, 1.f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
+
+            std::string treeNodeIdentifier = identifier;
+            if (treeNodeIdentifier.size() > numCoroutineIdChars)
+                treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
+
+            if (s_CallstackJumpToCurrentThread && coroutine == L)
+                ImGui::SetNextItemOpen(true);
+
+            bool open = ImGui::TreeNodeEx(
+                coroutine,
+                ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow | (coroutine == L ? ImGuiTreeNodeFlags_Selected : 0),
+                "%s",
+                treeNodeIdentifier.c_str()
+            );
+            bool switchTo = ImGui::IsItemClicked() && lua_stackdepth(coroutine) > 0;
+            ImGui::PopStyleColor();
+            ImGui::SetItemTooltip("%s", identifier.c_str());
+
+            ImGui::SameLine();
+
+            ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
+
+            const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
+            const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(lua_mainthread(coroutine), coroutine)];
+
+            ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
+            ImGui::TextUnformatted(lsdi.Id);
+            ImGui::PopStyleColor();
+            ImGui::SetItemTooltip("%s", lsdi.Description);
+
+            ImGui::SameLine();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
+            ImGui::TextUnformatted(lcsdi.Id);
+            ImGui::PopStyleColor();
+            ImGui::SetItemTooltip("%s", lcsdi.Description);
+
+            if (s_CallstackJumpToCurrentThread && coroutine == L)
+            {
+                ImGui::SetScrollHereY();
+                s_CallstackJumpToCurrentThread = false;
+            }
+
+            if (switchTo)
+            {
+                assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
+                if (currfuncindex != 0)
+                    lua_remove(L, currfuncindex);
+
+                L = coroutine;
+                currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
+                assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
+                ar = car;
+
+                TextEditorTab* tab = nullptr;
+
+                if (lua_mainthread(L) != L)
+                {
+                    tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
+                        "!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
+                        ud->VM, ud->SpawnTrace
+                    ));
+                }
+                else
+                {
+                    tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vms[CurrentVMIndex].first));
+                }
+
+                tab->DebuggerCurrentLine = targetLine;
+                tab->JumpToLine = targetLine;
+            }
+            else
+            {
+                if (getInfoSuccess)
+                    lua_pop(coroutine, 1); // pop our current function off to leave the stack balanced
+            }
+
+            if (open)
+            {
+                lua_Debug car = {};
+                int i = 0;
+
+                if (!lua_getinfo(coroutine, 0, "sln", &car))
+                    i = 1;
+
+                for (i = 0; lua_getinfo(coroutine, i, "sln", &car); i++)
+                {
+                    ImGui::PushID(i);
+
+                    if (car.currentline > 0)
+                    {
+                        std::string_view srcShortened = car.short_src;
+                        if (size_t loc = srcShortened.find("scripts/"); loc != std::string::npos)
+                            srcShortened = std::string_view(srcShortened.begin() + loc, srcShortened.end());
+
+                        ImGui::PushStyleColor(
+                            ImGuiCol_TextLink,
+                            ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
+                        );
+
+                        if (ImGui::TextLink(std::format(
+                            "{}:{} in {}",
+                            srcShortened, car.currentline, car.name ? car.name : "<anonmyous>"
+                        ).c_str()))
+                        {
+                            invokeTextEditor(car.short_src).JumpToLine = car.currentline;
+                            lua_getinfo(coroutine, i, "sln", &ar);
+                        }
+
+                        ImGui::SetItemTooltip("View source");
+                        ImGui::PopStyleColor();
+                    }
+                    else
+                    {
+                        ImGui::Text("%s in %s", car.short_src, car.name);
+                        ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
+                    }
+
+                    ImGui::PopID();
+                }
+
+                if (lua_getthreaddata(coroutine))
+                {
+                    const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
+                    if (ud->SpawnTrace.size() > 0)
+                    {
+                        ImGui::SeparatorText("Spawn trace");
+                        ImGui::TextUnformatted(ud->SpawnTrace.c_str());
+                    }
+                }
+
+                ImGui::TreePop();
+            }
+
+            ImGui::PopID();
+        };
+
+        renderCoroutine(vm.MainThread);
+        for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread))->Coroutines)
+            renderCoroutine(coroutine);
+    }
+    ImGui::End();
+
+    processDebuggerAction();
+}
+
+void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Reason)
 {
     using namespace ScriptEngine::L;
     ZoneScoped;
+
+    if (lua_stackdepth(L) == 0)
+        return;
 
     resetScriptTimeouts();
 
@@ -5401,12 +5987,7 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
         lua_resume(co, nullptr, 0);
     }
 
-    Engine* engine = Engine::Get();
-
     luaL_checkstack(L, 20, "debugger");
-
-    std::string_view breakReason;
-    std::string errorMessage;
 
     const std::string_view BreakReasons[] = {
         "Broke into Debugger",
@@ -5437,52 +6018,13 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
     else
         errorMessage = BreakExplanations[Reason];
 
-    ScriptEngine::L::StateUserdata* corUd = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
+    corUd = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
     s_QueuedDebuggerAction.reset();
-
-    if (!InDebugger)
-    {
-        prevContext = ImGui::GetCurrentContext();
-        debuggerContext = ImGui::CreateContext();
-
-        ImGuiIO& debuggerGuiIO = ImGui::GetIO(debuggerContext);
-        debuggerGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        debuggerGuiIO.IniFilename = "debugger-layout.ini";
-
-        ImGui_ImplGlfw_Shutdown();
-
-        ImGui::SetCurrentContext(debuggerContext);
-
-        PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger init");
-        PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL on Debugger init");
-
-        prevCursorMode = glfwGetInputMode(engine->Window, GLFW_CURSOR);
-        glfwSetInputMode(engine->Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-        engine->RendererContext.FrameBuffer.Unbind();
-        glDisable(GL_FRAMEBUFFER_SRGB);
-
-        DebuggerStackStart = lua_gettop(L);
-    }
-    else
-    {
-        ImGui::SetCurrentContext(debuggerContext);
-    }
 
     InDebugger = true;
 
-    double debuggerLastSecond = GetRunningTime();
-    double debuggerLastFrame = GetRunningTime();
-    int framesPerSecond = 0;
-    int framesInSecond = 0;
-    bool develUI = false;
-    bool quietBg = true;
-    bool running = true;
-
     int li = 0;
     bool getInfoSuccess = lua_getinfo(L, li, "slnfu", ar);
-
-    bool firstFrame = true;
 
     while (!ar->short_src || (strcmp(ar->short_src, "[C]") == 0))
     {
@@ -5500,7 +6042,7 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
             getInfoSuccess = true;
     }
 
-    int currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
+    currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
     TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
     for (TextEditorTab& otherTab : s_TextEditors)
     {
@@ -5520,10 +6062,7 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
     tab.JumpToLine = ar->currentline;
     tab.SetUIFocus = true;
 
-    static bool s_CallstackJumpToCurrentThread = false;
     s_CallstackJumpToCurrentThread = true;
-
-    static int CurrentVMIndex = 0;
 
     int cvii = 0;
     for (auto it = ScriptEngine::VMs.begin(); it != ScriptEngine::VMs.end(); it++)
@@ -5536,586 +6075,24 @@ void DeveloperTools::DebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Re
         cvii++;
     }
 
-    while (!glfwWindowShouldClose(engine->Window) && running)
-    {
-        ZoneScopedN("DebuggerFrame");
-        double dt = GetRunningTime() - debuggerLastFrame;
-        debuggerLastFrame = GetRunningTime();
-
-        glfwPollEvents();
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::DockSpaceOverViewport();
-        resetScriptTimeouts();
-
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        if (ImGui::Begin("Debugger"))
-        {
-            ImGui::TextUnformatted(breakReason.data());
-
-            ImGui::Text("Script: %s", ar->short_src);
-            ImGui::Text("Line: %i", ar->currentline);
-            ImGui::Text("In: %s", ar->name ? ar->name : "<anonymous function>");
-            ImGui::TextUnformatted(errorMessage.c_str());
-            ImGui::SetItemTooltip("%s", errorMessage.c_str());
-            ImGui::Text("VM: %s", corUd->VM.c_str());
-
-            if (s_QueuedDebuggerAction == TextEditor::DebugAction::Continue || s_QueuedDebuggerAction == TextEditor::DebugAction::Stop || ImGui::IsKeyDown(ImGuiKey_F5))
-            {
-                s_QueuedDebuggerAction.reset();
-                lua_callbacks(L)->debugstep = nullptr;
-                running = false;
-            }
-
-            ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-
-            static bool s_WasF7Down = false;
-            static bool s_WasF8Down = false;
-            bool isF7Down = ImGui::IsKeyDown(ImGuiKey_F7) && running;
-            bool isF8Down = ImGui::IsKeyDown(ImGuiKey_F8) && running;
-
-            if (isF8Down)
-            {
-                if (s_WasF8Down)
-                    isF8Down = false;
-
-                s_WasF8Down = true;
-            }
-            else
-                s_WasF8Down = false;
-
-            if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error
-                && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down))
-            )
-            {
-                ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
-                s_QueuedDebuggerAction.reset();
-
-                if (Reason == DebugBreakReason::DebuggerStep)
-                {
-                    running = false;
-                    ImGui::End();
-                    ImGui::EndFrame();
-
-                    assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-                    if (currfuncindex != 0)
-                        lua_pop(L, 1); // pop our function from `lua_getinfo`
-
-                    ImGui::SetCurrentContext(prevContext);
-
-                    s_WasF7Down = true;
-                    return;
-                }
-                else if (Reason == DebugBreakReason::Breakpoint)
-                {
-                    lua_breakpoint(L, -1, ar->currentline, false); // please
-                }
-
-                static int s_PrevLine = 0;
-                s_PrevLine = ar->currentline;
-
-                lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
-                    {
-                        if (ar->currentline > s_PrevLine)
-                        {
-                            s_PrevLine = ar->currentline;
-                            DeveloperTools::DebugBreak(L, ar, DebugBreakReason::DebuggerStep);
-                        }
-                    };
-
-                lua_singlestep(L, true);
-                lua_break(L);
-                running = false;
-            }
-
-            s_WasF7Down = isF7Down;
-
-            if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
-            {
-                ImGui::SaveIniSettingsToDisk("debugger-layout.ini");
-                s_QueuedDebuggerAction.reset();
-
-                if (Reason == DebugBreakReason::DebuggerStep)
-                {
-                    running = false;
-                    ImGui::End();
-                    ImGui::EndFrame();
-
-                    assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-                    if (currfuncindex != 0)
-                        lua_pop(L, 1); // pop our function from `lua_getinfo`
-
-                    ImGui::SetCurrentContext(prevContext);
-
-                    return;
-                }
-                else if (Reason == DebugBreakReason::Breakpoint)
-                {
-                    lua_breakpoint(L, -1, ar->currentline, false); // please
-                }
-
-                static int s_PrevLine = 0;
-                s_PrevLine = ar->currentline;
-
-                lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
-                    {
-                        if (ar->currentline != s_PrevLine)
-                        {
-                            s_PrevLine = ar->currentline;
-                            DeveloperTools::DebugBreak(L, ar, DebugBreakReason::DebuggerStep);
-                        }
-                    };
-
-                lua_singlestep(L, true);
-                lua_break(L);
-                running = false;
-            }
-
-            ImGui::Checkbox("All Developer UIs", &develUI);
-            ImGui::Checkbox("Quiet Background", &quietBg);
-            ImGui::Text("Debugger %i FPS / %.2fms", framesPerSecond, dt);
-
-            if (vmud->DebuggerAttached)
-            {
-                if (ImGui::Button("Detach Debugger for this VM"))
-                {
-                    lua_Callbacks* cb = lua_callbacks(L);
-                    vmud->DebuggerAttached = false;
-
-                    cb->debugbreak = nullptr;
-                    cb->debugprotectederror = nullptr;
-                    cb->debugstep = nullptr;
-                    cb->debuginterrupt = [](lua_State*, lua_Debug* ar)
-                        {
-                            lua_resume((lua_State*)ar->userdata, nullptr, 0);
-                        };
-                }
-            }
-            else
-            {
-                ImGui::Text("The Debugger has been detached for VM %s and all future VMs.", corUd->VM.c_str());
-            }
-        }
-        ImGui::End();
-
-        if (ImGui::Begin("Watch"))
-        {
-            static int Section = 0;
-            ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
-
-            ImGui::BeginChild("VariablesSection", ImVec2(), ImGuiChildFlags_Borders);
-            
-            switch (Section)
-            {
-            case 0:
-            {
-                for (int l = 0; l < lua_stackdepth(L); l++)
-                {
-                    ImGui::Text("---LEVEL %i---", l);
-                    ImGui::PushID(l);
-
-                    for (int i = 1; i < 256; i++)
-                    {
-                        luaL_checkstack(L, 3, "get local");
-                        int prev = lua_gettop(L);
-
-                        const char* name = lua_getlocal(L, l, i);
-                        if (lua_gettop(L) == prev)
-                            break; // no local here
-
-                        lua_pushstring(L, name ? name : std::format("[l{}]", l).c_str());
-                        lua_pushvalue(L, -2);
-
-                        if (debugVariable(L) && lua_setlocal(L, l, i))
-                            lua_pop(L, 1);
-                        else
-                            lua_pop(L, 2);
-
-                        lua_pop(L, 1);
-                    };
-
-                    ImGui::PopID();
-                }
-
-                break;
-            }
-            case 1:
-            {
-                for (int i = 1; i < ar->nupvals; i++)
-                {
-                    const char* nameCstr = lua_getupvalue(L, currfuncindex, i);
-
-                    if (!nameCstr)
-                        break;
-
-                    std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[u{}]", i);
-
-                    lua_pushstring(L, name.c_str());
-                    lua_pushvalue(L, -2);
-
-                    if (debugVariable(L) && lua_setupvalue(L, currfuncindex, i))
-                        lua_pop(L, 1);
-                    else
-                        lua_pop(L, 2);
-
-                    lua_pop(L, 1);
-                }
-
-                break;
-            }
-            case 2:
-            {
-                lua_pushstring(L, "Environment");
-                lua_pushvalue(L, LUA_ENVIRONINDEX);
-                debugVariable(L);
-
-                lua_pop(L, 2);
-                break;
-            }
-            case 3:
-            {
-                lua_pushstring(L, "Registry");
-                lua_pushvalue(L, LUA_REGISTRYINDEX);
-                debugVariable(L);
-
-                lua_pop(L, 2);
-                break;
-            }
-            case 4:
-            {
-                for (int i = 1; i <= lua_gettop(L); i++)
-                {
-                    lua_pushinteger(L, i);
-                    lua_pushvalue(L, i);
-                    if (debugVariable(L))
-                    {
-                        lua_remove(L, -2);
-                        lua_remove(L, -2);
-                    }
-
-                    lua_pop(L, 2);
-                }
-
-                break;
-            }
-            [[unlikely]] default: { assert(false); }
-
-            }
-            ImGui::EndChild();
-        }
-        ImGui::End();
-
-        if (ImGui::Begin("Callstack"))
-        {
-            std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>> vms;
-            vms.reserve(ScriptEngine::VMs.size());
-
-            for (auto& [ name, vm ] : ScriptEngine::VMs)
-                vms.emplace_back(name, vm);
-
-            if (CurrentVMIndex >= (int)vms.size())
-                CurrentVMIndex = 0;
-
-            ImGui::Combo("##", &CurrentVMIndex, [](void* vmsPtr, int index) -> const char*
-                {
-                    const auto vms = (std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>>*)vmsPtr;
-                    return vms->at(index).first.data();
-                }, &vms, (int)vms.size());
-
-            const ScriptEngine::LuauVM& vm = vms[CurrentVMIndex].second;
-
-            size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
-            if (numCoroutineIdChars < 3)
-                numCoroutineIdChars = 3;
-
-            const auto renderCoroutine = [&L, ar, vm, vms, &currfuncindex, numCoroutineIdChars](lua_State* coroutine)
-            {
-                ImGui::PushID(coroutine);
-
-                lua_Debug car = {};
-
-                int li = 0;
-                bool getInfoSuccess = lua_getinfo(coroutine, li, "slnfu", &car);
-
-                while (!car.short_src || (strcmp(car.short_src, "[C]") == 0))
-                {
-                    if (getInfoSuccess)
-                        lua_pop(coroutine, 1);
-                    li++;
-
-                    if (!lua_getinfo(coroutine, li, "slnfu", &car))
-                    {
-                        getInfoSuccess = lua_getinfo(coroutine, 0, "slnfu", &car);
-                        car.short_src = nullptr;
-                        break;
-                    }
-                    else
-                        getInfoSuccess = true;
-                }
-
-                const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
-                std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
-                std::string targetFile = car.short_src ? car.short_src : "";
-                int targetLine = ar->currentline;
-
-                if (targetFile.size() == 0)
-                {
-                    if (size_t pathBegin = identifier.find('.'); pathBegin != std::string::npos)
-                    {
-                        std::string_view fromPathOnwards = { identifier.begin() + pathBegin, identifier.end() };
-
-                        if (size_t pathEnd = fromPathOnwards.find(".luau"); pathEnd != std::string::npos)
-                        {
-                            targetFile = std::string(identifier.begin() + pathBegin, identifier.begin() + pathBegin + pathEnd + strlen(".luau"));
-
-                            if (size_t lineBegin = fromPathOnwards.find(':'); lineBegin != std::string::npos)
-                            {
-                                std::string_view fromLineOnwards = { fromPathOnwards.begin() + lineBegin, fromPathOnwards.end() };
-
-                                if (size_t lineEnd = fromLineOnwards.find('\n'); lineEnd != std::string::npos)
-                                    targetLine = std::stoi(std::string(fromLineOnwards.begin() + 1, fromLineOnwards.begin() + lineEnd));
-                            }
-                        }
-                    }
-                }
-
-                bool noSourceInformation = false;
-
-                if (identifier.size() == 2) // ":0"
-                {
-                    identifier = "<coroutine>";
-                    noSourceInformation = true;
-                }
-
-                if (size_t pathStartLoc = identifier.find("scripts/"); pathStartLoc != std::string::npos)
-                    identifier = { identifier.begin() + pathStartLoc, identifier.end() };
-
-                if (size_t newlLoc = identifier.find('\n'); newlLoc != std::string::npos && newlLoc != 0)
-                    identifier = { identifier.begin(), identifier.begin() + newlLoc };
-
-                if (!car.short_src && ud) // means we are showing the spawn trace and not the actual current call frame
-                    identifier = "Spawned from " + identifier;
-
-                if (coroutine == L)
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
-                else if (coroutine == vm.MainThread || noSourceInformation)
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5, 0.5, 0.5, 1.f));
-                else
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.75f, 0.75f, 1.f));
-
-                std::string treeNodeIdentifier = identifier;
-                if (treeNodeIdentifier.size() > numCoroutineIdChars)
-                    treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
-
-                if (s_CallstackJumpToCurrentThread && coroutine == L)
-                    ImGui::SetNextItemOpen(true);
-
-                bool open = ImGui::TreeNodeEx(coroutine, ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow, "%s", treeNodeIdentifier.c_str());
-                ImGui::PopStyleColor();
-                ImGui::SetItemTooltip("%s", identifier.c_str());
-
-                ImGui::SameLine();
-
-                ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
-
-                const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
-                const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(lua_mainthread(coroutine), coroutine)];
-
-                ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
-                ImGui::TextUnformatted(lsdi.Id);
-                ImGui::PopStyleColor();
-                ImGui::SetItemTooltip("%s", lsdi.Description);
-
-                ImGui::SameLine();
-
-                ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
-                ImGui::TextUnformatted(lcsdi.Id);
-                ImGui::PopStyleColor();
-                ImGui::SetItemTooltip("%s", lcsdi.Description);
-
-                if (s_CallstackJumpToCurrentThread && coroutine == L)
-                {
-                    ImGui::SetScrollHereY();
-                    s_CallstackJumpToCurrentThread = false;
-                }
-
-                if (ImGui::IsItemClicked())
-                {
-                    assert(currfuncindex == 0 || lua_type(L, -1) == LUA_TFUNCTION);
-                    if (currfuncindex != 0)
-                        lua_remove(L, currfuncindex);
-
-                    L = coroutine;
-                    currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
-                    assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
-                    memcpy(ar, &car, sizeof(lua_Debug));
-
-                    TextEditorTab* tab = nullptr;
-
-                    if (ud)
-                    {
-                        tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
-                            "!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
-                            ud->VM, ud->SpawnTrace
-                        ));
-                    }
-                    else
-                    {
-                        tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vms[CurrentVMIndex].first));
-                    }
-
-                    tab->DebuggerCurrentLine = targetLine;
-                    tab->JumpToLine = targetLine;
-                }
-                else
-                {
-                    if (getInfoSuccess)
-                        lua_pop(coroutine, 1); // pop our current function off to leave the stack balanced
-                }
-
-                if (open)
-                {
-                    lua_Debug car = {};
-                    int i = 0;
-
-                    if (!lua_getinfo(coroutine, 0, "sln", &car))
-                        i = 1;
-
-                    for (i = 0; lua_getinfo(coroutine, i, "sln", &car); i++)
-                    {
-                        ImGui::PushID(i);
-
-                        if (car.currentline > 0)
-                        {
-                            std::string_view srcShortened = car.short_src;
-                            if (size_t loc = srcShortened.find("scripts/"); loc != std::string::npos)
-                                srcShortened = std::string_view(srcShortened.begin() + loc, srcShortened.end());
-
-                            ImGui::PushStyleColor(
-                                ImGuiCol_TextLink,
-                                ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
-                            );
-
-                            if (ImGui::TextLink(std::format(
-                                "{}:{} in {}",
-                                srcShortened, car.currentline, car.name ? car.name : "<anonmyous>"
-                            ).c_str()))
-                            {
-                                invokeTextEditor(car.short_src).JumpToLine = car.currentline;
-                                lua_getinfo(coroutine, i, "sln", ar);
-                            }
-
-                            ImGui::SetItemTooltip("View source");
-                            ImGui::PopStyleColor();
-                        }
-                        else
-                        {
-                            ImGui::Text("%s in %s", car.short_src, car.name);
-                            ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
-                        }
-
-                        ImGui::PopID();
-                    }
-
-                    if (lua_getthreaddata(coroutine))
-                    {
-                        const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
-                        if (ud->SpawnTrace.size() > 0)
-                        {
-                            ImGui::SeparatorText("Spawn trace");
-                            ImGui::TextUnformatted(ud->SpawnTrace.c_str());
-                        }
-                    }
-
-                    ImGui::TreePop();
-                }
-
-                ImGui::PopID();
-            };
-
-            renderCoroutine(vm.MainThread);
-            for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread))->Coroutines)
-                renderCoroutine(coroutine);
-        }
-        ImGui::End();
-
-        if (develUI)
-            engine->OnFrameRenderGui.Fire(dt);
-        else
-            renderTextEditors();
-
-        if (!quietBg)
-        {
-            EcCamera* sceneCam = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
-
-            engine->RendererContext.DrawScene(
-                engine->CurrentScene,
-                sceneCam->GetRenderMatrix((float)engine->WindowSizeX / engine->WindowSizeY),
-                sceneCam->GetWorldTransform(),
-                GetRunningTime(),
-                engine->DebugWireframeRendering
-            );
-        }
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        // there's this really obnoxious single-frame flash that occurs when single stepping :(
-        if (!firstFrame)
-            engine->RendererContext.SwapBuffers();
-        else
-            firstFrame = false;
-
-        framesInSecond++;
-        if (GetRunningTime() - debuggerLastSecond >= 1.f)
-        {
-            debuggerLastSecond = GetRunningTime();
-            framesPerSecond = framesInSecond;
-            framesInSecond = 0;
-        }
-
-        std::this_thread::sleep_for(std::chrono::duration<double>(std::clamp(0.01 - dt, 0.0, 0.01)));
-        Memory::FrameFinish();
-    }
-
+    debuggerL = L;
+    debuggerAr = *ar;
+    debuggerReason = Reason;
+
+    /*
     assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
     if (currfuncindex != 0)
         lua_pop(L, 1); // pop our function from `lua_getinfo`
-
-    ImGui::SetCurrentContext(prevContext);
-
-    if (glfwWindowShouldClose(engine->Window))
-    {
-        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-        vmud->DebuggerAttached = false;
-    }
+    */
 }
 
-void DeveloperTools::LeaveDebugger(lua_State* /* L */)
+void DeveloperTools::LeaveDebugger()
 {
     if (!InDebugger)
         return;
 
-    ImGui::SetCurrentContext(debuggerContext);
-
-    Engine* engine = Engine::Get();
-
     for (TextEditorTab& tab : s_TextEditors)
         tab.DebuggerCurrentLine = 0;
-    glfwSetInputMode(engine->Window, GLFW_CURSOR, prevCursorMode);
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::SetCurrentContext(prevContext);
-    ImGui::DestroyContext(debuggerContext);
-
-    debuggerContext = nullptr;
-    prevContext = nullptr;
-
-    PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW on Debugger shutdown");
-    glEnable(GL_FRAMEBUFFER_SRGB);
 
     for (TextEditorTab& tab : s_TextEditors)
     {
@@ -6127,4 +6104,7 @@ void DeveloperTools::LeaveDebugger(lua_State* /* L */)
 
     s_QueuedDebuggerAction.reset();
     InDebugger = false;
+
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
+    vmud->BeingDebugged = false;
 }

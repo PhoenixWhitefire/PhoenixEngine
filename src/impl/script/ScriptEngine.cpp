@@ -315,6 +315,9 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
     bool isSynchronized = !vmud->PVM || !vmud->PVM->Desynchronized;
 
     double stepStarted = GetRunningTime();
+    bool beingDebugged = vmud->BeingDebugged;
+    bool canExitDebug = false;
+    vmud->BeingDebugged = false;
 
     for (YieldedCoroutine* yc : processing)
     {
@@ -336,6 +339,20 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
         }
 
         lua_State* coroutine = yc->Coroutine;
+        L::StateUserdata* corUd = (L::StateUserdata*)lua_getthreaddata(coroutine);
+        assert(!corUd->BeingDebugged && "That should only be set on the main thread!");
+
+        if (beingDebugged || vmud->BeingDebugged)
+        {
+            if (corUd->DebuggerResume)
+            {
+                canExitDebug = true;
+                corUd->DebuggerResume = false;
+            }
+            else
+                continue;
+        }
+
         int corRef = yc->CoroutineReference;
 
         const ResumptionModeHandler handler = s_ResumptionModeHandlers[yc->Mode];
@@ -359,7 +376,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
                 resumeStatus = lua_resume(coroutine, nullptr, nretvals);
             }
 
-            if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD)
+            if (resumeStatus != LUA_OK && resumeStatus != LUA_YIELD && resumeStatus != LUA_BREAK)
             {
                 int top = lua_gettop(coroutine);
                 const char* err = lua_tostring(coroutine, -1); // can't use `luaL_tolstring` because it might do a metatable check and trigger another exception
@@ -374,7 +391,18 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
             }
 
             lua_unref(coroutine, corRef);
+
+            if (vmud->BeingDebugged)
+                break;
         }
+    }
+
+    if (beingDebugged && !vmud->BeingDebugged)
+    {
+        if (canExitDebug)
+            DeveloperTools::LeaveDebugger();
+        else
+            vmud->BeingDebugged = true;
     }
 }
 
@@ -1799,11 +1827,11 @@ static void initRequireConfig(luarequire_Configuration* config)
                     if (lua_gettop(ML) == 0)
                         lua_pushstring(ML, "module must return a value");
                 }
-                else if (status == LUA_YIELD)
+                else if (status == LUA_YIELD || status == LUA_BREAK)
                 {
                     //lua_pop(L, 1);
                     //return -1;
-                    lua_pushstring(L, "module cannot yield");
+                    lua_pushstring(L, "module cannot yield or break in the top level");
                 }
                 else if (!lua_isstring(ML, -1))
                     lua_pushstring(ML, "unknown error while running module");
@@ -1880,13 +1908,13 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
             {
                 StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
                 if (vmud->DebuggerAttached)
-                    DeveloperTools::DebugBreak(L, ar, DebugBreakReason::Breakpoint);
+                    DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::Breakpoint);
             };
         cb->debuginterrupt = [](lua_State* L, lua_Debug* ar)
             {
                 StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
                 if (vmud->DebuggerAttached)
-                    DeveloperTools::DebugBreak(L, ar, DebugBreakReason::Interrupt);
+                    DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::Interrupt);
             };
 
         vmud->DebuggerAttached = true;
@@ -1963,6 +1991,9 @@ void ScriptEngine::LuauVM::Close()
 
     L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(L);
 
+    if (vmud->BeingDebugged)
+        DeveloperTools::LeaveDebugger();
+
     for (lua_State* co : vmud->Coroutines)
     {
         L::StateUserdata* ud = (L::StateUserdata*)lua_getthreaddata(co);
@@ -1992,8 +2023,37 @@ static void breakHere(lua_State* L, DebugBreakReason Reason)
     {
         lua_Debug ar = {};
         lua_getinfo(L, 1, "sln", &ar);
-        DeveloperTools::DebugBreak(L, &ar, Reason);
+        DeveloperTools::OnDebugBreak(L, &ar, Reason);
+        vmud->BeingDebugged = true;
     }
+}
+
+static void scheduleDebuggedCoro(lua_State* L, ScriptEngine::L::StateUserdata* vmud, ScriptEngine::L::StateUserdata* lud)
+{
+    lua_pushthread(L);
+    int ref = lua_ref(L, -1);
+
+    lua_getglobal(L, "game");
+    Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
+    GameObject* dm = GameObjectManager::Get()->FromGenericValue(dmgv);
+    lua_pop(L, 1);
+
+    ScriptEngine::YieldedCoroutine yc = {
+        .DebugString = "scheduleDebuggedCoro",
+        .Coroutine = L,
+        .CoroutineReference = ref,
+        .DataModel = dm,
+        .RmDeferred = {
+            .ResumeAt = 0.0,
+            .Arguments = nullptr,
+            .ArgumentsRef = 0
+        },
+        .Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred
+    };
+
+    // resume when thread leaves BREAK state
+    ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines.push_back(yc);
+    lud->DebuggerResume = false;
 }
 
 static lua_Status finishCoroutine(lua_State* L, int status)
@@ -2001,21 +2061,28 @@ static lua_Status finishCoroutine(lua_State* L, int status)
     using namespace ScriptEngine;
     using namespace L;
     ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-    bool maybeEnteredDebugger = vmud->DebuggerAttached;
+    ScriptEngine::L::StateUserdata* lud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
+    //bool maybeEnteredDebugger = vmud->DebuggerAttached;
 
-    while (status == LUA_BREAK)
+    if (!vmud->PVM && !vmud->BeingDebugged && !lud->DebuggerResume)
     {
-        breakHere(L, DebugBreakReason::BrokeIntoDebugger);
-        status = lua_resume(L, nullptr, 0);
+        if (status == LUA_BREAK)
+        {
+            breakHere(L, DebugBreakReason::BrokeIntoDebugger);
+            scheduleDebuggedCoro(L, vmud, lud);
+        }
+        else if (status == LUA_ERRRUN)
+        {
+            if (status == LUA_ERRRUN)
+                breakHere(L, DebugBreakReason::Error);
+        }
     }
 
-    if (status == LUA_ERRRUN)
-        breakHere(L, DebugBreakReason::Error);
-
     // NOTE debugger does its own checks to see if the hook was called
-    if (maybeEnteredDebugger)
-        DeveloperTools::LeaveDebugger(L);
+    //if (maybeEnteredDebugger)
+    //    DeveloperTools::LeaveDebugger(L);
 
+    /*
     while (!vmud->UnfinishedProfilerZones.empty())
     {
         const std::string_view& name = vmud->UnfinishedProfilerZones.top();
@@ -2024,6 +2091,7 @@ static lua_Status finishCoroutine(lua_State* L, int status)
         tracy::LuauZoneEndImpl();
         vmud->UnfinishedProfilerZones.pop();
     }
+    */
 
     return (lua_Status)status;
 }

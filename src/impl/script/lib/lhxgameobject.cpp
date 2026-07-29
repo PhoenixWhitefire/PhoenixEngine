@@ -42,7 +42,7 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
     );
 	*ptrToObj = Object ? Object->ObjectId : PHX_GAMEOBJECT_NULL_ID;
 
-    lua_pushvalue(L, -2);
+    lua_pushvalue(L, -1);
 	lua_rawseti(L, -3, *(const int32_t*)&Object->ObjectId);
 
     lua_remove(L, -2); // remove the registry sub-table

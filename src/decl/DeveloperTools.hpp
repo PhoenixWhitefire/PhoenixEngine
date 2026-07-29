@@ -23,8 +23,8 @@ namespace DeveloperTools
 	// does not require `::Initialize` to be called
 	void LaunchTracy();
 
-	void DebugBreak(lua_State*, lua_Debug*, DebugBreakReason);
-	void LeaveDebugger(lua_State*);
+	void OnDebugBreak(lua_State*, lua_Debug*, DebugBreakReason);
+	void LeaveDebugger();
 
 	inline bool Initialized = false;
 	inline bool FocusedOnTextDocument = false;

@@ -30,6 +30,7 @@
 #include "script/ScriptEngine.hpp"
 #include "render/TextureSlots.hpp"
 #include "GlobalJsonConfig.hpp"
+#include "DeveloperTools.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
 #include "Timing.hpp"
@@ -860,7 +861,9 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		);
 	}
 
-	this->OnFrameRenderGui.Fire(deltaTime);
+	if (DeveloperTools::Initialized)
+		DeveloperTools::Frame(deltaTime);
+
 	// Material Editor may screw up some stuff
 	glViewport(0, 0, WindowSizeX, WindowSizeY);
 	RendererContext.FrameBuffer.Unbind();

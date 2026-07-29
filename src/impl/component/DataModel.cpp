@@ -265,7 +265,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
         int resumeResult = ScriptEngine::L::Resume(L, nullptr, 0);
 
-        if (resumeResult != LUA_OK && resumeResult != LUA_YIELD)
+        if (resumeResult != LUA_OK && resumeResult != LUA_YIELD && resumeResult != LUA_BREAK)
         {
             lua_Debug ar = {};
             lua_getinfo(L, 1, "l", &ar);

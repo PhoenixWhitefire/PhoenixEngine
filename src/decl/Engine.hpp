@@ -57,7 +57,6 @@ public:
 	GLFWwindow* Window = nullptr;
 
 	EventSignal<double> OnFrameStart;
-	EventSignal<double> OnFrameRenderGui;
 	EventSignal<double> OnFrameEnd;
 
 	Scene CurrentScene;

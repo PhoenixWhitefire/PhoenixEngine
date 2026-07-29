@@ -58,6 +58,11 @@ static void queueEvent(
         return;
     }
 
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(eL));
+
+    if (vmud->BeingDebugged)
+        return; // TODO some way to discard just input and frame begin events perchance
+
     assert(Inputs.size() == rev->CallbackInputs.size());
     assert(lua_isfunction(eL, 2));
 
@@ -82,7 +87,6 @@ static void queueEvent(
     if (co != cL)
         lua_pop(eL, 1);
 
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(co));
     std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
 
     if (vmud->PVM)

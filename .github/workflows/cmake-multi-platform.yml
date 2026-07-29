@@ -144,7 +144,6 @@ jobs:
           lsp/
           apidump.json
           default-layout.ini
-          debugger-layout.ini
           phoenix.conf
           Vendor/tracy/profiler/build/Release/tracy-profiler.exe
           README.md
@@ -166,7 +165,6 @@ jobs:
           lsp/
           apidump.json
           default-layout.ini
-          debugger-layout.ini
           phoenix.conf
           Vendor/tracy/profiler/build/tracy-profiler
           README.md

@@ -247,7 +247,6 @@ static void init()
 		{
 			Log.Info("Developer-mode specific functionality");
 			DeveloperTools::Initialize(&engine->RendererContext);
-			engine->OnFrameRenderGui.Connect(&DeveloperTools::Frame);
 		}
 	}
 

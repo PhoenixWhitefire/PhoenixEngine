@@ -246,8 +246,7 @@ game:BindToClose(handleEngineShutdown)
 task.defer(checkIfLatestVersionBuilt)
 
 if table.find(Engine:GetCliArguments(), "-ed_ci") then
-    -- TODO luau cast
-    task.defer(State.ChangeStageTo, "SelectProject" :: "SelectProject")
+    task.defer(State.ChangeStageTo, "SelectProject")
 
     if StageUpdateConnection then
         StageUpdateConnection:Disconnect()

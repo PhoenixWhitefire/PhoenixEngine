@@ -300,11 +300,11 @@ local function homeTab(_: number)
 
     if inPlaytest then
         if tabButton("Stop", "@_etextures/editor-icons/stop.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Stop (F5)") then
-            task.defer(State.ChangeStageTo, "ProjectEditing" :: "ProjectEditing")
+            task.defer(State.ChangeStageTo, "ProjectEditing")
         end
     else
         if tabButton("Start", "@_etextures/editor-icons/start.png", not History.IsRecordingAction, nil, nil, currentActionTooltip or "Play (F5)") then
-            task.defer(State.ChangeStageTo, "ProjectPlaying" :: "ProjectPlaying")
+            task.defer(State.ChangeStageTo, "ProjectPlaying")
         end
     end
 
@@ -949,8 +949,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
             end
 
             if imgui.menuitem("Close") then
-                -- TODO luau cast
-                task.defer(State.ChangeStageTo, "SelectProject" :: "SelectProject")
+                task.defer(State.ChangeStageTo, "SelectProject")
             end
         end
 
@@ -1295,7 +1294,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
     local render, open = imgui.begin(State.Project.Name .. "###Viewport", if canInteract then "nb" else "ni | nb", State.CurrentStage == "ProjectEditing")
 
     if not open then
-        task.defer(State.ChangeStageTo, "SelectProject" :: "SelectProject")
+        task.defer(State.ChangeStageTo, "SelectProject")
     end
 
     if not render then

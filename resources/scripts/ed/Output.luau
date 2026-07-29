@@ -399,7 +399,7 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
 
     if State.CurrentStage == "ProjectPlaying" and Message:find("Script VM was timed-out") and Preferences.CancelPlaytestWhenScriptTimesOut then
         Engine:ShowMessageBox("Playtest cancelled", "The playtest was cancelled because of a script timing-out.\nYou may disable this behavior in Editor Settings.", "ok", "error")
-        task.defer(State.ChangeStageTo, "ProjectEditing" :: "ProjectEditing")
+        task.defer(State.ChangeStageTo, "ProjectEditing")
     end
 
     local createsNewline = false
