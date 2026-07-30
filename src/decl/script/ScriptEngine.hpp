@@ -125,7 +125,7 @@ namespace ScriptEngine
     inline std::vector<std::function<void()>> ParallelEvents;
     inline std::mutex ParallelEventsMutex;
 
-    inline double DefaultVMAllowedExecutionTime = 10.0;
+    inline double DefaultVMAllowedExecutionTime = 0.0;
 };
 
 namespace ScriptEngine::L
@@ -178,7 +178,7 @@ namespace ScriptEngine::L
         std::vector<lua_State*> Coroutines; // Only populated for the main thread
         std::vector<std::string> YieldBlockers;
         std::stack<std::string> UnfinishedProfilerZones;
-        double AllowedExecutionTime = 10.0;
+        double AllowedExecutionTime = 0.0;
         double LastResumed = 0.f;
         ParallelVM* PVM = nullptr;
         bool DebuggerAttached = false;

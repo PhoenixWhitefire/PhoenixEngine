@@ -758,14 +758,40 @@ end
 local wasSettingsOpen = false
 local OpenGitCommitMenu = false
 local GitCommitMessage = ""
+local GitBranches = {}
+local GitCurrentBranch = ""
+local GitBranchesLastUpdated = 0
+local GitNewBranchName = ""
 
 local function getGitStatus()
     if Git.Available then
-        Git.StatusResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" status`)
-        Git.DiffResult = fs.execute(`git -C "{ fs.resolvepath("@project") }" diff`)
+        Git.StatusResult = Git.Command("status")
+        Git.DiffResult = Git.Command("diff")
     else
         Git.StatusResult = "Git is not available on your system, please ensure it is installed correctly."
     end
+end
+
+local function updateGitBranches()
+    local out = Git.Command("branch --list --color=never")
+    local lines = string.split(out, "\n")
+    table.clear(GitBranches)
+
+    for index, line in lines do
+        if index == #lines then
+            break
+        end
+
+        local branchName = string.sub(line, 2, #line)
+
+        if string.sub(line, 1, 1) == "*" then
+            GitCurrentBranch = branchName
+        end
+
+        table.insert(GitBranches, branchName)
+    end
+
+    GitBranchesLastUpdated = game.Time
 end
 
 function CommonUI.RenderMainMenuBar(dt: number)
@@ -929,7 +955,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
                     if not State.Project.HasGitRepository then
                         if imgui.menuitem("Initialize repository") then
                             task.defer(function()
-                                print(fs.execute(`git -C "{ fs.resolvepath("@project") }" init`))
+                                print(Git.Command("init"))
                                 State.Project.HasGitRepository = fs.isdirectory("@project/.git")
 
                                 if State.Project.HasGitRepository then
@@ -938,6 +964,67 @@ function CommonUI.RenderMainMenuBar(dt: number)
                             end)
                         end
                     else
+                        local openCreateGitBranch = false
+
+                        if imgui.beginmenu("Branch") then
+                            if game.Time - GitBranchesLastUpdated > 1 then
+                                task.defer(updateGitBranches)
+                            end
+
+                            for _, branch in GitBranches do
+                                if branch == GitCurrentBranch then
+                                    imgui.pushstylecolor(Enum.ImGuiColor.Text, imgui.getstylecolor(Enum.ImGuiColor.TextLink))
+                                    imgui.text(branch)
+                                    imgui.popstylecolor()
+
+                                    imgui.sameline()
+
+                                    if imgui.button("+", 16, 16) then
+                                        openCreateGitBranch = true
+                                        GitNewBranchName = ""
+                                    end
+                                else
+                                    if imgui.menuitem(branch) then
+                                        task.defer(function()
+                                            Git.Command(`switch { branch }`)
+                                            updateGitBranches()
+                                        end)
+                                    end
+                                end
+                            end
+
+                            imgui.endmenu()
+                        end
+
+                        if openCreateGitBranch then
+                            imgui.openpopup("Create branch")
+                        end
+
+                        if imgui.beginpopup("Create branch") then
+                            local cxavail = imgui.contentregionavail().x
+
+                            imgui.text("Branch name:")
+                            GitNewBranchName = imgui.inputstring("##branch", GitNewBranchName)
+
+                            if #GitNewBranchName > 0 and table.find(GitBranches, GitNewBranchName) then
+                                imgui.pushstylecolor(Enum.ImGuiColor.Text, Theme.OutputLogError)
+                                imgui.text("A branch with that name already exists")
+                                imgui.popstylecolor()
+                            elseif GitNewBranchName:find("[^%w%s]") then
+                                imgui.pushstylecolor(Enum.ImGuiColor.Text, Theme.OutputLogError)
+                                imgui.text("Branch name must be alphanumeric")
+                                imgui.popstylecolor()
+                            elseif imgui.button("Create", cxavail) then
+                                task.defer(function()
+                                    print(Git.Command(`checkout -b "{ GitNewBranchName }"`))
+                                end)
+
+                                imgui.closecurrentpopup()
+                            end
+
+                            imgui.endpopup()
+                        end
+
                         if imgui.menuitem("Commit") then
                             task.defer(function()
                                 State:SaveProject()
@@ -1032,8 +1119,8 @@ function CommonUI.RenderMainMenuBar(dt: number)
             if imgui.button(buttonText) then
                 task.defer(function()
                     GitCommitMessage = string.gsub(GitCommitMessage, '"', '\\"')
-                    print(fs.execute(`git -C "{ fs.resolvepath("@project") }" add .`))
-                    print(fs.execute(`git -C "{ fs.resolvepath("@project") }" commit -m "{ GitCommitMessage }" -a`))
+                    print(Git.Command("add ."))
+                    print(Git.Command(`commit -m "{ GitCommitMessage }" -a`))
                     getGitStatus()
                 end)
             end

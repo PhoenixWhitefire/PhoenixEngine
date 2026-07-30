@@ -20,6 +20,12 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
     if (lua_isnil(L, -1))
     {
         lua_newtable(L);
+
+		lua_createtable(L, 0, 1);
+		lua_pushliteral(L, "v");
+		lua_setfield(L, -2, "__mode");
+		lua_setmetatable(L, -2);
+
         lua_pushvalue(L, -1);
         lua_setfield(L, LUA_REGISTRYINDEX, OBJECT_REG);
     }
@@ -34,6 +40,7 @@ void luhx_pushgameobject(lua_State* L, GameObject* Object)
     lua_pop(L, 1); // dont need that nil
 
     Object->IncrementHardRefs();
+	Object->HardRefCountFromLuau++;
 
     uint32_t* ptrToObj = (uint32_t*)lua_newuserdatataggedwithmetatable(
         L,
@@ -320,6 +327,7 @@ static void createmetatable(lua_State* L)
 		GameObject* target = objectManager->FindById(targetId);
 		assert(target);
 
+		target->HardRefCountFromLuau--;
 		target->DecrementHardRefs();
     });
 }

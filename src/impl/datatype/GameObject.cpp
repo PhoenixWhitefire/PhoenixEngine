@@ -479,6 +479,10 @@ void GameObject::Destroy()
 		for (const ObjectHandle& child : this->GetChildren())
 			child->Destroy();
 
+        GameObjectManager* objectManager = GameObjectManager::Get();
+        NextFreeId = objectManager->NextFreeId;
+        objectManager->NextFreeId = ObjectId; // stole this stick from `lua_ref`
+
 		Valid = false;
 	}
 }
@@ -1178,49 +1182,58 @@ void* GameObject::FindComponentByType(EntityComponent Type)
 
 ObjectHandle GameObjectManager::Create()
 {
-	if (WorldArray.size() == 0)
-	{
-		WorldArray.emplace_back();
-		WorldArray[0].Name = "<RESERVED INVALID SLOT>";
-		WorldArray[0].Valid = false;
-	}
+    if (WorldArray.size() == 0)
+    {
+        WorldArray.emplace_back();
+        WorldArray[0].Name = "<RESERVED INVALID SLOT>";
+        WorldArray[0].Valid = false;
+    }
 
-	uint32_t numObjects = static_cast<uint32_t>(WorldArray.size());
+    uint32_t id = NextFreeId;
 
-	if (numObjects >= UINT32_MAX - 1)
-		RAISE_RT("Reached end of GameObject ID space (2^32 - 1)");
+    if (id == UINT32_MAX)
+    {
+        id = static_cast<uint32_t>(WorldArray.size());
+
+	    if (id >= UINT32_MAX - 1)
+	        RAISE_RT("Reached end of GameObject ID space (2^32 - 1)");
 
 #ifndef NDEBUG
-
-	// cause as many re-allocations as possible to catch stale pointers
-	WorldArray.shrink_to_fit();
-
+    // cause as many re-allocations as possible to catch stale pointers
+    WorldArray.shrink_to_fit();
 #endif
 
-	WorldArray.emplace_back();
-	GameObject& created = WorldArray.back();
+	    WorldArray.emplace_back();
+    }
+    else
+    {
+        GameObject& reused = WorldArray[id];
+        NextFreeId = reused.NextFreeId; // stole this trick from `lua_ref`
+        reused = GameObject();
+    }
 
-	created.ObjectId = numObjects;
-	return &created;
+    GameObject& created = WorldArray[id];
+    created.ObjectId = id;
+    return &created;
 }
 
 ObjectHandle GameObjectManager::Create(EntityComponent FirstComponent)
 {
-	ObjectHandle created = Create();
-	created->AddComponent(FirstComponent);
-	created->Name = s_EntityComponentNames[(size_t)FirstComponent];
+    ObjectHandle created = Create();
+    created->AddComponent(FirstComponent);
+    created->Name = s_EntityComponentNames[(size_t)FirstComponent];
 
-	return created;
+    return created;
 }
 
 ObjectHandle GameObjectManager::Create(const std::string_view& FirstComponent)
 {
-	EntityComponent it = FindComponentTypeByName(FirstComponent);
+    EntityComponent it = FindComponentTypeByName(FirstComponent);
 
-	if (it == EntityComponent::None)
-		RAISE_RT("Invalid Component Name '{}'", FirstComponent);
-	else
-		return Create(it);
+    if (it == EntityComponent::None)
+        RAISE_RT("Invalid Component Name '{}'", FirstComponent);
+    else
+        return Create(it);
 }
 
 GameObjectManager::Collection& GameObjectManager::GetCollection(const std::string& Name)

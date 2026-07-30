@@ -662,7 +662,7 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 
 	for (auto& it : objects)
 	{
-		ObjectHandle object = it.second;
+		ObjectHandle& object = it.second;
 
 		// !! IMPORTANT !!
 		// The `Parent` key *should not* be set for Root Nodes as their parent

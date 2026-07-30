@@ -97,6 +97,7 @@ public:
 	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
+	uint32_t NextFreeId = UINT32_MAX;
 
 	std::vector<uint32_t> Children;
 	std::vector<ReflectorRef> Components;
@@ -109,6 +110,8 @@ public:
 	std::vector<Reflection::EventCallback> OnWorkspaceChangedCallbacks;
 
 	uint16_t HardRefCount = 0;
+	// How much of HardRefCount is from Luau
+	uint16_t HardRefCountFromLuau = 0;
 
 	bool TreeEnabled = true;
 	bool Serializes = true;
@@ -145,9 +148,10 @@ public:
 	GameObject* FindById(uint32_t);
 	GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
 	hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
 	std::array<IComponentManager*, (size_t)EntityComponent::__count> ComponentManagers{};
+	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
+	uint32_t NextFreeId = UINT32_MAX;
 
 	struct Collection
 	{

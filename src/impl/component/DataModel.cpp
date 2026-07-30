@@ -232,11 +232,6 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
     ScriptEngine::LuauVM& lvm = ScriptEngine::VMs.at(Dm->VM);
     lua_State* mainThread = lvm.MainThread;
 
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(mainThread);
-
-    double allowedExecTime = vmud->AllowedExecutionTime;
-    vmud->AllowedExecutionTime = 5.0;
-
     lua_State* L = lua_newthread(mainThread);
     luaL_sandboxthread(L);
 
@@ -282,14 +277,10 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
             lua_resetthread(L);
             lua_pop(mainThread, 1);
 
-            vmud->AllowedExecutionTime = allowedExecTime;
             return nullptr;
         }
         else
-        {
-            vmud->AllowedExecutionTime = allowedExecTime;
             return L;
-        }
     }
     else
     {
@@ -301,7 +292,6 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
         lua_resetthread(L);
         lua_pop(mainThread, 1);
 
-        vmud->AllowedExecutionTime = allowedExecTime;
         return nullptr;
     }
 }
@@ -340,6 +330,9 @@ void EcDataModel::Bind()
             }
         }
     }
+
+    for (auto& [ _, vm ] : ScriptEngine::VMs)
+        lua_gc(vm.MainThread, LUA_GCCOLLECT, 0);
 }
 
 void EcDataModel::Close()

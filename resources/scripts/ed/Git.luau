@@ -10,4 +10,8 @@ function Git.Initialize()
     print(if Git.Available then "Git is available" else "Git is not available")
 end
 
+function Git.Command(Command)
+    return fs.execute(`git -C "{ fs.resolvepathabsolute("@project") }" { Command }`)
+end
+
 return Git

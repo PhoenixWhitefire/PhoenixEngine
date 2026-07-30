@@ -66,14 +66,28 @@ public:
 
     virtual uint32_t CreateComponent(GameObject* Object) override
     {
-        m_Components.emplace_back();
+        uint32_t id = NextFreeId;
+        ObjectRef ref = Object;
 
-        T& component = m_Components.back();
-        component.Object = Object;
-        assert(component.Valid);
+        if (id == UINT32_MAX)
+        {
+            id = static_cast<uint32_t>(m_Components.size());
+            m_Components.emplace_back();
 
-        REFLECTION_SIGNAL_EVENT_RESTRICT(ComponentCreatedCallbacks, component.Object.TargetId, Reflection::GenericValue(component.Object));
-        return static_cast<uint32_t>(m_Components.size() - 1);
+            T& component = m_Components.back();
+            component.Object = ref;
+            component.Valid = true;
+            assert(component.Valid);
+        }
+        else
+        {
+            T& component = m_Components[id];
+            NextFreeId = component.NextFreeId;
+            component = T();
+        }
+
+        REFLECTION_SIGNAL_EVENT_RESTRICT(ComponentCreatedCallbacks, ref.TargetId, Reflection::GenericValue(ref));
+        return id;
     }
 
     virtual BaseComponent* GetComponent(uint32_t Id) override
@@ -88,8 +102,10 @@ public:
         v.reserve(m_Components.size());
 
         for (T& component : m_Components)
+        {
             if (component.Valid)
                 v.push_back((BaseComponent*)&component);
+        }
 
         return v;
     }
@@ -104,8 +120,10 @@ public:
     virtual void DeleteComponent(uint32_t Id) override
     {
         T& component = m_Components.at(Id);
-        component.Valid = false;
+        component.NextFreeId = NextFreeId;
+        NextFreeId = Id;
 
+        component.Valid = false;
         REFLECTION_SIGNAL_EVENT_RESTRICT(ComponentDeletedCallbacks, component.Object.TargetId, Reflection::GenericValue(component.Object));
     }
 
@@ -157,11 +175,13 @@ public:
     }
 
     std::vector<T> m_Components;
+    uint32_t NextFreeId = UINT32_MAX;
 };
 
 struct BaseComponent
 {
     ObjectRef Object;
+    uint32_t NextFreeId = UINT32_MAX;
 };
 
 template <EntityComponent T>

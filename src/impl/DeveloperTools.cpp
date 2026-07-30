@@ -4722,9 +4722,21 @@ static void renderInfo(double DeltaTime)
         static bool IsSamplingStats = false;
         static std::string SampledCsv;
 
+        GameObjectManager* objectManager = GameObjectManager::Get();
+
         ImGui::Text("FPS: %d", engine->FramesPerSecond);
         ImGui::Text("Frame time: %zims", frameTime);
         ImGui::Text("Draw calls: %u", engine->RendererContext.AccumulatedDrawCallCount);
+        ImGui::Text("World size: %zi", objectManager->WorldArray.size());
+
+        uint32_t live = 0;
+        for (const GameObject& object : objectManager->WorldArray)
+        {
+            if (object.Valid)
+                live++;
+        }
+
+        ImGui::Text("Live: %u", live);
 
         if (IsSamplingStats)
             SampledCsv.append(std::format(
@@ -4895,6 +4907,7 @@ static void renderInfo(double DeltaTime)
             SampledCsv += "\n";
         }
         else
+        {
             if (ImGui::Button("Begin sampling"))
             {
                 IsSamplingStats = true;
@@ -4909,6 +4922,57 @@ static void renderInfo(double DeltaTime)
 
                 SampledCsv += "\n";
             }
+        }
+
+        ImGui::Separator();
+
+        static std::string SelectedVM = "RootLVM";
+        int selectionIndex = 0;
+        std::vector<const char*> vms;
+        vms.reserve(ScriptEngine::VMs.size());
+
+        for (const auto& [ name, vm ] : ScriptEngine::VMs)
+        {
+            if (name == SelectedVM)
+                selectionIndex = vms.size();
+            vms.push_back(name.c_str());
+        }
+
+        ImGui::Combo("##vmcombo", &selectionIndex, vms.data(), vms.size());
+        SelectedVM = vms[selectionIndex];
+
+        if (ImGui::Button("Create Luau VM heap snapshot"))
+        {
+            FILE* file = fopen("./heap-dump-temp", "w");
+
+            if (!file)
+                tinyfd_messageBox("Failed to create snapshot", "The file\n./heap-dump-temp\ncould not be opened for writing.", "ok", "error", 1);
+            else
+            {
+                lua_memorydump(ScriptEngine::VMs.at(SelectedVM).MainThread, file, nullptr);
+                fclose(file);
+
+                const char* destination = tinyfd_saveFileDialog(
+                    "Save Heap Snapshot",
+                    "./",
+                    0,
+                    nullptr,
+                    nullptr
+                );
+
+                std::error_code ec;
+                std::filesystem::rename("./heap-dump-temp", destination, ec);
+
+                if (ec)
+                    tinyfd_messageBox(
+                        "Failed to move snapshot",
+                        std::format("Error occurred moving snapshot to destination {}: {}\nIt remains at ./heap-dump-temp", destination, ec.message()).c_str(),
+                        "ok",
+                        "error",
+                        1
+                    );
+            }
+        }
     }
     if (beganInfo)
         ImGui::End();

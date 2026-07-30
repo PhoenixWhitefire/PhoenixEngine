@@ -354,6 +354,8 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 {
     ZoneScoped;
 
+    GameObjectManager* objectManager = GameObjectManager::Get();
+
     IntersectionLib::Intersection intersection;
     GameObject* hitObject = nullptr;
     float closestHit = FLT_MAX;
@@ -367,8 +369,8 @@ SpatialCastResult EcWorkspace::Raycast(const glm::vec3& Origin, const glm::vec3&
 
         for (uint32_t oid : CellObjects)
         {
-            GameObject* p = GameObjectManager::Get()->FindById(oid);
-            if (!p || p->IsDestructionPending || p->OwningWorkspace != Object->ObjectId)
+            GameObject* p = &objectManager->WorldArray[oid];
+            if (!p->Valid || p->IsDestructionPending || p->OwningWorkspace != Object->ObjectId)
                 continue;
 
             if (FilterIsIgnoreList)

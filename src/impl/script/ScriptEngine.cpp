@@ -1956,7 +1956,7 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
         {
             StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 
-            if (GetRunningTime() - vmud->LastResumed > vmud->AllowedExecutionTime)
+            if (vmud->AllowedExecutionTime != 0.f && GetRunningTime() - vmud->LastResumed > vmud->AllowedExecutionTime)
             {
                 vmud->LastResumed = GetRunningTime() + 0.5; // interrupt may recurse due to GC
                 luaL_error(L, "Script VM was timed-out for running for more than %lf seconds without yielding (GC: %i)", vmud->AllowedExecutionTime, GcState);
