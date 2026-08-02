@@ -91,9 +91,15 @@ local function runCurrentCommand()
         CommandBarCommand = `print({ CommandBarCommand:sub(2, #CommandBarCommand) })`
     end
 
+    local targetVM = if State.CurrentStage == "ProjectEditing" then
+                        Configuration.GameEditingVMName
+                    else if State.CurrentStage == "ProjectPlaying" then
+                        Configuration.PlaytestVMName
+                    else _VMNAME
+
     local callSuccess, runSuccessOrCallError, callError = pcall(function()
         return ScriptEngine:RunInVM(
-            if State.CurrentStage == "ProjectEditing" then Configuration.GameEditingVMName else Configuration.PlaytestVMName,
+            targetVM,
             CommandBarCommand,
             "@@project/resources/scripts/!CommandBar"
         )
@@ -155,6 +161,10 @@ PlayerInput.KeyEvent:Connect(function(event)
 
     if PlayerInput.IsKeyboardSunk then
         return
+    end
+
+    if State.CurrentStage == "SelectProject" and event.Key == Enum.Key.C then
+        CommonUI.EnableBottomBarInStartPage = not not not CommonUI.EnableBottomBarInStartPage
     end
 
     local key = event.Key
@@ -1282,6 +1292,44 @@ function CommonUI.RenderMainMenuBar(dt: number)
     end
 end
 
+function CommonUI.RenderBottomBar()
+    local w = Renderer.Resolution
+
+    imgui.setnextwindowposition(0, w.y - 35)
+    imgui.setnextwindowsize(w.x, 35 * imgui.scalefactor())
+
+    imgui.begin("Bottom Bar", "nt | nd | nr | ns")
+
+    imgui.setcursorposition(imgui.cursorposition() + vector.create(0, 2))
+    imgui.text("> ")
+    imgui.sameline()
+    imgui.setcursorposition(imgui.cursorposition() - vector.create(0, 2))
+
+    CommandBarCommand = imgui.inputstring(if CommandBarBlinkFrame == 1 then "##CommandBarBlinking" else "##Command", CommandBarCommand)
+    CommandBarActive = imgui.itemactive()
+
+    if CommandBarBlinkFrame == 1 then
+        CommandBarBlinkFrame += 1
+
+    elseif CommandBarBlinkFrame == 2 then
+        CommandBarBlinkFrame = 0
+        imgui.focuskeyboardhere(-1)
+    end
+
+    if CommandBarPostRun then
+        imgui.focuskeyboardhere(-1)
+        CommandBarPostRun = false
+    end
+
+    imgui.sameline()
+
+    local noteStr = `{ Engine.Framerate } FPS ({ State.CurrentStage }) | { State.Project.Name }`
+    imgui.text(noteStr)
+    imgui.setitemtooltip(noteStr)
+
+    imgui.endw()
+end
+
 function CommonUI.RenderViewport(DeltaTime: number)
     if State.CurrentStage == "ProjectEditing" and State.Project.Workspace then
         local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
@@ -1353,41 +1401,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
     TagViewer.Render()
 
     if Preferences.ToolsOpen.BottomBar then
-        local w = Renderer.Resolution
-
-        imgui.setnextwindowposition(0, w.y - 35)
-        imgui.setnextwindowsize(w.x, 35 * imgui.scalefactor())
-
-        imgui.begin("Bottom Bar", "nt | nd | nr | ns")
-
-        imgui.setcursorposition(imgui.cursorposition() + vector.create(0, 2))
-        imgui.text("> ")
-        imgui.sameline()
-        imgui.setcursorposition(imgui.cursorposition() - vector.create(0, 2))
-
-        CommandBarCommand = imgui.inputstring(if CommandBarBlinkFrame == 1 then "##CommandBarBlinking" else "##Command", CommandBarCommand)
-        CommandBarActive = imgui.itemactive()
-
-        if CommandBarBlinkFrame == 1 then
-            CommandBarBlinkFrame += 1
-
-        elseif CommandBarBlinkFrame == 2 then
-            CommandBarBlinkFrame = 0
-            imgui.focuskeyboardhere(-1)
-        end
-
-        if CommandBarPostRun then
-            imgui.focuskeyboardhere(-1)
-            CommandBarPostRun = false
-        end
-
-        imgui.sameline()
-
-        local noteStr = `{ Engine.Framerate } FPS ({ State.CurrentStage }) | { State.Project.Name }`
-        imgui.text(noteStr)
-        imgui.setitemtooltip(noteStr)
-
-        imgui.endw()
+        CommonUI.RenderBottomBar()
     end
 
     Output.Render()

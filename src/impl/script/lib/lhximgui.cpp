@@ -456,7 +456,7 @@ static int imgui_setnextwindowsize(lua_State* L)
 
 static int imgui_beginfullscreen(lua_State* L)
 {
-    ImVec2 offset( luaL_optnumber(L, 2, 0.f), luaL_optnumber(L, 3, 0.f) );
+    ImVec2 offset = { luaL_optnumber(L, 2, 0.f), luaL_optnumber(L, 3, 0.f) };
 
     ImGuiIO& guiIO = ImGui::GetIO();
     ImGui::SetNextWindowPos(offset);

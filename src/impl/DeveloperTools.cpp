@@ -23,6 +23,8 @@
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <tinyfiledialogs.h>
 #include <lualib.h>
+#include <luau/VM/src/lgc.h> // needed for luaC_enumheap
+#include <luau/VM/src/lstate.h> // needed for heap inspector
 #include <chrono>
 #include <set>
 
@@ -4688,10 +4690,92 @@ void DeveloperTools::LaunchTracy()
 #endif
 }
 
+struct LuauHeapSnapshotLink
+{
+    void* To = nullptr;
+    std::string Name;
+};
+
+struct LuauHeapSnapshotNode
+{
+    std::string Name;
+    void* Pointer = nullptr;
+    size_t Size = UINT64_MAX;
+
+    uint8_t Type = UINT8_MAX;
+    uint8_t MemCat = UINT8_MAX;
+
+    std::unordered_map<std::string, std::vector<LuauHeapSnapshotLink>> Children;
+};
+
+struct LuauHeapSnapshotEdge
+{
+    std::string Name;
+    void* From = nullptr;
+    void* To = nullptr;
+};
+
+struct LuauHeapSnapshot
+{
+    std::unordered_map<const void*, LuauHeapSnapshotNode> Nodes;
+    std::vector<LuauHeapSnapshotEdge> Edges;
+    std::unordered_set<const void*> Roots;
+    std::unordered_set<const void*> NonRoots;
+};
+
+static const char* luauBuiltinTypeName(lua_State* L, uint8_t tt)
+{
+    if (tt < LUA_T_COUNT)
+        return lua_typename(L, tt);
+    else
+    {
+        switch (tt)
+        {
+        case LUA_TDEADKEY:
+            return "<deadkey>";
+        case LUA_TPROTO:
+            return "<proto>";
+        case LUA_TUPVAL:
+            return "<upvalue>";
+        default:
+            return "<unknown>";
+        }
+    }
+}
+
+static void renderHeapSnapshotNodeRecursive(lua_State* L, const LuauHeapSnapshot& snapshot, const LuauHeapSnapshotNode& node)
+{
+    constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull;
+
+    if (ImGui::TreeNodeEx(&node, NodeFlags, "%s", node.Name.empty() ? "(node)" : node.Name.c_str()))
+    {
+        ImGui::TextUnformatted(luauBuiltinTypeName(L, node.Type));
+        ImGui::Text("%zi bytes", node.Size);
+        ImGui::Text("Memcat %i", (int)node.MemCat);
+
+        for (const auto& [ name, links ] : node.Children)
+        {
+            if (!name.empty())
+                ImGui::Text("%s ->", name.c_str());
+
+            for (const LuauHeapSnapshotLink& link : links)
+            {
+                const LuauHeapSnapshotNode& child = snapshot.Nodes.at(link.To);
+                renderHeapSnapshotNodeRecursive(L, snapshot, child);
+            }
+        }
+
+        ImGui::TreePop();
+    }
+}
+
 static void renderInfo(double DeltaTime)
 {
     ZoneScopedC(tracy::Color::DarkOliveGreen);
 
+    static bool IsHeapSnapshotInspectorOpen = false;
+    static LuauHeapSnapshot CurrentHeapSnapshot;
+    static std::string SelectedVM = "RootLVM";
     Engine* engine = Engine::Get();
 
     // We need to keep track of two different states,
@@ -4926,7 +5010,6 @@ static void renderInfo(double DeltaTime)
 
         ImGui::Separator();
 
-        static std::string SelectedVM = "RootLVM";
         int selectionIndex = 0;
         std::vector<const char*> vms;
         vms.reserve(ScriptEngine::VMs.size());
@@ -4941,15 +5024,95 @@ static void renderInfo(double DeltaTime)
         ImGui::Combo("##vmcombo", &selectionIndex, vms.data(), vms.size());
         SelectedVM = vms[selectionIndex];
 
-        if (ImGui::Button("Create Luau VM heap snapshot"))
+        if (ImGui::Button("Create and inspect Luau VM heap snapshot"))
         {
+            lua_State* L = ScriptEngine::VMs.at(SelectedVM).MainThread;
+            lua_gc(L, LUA_GCCOLLECT, 0);
+
+            LuauHeapSnapshot snapshot;
+            static lua_State* s_L = L;
+
+            luaC_enumheap(
+                L,
+                &snapshot,
+                [](void* context, void* ptr, uint8_t tt, uint8_t memcat, size_t size, const char* name)
+                {
+                    LuauHeapSnapshot* snapshot = (LuauHeapSnapshot*)context;
+                    std::string nodeName = name ? name : std::format("({})", luauBuiltinTypeName(s_L, tt));
+                    const GCObject* gco = (const GCObject*)ptr;
+
+                    if (tt == LUA_TUSERDATA)
+                    {
+                        if (gco->u.tag == UserdataTag::GameObject)
+                        {
+                            uint32_t id = *(const uint32_t*)gco->u.data;
+                            GameObject* object = GameObjectManager::Get()->FindById(id);
+
+                            if (object)
+                                nodeName = std::format("GameObject[{}]", object->GetFullName());
+                        }
+                    }
+                    else if (tt == LUA_TSTRING && size <= 64)
+                    {
+                        nodeName = std::format("\"{}\"", std::string(gco->ts.data, size));
+                    }
+
+                    LuauHeapSnapshotNode node = LuauHeapSnapshotNode{
+                        .Name = nodeName,
+                        .Pointer = ptr,
+                        .Size = size,
+                        .Type = tt,
+                        .MemCat = memcat,
+                    };
+
+                    if (const auto& it = snapshot->Nodes.find(ptr); it != snapshot->Nodes.end())
+                        node.Children = it->second.Children;
+
+                    snapshot->Nodes[ptr] = node;
+
+                    if (snapshot->NonRoots.find(ptr) == snapshot->NonRoots.end())
+                        snapshot->Roots.insert(ptr);
+                },
+                [](void* context, void* from, void* to, const char* name)
+                {
+                    const char* edgeName = name ? name : "(edge)";
+
+                    LuauHeapSnapshot* snapshot = (LuauHeapSnapshot*)context;
+                    snapshot->Edges.push_back(LuauHeapSnapshotEdge{
+                        .Name = edgeName,
+                        .From = from,
+                        .To = to,
+                    });
+
+                    LuauHeapSnapshotNode& fromNode = snapshot->Nodes[from];
+                    std::vector<LuauHeapSnapshotLink>& links = fromNode.Children[edgeName];
+
+                    if (std::find_if(links.begin(), links.end(), [to](const auto& l) { return l.To == to; }) == links.end())
+                        links.push_back(LuauHeapSnapshotLink{ .To = to, .Name = edgeName });
+
+                    if (const auto& it = snapshot->Roots.find(to); it != snapshot->Roots.end())
+                        snapshot->Roots.erase(to);
+                    else
+                        snapshot->NonRoots.insert(to);
+                }
+            );
+
+            CurrentHeapSnapshot = snapshot;
+            IsHeapSnapshotInspectorOpen = true;
+        }
+
+        if (ImGui::Button("Dump Luau VM heap snapshot"))
+        {
+            lua_State* L = ScriptEngine::VMs.at(SelectedVM).MainThread;
+            lua_gc(L, LUA_GCCOLLECT, 0);
+
             FILE* file = fopen("./heap-dump-temp", "w");
 
             if (!file)
                 tinyfd_messageBox("Failed to create snapshot", "The file\n./heap-dump-temp\ncould not be opened for writing.", "ok", "error", 1);
             else
             {
-                lua_memorydump(ScriptEngine::VMs.at(SelectedVM).MainThread, file, nullptr);
+                lua_memorydump(L, file, nullptr);
                 fclose(file);
 
                 const char* destination = tinyfd_saveFileDialog(
@@ -4979,6 +5142,23 @@ static void renderInfo(double DeltaTime)
 
     if (!infoOpen)
         DeveloperTools::InfoShown = false;
+
+    if (IsHeapSnapshotInspectorOpen)
+    {
+        if (ImGui::Begin("Heap snapshot inspector", &IsHeapSnapshotInspectorOpen))
+        {
+            lua_State* L = ScriptEngine::VMs.at(SelectedVM).MainThread;
+
+            for (const void* root : CurrentHeapSnapshot.Roots)
+            {
+                const LuauHeapSnapshotNode& node = CurrentHeapSnapshot.Nodes.at(root);
+                renderHeapSnapshotNodeRecursive(L, CurrentHeapSnapshot, node);
+                ImGui::Separator();
+            }
+
+            ImGui::End();
+        }
+    }
 }
 
 static void renderRendererSettings()

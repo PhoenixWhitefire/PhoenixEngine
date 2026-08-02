@@ -269,7 +269,7 @@ local PrevSelectedProjectsCategory = 0
 function SelectProject.Render(DeltaTime: number)
     assert(typeof(DeltaTime) == "number")
 
-    if imgui.beginfullscreen("Start Page", 0, 18) then
+    if not CommonUI.EnableBottomBarInStartPage and imgui.beginfullscreen("Start Page", 0, 18) then
         local startPos = imgui.cursorposition()
 
         if imgui.beginchild("SidePanel", vector.create(165, 0), "b") then
@@ -324,9 +324,15 @@ function SelectProject.Render(DeltaTime: number)
         imgui.dummy()
         imgui.endchild()
     end
-    imgui.endw()
+    if not CommonUI.EnableBottomBarInStartPage then
+        imgui.endw()
+    end
 
     CommonUI.RenderMainMenuBar(DeltaTime)
+
+    if CommonUI.EnableBottomBarInStartPage then
+        CommonUI.RenderBottomBar()
+    end
 end
 
 return SelectProject
