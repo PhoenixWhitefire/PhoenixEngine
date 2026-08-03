@@ -25,12 +25,12 @@ public:
     virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) = 0;
     virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor*) = 0;
 
-    std::vector<Reflection::EventCallback> ComponentCreatedCallbacks;
-    std::vector<Reflection::EventCallback> ComponentDeletedCallbacks;
+    std::vector<Reflection::EventConnection> ComponentCreatedCallbacks;
+    std::vector<Reflection::EventConnection> ComponentDeletedCallbacks;
 
     Reflection::EventDescriptor ComponentCreatedEvent = Reflection::EventDescriptor{
         .CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
-        .Connect = [this](void*, const Reflection::EventCallback& Callback)
+        .Connect = [this](void*, const Reflection::EventConnection& Callback)
             {
                 return Reflection::EventConnect(ComponentCreatedCallbacks, Callback);
             },
@@ -38,10 +38,14 @@ public:
             {
                 Reflection::EventDisconnect(ComponentCreatedCallbacks, Id);
             },
+        .Cleanup = [this](void*)
+            {
+                Reflection::EventCleanup(ComponentCreatedCallbacks);
+            }
     };
     Reflection::EventDescriptor ComponentDeletedEvent = Reflection::EventDescriptor{
         .CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
-        .Connect = [this](void*, const Reflection::EventCallback& Callback)
+        .Connect = [this](void*, const Reflection::EventConnection& Callback)
             {
                 return Reflection::EventConnect(ComponentDeletedCallbacks, Callback);
             },
@@ -49,6 +53,10 @@ public:
             {
                 Reflection::EventDisconnect(ComponentDeletedCallbacks, Id);
             },
+        .Cleanup = [this](void*)
+            {
+                Reflection::EventCleanup(ComponentDeletedCallbacks);
+            }
     };
 };
 
@@ -120,6 +128,9 @@ public:
     virtual void DeleteComponent(uint32_t Id) override
     {
         T& component = m_Components.at(Id);
+        for (auto& [ _, event ] : GetEvents())
+            event.Cleanup((void*)&component);
+
         component.NextFreeId = NextFreeId;
         NextFreeId = Id;
 

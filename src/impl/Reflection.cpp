@@ -736,13 +736,26 @@ bool Reflection::TypeFits(ValueType Target, ValueType Value)
     return (Value == base) || ((Target & ValueType::Null) && Value == ValueType::Null) || Target == ValueType::Any;
 }
 
-uint32_t Reflection::EventConnect(std::vector<EventCallback>& Callbacks, const EventCallback& NewCallback)
+uint32_t Reflection::EventConnect(std::vector<EventConnection>& Callbacks, const EventConnection& NewCallback)
 {
     Callbacks.push_back(NewCallback);
     return (uint32_t)Callbacks.size() - 1;
 }
 
-void Reflection::EventDisconnect(std::vector<EventCallback>& Callbacks, uint32_t Id)
+void Reflection::EventDisconnect(std::vector<EventConnection>& Callbacks, uint32_t Id)
 {
+    Callbacks[Id].Cleanup();
     Callbacks[Id].Callback = nullptr;
+}
+
+void Reflection::EventCleanup(std::vector<EventConnection>& Callbacks)
+{
+    for (EventConnection& callback : Callbacks)
+    {
+        if (callback.Callback)
+        {
+            callback.Cleanup();
+            callback.Callback = nullptr;
+        }
+    }
 }

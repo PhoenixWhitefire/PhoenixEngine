@@ -225,7 +225,7 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] = {
     shouldResume_Deferred,
     shouldResume_Promise,
     shouldResume_Polled,
-    shouldResume_Polled
+    shouldResume_Polled,
 };
 
 static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
@@ -283,13 +283,6 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(Name.data(), Name.size());
-
-    // getting this in github CI, can't repro locally
-    if (!MainThread)
-    {
-        Log.ErrorF("{} has no main thread?!", Name);
-        return;
-    }
 
     std::deque<YieldedCoroutine>* yieldedCoros;
     if (YieldedOverride)
@@ -1997,12 +1990,13 @@ void ScriptEngine::LuauVM::Close()
     for (lua_State* co : vmud->Coroutines)
     {
         L::StateUserdata* ud = (L::StateUserdata*)lua_getthreaddata(co);
-        for (EventConnectionData* ec : ud->EventConnections)
+        while (!ud->EventConnections.empty())
         {
+            EventConnectionData* ec = ud->EventConnections.back();
             assert(ec->ConnectionId != UINT32_MAX);
 
-            if (void* referred = ec->Reflector.Referred())
-                ec->Event->Disconnect(referred, ec->ConnectionId);
+            void* referred = ec->Reflector.Referred();
+            ec->Event->Disconnect(referred, ec->ConnectionId);
         }
 
         ud->EventConnections.clear();
@@ -2046,7 +2040,7 @@ static void scheduleDebuggedCoro(lua_State* L, ScriptEngine::L::StateUserdata* v
         .RmDeferred = {
             .ResumeAt = 0.0,
             .Arguments = nullptr,
-            .ArgumentsRef = 0
+            .ArgumentsRef = -1
         },
         .Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred
     };

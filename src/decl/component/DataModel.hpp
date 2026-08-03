@@ -19,8 +19,8 @@ struct EcDataModel : public Component<EntityComponent::DataModel>
     std::string VM = ROOT_LVM_NAME;
     uint32_t Workspace = UINT32_MAX;
 
-    std::vector<Reflection::EventCallback> OnFrameBeginCallbacks;
-    std::vector<Reflection::EventCallback> ClosingCallbacks;
+    std::vector<Reflection::EventConnection> OnFrameBeginCallbacks;
+    std::vector<Reflection::EventConnection> ClosingCallbacks;
     Reflection::GenericFunction CloseCallback;
     std::vector<lua_State*> Modules;
     std::vector<EntityComponent> BoundServices;

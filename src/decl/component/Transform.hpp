@@ -19,7 +19,7 @@ struct EcTransform : public Component<EntityComponent::Transform>
     // local-space (relative to world transform of nearest Transform ancestor)
     glm::mat4 LocalTransform = { 1.f };
 
-    std::vector<Reflection::EventCallback> OnScriptMovedCallbacks;
+    std::vector<Reflection::EventConnection> OnScriptMovedCallbacks;
     bool Valid = true;
 };
 

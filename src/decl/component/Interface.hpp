@@ -46,7 +46,7 @@ struct EcUIText : public Component<EntityComponent::UIText>
 
 struct EcUIButton : public Component<EntityComponent::UIButton>
 {
-    std::vector<Reflection::EventCallback> OnClickedCallbacks;
+    std::vector<Reflection::EventConnection> OnClickedCallbacks;
 
     bool Valid = true;
 };

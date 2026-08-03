@@ -6,7 +6,7 @@
 
 struct EcLoggingService : public Component<EntityComponent::Logging>
 {
-    std::vector<Reflection::EventCallback> OnMessagedCallbacks;
+    std::vector<Reflection::EventConnection> OnMessagedCallbacks;
     bool Valid = true;
 };
 

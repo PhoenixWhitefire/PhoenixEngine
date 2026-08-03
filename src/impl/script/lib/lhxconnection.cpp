@@ -4,88 +4,61 @@
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
 
+static void disconnect(EventConnectionData* ec)
+{
+    void* p = ec->Reflector.Referred();
+    assert(p);
+
+    ec->Event->Disconnect(p, ec->ConnectionId);
+
+    // Cleanup was invoked by `::Disconnect`
+}
+
 static int conn_namecall(lua_State* L)
 {
-	if (strcmp(lua_namecallatom(L, nullptr), "Disconnect") == 0)
-	{
-		EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
+    if (strcmp(lua_namecallatom(L, nullptr), "Disconnect") == 0)
+    {
+        EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
 
-		if (ec->ConnectionId == UINT32_MAX)
-			luaL_error(L, "Event Connection was already disconnected!");
+        if (ec->ConnectionId == UINT32_MAX)
+            luaL_error(L, "Event Connection was already disconnected!");
 
-		uint32_t connectionId = ec->ConnectionId;
+        disconnect(ec);
+    }
+    else
+        luaL_error(L, "No such method of Event Connection known as '%s'", lua_namecallatom(L, nullptr));
 
-		if (void* p = ec->Reflector.Referred())
-			ec->Event->Disconnect(p, ec->ConnectionId);
-		ec->ConnectionId = UINT32_MAX;
-
-		ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(ec->L);
-		if (ud->EventConnections.size() > 0)
-		{
-			const auto& it = std::find(ud->EventConnections.begin(), ud->EventConnections.end(), ec);
-			assert(it != ud->EventConnections.end());
-			ud->EventConnections.erase(it);
-		}
-
-        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(ec->L));
-        std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
-
-        if (vmud->PVM)
-            yieldedCoros = &vmud->PVM->YieldedCoroutinesSync;
-        else
-            yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
-
-		for (ScriptEngine::YieldedCoroutine& yc : *yieldedCoros)
-		{
-			if (yc.Mode != ScriptEngine::YieldedCoroutine::ResumptionMode::DeferredEventResumption)
-				continue;
-
-			if (yc.RmEventCallback.Event == ec->Event && yc.RmEventCallback.Reflector == ec->Reflector && yc.RmEventCallback.ConnectionId == connectionId)
-				yc.Dead = true;
-		}
-
-		assert(lua_mainthread(L) == lua_mainthread(ec->L));
-		lua_unref(L, ec->EThreadRef);
-		lua_unref(L, ec->CThreadRef);
-		lua_unref(L, ec->SpawningThreadRef);
-	}
-	else
-		luaL_error(L, "No such method of Event Connection known as '%s'", lua_namecallatom(L, nullptr));
-
-	return 0;
+    return 0;
 }
 
 static int conn_index(lua_State* L)
 {
     const char* k = luaL_checkstring(L, 2);
-	EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
+    EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
 
-	if (strcmp(k, "Connected") == 0)
-		lua_pushboolean(L, ec->ConnectionId != UINT32_MAX);
+    if (strcmp(k, "Connected") == 0)
+        lua_pushboolean(L, ec->ConnectionId != UINT32_MAX);
 
-	else if (strcmp(k, "Signal") == 0)
-	{
-		lua_pushinteger(L, ec->SignalRef);
-		lua_gettable(L, LUA_REGISTRYINDEX);
-	}
-	else
-		luaL_error(L, "Invalid member '%s' of Event Connection", k);
+    else if (strcmp(k, "Signal") == 0)
+        lua_getref(L, ec->SignalRef);
 
-	return 1;
+    else
+        luaL_error(L, "Invalid member '%s' of Event Connection", k);
+
+    return 1;
 }
 
 static int conn_tostring(lua_State* L)
 {
     EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
-	lua_pushinteger(L, ec->SignalRef);
-	lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_getref(L, ec->SignalRef);
 
-	EventSignalData* ev = (EventSignalData*)luaL_checkudatatagged(L, -1, UserdataTag::EventSignal);
-	GameObject* obj = GameObjectManager::Get()->FindById(ev->Reflector.Id);
+    EventSignalData* ev = (EventSignalData*)luaL_checkudatatagged(L, -1, UserdataTag::EventSignal);
+    GameObject* obj = GameObjectManager::Get()->FindById(ev->Reflector.Id);
 
-	std::string source = ev->Reflector.Type == EntityComponent::None
-		? (obj ? obj->GetFullName() + "." : "GameObject::")
-		: std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.Type]);
+    std::string source = ev->Reflector.Type == EntityComponent::None
+        ? (obj ? obj->GetFullName() + "." : "GameObject::")
+        : std::format("{}::", s_EntityComponentNames[(size_t)ev->Reflector.Type]);
 
     lua_pushfstring(L, "Connection to %s%s", source.c_str(), ev->EventName);
     return 1;
@@ -93,16 +66,16 @@ static int conn_tostring(lua_State* L)
 
 static int conn_eq(lua_State* L)
 {
-	EventConnectionData* a = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
-	EventConnectionData* b = (EventConnectionData*)luaL_checkudatatagged(L, 2, UserdataTag::EventConnection);
+    EventConnectionData* a = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
+    EventConnectionData* b = (EventConnectionData*)luaL_checkudatatagged(L, 2, UserdataTag::EventConnection);
 
-	lua_pushboolean(
-		L,
-		a->Reflector == b->Reflector
-			&& a->ConnectionId == b->ConnectionId
-			&& a->Event == b->Event
-	);
-	return 1;
+    lua_pushboolean(
+        L,
+        a->Reflector == b->Reflector
+            && a->ConnectionId == b->ConnectionId
+            && a->Event == b->Event
+    );
+    return 1;
 }
 
 static void createmetatable(lua_State* L)
@@ -110,21 +83,29 @@ static void createmetatable(lua_State* L)
     lua_createtable(L, 0, 5);
 
     lua_pushliteral(L, "EventConnection");
-	lua_setfield(L, -2, "__type");
+    lua_setfield(L, -2, "__type");
 
     lua_pushcfunction(L, conn_namecall, "__namecall");
-	lua_setfield(L, -2, "__namecall");
+    lua_setfield(L, -2, "__namecall");
 
-	lua_pushcfunction(L, conn_index, "EventConnection.__index");
-	lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, conn_index, "EventConnection.__index");
+    lua_setfield(L, -2, "__index");
 
-	lua_pushcfunction(L, conn_tostring, "EventConnection.__tostring");
-	lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, conn_tostring, "EventConnection.__tostring");
+    lua_setfield(L, -2, "__tostring");
 
-	lua_pushcfunction(L, conn_eq, "EventConnection.__eq");
-	lua_setfield(L, -2, "__eq");
+    lua_pushcfunction(L, conn_eq, "EventConnection.__eq");
+    lua_setfield(L, -2, "__eq");
 
-	lua_setuserdatametatable(L, UserdataTag::EventConnection);
+    lua_setuserdatametatable(L, UserdataTag::EventConnection);
+
+    lua_setuserdatadtor(L, UserdataTag::EventConnection, [](lua_State*, void* ud)
+    {
+        EventConnectionData* ec = (EventConnectionData*)ud;
+
+        if (ec->ConnectionId != UINT32_MAX)
+            disconnect(ec);
+    });
 }
 
 int luhxopen_EventConnection(lua_State* L)

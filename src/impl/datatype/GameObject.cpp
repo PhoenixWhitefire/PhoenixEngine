@@ -467,6 +467,9 @@ void GameObject::Destroy()
 		while (!Components.empty())
 			RemoveComponent(Components.back().Type);
 
+		for (auto& [ _, event ] : s_Api.Events)
+			event.Cleanup((void*)this);
+
 		this->SetParent(nullptr);
 
 		assert(HardRefCount > 0);
@@ -1250,26 +1253,32 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 		Collections.push_back(Collection{
 			.AddedEvent = { .Descriptor = new Reflection::EventDescriptor{
 				.CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
-				.Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
+				.Connect = [this, id](void*, Reflection::EventConnection Callback) -> uint32_t
 				{
-					Collections[id].AddedEvent.Callbacks.push_back(Callback);
-					return (uint32_t)Collections[id].AddedEvent.Callbacks.size() - 1;
+					return Reflection::EventConnect(Collections[id].AddedEvent.Callbacks, Callback);
 				},
 				.Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
 				{
-					Collections[id].AddedEvent.Callbacks[ConnectionId].Callback = nullptr;
+					Reflection::EventDisconnect(Collections[id].AddedEvent.Callbacks, ConnectionId);
+				},
+				.Cleanup = [this, id](void*)
+				{
+					Reflection::EventCleanup(Collections[id].AddedEvent.Callbacks);
 				},
 			} },
 			.RemovedEvent = { .Descriptor = new Reflection::EventDescriptor{
 				.CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
-				.Connect = [this, id](void*, Reflection::EventCallback Callback) -> uint32_t
+				.Connect = [this, id](void*, Reflection::EventConnection Callback) -> uint32_t
 				{
-					Collections[id].RemovedEvent.Callbacks.push_back(Callback);
-					return (uint32_t)Collections[id].RemovedEvent.Callbacks.size() - 1;
+					return Reflection::EventConnect(Collections[id].RemovedEvent.Callbacks, Callback);
 				},
 				.Disconnect = [this, id](void*, uint32_t ConnectionId) noexcept
 				{
-					Collections[id].RemovedEvent.Callbacks[ConnectionId].Callback = nullptr;
+					Reflection::EventDisconnect(Collections[id].RemovedEvent.Callbacks, ConnectionId);
+				},
+				.Cleanup = [this, id](void*)
+				{
+					Reflection::EventCleanup(Collections[id].RemovedEvent.Callbacks);
 				},
 			} }
 		});

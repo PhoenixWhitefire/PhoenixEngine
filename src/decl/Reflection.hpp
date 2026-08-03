@@ -28,32 +28,38 @@
 
 #define REFLECTION_EVENT(c, n, ...) { \
     #n, \
-    { \
-        { __VA_OPT__(REFLECTION_SPAN({ __VA_ARGS__ })) }, \
-        [](void* p, const Reflection::EventCallback& Callback) \
+    Reflection::EventDescriptor{ \
+        .CallbackInputs = { __VA_OPT__(REFLECTION_SPAN({ __VA_ARGS__ })) }, \
+        .Connect = [](void* p, const Reflection::EventConnection& Callback) \
         -> uint32_t \
         { \
             c* ec = static_cast<c*>(p); \
             return Reflection::EventConnect(ec->n##Callbacks, Callback); \
         }, \
-        [](void* p, uint32_t Id) \
+        .Disconnect = [](void* p, uint32_t Id) \
         -> void \
         { \
             c* ec = static_cast<c*>(p); \
             Reflection::EventDisconnect(ec->n##Callbacks, Id); \
+        }, \
+        .Cleanup = [](void* p) \
+        -> void \
+        { \
+            c* ec = static_cast<c*>(p); \
+            Reflection::EventCleanup(ec->n##Callbacks); \
         } \
     } \
-} \
+}
 
 #define REFLECTION_SIGNAL_EVENT(CbListOg, ...) { ZoneScopedN(#CbListOg); \
-    std::vector<Reflection::EventCallback> CbList = CbListOg; \
+    std::vector<Reflection::EventConnection> CbList = CbListOg; \
     for (size_t cbi = 0; cbi < CbList.size(); cbi++) \
         if (const Reflection::EventCallbackFunction& cb = CbList[cbi].Callback) \
             cb({ __VA_ARGS__ }, (uint32_t)cbi, UINT32_MAX); \
 } \
 
 #define REFLECTION_SIGNAL_EVENT_RESTRICT(CbListOg, DataModelDescendingObject, ...) { ZoneScopedN(#CbListOg); \
-    std::vector<Reflection::EventCallback> CbList = CbListOg; \
+    std::vector<Reflection::EventConnection> CbList = CbListOg; \
     for (size_t cbi = 0; cbi < CbList.size(); cbi++) \
         if (const Reflection::EventCallbackFunction& cb = CbList[cbi].Callback) \
             cb({ __VA_ARGS__ }, (uint32_t)cbi, DataModelDescendingObject); \
@@ -218,15 +224,19 @@ namespace Reflection
     typedef std::promise<std::vector<Reflection::GenericValue>>*(*YieldingMethodFunction)(void*, const std::vector<Reflection::GenericValue>&);
 
     using EventCallbackFunction = std::function<void(const std::vector<Reflection::GenericValue>&, uint32_t, uint32_t)>;
+    using EventConnectionCleanup = std::function<void()>;
 
-    struct EventCallback
+    struct EventConnection
     {
         EventCallbackFunction Callback;
+        EventConnectionCleanup Cleanup;
+
         uint32_t DataModel;
     };
 
-    using EventConnectFunction = std::function<uint32_t(void*, const EventCallback&)>;
+    using EventConnectFunction = std::function<uint32_t(void*, const EventConnection&)>;
     using EventDisconnectFunction = std::function<void(void*, uint32_t)>;
+    using EventCleanupFunction = std::function<void(void*)>;
 
     struct PropertyDescriptor
     {
@@ -280,10 +290,12 @@ namespace Reflection
 
         EventConnectFunction Connect;
         EventDisconnectFunction Disconnect;
+        EventCleanupFunction Cleanup;
     };
 
-    uint32_t EventConnect(std::vector<EventCallback>&, const Reflection::EventCallback&);
-    void EventDisconnect(std::vector<EventCallback>&, uint32_t);
+    uint32_t EventConnect(std::vector<EventConnection>&, const Reflection::EventConnection&);
+    void EventDisconnect(std::vector<EventConnection>&, uint32_t);
+    void EventCleanup(std::vector<EventConnection>&);
 
     typedef std::unordered_map<std::string_view, Reflection::PropertyDescriptor> StaticPropertyMap;
     typedef std::unordered_map<std::string_view, Reflection::MethodDescriptor> StaticMethodMap;

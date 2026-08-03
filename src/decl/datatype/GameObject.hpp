@@ -104,10 +104,10 @@ public:
 	Reflection::Api ComponentApis;
 	std::unordered_map<std::string_view, ReflectorRef> MemberToComponentMap;
 	std::vector<uint16_t> Tags;
-	std::vector<Reflection::EventCallback> OnTagAddedCallbacks;
-	std::vector<Reflection::EventCallback> OnTagRemovedCallbacks;
-	std::vector<Reflection::EventCallback> OnTreeEnabledChangedCallbacks;
-	std::vector<Reflection::EventCallback> OnWorkspaceChangedCallbacks;
+	std::vector<Reflection::EventConnection> OnTagAddedCallbacks;
+	std::vector<Reflection::EventConnection> OnTagRemovedCallbacks;
+	std::vector<Reflection::EventConnection> OnTreeEnabledChangedCallbacks;
+	std::vector<Reflection::EventConnection> OnWorkspaceChangedCallbacks;
 
 	uint16_t HardRefCount = 0;
 	// How much of HardRefCount is from Luau
@@ -162,7 +162,7 @@ public:
 		{
 			// We want these to exist in the same memory location for the entire lifetime of the Engine
 			Reflection::EventDescriptor* Descriptor = nullptr;
-			std::vector<Reflection::EventCallback> Callbacks;
+			std::vector<Reflection::EventConnection> Callbacks;
 		};
 
 		Event AddedEvent;

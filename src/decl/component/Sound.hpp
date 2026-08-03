@@ -39,7 +39,7 @@ struct EcSound : public Component<EntityComponent::Sound>
 
     uint32_t EcId = UINT32_MAX;
 
-    std::vector<Reflection::EventCallback> OnLoadedCallbacks;
+    std::vector<Reflection::EventConnection> OnLoadedCallbacks;
     ma_sound* SoundInstance;
 
     bool m_PlayRequested = false;

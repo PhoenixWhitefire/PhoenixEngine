@@ -5,6 +5,7 @@
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
 #include "script/LightUserdataTags.hpp"
+#include "datatype/ComponentBase.hpp"
 
 void luhx_pushsignal(
     lua_State* L,
@@ -20,6 +21,28 @@ void luhx_pushsignal(
     ev->EventName = EventName;
     ev->Event = Event;
     ev->RestrictDataModel = RestrictToDataModel;
+}
+
+static void incrementReflectorRefs(ReflectorRef& reflector)
+{
+    void* referred = reflector.Referred();
+    assert(referred);
+
+    if (reflector.Type == EntityComponent::None)
+        ((GameObject*)referred)->IncrementHardRefs();
+    else
+        ((BaseComponent*)referred)->Object->IncrementHardRefs();
+}
+
+static void decrementReflectorRefs(ReflectorRef& reflector)
+{
+    void* referred = reflector.Referred();
+    assert(referred);
+
+    if (reflector.Type == EntityComponent::None)
+        ((GameObject*)referred)->DecrementHardRefs();
+    else
+        ((BaseComponent*)referred)->Object->DecrementHardRefs();
 }
 
 static void queueEvent(
@@ -131,6 +154,43 @@ static void queueEvent(
     });
 }
 
+static void cleanupConnection(lua_State* L, EventConnectionData* ec)
+{
+    if (ec->ConnectionId == UINT32_MAX)
+        return;
+
+    assert(lua_mainthread(L) == lua_mainthread(ec->L));
+
+    ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(ec->L);
+    const auto& it = std::find(ud->EventConnections.begin(), ud->EventConnections.end(), ec);
+    assert(it != ud->EventConnections.end());
+    ud->EventConnections.erase(it);
+
+    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(ec->L));
+    std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
+
+    if (vmud->PVM)
+        yieldedCoros = &vmud->PVM->YieldedCoroutinesSync;
+    else
+        yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
+
+    for (ScriptEngine::YieldedCoroutine& yc : *yieldedCoros)
+    {
+        if (yc.Mode != ScriptEngine::YieldedCoroutine::ResumptionMode::DeferredEventResumption)
+            continue;
+
+        if (yc.RmEventCallback.Event == ec->Event && yc.RmEventCallback.Reflector == ec->Reflector && yc.RmEventCallback.ConnectionId == ec->ConnectionId)
+            yc.Dead = true;
+    }
+
+    lua_unref(L, ec->EThreadRef);
+    lua_unref(L, ec->CThreadRef);
+    lua_unref(L, ec->SpawningThreadRef);
+    decrementReflectorRefs(ec->Reflector);
+
+    ec->ConnectionId = UINT32_MAX;
+}
+
 static int sig_namecall(lua_State* L)
 {
     if (strcmp(lua_namecallatom(L, nullptr), "Connect") == 0)
@@ -164,7 +224,6 @@ static int sig_namecall(lua_State* L)
 
         EventConnectionData* ec = (EventConnectionData*)lua_newuserdatataggedwithmetatable(eL, sizeof(EventConnectionData), UserdataTag::EventConnection);
         *ec = {};
-        //ec->DataModel = nullptr; // zero-initialization breaks some assumptions that IDs which are not `PHX_GAMEOBJECT_NULL_ID` are valid
         lua_xpush(eL, L, -1);
 
         // assign the connection to the Event Thread so it can be used by the Connection Threads
@@ -182,16 +241,23 @@ static int sig_namecall(lua_State* L)
 
         ReflectorRef reflector = ev->Reflector;
         ObjectRef dmRef = ec->DataModel;
+        dmRef->IncrementHardRefs();
 
         lua_xpush(eL, cL, 2);
 
         uint32_t cnId = rev->Connect(
             ev->Reflector.Referred(),
-            Reflection::EventCallback{
+            Reflection::EventConnection{
                 .Callback = [eL, ec, cL, rev, ev, dmRef, reflector](const std::vector<Reflection::GenericValue>& Inputs, uint32_t ConnectionId, uint32_t FromDataModel) -> void
                 {
                     ZoneScopedN("QueueEvent");
                     queueEvent(eL, ec, cL, rev, ev, dmRef, reflector, Inputs, ConnectionId, FromDataModel);
+                },
+                .Cleanup = [=]()
+                {
+                    ZoneScopedN("CleanupEventConnection");
+                    cleanupConnection(L, ec);
+                    dmRef->DecrementHardRefs();
                 },
                 .DataModel = ev->RestrictDataModel,
             }
@@ -211,6 +277,7 @@ static int sig_namecall(lua_State* L)
 
         ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(L))->EventConnections.push_back(ec);
 
+        incrementReflectorRefs(reflector);
         return 1;
     }
     else if (strcmp(lua_namecallatom(L, nullptr), "Wait") == 0)
@@ -224,27 +291,49 @@ static int sig_namecall(lua_State* L)
         uint32_t* fromDataModel = new uint32_t;
         *resume = false;
 
-        uint32_t cid = rev->Connect(
+        EventConnectionData* ec = (EventConnectionData*)lua_newuserdatataggedwithmetatable(L, sizeof(EventConnectionData), UserdataTag::EventConnection);
+        int cref = lua_ref(L, -1);
+        *ec = {};
+
+        ec->ConnectionId = rev->Connect(
             reflector.Referred(),
-            Reflection::EventCallback{
-                [ev, resume, reflector, rev, values, fromDataModel](const std::vector<Reflection::GenericValue>& Values, uint32_t, uint32_t FromDataModel)
+            Reflection::EventConnection{
+                .Callback = [resume, rev, reflector, values, fromDataModel, ec](const std::vector<Reflection::GenericValue>& Values, uint32_t, uint32_t FromDataModel)
                 -> void
                 {
                     *values = Values;
                     *fromDataModel = FromDataModel;
                     *resume = true;
+                },
+                .Cleanup = [=]()
+                {
+                    cleanupConnection(L, ec);
+
+                    std::string warning;
+                    ScriptEngine::L::DumpStacktrace(L, &warning, 0, "Event was cleaned up, thread will not resume");
+
+                    Log.Warning(warning);
                 }
             }
         );
 
+        ec->Reflector = ev->Reflector;
+        ec->SignalRef = cref;
+        ec->ConnectionId = ec->ConnectionId;
+        ec->Event = rev;
+        ec->L = L;
+
+        ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(L))->EventConnections.push_back(ec);
+        incrementReflectorRefs(reflector);
+
         return ScriptEngine::L::Yield(
             L,
             0,
-            [resume, values, reflector, rev, ev, cid, fromDataModel](ScriptEngine::YieldedCoroutine& yc)
+            [=](ScriptEngine::YieldedCoroutine& yc)
             -> void
             {
                 yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Polled;
-                yc.RmPoll = [resume, values, reflector, rev, ev, cid, fromDataModel](lua_State* L) -> int
+                yc.RmPoll = [=](lua_State* L) -> int
                     {
                         if (*resume)
                         {
@@ -259,17 +348,12 @@ static int sig_namecall(lua_State* L)
                                 }
                             }
 
-                            rev->Disconnect(reflector.Referred(), cid);
-
                             int count = (int)values->size();
 
                             for (const Reflection::GenericValue& gv : *values)
                                 ScriptEngine::L::PushGenericValue(L, gv);
 
-                            delete values;
-                            delete fromDataModel;
-                            delete resume;
-
+                            rev->Disconnect(reflector.Referred(), ec->ConnectionId);
                             return count;
                         }
 

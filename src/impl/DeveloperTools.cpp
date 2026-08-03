@@ -4727,6 +4727,8 @@ struct LuauHeapSnapshot
 };
 
 static bool IsFilteringHeapSnapshot = false;
+static const void* SelectedHeapObject = nullptr;
+static bool FindingSelectedHeapObject = false;
 
 static void expandNodeParents(LuauHeapSnapshot& snapshot, const LuauHeapSnapshotNode& node, std::unordered_set<const void*>& seen)
 {
@@ -4769,8 +4771,15 @@ static void renderHeapSnapshotNodeRecursive(lua_State* L, const LuauHeapSnapshot
 
     if (node.AlongSearchPath)
         nodeFlags |= ImGuiTreeNodeFlags_DefaultOpen;
-    else if (node.IsSearchTarget)
+    else if (node.IsSearchTarget || SelectedHeapObject == node.Pointer)
         nodeFlags |= ImGuiTreeNodeFlags_Selected;
+
+    if (SelectedHeapObject == node.Pointer && FindingSelectedHeapObject && seen.find(node.Pointer) == seen.end())
+    {
+        FindingSelectedHeapObject = false;
+        ImGui::SetScrollHereY();
+        ImGui::SetKeyboardFocusHere();
+    }
 
     if (ImGui::TreeNodeEx(&node, nodeFlags, "%s", node.Name.empty() ? "(node)" : node.Name.c_str()))
     {
@@ -4817,7 +4826,13 @@ static void renderHeapSnapshotNodeRecursive(lua_State* L, const LuauHeapSnapshot
             }
         }
         else
-            ImGui::TextUnformatted("<< recursive >>");
+        {
+            if (ImGui::TextLink("<< value >>"))
+            {
+                SelectedHeapObject = node.Pointer;
+                FindingSelectedHeapObject = true;
+            }
+        }
 
         ImGui::TreePop();
     }
@@ -5063,7 +5078,7 @@ static void renderInfo(double DeltaTime)
             }
         }
 
-        ImGui::Separator();
+        ImGui::SeparatorText("Luau Heap");
 
         int selectionIndex = 0;
         std::vector<const char*> vms;
@@ -5106,10 +5121,13 @@ static void renderInfo(double DeltaTime)
                                 nodeName = std::format("GameObject[{}]", object->GetFullName());
                         }
                     }
-                    else if (tt == LUA_TSTRING && size <= 64)
+                    else if (tt == LUA_TSTRING)
                     {
                         const GCObject* gco = (const GCObject*)ptr;
-                        nodeName = std::format("\"{}\"", gco->ts.data);
+                        size_t len = strlen(gco->ts.data);
+
+                        if (len <= 64)
+                            nodeName = std::format("\"{}\"", std::string(gco->ts.data, len));
                     }
                     else if (tt == LUA_TTHREAD)
                     {
@@ -5167,6 +5185,7 @@ static void renderInfo(double DeltaTime)
             );
 
             CurrentHeapSnapshot = snapshot;
+            SelectedHeapObject = nullptr;
             SearchFilter.clear();
             IsHeapSnapshotInspectorOpen = true;
         }
