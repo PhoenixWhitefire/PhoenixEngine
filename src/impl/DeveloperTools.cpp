@@ -4704,8 +4704,11 @@ struct LuauHeapSnapshotNode
 
     uint8_t Type = UINT8_MAX;
     uint8_t MemCat = UINT8_MAX;
+    bool AlongSearchPath = false;
+    bool IsSearchTarget = false;
 
     std::unordered_map<std::string, std::vector<LuauHeapSnapshotLink>> Children;
+    std::unordered_set<const void*> Parents;
 };
 
 struct LuauHeapSnapshotEdge
@@ -4722,6 +4725,23 @@ struct LuauHeapSnapshot
     std::unordered_set<const void*> Roots;
     std::unordered_set<const void*> NonRoots;
 };
+
+static bool IsFilteringHeapSnapshot = false;
+
+static void expandNodeParents(LuauHeapSnapshot& snapshot, const LuauHeapSnapshotNode& node, std::unordered_set<const void*>& seen)
+{
+    for (const void* parentPtr : node.Parents)
+    {
+        if (seen.find(parentPtr) != seen.end())
+            continue;
+
+        LuauHeapSnapshotNode& parent = snapshot.Nodes.at(parentPtr);
+        parent.AlongSearchPath = true;
+
+        seen.insert(parentPtr);
+        expandNodeParents(snapshot, parent, seen);
+    }
+}
 
 static const char* luauBuiltinTypeName(lua_State* L, uint8_t tt)
 {
@@ -4743,27 +4763,61 @@ static const char* luauBuiltinTypeName(lua_State* L, uint8_t tt)
     }
 }
 
-static void renderHeapSnapshotNodeRecursive(lua_State* L, const LuauHeapSnapshot& snapshot, const LuauHeapSnapshotNode& node)
+static void renderHeapSnapshotNodeRecursive(lua_State* L, const LuauHeapSnapshot& snapshot, const LuauHeapSnapshotNode& node, std::unordered_set<const void*>& seen)
 {
-    constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull;
+    ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull;
 
-    if (ImGui::TreeNodeEx(&node, NodeFlags, "%s", node.Name.empty() ? "(node)" : node.Name.c_str()))
+    if (node.AlongSearchPath)
+        nodeFlags |= ImGuiTreeNodeFlags_DefaultOpen;
+    else if (node.IsSearchTarget)
+        nodeFlags |= ImGuiTreeNodeFlags_Selected;
+
+    if (ImGui::TreeNodeEx(&node, nodeFlags, "%s", node.Name.empty() ? "(node)" : node.Name.c_str()))
     {
         ImGui::TextUnformatted(luauBuiltinTypeName(L, node.Type));
         ImGui::Text("%zi bytes", node.Size);
         ImGui::Text("Memcat %i", (int)node.MemCat);
 
-        for (const auto& [ name, links ] : node.Children)
+        if (seen.find(node.Pointer) == seen.end())
         {
-            if (!name.empty())
-                ImGui::Text("%s ->", name.c_str());
+            seen.insert(node.Pointer);
 
-            for (const LuauHeapSnapshotLink& link : links)
+            for (const auto& [ name, links ] : node.Children)
             {
-                const LuauHeapSnapshotNode& child = snapshot.Nodes.at(link.To);
-                renderHeapSnapshotNodeRecursive(L, snapshot, child);
+                if (IsFilteringHeapSnapshot)
+                {
+                    bool anyRelevant = false;
+
+                    for (const LuauHeapSnapshotLink& link : links)
+                    {
+                        const LuauHeapSnapshotNode& child = snapshot.Nodes.at(link.To);
+
+                        if (child.AlongSearchPath || child.IsSearchTarget)
+                        {
+                            anyRelevant = true;
+                            break;
+                        }
+                    }
+
+                    if (!anyRelevant)
+                        continue;
+                }
+
+                if (!name.empty())
+                    ImGui::Text("%s ->", name.c_str());
+
+                for (const LuauHeapSnapshotLink& link : links)
+                {
+                    const LuauHeapSnapshotNode& child = snapshot.Nodes.at(link.To);
+                    if (IsFilteringHeapSnapshot && !child.AlongSearchPath && !child.IsSearchTarget)
+                        continue;
+
+                    renderHeapSnapshotNodeRecursive(L, snapshot, child, seen);
+                }
             }
         }
+        else
+            ImGui::TextUnformatted("<< recursive >>");
 
         ImGui::TreePop();
     }
@@ -4776,6 +4830,7 @@ static void renderInfo(double DeltaTime)
     static bool IsHeapSnapshotInspectorOpen = false;
     static LuauHeapSnapshot CurrentHeapSnapshot;
     static std::string SelectedVM = "RootLVM";
+    static std::string SearchFilter = "";
     Engine* engine = Engine::Get();
 
     // We need to keep track of two different states,
@@ -5039,13 +5094,12 @@ static void renderInfo(double DeltaTime)
                 {
                     LuauHeapSnapshot* snapshot = (LuauHeapSnapshot*)context;
                     std::string nodeName = name ? name : std::format("({})", luauBuiltinTypeName(s_L, tt));
-                    const GCObject* gco = (const GCObject*)ptr;
 
-                    if (tt == LUA_TUSERDATA)
+                    if (tt == LUA_TUSERDATA && name)
                     {
-                        if (gco->u.tag == UserdataTag::GameObject)
+                        if (strcmp(name, "GameObject") == 0)
                         {
-                            uint32_t id = *(const uint32_t*)gco->u.data;
+                            uint32_t id = *(const uint32_t*)ptr;
                             GameObject* object = GameObjectManager::Get()->FindById(id);
 
                             if (object)
@@ -5054,7 +5108,16 @@ static void renderInfo(double DeltaTime)
                     }
                     else if (tt == LUA_TSTRING && size <= 64)
                     {
-                        nodeName = std::format("\"{}\"", std::string(gco->ts.data, size));
+                        const GCObject* gco = (const GCObject*)ptr;
+                        nodeName = std::format("\"{}\"", gco->ts.data);
+                    }
+                    else if (tt == LUA_TTHREAD)
+                    {
+                        GCObject* gco = (GCObject*)ptr;
+                        const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(&gco->th);
+                        assert(ud);
+
+                        nodeName = std::format("(thread: {})", ud->SpawnTrace);
                     }
 
                     LuauHeapSnapshotNode node = LuauHeapSnapshotNode{
@@ -5066,7 +5129,10 @@ static void renderInfo(double DeltaTime)
                     };
 
                     if (const auto& it = snapshot->Nodes.find(ptr); it != snapshot->Nodes.end())
+                    {
                         node.Children = it->second.Children;
+                        node.Parents = it->second.Parents;
+                    }
 
                     snapshot->Nodes[ptr] = node;
 
@@ -5085,6 +5151,9 @@ static void renderInfo(double DeltaTime)
                     });
 
                     LuauHeapSnapshotNode& fromNode = snapshot->Nodes[from];
+                    LuauHeapSnapshotNode& toNode = snapshot->Nodes[to];
+                    toNode.Parents.insert(from);
+
                     std::vector<LuauHeapSnapshotLink>& links = fromNode.Children[edgeName];
 
                     if (std::find_if(links.begin(), links.end(), [to](const auto& l) { return l.To == to; }) == links.end())
@@ -5098,6 +5167,7 @@ static void renderInfo(double DeltaTime)
             );
 
             CurrentHeapSnapshot = snapshot;
+            SearchFilter.clear();
             IsHeapSnapshotInspectorOpen = true;
         }
 
@@ -5147,12 +5217,48 @@ static void renderInfo(double DeltaTime)
     {
         if (ImGui::Begin("Heap snapshot inspector", &IsHeapSnapshotInspectorOpen))
         {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            bool filter = ImGui::InputText("##search", &SearchFilter, ImGuiInputTextFlags_EnterReturnsTrue);
+
+            if (filter)
+            {
+                if (SearchFilter.empty())
+                    IsFilteringHeapSnapshot = false;
+                else
+                {
+                    IsFilteringHeapSnapshot = true;
+
+                    for (auto& [ _, node ] : CurrentHeapSnapshot.Nodes)
+                    {
+                        node.AlongSearchPath = false;
+                        node.IsSearchTarget = false;
+                    }
+
+                    std::unordered_set<const void*> seen;
+
+                    for (auto& [ _, node ] : CurrentHeapSnapshot.Nodes)
+                    {
+                        if (node.Name.find(SearchFilter) != std::string::npos)
+                        {
+                            node.IsSearchTarget = true;
+                            expandNodeParents(CurrentHeapSnapshot, node, seen);
+                        }
+                    }
+                }
+            }
+
             lua_State* L = ScriptEngine::VMs.at(SelectedVM).MainThread;
 
             for (const void* root : CurrentHeapSnapshot.Roots)
             {
                 const LuauHeapSnapshotNode& node = CurrentHeapSnapshot.Nodes.at(root);
-                renderHeapSnapshotNodeRecursive(L, CurrentHeapSnapshot, node);
+
+                if (IsFilteringHeapSnapshot && !node.AlongSearchPath && !node.IsSearchTarget)
+                    continue;
+
+                std::unordered_set<const void*> seen;
+                renderHeapSnapshotNodeRecursive(L, CurrentHeapSnapshot, node, seen);
+
                 ImGui::Separator();
             }
 
