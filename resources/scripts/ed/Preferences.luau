@@ -19,4 +19,5 @@ return {
     CancelPlaytestWhenScriptTimesOut = true,
     Theme = "Dark",
     DebuggerEnabled = false,
+    CreateVsCodeOrCodiumSettingsFile = true,
 }

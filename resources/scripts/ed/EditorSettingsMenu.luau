@@ -256,6 +256,14 @@ local function renderExternalToolsSection()
     Preferences.CodeEditorPath = stringSetting("Code Editor path", Preferences.CodeEditorPath)
     Preferences.AutoLaunchCodeEditorOnProjectOpen = setting("Launch code editor on project open", imgui.checkbox, Preferences.AutoLaunchCodeEditorOnProjectOpen)
 
+    if Preferences.CodeEditorPath == "code" or Preferences.CodeEditorPath == "codium" then
+        Preferences.CreateVsCodeOrCodiumSettingsFile = setting(
+            "Create Luau LSP settings file if possible\nwhen launching through `File` > `Open in Code Editor`",
+            imgui.checkbox,
+            Preferences.CreateVsCodeOrCodiumSettingsFile
+        )
+    end
+
     Preferences.GitIntegration = setting("Git integration", imgui.checkbox, Preferences.GitIntegration)
 end
 
