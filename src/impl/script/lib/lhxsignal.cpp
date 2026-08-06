@@ -309,10 +309,14 @@ static int sig_namecall(lua_State* L)
                 {
                     cleanupConnection(L, ec);
 
-                    std::string warning;
-                    ScriptEngine::L::DumpStacktrace(L, &warning, 0, "Event was cleaned up, thread will not resume");
+                    //std::string warning;
+                    //ScriptEngine::L::DumpStacktrace(L, &warning, 0, "Event was cleaned up, thread will not resume");
 
-                    Log.Warning(warning);
+                    //Log.Warning(warning);
+
+                    delete resume;
+                    delete values;
+                    delete fromDataModel;
                 }
             }
         );
