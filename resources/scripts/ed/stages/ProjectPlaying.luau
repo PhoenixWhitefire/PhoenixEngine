@@ -17,6 +17,8 @@ local GameClosedConnection = nil
 DeveloperTools.DebuggerRequestedStop:Connect(function()
     if State.CurrentStage == "ProjectPlaying" then
         State.ChangeStageTo("ProjectEditing")
+    else
+        warn(`Got debugger stop signal while in { State.CurrentStage }`)
     end
 end)
 

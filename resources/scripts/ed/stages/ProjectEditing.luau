@@ -56,6 +56,10 @@ DeveloperTools.BreakpointRemoved:Connect(function(file, line)
     if breakpointsForScript then
         breakpointsForScript[line] = nil
     end
+
+    if State.CurrentStage == "ProjectPlaying" then
+        ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, file, line, false)
+    end
 end)
 
 local function makeVisualizerForObject(Object: GameObject, Visualization: GameObject & EcTransform)
@@ -257,10 +261,11 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
     end
 
     for o, cs in VisualizationsChangedConnections do
-        if cs.Moved then
+        -- TODO .Connected checks?
+        if cs.Moved and cs.Moved.Connected then
             cs.Moved:Disconnect()
         end
-        if cs.WorkspaceChanged then
+        if cs.WorkspaceChanged and cs.WorkspaceChanged.Connected then
             cs.WorkspaceChanged:Disconnect()
         end
     end

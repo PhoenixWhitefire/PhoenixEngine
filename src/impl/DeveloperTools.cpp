@@ -5936,6 +5936,7 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
             if (ShouldBreak(L, PrevDepth, ar))
             {
                 lua_getinfo(L, 0, "slnu", &debuggerAr);
+                debuggerAr.currentline = ar->currentline;
                 lua_break(L);
 
                 DeveloperTools::OnDebugBreak(L, &debuggerAr, DebugBreakReason::DebuggerStep);
@@ -5943,11 +5944,15 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
         };
 
     lua_singlestep(L, true);
-
     lua_Status status = ScriptEngine::L::Resume(L, L, 0);
 
     if (status != LUA_BREAK && status != LUA_ERRRUN)
         DeveloperTools::LeaveDebugger();
+    else
+    {
+        lua_getinfo(L, 0, "sln", &debuggerAr);
+        DeveloperTools::OnDebugBreak(L, &debuggerAr, status == LUA_ERRRUN ? DebugBreakReason::Error : DebugBreakReason::BrokeIntoDebugger);
+    }
 }
 
 static bool isSteppable(const ScriptEngine::L::StateUserdata* vmud, DebugBreakReason Reason, lua_State* L)
@@ -5966,20 +5971,26 @@ static bool isSteppable(const ScriptEngine::L::StateUserdata* vmud, DebugBreakRe
 
 static void processDebuggerAction()
 {
-    DebugBreakReason Reason = debuggerReason;
-    lua_State*& L = debuggerL;
-
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
-
     if (s_QueuedDebuggerAction == TextEditor::DebugAction::Continue || s_QueuedDebuggerAction == TextEditor::DebugAction::Stop /*|| ImGui::IsKeyDown(ImGuiKey_F5)*/)
     {
-        if (s_QueuedDebuggerAction == TextEditor::DebugAction::Stop)
-            REFLECTION_SIGNAL_EVENT(EcDeveloperToolsService::DebuggerRequestedStopCallbacks);
-
+        TextEditor::DebugAction queued = s_QueuedDebuggerAction.value();
         s_QueuedDebuggerAction.reset();
 
-        lua_callbacks(L)->debugstep = nullptr;
-        DeveloperTools::LeaveDebugger();
+        if (queued == TextEditor::DebugAction::Stop)
+        {
+            REFLECTION_SIGNAL_EVENT(EcDeveloperToolsService::DebuggerRequestedStopCallbacks);
+            DeveloperTools::LeaveDebugger();
+        }
+        else
+        {
+            lua_singlestep(debuggerL, false);
+            lua_Status status = ScriptEngine::L::Resume(debuggerL, nullptr, 0);
+
+            if (status != LUA_BREAK && status != LUA_ERRRUN)
+                DeveloperTools::LeaveDebugger();
+        }
+
+        return;
     }
 
     const ShouldBreakFunction shouldBreakFuncs[] = {
@@ -5998,8 +6009,10 @@ static void processDebuggerAction()
         int idx = (int)s_QueuedDebuggerAction.value();
         s_QueuedDebuggerAction.reset();
 
-        if (isSteppable(vmud, Reason, L))
-            debuggerStep(L, shouldBreakFuncs[idx]);
+        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
+
+        if (isSteppable(vmud, debuggerReason, debuggerL))
+            debuggerStep(debuggerL, shouldBreakFuncs[idx]);
     }
 }
 
@@ -6069,7 +6082,7 @@ void renderDebugger()
     }
     ImGui::End();
 
-    if (lua_stackdepth(L) > 0 && ImGui::Begin("Watch"))
+    if (ImGui::Begin("Watch", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
     {
         static int Section = 0;
         ImGui::Combo("Variables", &Section, "Locals\0Upvalues\0Environment\0Registry\0Stack\0");
@@ -6121,12 +6134,13 @@ void renderDebugger()
 
                 for (int i = 1; i < info.nupvals; i++)
                 {
+                    int prevTop = lua_gettop(L);
                     const char* nameCstr = lua_getupvalue(L, closure, i);
 
-                    if (!nameCstr)
-                        break;
+                    if (prevTop == lua_gettop(L))
+                        continue; // no upvalue here
 
-                    std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[u{}]", i);
+                    std::string name = nameCstr && nameCstr[0] != '\0' ? nameCstr : std::format("[u{}]", i);
 
                     lua_pushstring(L, name.c_str());
                     lua_pushvalue(L, -2);
@@ -6192,8 +6206,7 @@ void renderDebugger()
         }
         ImGui::EndChild();
     }
-    if (lua_stackdepth(L) > 0)
-        ImGui::End();
+    ImGui::End();
 
     if (ImGui::Begin("Callstack"))
     {
@@ -6423,6 +6436,8 @@ void renderDebugger()
     processDebuggerAction();
 }
 
+static int DebuggingCoroRef = LUA_NOREF;
+
 void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Reason)
 {
     using namespace ScriptEngine::L;
@@ -6446,6 +6461,13 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
 
     luaL_checkstack(L, 20, "debugger");
 
+    if (DebuggingCoroRef != LUA_NOREF)
+        lua_unref(L, DebuggingCoroRef);
+
+    lua_pushthread(L);
+    DebuggingCoroRef = lua_ref(L, -1);
+    lua_pop(L, 1);
+
     const std::string_view BreakReasons[] = {
         "Broke into Debugger",
         "Breakpoint hit",
@@ -6456,7 +6478,7 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
 
     const std::string_view BreakExplanations[] = {
         "Something caused the coroutine to enter a `BREAK` state, such as `debug.breakpoint()`",
-        "The coroutine reached a breakpoint while running, such as one set by `debug.breakpoint(line)`",
+        "The coroutine reached a breakpoint while running",
         "The coroutine was interrupted by resuming another coroutine that entered a `BREAK` state",
         "Error occurred (this should have been replaced with the actual error message)",
         "You are stepping through the code",
@@ -6530,6 +6552,9 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
     debuggerL = L;
     debuggerAr = *ar;
     debuggerReason = Reason;
+
+    if (Reason == DebugBreakReason::Breakpoint)
+        lua_break(L);
 }
 
 void DeveloperTools::LeaveDebugger()
@@ -6546,7 +6571,11 @@ void DeveloperTools::LeaveDebugger()
         tab.Editor.SetErrorMarkers({});
     }
 
-    //lua_settop(L, DebuggerStackStart);
+    if (DebuggingCoroRef != LUA_NOREF)
+    {
+        lua_unref(debuggerL, DebuggingCoroRef);
+        DebuggingCoroRef = LUA_NOREF;
+    }
 
     s_QueuedDebuggerAction.reset();
     InDebugger = false;
@@ -6555,4 +6584,5 @@ void DeveloperTools::LeaveDebugger()
     vmud->BeingDebugged = false;
 
     lua_singlestep(debuggerL, false);
+    debuggerL = nullptr;
 }
