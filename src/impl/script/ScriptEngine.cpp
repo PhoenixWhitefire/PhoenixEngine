@@ -334,11 +334,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
         }
 
         lua_State* coroutine = yc->Coroutine;
-
-#ifdef NDEBUG
-        L::StateUserdata* corUd = (L::StateUserdata*)lua_getthreaddata(coroutine);
-        assert(!corUd->BeingDebugged && "That should only be set on the main thread!");
-#endif
+        assert(!((L::StateUserdata*)lua_getthreaddata(coroutine))->BeingDebugged && "That should only be set on the main thread!");
 
         int corRef = yc->CoroutineReference;
 
