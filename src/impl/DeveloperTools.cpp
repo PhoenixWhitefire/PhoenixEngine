@@ -6233,7 +6233,7 @@ void renderDebugger()
         if (numCoroutineIdChars < 3)
             numCoroutineIdChars = 3;
 
-        const auto renderCoroutine = [vm, vms, numCoroutineIdChars](lua_State* coroutine)
+        const auto renderCoroutine = [&L, &ar, vm, vms, numCoroutineIdChars](lua_State* coroutine)
         {
             ImGui::PushID(coroutine);
 

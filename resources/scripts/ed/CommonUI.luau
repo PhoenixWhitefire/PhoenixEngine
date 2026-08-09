@@ -253,7 +253,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
     imgui.setcursorposition(cpos.x + 2, cpos.y)
 
     imgui.image(Icon, vector.create(100, 100) * sf, false, tint, false)
-    local clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
+    local clicked, hovered = imgui.itemclicked() or (imgui.itemhovered() and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)), imgui.itemhovered()
     imgui.text(Text)
     clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
