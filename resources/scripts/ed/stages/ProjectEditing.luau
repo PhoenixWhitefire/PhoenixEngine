@@ -31,6 +31,7 @@ local VisualizationsChangedConnections: { [GameObject]: {
 local NewCameraCreatedConnection: EventConnection? = nil
 -- TODO luau removing annotation shows leftover free type
 local Breakpoints: { [string]: { [number]: DebugBreakpointInfo } } = {}
+ProjectEditing.Breakpoints = Breakpoints
 
 type BreakpointsData = { File: string, Breakpoints: { DebugBreakpointInfo } }
 
@@ -201,14 +202,6 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
 
         if Preferences.ClearOutputOnPlaytest then
             table.clear(Output.Log)
-        end
-
-        ScriptEngine:CreateVM(Configuration.PlaytestVMName)
-
-        for scriptPath, breakpointsForScript in Breakpoints do
-            for _, breakpoint in breakpointsForScript do
-                ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, scriptPath, breakpoint.Line, breakpoint.Enabled or breakpoint.ConditionEnabled)
-            end
         end
 
         return

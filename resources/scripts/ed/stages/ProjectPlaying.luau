@@ -12,6 +12,8 @@ local Preferences = require("@ed/Preferences")
 local CommonUI = require("@ed/CommonUI")
 local State = require("@ed/State")
 
+local ProjectEditing = require("@ed/stages/ProjectEditing")
+
 local GameClosedConnection = nil
 
 DeveloperTools.DebuggerRequestedStop:Connect(function()
@@ -37,9 +39,16 @@ function ProjectPlaying.Enter(_prev)
 
     State.Project.DataModel.VM = Configuration.PlaytestVMName
     Engine:BindDataModel(State.Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
+    ScriptEngine:CreateVM(Configuration.PlaytestVMName)
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
 
-    if not Preferences.DebuggerEnabled then
+    if Preferences.DebuggerEnabled then
+        for scriptPath, breakpointsForScript in ProjectEditing.Breakpoints do
+            for _, breakpoint in breakpointsForScript do
+                ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, scriptPath, breakpoint.Line, breakpoint.Enabled or breakpoint.ConditionEnabled)
+            end
+        end
+    else
         ScriptEngine:DetachDebuggerFromVM(Configuration.PlaytestVMName)
     end
 
