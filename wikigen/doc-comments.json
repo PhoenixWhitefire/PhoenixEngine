@@ -282,6 +282,14 @@
       },
       "DeveloperTools": {
         "Description": "Built-in development tools",
+        "Events": {
+          "BreakpointRemoved": "Fires when a breakpoint is removed, providing the file and line number",
+          "BreakpointUpdated": {
+            "Description": "Fires when a breakpoint is added or modified",
+            "ArgumentTypes": "string, DebugBreakpointInfo"
+          },
+          "DebuggerRequestedStop": "Fires when the developer clicks 'Stop' in the debugger"
+        },
         "Properties": {
           "DocumentationShown": "Whether the Documentation tool is enabled",
           "ExplorerShown": "Whether the Explorer tool is enabled",
@@ -298,9 +306,17 @@
           "CloseTextDocuments": {
             "Description": "Saves and closes all open text documents"
           },
+          "GetDocumentBreakpoints": {
+            "Description": "Gets a list of all breakpoints associated with a text document. If it is not open, returns an empty table",
+            "Type": "(self, File: string) : { DebugBreakpointInfo }"
+          },
           "GetExplorerSelections": {
             "Description": "Returns what is currently selected in the Explorer",
             "Type": "() : { GameObject }"
+          },
+          "GetOpenTextDocuments": {
+            "Description": "Gets a list of all open text documents",
+            "Type": "() : { string }"
           },
           "GetToolNames": {
             "Description": "Returns a list of valid Engine tools",
@@ -315,11 +331,16 @@
             "Description": "Opens a text file. This requires Developer Mode to be enabled to have any effect",
             "ParameterNames": [
               "Path",
-              "Line"
+              "Line",
+              "TakeFocus"
             ]
           },
           "SaveTextDocuments": {
             "Description": "Saves all open text documents"
+          },
+          "SetDocumentBreakpoints": {
+            "Description": "Sets the breakpoints of a text document. This will queue if the document is not open at the time of the call",
+            "Type": "(self, File: string, Breakpoints: { read DebugBreakpointInfo }) : ()"
           },
           "SetExplorerRoot": {
             "Description": "Changes the Root of the built-in Explorer's hierarchy view",
@@ -707,6 +728,11 @@
           "RunInVM": {
             "Description": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)",
             "In": "VmName: string, Code: string, ChunkName: string"
+          },
+          "SetScriptBreakpoint": {
+            "Description": "Sets the breakpoint for a given script",
+            "In": "VM: string, ScriptPath: string, Line: number, Enabled: boolean",
+            "Out": "number"
           },
           "SetVMAllowedExecutionTime": {
             "Description": "Sets how long script coroutines are allowed to run for, in seconds, before yielding. Scripts that overrun this duration will error",
@@ -2288,6 +2314,10 @@
             "In": [
               "Text: string"
             ]
+          },
+          "setclipboardtext": {
+            "Description": "Sets clipboard text",
+            "Type": "(Text: string) -> ()"
           },
           "setcursorposition": {
             "Description": [

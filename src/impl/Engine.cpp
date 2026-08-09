@@ -1333,6 +1333,8 @@ void Engine::Shutdown()
 	DataModelRef.Clear();
 	WorkspaceRef.Clear();
 
+	DeveloperTools::Shutdown();
+
 	Log.Info("Shutting down script engine...");
 	ScriptEngine::Shutdown();
 
@@ -1345,7 +1347,7 @@ void Engine::Shutdown()
 		collection.RemovedEvent.Descriptor = nullptr;
 	}
 
-	Log.Info("Shutting down HistoryInstance...");
+	Log.Info("Shutting down History...");
 	HistoryInstance.Shutdown();
 
 	Log.Info("Shutting down Component Managers...");

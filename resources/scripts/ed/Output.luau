@@ -161,7 +161,7 @@ function Output.Render()
 
                 local canInteract = (message.Source or subMessage.CanInteract) and LogMessageHovering == smid and tooltip ~= "From Command Bar"
                 local doInteract = false
-                local isPrettyPrintableTable = type(subMessage.DirectValue) == "table"
+                local isPrettyPrintableTable = typeof(subMessage.DirectValue) == "table"
 
                 if not isPrettyPrintableTable or subMessage.Content:find("table: 0x") ~= 1 then
                     if canInteract then
@@ -232,7 +232,7 @@ function Output.Render()
                                 imgui.setcursorposition(imgui.cursorposition() + vector.create(startX - 20, 0))
 
                                 local kstr = k
-                                if type(k) == "string" then
+                                if typeof(k) == "string" then
                                     if not k:match("%W") then
                                         kstr = k
                                     else
@@ -242,7 +242,7 @@ function Output.Render()
                                     kstr = `[{ k }]`
                                 end
 
-                                if type(v) == "table" then
+                                if typeof(v) == "table" then
                                     local tpos = imgui.cursorposition()
                                     if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
                                         imgui.treepop()
@@ -279,6 +279,11 @@ function Output.Render()
                                             DeveloperTools:SetExplorerSelections({ v :: any })
                                         end
 
+                                        if imgui.itemclicked(Enum.MouseButton.Right) then
+                                            imgui.setclipboardtext(tostring(v))
+                                            imgui.settooltip("Copied")
+                                        end
+
                                         if next(t, k) then
                                             imgui.sameline()
                                             imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
@@ -286,13 +291,18 @@ function Output.Render()
                                         end
                                     else
                                         local vts = tostring(v)
-                                        if type(v) == "string" then
+                                        if typeof(v) == "string" then
                                             vts = `"{ v }"`
-                                        elseif type(v) ~= "number" and type(v) ~= "boolean" then
+                                        elseif typeof(v) ~= "number" and typeof(v) ~= "boolean" then
                                             vts = `[{ v }]`
                                         end
 
                                         imgui.text(vts .. if next(t, k) then "," else "")
+
+                                        if imgui.itemclicked(Enum.MouseButton.Right) then
+                                            imgui.setclipboardtext(vts)
+                                            imgui.settooltip("Copied")
+                                        end
                                     end
                                 end
                             end
@@ -393,7 +403,7 @@ function Output.Render()
 end
 
 Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
-    if type(Value) == "table" then
+    if typeof(Value) == "table" then
         table.freeze(Value :: any)
     end
 

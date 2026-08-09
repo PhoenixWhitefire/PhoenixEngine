@@ -1378,6 +1378,9 @@
   "@phoenix/global/imgui.separatortext": {
     "documentation": "* `ImGui::SeparatorText`"
   },
+  "@phoenix/global/imgui.setclipboardtext": {
+    "documentation": "* Sets clipboard text"
+  },
   "@phoenix/global/imgui.setcursorposition": {
     "documentation": "* Sets the position of the Dear ImGui element cursor within the current window"
   },
@@ -1639,17 +1642,28 @@
   "@phoenix/globaltype/DataModel.VM": {
     "documentation": "The Luau Virtual Machine that Scripts bound to this Data Model will run in"
   },
+  "@phoenix/globaltype/DeveloperTools.BreakpointRemoved": {},
+  "@phoenix/globaltype/DeveloperTools.BreakpointUpdated": {
+    "documentation": "Fires when a breakpoint is added or modified"
+  },
   "@phoenix/globaltype/DeveloperTools.CloseTextDocuments": {
     "documentation": "Saves and closes all open text documents"
   },
+  "@phoenix/globaltype/DeveloperTools.DebuggerRequestedStop": {},
   "@phoenix/globaltype/DeveloperTools.DocumentationShown": {
     "documentation": "Whether the Documentation tool is enabled"
   },
   "@phoenix/globaltype/DeveloperTools.ExplorerShown": {
     "documentation": "Whether the Explorer tool is enabled"
   },
+  "@phoenix/globaltype/DeveloperTools.GetDocumentBreakpoints": {
+    "documentation": "Gets a list of all breakpoints associated with a text document. If it is not open, returns an empty table"
+  },
   "@phoenix/globaltype/DeveloperTools.GetExplorerSelections": {
     "documentation": "Returns what is currently selected in the Explorer"
+  },
+  "@phoenix/globaltype/DeveloperTools.GetOpenTextDocuments": {
+    "documentation": "Gets a list of all open text documents"
   },
   "@phoenix/globaltype/DeveloperTools.GetToolNames": {
     "documentation": "Returns a list of valid Engine tools"
@@ -1683,6 +1697,9 @@
   },
   "@phoenix/globaltype/DeveloperTools.ScriptsShown": {
     "documentation": "Whether the Scripts tool is enabled"
+  },
+  "@phoenix/globaltype/DeveloperTools.SetDocumentBreakpoints": {
+    "documentation": "Sets the breakpoints of a text document. This will queue if the document is not open at the time of the call"
   },
   "@phoenix/globaltype/DeveloperTools.SetExplorerRoot": {
     "documentation": "Changes the Root of the built-in Explorer's hierarchy view"
@@ -2232,6 +2249,9 @@
   },
   "@phoenix/globaltype/ScriptEngine.RunInVM": {
     "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
+  },
+  "@phoenix/globaltype/ScriptEngine.SetScriptBreakpoint": {
+    "documentation": "Sets the breakpoint for a given script"
   },
   "@phoenix/globaltype/ScriptEngine.SetVMAllowedExecutionTime": {
     "documentation": "Sets how long script coroutines are allowed to run for, in seconds, before yielding. Scripts that overrun this duration will error"

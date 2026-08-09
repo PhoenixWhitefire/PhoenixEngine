@@ -186,7 +186,7 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
 const Reflection::StaticEventMap& DataModelComponentManager::GetEvents()
 {
     static Reflection::StaticEventMap events = {
-        REFLECTION_EVENT(EcDataModel, OnFrameBegin, Reflection::ValueType::Double),
+        REFLECTION_EVENT_DEBUGGERDISCARD(EcDataModel, OnFrameBegin, Reflection::ValueType::Double),
         REFLECTION_EVENT(EcDataModel, Closing),
     };
 

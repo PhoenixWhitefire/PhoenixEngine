@@ -2,7 +2,7 @@
 // a simple toolset, build right into the engine
 #pragma once
 
-#include "script/DebugBreakReason.hpp"
+#include "script/Debugging.hpp"
 #include "render/Renderer.hpp"
 
 struct lua_State;
@@ -10,26 +10,31 @@ struct lua_Debug;
 
 namespace DeveloperTools
 {
-	void Initialize(Renderer*);
-	void Shutdown();
+    void Initialize(Renderer*);
+    void Shutdown();
 
-	void Frame(double DeltaTime);
-	void SetExplorerSelections(const std::vector<ObjectHandle>&);
-	const std::vector<ObjectHandle>& GetExplorerSelections();
-	void SetExplorerRoot(const ObjectHandle);
-	void OpenTextDocument(const std::string&, int Line = 1);
-	void SaveTextDocuments();
-	void CloseTextDocuments();
-	// does not require `::Initialize` to be called
-	void LaunchTracy();
+    void Frame(double DeltaTime);
+    void SetExplorerSelections(const std::vector<ObjectHandle>&);
+    const std::vector<ObjectHandle>& GetExplorerSelections();
+    void SetExplorerRoot(const ObjectHandle);
+    void OpenTextDocument(const std::string&, int Line = 1, bool TakeFocus = true);
+    void SaveTextDocuments();
+    void CloseTextDocuments();
+    std::vector<std::string_view> GetOpenTextDocuments();
 
-	void OnDebugBreak(lua_State*, lua_Debug*, DebugBreakReason);
-	void LeaveDebugger();
+    std::vector<DebugBreakpoint> GetDocumentBreakpoints(const std::string& File);
+    void SetDocumentBreakpoints(const std::string& File, const std::vector<DebugBreakpoint>& Breakpoints);
 
-	inline bool Initialized = false;
-	inline bool FocusedOnTextDocument = false;
+    // does not require `::Initialize` to be called
+    void LaunchTracy();
 
-	inline bool DocumentationShown = false;
+    void OnDebugBreak(lua_State*, lua_Debug*, DebugBreakReason);
+    void LeaveDebugger();
+
+    inline bool Initialized = false;
+    inline bool FocusedOnTextDocument = false;
+
+    inline bool DocumentationShown = false;
     inline bool ExplorerShown = false;
     inline bool InfoShown = false;
     inline bool MaterialsShown = false;

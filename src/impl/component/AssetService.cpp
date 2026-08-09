@@ -1,4 +1,5 @@
 #include "component/AssetService.hpp"
+#include "Reflection.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/ModelImporter.hpp"
@@ -9,37 +10,62 @@
 
 static void loadMeshDataFromMap(const std::vector<Reflection::GenericValue>& inputs, Mesh& mesh)
 {
-    const std::unordered_map<Reflection::GenericValue, Reflection::GenericValue>& meshData = inputs[1].AsMap();
-
-    std::span<Reflection::GenericValue> vertices = meshData.at("Vertices").AsArray();
-    std::span<Reflection::GenericValue> indices = meshData.at("Indices").AsArray();
-
-    mesh.Vertices.reserve(vertices.size());
-    mesh.Indices.reserve(indices.size());
-
-    for (const Reflection::GenericValue& vertexData : vertices)
+    inputs[1].ForEachMapPair([&](const Reflection::GenericValue& key, const Reflection::GenericValue& value)
     {
-        std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> vertex = vertexData.AsMap();
-        std::span<Reflection::GenericValue> paintData = vertex.at("Paint").AsArray();
+        const std::string_view& name = key.AsStringView();
 
-        mesh.Vertices.push_back(Vertex{
-            .Position = vertex.at("Position").AsVector3(),
-            .Normal = vertex.at("Normal").AsVector3(),
-            .Paint = glm::vec4(paintData[0].AsDouble(), paintData[1].AsDouble(), paintData[2].AsDouble(), paintData[3].AsDouble()),
-            .TextureUV = glm::vec2(vertex.at("UV").AsVector3())
-        });
-    }
+        if (name == "Vertices")
+        {
+            const std::span<Reflection::GenericValue>& vertices = value.AsArray();
+            mesh.Vertices.reserve(vertices.size());
 
-    for (const Reflection::GenericValue& indexData : indices)
-    {
-        int64_t i = indexData.AsInteger();
-        if (i <= 0)
-            RAISE_RT("Got invalid index '{}', must be positive (index into Vertices table)", i);
-        else if (i > UINT32_MAX)
-            RAISE_RT("Got invalid index '{}', out of 32-bit unsigned integer range (0..{} inclusive)", i, UINT32_MAX);
+            for (const Reflection::GenericValue& vg : vertices)
+            {
+                Vertex v = {};
 
-        mesh.Indices.push_back((uint32_t)i - 1);
-    }
+                vg.ForEachMapPair([&](const Reflection::GenericValue& vkey, const Reflection::GenericValue& vvalue)
+                {
+                    const std::string_view& vname = vkey.AsStringView();
+
+                    if (vname == "Position")
+                        v.Position = vvalue.AsVector3();
+                    else if (vname == "Normal")
+                        v.Normal = vvalue.AsVector3();
+                    else if (vname == "Paint")
+                    {
+                        const std::span<Reflection::GenericValue> components = vvalue.AsArray();
+                        if (components.size() < 4)
+                            RAISE_RT("Paint field requires 4 components");
+
+                        for (int i = 0; i < 4; i++)
+                            v.Paint[i] = components[i].AsDouble();
+                    }
+                    else if (vname == "UV")
+                        v.TextureUV = vvalue.AsVector3();
+                    else
+                        RAISE_RT("Invalid field on vertex '{}'", vname);
+                });
+            }
+        }
+        else if (name == "Indices")
+        {
+            const std::span<Reflection::GenericValue>& indices = value.AsArray();
+            mesh.Indices.reserve(indices.size());
+
+            for (const Reflection::GenericValue& index : indices)
+            {
+                int64_t i = index.AsInteger();
+                if (i <= 0)
+                    RAISE_RT("Got invalid index '{}', must be positive (index into Vertices table)", i);
+                else if (i > UINT32_MAX)
+                    RAISE_RT("Got invalid index '{}', out of 32-bit unsigned integer range (0..2^32 inclusive)", i);
+
+                mesh.Indices.push_back((uint32_t)i - 1);
+            }
+        }
+        else
+            RAISE_RT("Invalid field on mesh '{}'", name);
+    });
 }
 
 static void loadMeshDataFromBuffer(const std::vector<Reflection::GenericValue>& inputs, Mesh& mesh)

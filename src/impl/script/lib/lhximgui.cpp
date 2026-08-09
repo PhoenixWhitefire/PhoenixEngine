@@ -1189,8 +1189,13 @@ static int imgui_rgbaedit(lua_State* L)
     return 1;
 }
 
-static luaL_Reg imgui_funcs[] =
+static int imgui_setclipboardtext(lua_State* L)
 {
+    ImGui::SetClipboardText(luaL_checkstring(L, 1));
+    return 0;
+}
+
+static luaL_Reg imgui_funcs[] = {
     { "begin", imgui_begin },
     { "endw", imgui_end },
     { "indent", imgui_indent },
@@ -1272,6 +1277,7 @@ static luaL_Reg imgui_funcs[] =
     { "collapsingheader", imgui_collapsingheader },
     { "rgbedit", imgui_rgbedit },
     { "rgbaedit", imgui_rgbaedit },
+    { "setclipboardtext", imgui_setclipboardtext },
     { NULL, NULL }
 };
 

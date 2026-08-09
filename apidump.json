@@ -114,14 +114,22 @@
         }
       },
       "DeveloperTools": {
+        "Events": {
+          "BreakpointRemoved": "(String, Integer)",
+          "BreakpointUpdated": "(String, Map)",
+          "DebuggerRequestedStop": "()"
+        },
         "Methods": {
           "CloseTextDocuments": "() -> ()",
+          "GetDocumentBreakpoints": "(String) -> (Array)",
           "GetExplorerSelections": "() -> (Array)",
+          "GetOpenTextDocuments": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
           "Initialize": "() -> ()",
           "IsToolEnabled": "(String) -> (Boolean)",
-          "OpenTextDocument": "(String, Integer?) -> ()",
+          "OpenTextDocument": "(String, Integer?, Boolean?) -> ()",
           "SaveTextDocuments": "() -> ()",
+          "SetDocumentBreakpoints": "(String, Array) -> ()",
           "SetExplorerRoot": "(GameObject) -> ()",
           "SetExplorerSelections": "(Array) -> ()",
           "SetToolEnabled": "(String, Boolean) -> ()"
@@ -325,6 +333,7 @@
           "CreateVM": "(String) -> ()",
           "DetachDebuggerFromVM": "(String) -> ()",
           "RunInVM": "(String, String, String?) -> (Boolean, String?)",
+          "SetScriptBreakpoint": "(String, String, Integer, Boolean) -> (Integer)",
           "SetVMAllowedExecutionTime": "(String, Double) -> ()"
         }
       },
@@ -839,6 +848,7 @@
         "scrollherey": "function",
         "separator": "function",
         "separatortext": "function",
+        "setclipboardtext": "function",
         "setcursorposition": "function",
         "setitemtooltip": "function",
         "setnextitemopen": "function",

@@ -557,7 +557,6 @@ static void application(int argc, char** argv)
             Log.InfoF("Engine received signal {}", engine.SystemSignal);
 
         s_ExitCode = engine.ExitCode;
-        DeveloperTools::Shutdown();
         engine.Shutdown();
     }
 

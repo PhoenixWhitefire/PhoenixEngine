@@ -14,6 +14,12 @@ local State = require("@ed/State")
 
 local GameClosedConnection = nil
 
+DeveloperTools.DebuggerRequestedStop:Connect(function()
+    if State.CurrentStage == "ProjectPlaying" then
+        State.ChangeStageTo("ProjectEditing")
+    end
+end)
+
 function ProjectPlaying.Enter(_prev)
     PlayerInput.Cursor = Enum.Cursor.NotAllowed
 
@@ -29,7 +35,6 @@ function ProjectPlaying.Enter(_prev)
 
     State.Project.DataModel.VM = Configuration.PlaytestVMName
     Engine:BindDataModel(State.Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
-    ScriptEngine:CreateVM(Configuration.PlaytestVMName)
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
 
     if not Preferences.DebuggerEnabled then

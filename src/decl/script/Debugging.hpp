@@ -1,4 +1,4 @@
-// DebugBreakReason.hpp, 07/06/2026
+// Debugging.hpp, 07/06/2026
 #pragma once
 
 struct DebugBreakReason_
@@ -13,3 +13,11 @@ struct DebugBreakReason_
 };
 
 using DebugBreakReason = DebugBreakReason_::DBR;
+
+struct DebugBreakpoint
+{
+    int Line = -1;
+    bool Enabled = false;
+    bool ConditionEnabled = false;
+    std::string Condition;
+};

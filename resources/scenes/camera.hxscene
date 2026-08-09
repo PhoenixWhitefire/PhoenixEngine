@@ -46,9 +46,7 @@ PHOENIXF
         "Transform"
       ],
       "$_objectId": 1,
-      "$_tags": [
-        "Draggable"
-      ],
+      "$_tags": [],
       "LocalTransform": [
         [
           1.0,

@@ -51,23 +51,13 @@ if not fs.isdirectory(Preferences.ProjectsDirectory) then
     fs.mkdir(Preferences.ProjectsDirectory)
 end
 
+local shuttingDown = false
+
 local function handleEngineShutdown()
+    shuttingDown = true
+
     CommonUI.SaveSettings()
-
-    if State.CurrentStage == "ProjectEditing" or State.CurrentStage == "ProjectPlaying" then
-        local choice = Engine:ShowMessageBox("Save", "Save current Editor file before closing?", "yesno", "warning", 1)
-
-        if choice == 0 then
-            warn("Quitting without saving")
-        else
-            print("Saving before quitting")
-            State:SaveProject()
-        end
-
-        if State.Project.DataModel then
-            State.Project.DataModel:Destroy()
-        end
-    end
+    State.ChangeStageTo("SelectProject")
 end
 
 local function checkIfLatestVersionBuilt()
@@ -202,6 +192,10 @@ function State.ChangeStageTo(NewStage: Types.Stage)
     assert(State.CurrentStage ~= "Update")
     assert(Stages[NewStage], NewStage)
 
+    if State.CurrentStage == NewStage then
+        return
+    end
+
     if IsSessionJustPlaytest and NewStage ~= "ProjectPlaying" then
         game:Close()
         return
@@ -237,7 +231,7 @@ function State.ChangeStageTo(NewStage: Types.Stage)
 
     State.CurrentStage = NewStage
 
-    if not Engine.IsHeadless then
+    if not Engine.IsHeadless and not shuttingDown then
         stageUpdate(State, 0)
     end
 end

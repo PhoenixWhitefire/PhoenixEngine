@@ -192,9 +192,9 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
 const Reflection::StaticEventMap& PlayerInputComponentManager::GetEvents()
 {
     static const Reflection::StaticEventMap events = {
-        REFLECTION_EVENT(EcPlayerInput, KeyEvent, Reflection::ValueType::InputEvent),
-        REFLECTION_EVENT(EcPlayerInput, MouseButtonEvent, Reflection::ValueType::InputEvent),
-        REFLECTION_EVENT(EcPlayerInput, ScrollEvent, Reflection::ValueType::InputEvent)
+        REFLECTION_EVENT_DEBUGGERDISCARD(EcPlayerInput, KeyEvent, Reflection::ValueType::InputEvent),
+        REFLECTION_EVENT_DEBUGGERDISCARD(EcPlayerInput, MouseButtonEvent, Reflection::ValueType::InputEvent),
+        REFLECTION_EVENT_DEBUGGERDISCARD(EcPlayerInput, ScrollEvent, Reflection::ValueType::InputEvent)
     };
 
     return events;

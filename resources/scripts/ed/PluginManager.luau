@@ -177,7 +177,7 @@ end
 
 function PluginManager.Shutdown()
     for _, plugin in PluginManager.Plugins do
-        if plugin.OnShutdown then
+        if getPluginSettings(plugin).Enabled and plugin.OnShutdown then
             setPluginAlias(plugin.ParentPath)
             plugin:OnShutdown()
             fs.removealias("plugin")

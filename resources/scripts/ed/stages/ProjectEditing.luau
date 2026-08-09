@@ -29,6 +29,34 @@ local VisualizationsChangedConnections: { [GameObject]: {
     read WorkspaceChanged: EventConnection?,
 } } = {}
 local NewCameraCreatedConnection: EventConnection? = nil
+-- TODO luau removing annotation shows leftover free type
+local Breakpoints: { [string]: { [number]: DebugBreakpointInfo } } = {}
+
+type BreakpointsData = { File: string, Breakpoints: { DebugBreakpointInfo } }
+
+DeveloperTools.BreakpointUpdated:Connect(function(file, breakpoint)
+    local breakpointsForScript = Breakpoints[file]
+
+    if not breakpointsForScript then
+        breakpoint.Enabled = true
+        breakpointsForScript = {}
+        Breakpoints[file] = breakpointsForScript
+    end
+
+    if not breakpointsForScript[breakpoint.Line] then
+        breakpoint.Enabled = true
+    end
+
+    breakpointsForScript[breakpoint.Line] = breakpoint
+end)
+
+DeveloperTools.BreakpointRemoved:Connect(function(file, line)
+    local breakpointsForScript = Breakpoints[file]
+
+    if breakpointsForScript then
+        breakpointsForScript[line] = nil
+    end
+end)
 
 local function makeVisualizerForObject(Object: GameObject, Visualization: GameObject & EcTransform)
     -- TODO luau cast
@@ -87,6 +115,21 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
         for _, name in Preferences.DevToolsOpen do
             DeveloperTools:SetToolEnabled(name, true)
         end
+
+        local edFile = json.parse(fs.read("@project/phoenix.editor") :: string) :: { [string]: JsonEncodable }
+
+        if edFile.OpenDocuments then
+            for _, doc in edFile.OpenDocuments :: { string } do
+                DeveloperTools:OpenTextDocument(doc, 1, false)
+            end
+        end
+
+        if edFile.Breakpoints then
+            for _, breakpointsInfo in edFile.Breakpoints :: { BreakpointsData } do
+                DeveloperTools:SetDocumentBreakpoints(breakpointsInfo.File, breakpointsInfo.Breakpoints)
+            end
+        end
+
     elseif PreviousStage == "ProjectPlaying" then
         DeveloperTools:SetExplorerSelections(LastSelectedInEditMode)
         table.clear(LastSelectedInEditMode)
@@ -156,8 +199,53 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
             table.clear(Output.Log)
         end
 
+        ScriptEngine:CreateVM(Configuration.PlaytestVMName)
+
+        for scriptPath, breakpointsForScript in Breakpoints do
+            for _, breakpoint in breakpointsForScript do
+                ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, scriptPath, breakpoint.Line, breakpoint.Enabled or breakpoint.ConditionEnabled)
+            end
+        end
+
         return
     else
+        local openDocuments = DeveloperTools:GetOpenTextDocuments()
+
+        local edFile = json.parse(fs.read("@project/phoenix.editor") :: string) :: { [string]: JsonEncodable }
+        edFile.OpenDocuments = openDocuments
+
+        local breakpointInfos = edFile.Breakpoints :: { BreakpointsData }?
+        if not breakpointInfos then
+            breakpointInfos = {} :: { BreakpointsData }
+            -- TODO luau cast
+            edFile.Breakpoints = breakpointInfos :: { [string]: JsonEncodable }
+        end
+        assert(breakpointInfos)
+
+        for _, doc in openDocuments do
+            local info: BreakpointsData = {
+                File = doc,
+                Breakpoints = DeveloperTools:GetDocumentBreakpoints(doc)
+            }
+
+            local hasExisting = false
+
+            for index, existing in breakpointInfos :: { BreakpointsData } do
+                if existing.File == doc then
+                    breakpointInfos[index] = info
+                    hasExisting = true
+
+                    break
+                end
+            end
+
+            if not hasExisting then
+                table.insert(breakpointInfos, info)
+            end
+        end
+
+        fs.write("@project/phoenix.editor", json.encode(edFile))
+
         DeveloperTools:CloseTextDocuments()
 
         for _, watcher in Reimport.Watchers do

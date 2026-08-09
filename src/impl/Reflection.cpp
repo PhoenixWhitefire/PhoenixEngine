@@ -107,7 +107,7 @@ Reflection::GenericValue::GenericValue(const glm::mat4& m)
 
 static void fromArray(Reflection::GenericValue& G, const std::span<const Reflection::GenericValue>& Array)
 {
-    size_t allocSize = Array.size() * sizeof(G);
+    size_t allocSize = Array.size() * sizeof(Reflection::GenericValue);
     if (allocSize == 0)
     {
         G.Val.Array = nullptr;
@@ -171,6 +171,36 @@ Reflection::GenericValue::GenericValue(const ObjectRef& Object)
 Reflection::GenericValue Reflection::GenericValue::Null()
 {
     return {};
+}
+
+Reflection::GenericValue Reflection::GenericValue::MapPairs(const std::span<const Pair>& Pairs)
+{
+    uint32_t numElems = Pairs.size() * 2;
+
+    Reflection::GenericValue gv = {};
+    gv.Type = ValueType::Map;
+    gv.Size = numElems;
+
+    size_t allocSize = numElems * sizeof(GenericValue);
+    if (allocSize == 0)
+        return gv;
+
+    assert(allocSize <= UINT32_MAX);
+    gv.Val.Array = (GenericValue*)Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
+
+    if (!gv.Val.Array)
+        RAISE_RT("Failed to allocate {} bytes in MapPairs (length {}, GV Size {})", allocSize, Pairs.size(), sizeof(GenericValue));
+
+    uint32_t i = 0;
+    for (const auto& [ first, second ] : Pairs)
+    {
+        new (&gv.Val.Array[i]) Reflection::GenericValue(first);
+        new (&gv.Val.Array[i + 1]) Reflection::GenericValue(second);
+        i += 2;
+    }
+
+    assert(Pairs.size() * 2 <= UINT32_MAX);
+    return gv;
 }
 
 void Reflection::GenericValue::CopyInto(GenericValue& Target, const GenericValue& Source)
@@ -442,6 +472,7 @@ std::string Reflection::GenericValue::AsString() const
             return std::string(Val.StrSso, Size);
     }
 }
+
 std::string_view Reflection::GenericValue::AsStringView() const
 {
     if (Type != ValueType::String)
@@ -454,12 +485,14 @@ std::string_view Reflection::GenericValue::AsStringView() const
             return std::string_view(Val.StrSso, Size);
     }
 }
+
 bool Reflection::GenericValue::AsBoolean() const
 {
     return Type == ValueType::Boolean
         ? Val.Bool
         : WRONG_TYPE();
 }
+
 double Reflection::GenericValue::AsDouble() const
 {
     if (Type == ValueType::Double)
@@ -471,6 +504,7 @@ double Reflection::GenericValue::AsDouble() const
     // special error message
     RAISE_RT("GenericValue was not a number (Integer/ Double ), but instead a {}", TypeAsString(Type));
 }
+
 int64_t Reflection::GenericValue::AsInteger() const
 {
     if (Type == ValueType::Integer)
@@ -491,24 +525,28 @@ glm::vec2 Reflection::GenericValue::AsVector2() const
     else
         WRONG_TYPE();
 }
+
 glm::vec3 Reflection::GenericValue::AsVector3() const
 {
     return Type == ValueType::Vector3
         ? Val.Vec3
         : WRONG_TYPE();
 }
+
 glm::mat4 Reflection::GenericValue::AsMatrix() const
 {
     return Type == ValueType::Matrix
         ? Val.Mat
         : WRONG_TYPE();
 }
+
 const Reflection::GenericFunction& Reflection::GenericValue::AsFunction() const
 {
     return Type == ValueType::Function
         ? Val.Func
         : WRONG_TYPE();
 }
+
 std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 {
     if (this->Type != Reflection::ValueType::Array)
@@ -516,19 +554,14 @@ std::span<Reflection::GenericValue> Reflection::GenericValue::AsArray() const
 
     return std::span(Val.Array, Size);
 }
-std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> Reflection::GenericValue::AsMap() const
+
+void Reflection::GenericValue::ForEachMapPair(const std::function<void(const Reflection::GenericValue&, const Reflection::GenericValue&)> Visit) const
 {
-    if (Type != ValueType::Map && Type != ValueType::Array)
+    if (Type != ValueType::Map)
         WRONG_TYPE();
 
-    if (Size % 2 != 0)
-        RAISE_RT("Map had an uneven number of array elements ({})", Size);
-
-    std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> map;
     for (uint32_t i = 0; i < Size; i += 2)
-        map[Val.Array[i]] = Val.Array[i + 1];
-
-    return map;
+        Visit(Val.Array[i], Val.Array[i + 1]);
 }
 
 #undef WRONG_TYPE

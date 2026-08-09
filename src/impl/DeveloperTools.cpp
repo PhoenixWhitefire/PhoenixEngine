@@ -77,6 +77,7 @@ struct TextEditorTab
     bool WasEdited = false;
 };
 static std::vector<TextEditorTab> s_TextEditors;
+static std::unordered_map<std::string, std::vector<DebugBreakpoint>> s_QueuedBreakpoints;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
 
 static const std::string_view AddableComponents[] = {
@@ -565,10 +566,7 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
         );
 
         if (choice == 0)
-        {
-            Tab.WasEdited = false;
             return;
-        }
     }
 
     Tab.LastSynced = std::chrono::system_clock::now() + std::chrono::milliseconds(10);
@@ -587,9 +585,6 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
 
     if (textEditorFile == UNSAVEDTAG || textEditorFile.empty() || !std::filesystem::is_regular_file(textEditorFile))
     {
-        static uint32_t ErrCount = 0;
-        ErrCount++;
-
         Tab.FilePath = SAVINGTAG;
         if (!textEditorAskSaveFileAs(AskSave, contents))
         {
@@ -600,7 +595,7 @@ static void textEditorSaveFile(TextEditorTab& Tab, bool AskSave = true)
     }
     else
     {
-        std::string realSaveLoc = FileRW::ResolvePathNormalized(textEditorFile);
+        std::string realSaveLoc = FileRW::ResolvePathAbsolute(textEditorFile);
 
         std::string error;
         if (!FileRW::WriteFile(realSaveLoc, contents, &error))
@@ -623,7 +618,7 @@ static std::string textFileContentsFromPath(const std::string& Path)
     if (Path.find("!InlineDocument:") != std::string::npos)
         return { Path.begin() + strlen("!InlineDocument:"), Path.end() };
 
-    if (std::filesystem::is_directory(FileRW::ResolvePathNormalized(Path)))
+    if (std::filesystem::is_directory(FileRW::ResolvePathAbsolute(Path)))
     {
         std::string error = std::format(
             "File '{}' couldn't be read, it is a directory",
@@ -655,9 +650,11 @@ static std::optional<TextEditor::DebugAction> s_QueuedDebuggerAction = std::null
 
 static TextEditorTab& invokeTextEditor(const std::string& File)
 {
+    const std::string path = FileRW::ResolvePathAbsolute(File);
+
     for (TextEditorTab& tab : s_TextEditors)
     {
-        if (tab.FilePath == File)
+        if (tab.FilePath == path)
         {
             tab.SetUIFocus = true;
             return tab;
@@ -670,23 +667,99 @@ static TextEditorTab& invokeTextEditor(const std::string& File)
     tab.SetUIFocus = true;
 
     if (File.find(".luau") != std::string::npos)
+    {
         tab.Editor.SetLanguageDefinition(s_EditorLuauLang);
 
+        tab.Editor.OnBreakpointUpdate = [path](TextEditor*, int Line, bool Enabled, const std::string& Condition, bool ConditionEnabled)
+        {
+            REFLECTION_SIGNAL_EVENT(
+                EcDeveloperToolsService::BreakpointUpdatedCallbacks,
+                path,
+                Reflection::GenericValue::MapPairs({
+                    { "Line", Line },
+                    { "Enabled", Enabled },
+                    { "Condition", Condition },
+                    { "ConditionEnabled", ConditionEnabled },
+                })
+            );
+        };
+
+        tab.Editor.OnBreakpointRemove = [path](TextEditor*, int Line)
+        {
+            REFLECTION_SIGNAL_EVENT(EcDeveloperToolsService::BreakpointRemovedCallbacks, path, Line);
+        };
+    }
     else if (File.find(".vert") != std::string::npos || File.find(".frag") != std::string::npos || File.find(".geom") != std::string::npos || File.find(".glsl") != std::string::npos)
         tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::GLSL());
 
     else if (File.find(".cpp") != std::string::npos || File.find(".hpp") != std::string::npos)
         tab.Editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
 
-    tab.FilePath = File;
-    tab.Editor.SetText(textFileContentsFromPath(File));
+    tab.FilePath = path;
+    tab.Editor.SetText(textFileContentsFromPath(path));
     tab.Editor.OnDebuggerAction = [](TextEditor*, TextEditor::DebugAction action)
     {
         s_QueuedDebuggerAction = action;
     };
 
+    if (const auto& it = s_QueuedBreakpoints.find(path); it != s_QueuedBreakpoints.end())
+    {
+        for (const DebugBreakpoint& bp : it->second)
+            tab.Editor.AddBreakpoint(bp.Line, bp.ConditionEnabled, bp.Condition, bp.Enabled);
+
+        s_QueuedBreakpoints.erase(it);
+    }
+
     tab.LastSynced = std::chrono::system_clock::now();
     return tab;
+}
+
+std::vector<DebugBreakpoint> DeveloperTools::GetDocumentBreakpoints(const std::string& File)
+{
+    std::string path = FileRW::ResolvePathAbsolute(File);
+
+    for (TextEditorTab& tab : s_TextEditors)
+    {
+        if (tab.FilePath == File)
+        {
+            const auto& breakpointsTextEd = tab.Editor.GetBreakpoints();
+            std::vector<DebugBreakpoint> breakpoints;
+            breakpoints.reserve(breakpointsTextEd.size());
+
+            for (const auto& bp : breakpointsTextEd)
+                breakpoints.push_back(DebugBreakpoint{
+                    .Line = bp.mLine,
+                    .Enabled = bp.mEnabled,
+                    .ConditionEnabled = bp.mUseCondition,
+                    .Condition = bp.mCondition,
+                });
+
+            return breakpoints;
+        }
+    }
+
+    return {};
+}
+
+void DeveloperTools::SetDocumentBreakpoints(const std::string& File, const std::vector<DebugBreakpoint>& Breakpoints)
+{
+    std::string path = FileRW::ResolvePathAbsolute(File);
+
+    for (TextEditorTab& tab : s_TextEditors)
+    {
+        if (tab.FilePath == path)
+        {
+            for (const auto& oldBp : tab.Editor.GetBreakpoints())
+                tab.Editor.RemoveBreakpoint(oldBp.mLine);
+
+            for (const DebugBreakpoint& bp : Breakpoints)
+                tab.Editor.AddBreakpoint(bp.Line, bp.ConditionEnabled, bp.Condition, bp.Enabled);
+
+            return;
+        }
+    }
+
+    s_QueuedBreakpoints[path] = Breakpoints;
 }
 
 static void renderTextEditors()
@@ -1968,12 +2041,14 @@ static void recursiveIterateTree(const ObjectHandle& current)
             std::vector<ObjectHandle> descs = object->GetDescendants();
 
             for (const ObjectHandle& desc : descs)
+            {
                 if (isInSelections(desc))
                 {
                     ImGui::SetNextItemOpen(true);
                     flags |= ImGuiTreeNodeFlags_DefaultOpen;
                     break;
                 }
+            }
         }
 
         const ImGuiStyle& style = ImGui::GetStyle();
@@ -2852,7 +2927,18 @@ static void renderExplorer()
         ExplorerShouldSeekToCurrentSelection = false;
 
     if (ExplorerShouldSeekToCurrentSelection)
+    {
         ImGui::SetNextWindowFocus();
+
+        for (const ObjectHandle& handle : Selections)
+        {
+            if (!handle->IsDescendantOf(ExplorerRoot.Dereference()))
+            {
+                ExplorerShouldSeekToCurrentSelection = false;
+                break;
+            }
+        }
+    }
 
     if (!ImGui::Begin("Explorer", &DeveloperTools::ExplorerShown))
     {
@@ -3026,7 +3112,7 @@ static void renderExplorer()
                     }
                     else if (action == ContextMenuAction::AutoReimport)
                     {
-                        const std::string ReimportableStr = "Ed_ReimportableModel";
+                        const std::string ReimportableStr = "Phoenix_ReimportableModel";
                         bool autoReimport = false;
 
                         for (const ObjectHandle& sel : Selections)
@@ -3420,7 +3506,7 @@ static void recursiveRenderFilesystemNode(FilesystemNode& Node)
             {
                 for (size_t i = 0; i < s_TextEditors.size(); i++)
                 {
-                    if (FileRW::ResolvePathNormalized(s_TextEditors[i].FilePath) == FileRW::ResolvePathNormalized(Node.Path.string()))
+                    if (FileRW::ResolvePathAbsolute(s_TextEditors[i].FilePath) == FileRW::ResolvePathAbsolute(Node.Path.string()))
                     {
                         s_TextEditors.erase(s_TextEditors.begin() + i);
                         break;
@@ -3900,6 +3986,11 @@ static bool renderPropertyAssetSelector(const std::string_view& PropertyName, fl
     }
 
     return didSet;
+}
+
+static bool isInternalTagName(const std::string_view& name)
+{
+    return name.find("Phoenix_") == 0;
 }
 
 static void renderProperties()
@@ -4570,7 +4661,20 @@ static void renderProperties()
             if (ImGui::IsWindowAppearing())
                 ImGui::SetKeyboardFocusHere();
 
+            bool pushed = false;
+
+            if (isInternalTagName(EntryBuffer))
+            {
+                ErrorTooltipMessage = "?";
+                ErrorTooltipTimeRemaining = 0.1f;
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.f, 0.75f, 0.29f, 1.f));
+                pushed = true;
+            }
+
             ImGui::InputText("##", EntryBuffer, 64);
+
+            if (pushed)
+                ImGui::PopStyleColor();
 
             if (ImGui::IsItemDeactivatedAfterEdit() && strlen(EntryBuffer) > 0)
             {
@@ -4585,7 +4689,11 @@ static void renderProperties()
             std::vector<std::string_view> collectionNames;
             collectionNames.reserve(GameObjectManager::Get()->Collections.size());
             for (const GameObjectManager::Collection& collection : GameObjectManager::Get()->Collections)
-                collectionNames.emplace_back(collection.Name);
+            {
+                const std::string_view& name = collection.Name;
+                if (!isInternalTagName(name))
+                    collectionNames.emplace_back(name);
+            }
 
             std::sort(collectionNames.begin(), collectionNames.end());
 
@@ -5431,9 +5539,10 @@ const std::vector<ObjectHandle>& DeveloperTools::GetExplorerSelections()
     return Selections;
 }
 
-void DeveloperTools::OpenTextDocument(const std::string& Path, int Line)
+void DeveloperTools::OpenTextDocument(const std::string& Path, int Line, bool TakeFocus)
 {
     TextEditorTab& tab = invokeTextEditor(Path);
+    tab.SetUIFocus = TakeFocus;
     tab.JumpToLine = Line;
 }
 
@@ -5447,6 +5556,17 @@ void DeveloperTools::CloseTextDocuments()
 {
     SaveTextDocuments();
     s_TextEditors.clear();
+}
+
+std::vector<std::string_view> DeveloperTools::GetOpenTextDocuments()
+{
+    std::vector<std::string_view> paths;
+    paths.reserve(s_TextEditors.size());
+
+    for (const TextEditorTab& tab : s_TextEditors)
+        paths.push_back(tab.FilePath);
+
+    return paths;
 }
 
 void DeveloperTools::Shutdown()
@@ -5608,6 +5728,7 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
     default:
     {
         std::string valueString;
+        GameObject* targetObject = nullptr;
         bool editableValue = false;
 
         switch (lua_type(L, -1))
@@ -5622,7 +5743,15 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
             if (!CanEdit || lua_type(L, -1) == LUA_TUSERDATA)
             {
                 if (const uint32_t* id = (uint32_t*)lua_touserdatatagged(L, -1, UserdataTag::GameObject))
-                    valueString = GameObjectManager::Get()->FindById(*id)->GetFullName();
+                {
+                    GameObjectManager* objectManager = GameObjectManager::Get();
+                    targetObject = objectManager->FindById(*id);
+
+                    if (targetObject)
+                        valueString = targetObject->GetFullName();
+                    else
+                        valueString = std::format("[Invalid GameObject, ID={}]", *id);
+                }
                 else if (const Color* color = (Color*)lua_touserdatatagged(L, -1, UserdataTag::Color))
                     valueString = std::format("{}, {}, {}", color->R, color->G, color->B);
                 else
@@ -5647,12 +5776,18 @@ static bool debugVariable(lua_State* L, bool CanEdit = true)
 
         ImGui::PushID(varname.c_str());
 
-        if (ImGui::TreeNodeEx(
+        // checking Dear ImGui issues apparently this can return true? 4833
+        bool opened_what = ImGui::TreeNodeEx(
             varname.c_str(),
             NodeFlags | ImGuiTreeNodeFlags_Leaf,
             "%s: %s",
             varname.c_str(), valueString.c_str()
-        ))
+        );
+
+        if (ImGui::IsItemClicked() && targetObject)
+            Selections = { ObjectHandle(targetObject) };
+
+        if (opened_what)
             ImGui::TreePop();
 
         if (editableValue)
@@ -5740,7 +5875,6 @@ static lua_State* debuggerL = nullptr;
 static lua_Debug debuggerAr = {};
 static DebugBreakReason debuggerReason = DebugBreakReason::BrokeIntoDebugger;
 static ScriptEngine::L::StateUserdata* corUd = nullptr;
-static int currfuncindex = 0;
 static bool s_CallstackJumpToCurrentThread = false;
 static int CurrentVMIndex = 0;
 static bool InDebugger = false;
@@ -5768,81 +5902,52 @@ static void resetScriptTimeouts()
     }
 }
 
-static void singleStep(DebugBreakReason Reason, lua_State* L, ScriptEngine::L::StateUserdata* lud, const lua_Debug& ar)
+static bool singleStepShouldBreak(lua_State* L, int PrevDepth, const lua_Debug* ar)
 {
-    lud->DebuggerResume = true;
-
-    if (Reason == DebugBreakReason::DebuggerStep)
-    {
-        assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-        if (currfuncindex != 0)
-            lua_pop(L, 1); // pop our function from `lua_getinfo`
-
-        //s_WasF7Down = true;
-        return;
-    }
-    else if (Reason == DebugBreakReason::Breakpoint)
-    {
-        lua_breakpoint(L, -1, ar.currentline, false); // please
-    }
-
-    static int s_PrevLine = 0;
-    s_PrevLine = ar.currentline;
-
-    lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
-        {
-            if (ar->currentline > s_PrevLine)
-            {
-                s_PrevLine = ar->currentline;
-                lua_break(L);
-
-                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-                vmud->BeingDebugged = true;
-
-                DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::DebuggerStep);
-                currfuncindex = 0; // TODO
-            }
-        };
-
-    lua_singlestep(L, true);
+    return (ar->currentline > debuggerAr.currentline
+        || ar->short_src != debuggerAr.short_src)
+        && PrevDepth >= lua_stackdepth(L);
 }
 
-static void stepInto(DebugBreakReason Reason, lua_State* L, ScriptEngine::L::StateUserdata* lud, const lua_Debug& ar)
+static bool stepIntoShouldBreak(lua_State* L, int PrevDepth, const lua_Debug* ar)
 {
-    lud->DebuggerResume = true;
+    return ar->currentline != debuggerAr.currentline
+        || ar->short_src != debuggerAr.short_src
+        || PrevDepth < lua_stackdepth(L);
+}
 
-    if (Reason == DebugBreakReason::DebuggerStep)
-    {
-        assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-        if (currfuncindex != 0)
-            lua_pop(L, 1); // pop our function from `lua_getinfo`
+static bool stepOutOfShouldBreak(lua_State* L, int PrevDepth, const lua_Debug*)
+{
+    return PrevDepth > lua_stackdepth(L);
+}
 
-        return;
-    }
-    else if (Reason == DebugBreakReason::Breakpoint)
-    {
-        lua_breakpoint(L, -1, ar.currentline, false); // please
-    }
+using ShouldBreakFunction = bool(*)(lua_State*, int, const lua_Debug*);
 
-    static int s_PrevLine = 0;
-    s_PrevLine = ar.currentline;
+static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
+{
+    static int PrevDepth = 0;
+    PrevDepth = lua_stackdepth(L);
+
+    static ShouldBreakFunction ShouldBreak = nullptr;
+    ShouldBreak = shouldBreakFunc;
 
     lua_callbacks(L)->debugstep = [](lua_State* L, lua_Debug* ar)
         {
-            if (ar->currentline != s_PrevLine)
+            if (ShouldBreak(L, PrevDepth, ar))
             {
-                s_PrevLine = ar->currentline;
+                lua_getinfo(L, 0, "slnu", &debuggerAr);
                 lua_break(L);
 
-                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-                vmud->BeingDebugged = true;
-
-                DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::DebuggerStep);
-                currfuncindex = 0; // TODO
+                DeveloperTools::OnDebugBreak(L, &debuggerAr, DebugBreakReason::DebuggerStep);
             }
         };
 
     lua_singlestep(L, true);
+
+    lua_Status status = ScriptEngine::L::Resume(L, L, 0);
+
+    if (status != LUA_BREAK && status != LUA_ERRRUN)
+        DeveloperTools::LeaveDebugger();
 }
 
 static bool isSteppable(const ScriptEngine::L::StateUserdata* vmud, DebugBreakReason Reason, lua_State* L)
@@ -5863,52 +5968,38 @@ static void processDebuggerAction()
 {
     DebugBreakReason Reason = debuggerReason;
     lua_State*& L = debuggerL;
-    lua_Debug& ar = debuggerAr;
 
     ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
-    ScriptEngine::L::StateUserdata* lud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(debuggerL);
 
     if (s_QueuedDebuggerAction == TextEditor::DebugAction::Continue || s_QueuedDebuggerAction == TextEditor::DebugAction::Stop /*|| ImGui::IsKeyDown(ImGuiKey_F5)*/)
     {
+        if (s_QueuedDebuggerAction == TextEditor::DebugAction::Stop)
+            REFLECTION_SIGNAL_EVENT(EcDeveloperToolsService::DebuggerRequestedStopCallbacks);
+
         s_QueuedDebuggerAction.reset();
 
         lua_callbacks(L)->debugstep = nullptr;
         DeveloperTools::LeaveDebugger();
     }
 
-    static bool s_WasF7Down = false;
-    static bool s_WasF8Down = false;
-    bool isF7Down = false; //ImGui::IsKeyDown(ImGuiKey_F7) && running;
-    bool isF8Down = false; //ImGui::IsKeyDown(ImGuiKey_F8) && running;
+    const ShouldBreakFunction shouldBreakFuncs[] = {
+        singleStepShouldBreak,
+        stepIntoShouldBreak,
+        stepOutOfShouldBreak,
+        nullptr,
+        nullptr,
+    };
 
-    if (isF8Down)
-    {
-        if (s_WasF8Down)
-            isF8Down = false;
-
-        s_WasF8Down = true;
-    }
-    else
-        s_WasF8Down = false;
-
-    if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error
-        && (s_QueuedDebuggerAction == TextEditor::DebugAction::Step || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut || (isF7Down && !s_WasF7Down))
+    if (s_QueuedDebuggerAction == TextEditor::DebugAction::Step
+        || s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto
+        || s_QueuedDebuggerAction == TextEditor::DebugAction::StepOut
     )
     {
+        int idx = (int)s_QueuedDebuggerAction.value();
         s_QueuedDebuggerAction.reset();
 
         if (isSteppable(vmud, Reason, L))
-            singleStep(Reason, L, lud, ar);
-    }
-
-    s_WasF7Down = isF7Down;
-
-    if (vmud->DebuggerAttached && Reason != DebugBreakReason::Error && (s_QueuedDebuggerAction == TextEditor::DebugAction::StepInto || isF8Down))
-    {
-        s_QueuedDebuggerAction.reset();
-
-        if (isSteppable(vmud, Reason, L))
-            stepInto(Reason, L, lud, ar);
+            debuggerStep(L, shouldBreakFuncs[idx]);
     }
 }
 
@@ -5969,10 +6060,6 @@ void renderDebugger()
                 cb->debugbreak = nullptr;
                 cb->debugprotectederror = nullptr;
                 cb->debugstep = nullptr;
-                cb->debuginterrupt = [](lua_State*, lua_Debug* ar)
-                    {
-                        lua_resume((lua_State*)ar->userdata, nullptr, 0);
-                    };
             }
         }
         else
@@ -6025,25 +6112,38 @@ void renderDebugger()
         }
         case 1:
         {
-            for (int i = 1; i < ar.nupvals; i++)
+            lua_Debug info = {};
+            bool gotClosure = lua_getinfo(L, 0, "fu", &info);
+
+            if (gotClosure)
             {
-                const char* nameCstr = lua_getupvalue(L, currfuncindex, i);
+                int closure = lua_gettop(L);
 
-                if (!nameCstr)
-                    break;
+                for (int i = 1; i < info.nupvals; i++)
+                {
+                    const char* nameCstr = lua_getupvalue(L, closure, i);
 
-                std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[u{}]", i);
+                    if (!nameCstr)
+                        break;
 
-                lua_pushstring(L, name.c_str());
-                lua_pushvalue(L, -2);
+                    std::string name = nameCstr[0] != '\0' ? nameCstr : std::format("[u{}]", i);
 
-                if (debugVariable(L) && lua_setupvalue(L, currfuncindex, i))
+                    lua_pushstring(L, name.c_str());
+                    lua_pushvalue(L, -2);
+
+                    if (debugVariable(L) && lua_setupvalue(L, closure, i))
+                        lua_pop(L, 1);
+                    else
+                        lua_pop(L, 2);
+
                     lua_pop(L, 1);
-                else
-                    lua_pop(L, 2);
+                }
 
+                assert(lua_gettop(L) == closure);
                 lua_pop(L, 1);
             }
+            else
+                ImGui::TextUnformatted("Unavailable");
 
             break;
         }
@@ -6120,29 +6220,25 @@ void renderDebugger()
         if (numCoroutineIdChars < 3)
             numCoroutineIdChars = 3;
 
-        const auto renderCoroutine = [&L, vm, vms, numCoroutineIdChars, &ar](lua_State* coroutine)
+        const auto renderCoroutine = [vm, vms, numCoroutineIdChars](lua_State* coroutine)
         {
             ImGui::PushID(coroutine);
 
             lua_Debug car = {};
 
             int li = 0;
-            bool getInfoSuccess = lua_getinfo(coroutine, li, "slnfu", &car);
+            lua_getinfo(coroutine, li, "slnu", &car);
 
             while (!car.short_src || (strcmp(car.short_src, "[C]") == 0))
             {
-                if (getInfoSuccess)
-                    lua_pop(coroutine, 1);
                 li++;
 
-                if (!lua_getinfo(coroutine, li, "slnfu", &car))
+                if (!lua_getinfo(coroutine, li, "slnu", &car))
                 {
-                    getInfoSuccess = lua_getinfo(coroutine, 0, "slnfu", &car);
+                    lua_getinfo(coroutine, 0, "slnu", &car);
                     car.short_src = nullptr;
                     break;
                 }
-                else
-                    getInfoSuccess = true;
             }
 
             const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
@@ -6237,13 +6333,7 @@ void renderDebugger()
 
             if (switchTo)
             {
-                assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
-                if (currfuncindex != 0)
-                    lua_remove(L, currfuncindex);
-
                 L = coroutine;
-                currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
-                assert(currfuncindex == 0 || lua_type(L, currfuncindex) == LUA_TFUNCTION);
                 ar = car;
 
                 TextEditorTab* tab = nullptr;
@@ -6262,11 +6352,6 @@ void renderDebugger()
 
                 tab->DebuggerCurrentLine = targetLine;
                 tab->JumpToLine = targetLine;
-            }
-            else
-            {
-                if (getInfoSuccess)
-                    lua_pop(coroutine, 1); // pop our current function off to leave the stack balanced
             }
 
             if (open)
@@ -6344,7 +6429,10 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
     ZoneScoped;
 
     if (lua_stackdepth(L) == 0)
+    {
+        Log.Error("Cannot break into debugger for this thread, no stack frames are available");
         return;
+    }
 
     resetScriptTimeouts();
 
@@ -6353,7 +6441,7 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
         lua_State* co = (lua_State*)ar->userdata;
         assert(co);
 
-        lua_resume(co, nullptr, 0);
+        L = co; // TODO idk
     }
 
     luaL_checkstack(L, 20, "debugger");
@@ -6363,7 +6451,7 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
         "Breakpoint hit",
         "Coroutine interrupted",
         "Error occurred",
-        "Debug step"
+        "Debug step",
     };
 
     const std::string_view BreakExplanations[] = {
@@ -6371,7 +6459,7 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
         "The coroutine reached a breakpoint while running, such as one set by `debug.breakpoint(line)`",
         "The coroutine was interrupted by resuming another coroutine that entered a `BREAK` state",
         "Error occurred (this should have been replaced with the actual error message)",
-        "You are stepping through the code"
+        "You are stepping through the code",
     };
 
     breakReason = BreakReasons[Reason];
@@ -6393,25 +6481,20 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
     InDebugger = true;
 
     int li = 0;
-    bool getInfoSuccess = lua_getinfo(L, li, "slnfu", ar);
+    lua_getinfo(L, li, "slnu", ar);
 
     while (!ar->short_src || (strcmp(ar->short_src, "[C]") == 0))
     {
-        if (getInfoSuccess)
-            lua_pop(L, 1);
         li++;
 
-        if (!lua_getinfo(L, li, "slnfu", ar))
+        if (!lua_getinfo(L, li, "slnu", ar))
         {
-            getInfoSuccess = lua_getinfo(L, 0, "slnfu", ar);
+            lua_getinfo(L, 0, "slnu", ar);
             ar->short_src = "Failed to find function at call frame";
             break;
         }
-        else
-            getInfoSuccess = true;
     }
 
-    currfuncindex = getInfoSuccess ? lua_gettop(L) : 0;
     TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
     for (TextEditorTab& otherTab : s_TextEditors)
     {
@@ -6447,12 +6530,6 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
     debuggerL = L;
     debuggerAr = *ar;
     debuggerReason = Reason;
-
-    /*
-    assert((lua_gettop(L) == currfuncindex && lua_type(L, -1) == LUA_TFUNCTION) || currfuncindex == 0);
-    if (currfuncindex != 0)
-        lua_pop(L, 1); // pop our function from `lua_getinfo`
-    */
 }
 
 void DeveloperTools::LeaveDebugger()
@@ -6476,4 +6553,6 @@ void DeveloperTools::LeaveDebugger()
 
     ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
     vmud->BeingDebugged = false;
+
+    lua_singlestep(debuggerL, false);
 }

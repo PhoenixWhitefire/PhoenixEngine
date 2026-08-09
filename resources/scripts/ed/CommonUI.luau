@@ -120,6 +120,7 @@ local function runCurrentCommand()
     end
 
     CommandBarPostRun = true
+    CommonUI.SaveSettings()
 end
 
 local function handleCommandBarActions(event)
@@ -244,19 +245,7 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
     local sf = imgui.scalefactor()
 
     imgui.pushstylecolor(Enum.ImGuiColor.ChildBg, backgroundColor)
-
     local imagePos = imgui.cursorposition()
-    imgui.setcursorposition(imagePos + vector.create(10, 10))
-    imgui.pushstylecolor(Enum.ImGuiColor.Button, { 0, 0, 0, 0 })
-    imgui.pushstylecolor(Enum.ImGuiColor.ButtonActive, { 0, 0, 0, 0 })
-    imgui.pushstylecolor(Enum.ImGuiColor.ButtonHovered, { 0, 0, 0, 0 })
-
-    local clicked, hovered = imgui.button(`##{ Id }`, 100, 95), imgui.itemhovered()
-
-    imgui.popstylecolor()
-    imgui.popstylecolor()
-    imgui.popstylecolor()
-    imgui.setcursorposition(imagePos)
 
     imgui.beginchild(Text .. "_Selection", vector.create(120, 150) * sf, "b")
 
@@ -264,12 +253,27 @@ local function tabButton(Text: string, Icon: string, Enabled: boolean?, Lit: boo
     imgui.setcursorposition(cpos.x + 2, cpos.y)
 
     imgui.image(Icon, vector.create(100, 100) * sf, false, tint, false)
+    local clicked, hovered = imgui.itemclicked(), imgui.itemhovered()
     imgui.text(Text)
     clicked, hovered = clicked or imgui.itemclicked(), hovered or imgui.itemhovered()
 
     local windowHovered = imgui.windowhovered()
 
     imgui.endchild()
+
+    local nextPos = imgui.cursorposition()
+
+    imgui.setcursorposition(imagePos)
+
+    imgui.pushstylecolor(Enum.ImGuiColor.Button, { 0, 0, 0, 0 })
+    imgui.pushstylecolor(Enum.ImGuiColor.ButtonActive, { 0, 0, 0, 0 })
+    imgui.pushstylecolor(Enum.ImGuiColor.ButtonHovered, { 0, 0, 0, 0 })
+    clicked, hovered = clicked or imgui.button(`##{ Id }`, 120, 150), hovered or imgui.itemhovered()
+    imgui.popstylecolor()
+    imgui.popstylecolor()
+    imgui.popstylecolor()
+
+    imgui.setcursorposition(nextPos)
 
     if Enabled and (hovered or windowHovered) then
         WipTabButtonHovering = Id
@@ -441,7 +445,7 @@ function CommonUI.SaveSettings()
     end)
 
     if not success then
-        warn(`Failed to save settings: { error }`)
+        ErrorMessage.Push(`Failed to save settings: { error }`)
     end
 end
 

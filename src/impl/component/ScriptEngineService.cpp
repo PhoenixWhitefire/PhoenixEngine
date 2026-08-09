@@ -183,6 +183,22 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
                 return {};
             }
         } },
+
+        { "SetScriptBreakpoint", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::String, Reflection::ValueType::Integer, Reflection::ValueType::Boolean }),
+            REFLECTION_SPAN({ Reflection::ValueType::Integer }),
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                int lineApplied = ScriptEngine::SetScriptBreakpoint(
+                    inputs[0].AsString(),
+                    inputs[1].AsString(),
+                    (int)inputs[2].AsInteger(),
+                    inputs[3].AsBoolean()
+                );
+
+                return { lineApplied };
+            }
+        } },
     };
 
     return methods;

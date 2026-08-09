@@ -45,7 +45,7 @@ local function docWarn(message)
     docgenWarned = true
 end
 
-local function keysOf<T>(t: { [T]: any }) : { T }
+local function keysOf<T>(t: { read [T]: unknown }) : { T }
     local kt = {}
     for k, _ in t do
         table.insert(kt, k)
@@ -257,6 +257,13 @@ declare plugin: {
     ProjectDatamodel: GameObject & EcDataModel,
     ProjectWorkspace: GameObject & EcWorkspace,
 }?
+
+export type DebugBreakpointInfo = {
+    Enabled: boolean,
+    Line: number,
+    ConditionEnabled: boolean,
+    Condition: string,
+}
 
 -- Finish intro --
 ]]
@@ -506,7 +513,7 @@ local function rtolsub(str)
     return str
 end
 
-local function count(t: { any })
+local function count(t: { read [unknown]: unknown })
     local n = 0
     for _, _ in t do
         n += 1
@@ -539,13 +546,16 @@ local function dumpReflectionApi(t, d, cn, externType)
                 local luautype = rtolsub(v)
                 local isReadOnly = v:find("READONLY") ~= nil
 
-                local docs: any = d.Properties[n]
+                local docs: { [string]: unknown } | string = d.Properties[n]
                 local desc = docs
 
                 if typeof(docs) == "table" then
+                    assert(typeof(docs.Type) == "string")
                     luautype = docs.Type or luautype
                     desc = docs.Description or desc
                 end
+
+                assert(typeof(desc) == "string")
 
                 if luautype:find("Array") or luautype:find("Map") then
                     docWarn(`Type '{luautype}' has Array or Map, for {cn}.{n}`)
@@ -582,6 +592,8 @@ local function dumpReflectionApi(t, d, cn, externType)
                 if typeof(docs) == "table" then
                     subst = docs.Type or subst
                     desc = docs.Description or desc
+
+                    assert(typeof(subst) == "string")
 
                     if docs.Out then
                         if docs.Type then

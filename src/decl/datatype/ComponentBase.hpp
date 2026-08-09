@@ -74,7 +74,7 @@ public:
 
     virtual uint32_t CreateComponent(GameObject* Object) override
     {
-        uint32_t id = NextFreeId;
+        uint32_t id = UINT32_MAX; //NextFreeId;
         ObjectRef ref = Object;
 
         if (id == UINT32_MAX)

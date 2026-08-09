@@ -83,9 +83,6 @@ static void queueEvent(
 
     ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(eL));
 
-    if (vmud->BeingDebugged)
-        return; // TODO some way to discard just input and frame begin events perchance
-
     assert(Inputs.size() == rev->CallbackInputs.size());
     assert(lua_isfunction(eL, 2));
 
@@ -309,10 +306,13 @@ static int sig_namecall(lua_State* L)
                 {
                     cleanupConnection(L, ec);
 
-                    //std::string warning;
-                    //ScriptEngine::L::DumpStacktrace(L, &warning, 0, "Event was cleaned up, thread will not resume");
+                    if (!*resume)
+                    {
+                        std::string warning;
+                        ScriptEngine::L::DumpStacktrace(L, &warning, 0, "Event was cleaned up, thread will not resume");
 
-                    //Log.Warning(warning);
+                        Log.Warning(warning);
+                    }
 
                     delete resume;
                     delete values;

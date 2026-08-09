@@ -2,11 +2,11 @@
 
 #pragma once
 
+#include <initializer_list>
 #include <unordered_map>
 #include <functional>
 #include <string>
 #include <vector>
-#include <format>
 #include <future>
 #include <span>
 #include <glm/mat4x4.hpp>
@@ -48,6 +48,32 @@
             c* ec = static_cast<c*>(p); \
             Reflection::EventCleanup(ec->n##Callbacks); \
         } \
+    } \
+}
+
+#define REFLECTION_EVENT_DEBUGGERDISCARD(c, n, ...) { \
+    #n, \
+    Reflection::EventDescriptor{ \
+        .CallbackInputs = { __VA_OPT__(REFLECTION_SPAN({ __VA_ARGS__ })) }, \
+        .Connect = [](void* p, const Reflection::EventConnection& Callback) \
+        -> uint32_t \
+        { \
+            c* ec = static_cast<c*>(p); \
+            return Reflection::EventConnect(ec->n##Callbacks, Callback); \
+        }, \
+        .Disconnect = [](void* p, uint32_t Id) \
+        -> void \
+        { \
+            c* ec = static_cast<c*>(p); \
+            Reflection::EventDisconnect(ec->n##Callbacks, Id); \
+        }, \
+        .Cleanup = [](void* p) \
+        -> void \
+        { \
+            c* ec = static_cast<c*>(p); \
+            Reflection::EventCleanup(ec->n##Callbacks); \
+        }, \
+        .DebuggerShouldDiscard = true, \
     } \
 }
 
@@ -187,8 +213,20 @@ namespace Reflection
         GenericValue(const GenericValue&);
         GenericValue(GenericValue&&);
 
-        static void CopyInto(GenericValue&, const GenericValue&);
+        struct Pair
+        {
+            const GenericValue& First;
+            const GenericValue& Second;
+        };
+
         static GenericValue Null();
+        static GenericValue MapPairs(const std::span<const Pair>&);
+        static GenericValue MapPairs(const std::initializer_list<Pair>& initializer)
+        {
+            return MapPairs(std::span(initializer.begin(), initializer.end()));
+        }
+
+        static void CopyInto(GenericValue&, const GenericValue&);
 
         void Reset();
 
@@ -207,7 +245,8 @@ namespace Reflection
         glm::mat4 AsMatrix() const;
         const GenericFunction& AsFunction() const;
         std::span<GenericValue> AsArray() const;
-        std::unordered_map<GenericValue, GenericValue> AsMap() const;
+
+        void ForEachMapPair(const std::function<void(const Reflection::GenericValue&, const Reflection::GenericValue&)>) const;
 
         GenericValue& operator = (const Reflection::GenericValue& Other);
         GenericValue& operator = (Reflection::GenericValue&& Other);
@@ -291,6 +330,8 @@ namespace Reflection
         EventConnectFunction Connect;
         EventDisconnectFunction Disconnect;
         EventCleanupFunction Cleanup;
+
+        bool DebuggerShouldDiscard = false;
     };
 
     uint32_t EventConnect(std::vector<EventConnection>&, const Reflection::EventConnection&);

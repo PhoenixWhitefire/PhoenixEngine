@@ -16,50 +16,32 @@ struct HttpRequest
 
 static HttpRequest parseRequestFromReflection(const Reflection::GenericValue& gv)
 {
-    std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> map = gv.AsMap();
-    const auto& urlIt = map.find("Url");
-    const auto& methodIt = map.find("Method");
-    const auto& headersIt = map.find("Headers");
-    const auto& bodyIt = map.find("Body");
-
-    if (urlIt == map.end())
-        RAISE_RT("Expected `Url` field in request data");
-    if (urlIt->second.Type != Reflection::ValueType::String)
-        RAISE_RT("Expected `Url` to be a string, got '{}' ({})", urlIt->second.ToString(), Reflection::TypeAsString(urlIt->second.Type));
-
     HttpRequest request;
-    request.Url = urlIt->second.AsString();
+    bool gotUrl = false;
 
-    if (methodIt != map.end())
+    gv.ForEachMapPair([&](const Reflection::GenericValue& key, const Reflection::GenericValue& value)
     {
-        if (methodIt->second.Type != Reflection::ValueType::String)
-            RAISE_RT("Expected `Method` to be a string, got '{}' ({})", methodIt->second.ToString(), Reflection::TypeAsString(methodIt->second.Type));
-        request.Method = methodIt->second.AsString();
-    }
+        const std::string_view& field = key.AsStringView();
 
-    if (headersIt != map.end())
-    {
-        if (headersIt->second.Type != Reflection::ValueType::Map && headersIt->second.Type != Reflection::ValueType::Array)
-            RAISE_RT("Expected `Body` to be a string, got '{}' ({})", bodyIt->second.ToString(), Reflection::TypeAsString(bodyIt->second.Type));
-
-        std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> headersGv = headersIt->second.AsMap();
-        for (const auto& pair : headersGv)
+        if (field == "Url")
+            request.Url = value.AsString(), gotUrl = true;
+        else if (field == "Method")
+            request.Method = value.AsString();
+        else if (field == "Headers")
         {
-            if (pair.first.Type != Reflection::ValueType::String)
-                RAISE_RT("Expected Key of Header to be a string, got '{}' ({})", pair.first.ToString(), Reflection::TypeAsString(pair.first.Type));
-            if (pair.second.Type != Reflection::ValueType::String)
-                RAISE_RT("Expected Value of Header to be a string, got '{}' ({})", pair.second.ToString(), Reflection::TypeAsString(pair.second.Type));
-
-            request.Headers.emplace_back(pair.first.AsString(), pair.second.AsString());
+            value.ForEachMapPair([&](const Reflection::GenericValue& headerKey, const Reflection::GenericValue& headerValue)
+            {
+                request.Headers.emplace_back(headerKey.AsString(), headerValue.AsString());
+            });
         }
-    }
+        else if (field == "Body")
+            request.Body = value.AsString();
+        else
+            RAISE_RT("Invalid field '{}' with value '{}' ()", field, value.ToString(), Reflection::TypeAsString(value.Type));
+    });
 
-    if (bodyIt != map.end())
-    {
-        if (bodyIt->second.Type != Reflection::ValueType::String)
-            RAISE_RT("Expected `Body` to be a string, got '{}' ({})", bodyIt->second.ToString(), Reflection::TypeAsString(bodyIt->second.Type));
-        request.Body = bodyIt->second.AsString();
-    }
+    if (!gotUrl)
+        RAISE_RT("Expected `Url` field in request data");
 
     return request;
 }
@@ -77,17 +59,17 @@ static size_t writeFunction(char* ptr, size_t size, size_t nmemb, void* userdata
 
 static void makeHttpRequest(const HttpRequest& request, std::promise<std::vector<Reflection::GenericValue>>* Out)
 {
-    std::unordered_map<Reflection::GenericValue, Reflection::GenericValue> returnTable;
-    returnTable["Status"] = 0;
-    returnTable["Body"] = "Unknown error";
+    std::vector<std::pair<Reflection::GenericValue, Reflection::GenericValue>> returnTable;
 
     CURL* curl = curl_easy_init();
     if (!curl)
     {
-        returnTable["Ok"] = false;
-        returnTable["Body"] = "Failed to initialize Curl";
+        Out->set_value({ Reflection::GenericValue::MapPairs({
+            { "Ok", false },
+            { "Status", 0 },
+            { "Body", "Failed to initialize Curl" },
+        }) });
 
-        Out->set_value({ returnTable });
         return;
     }
 
@@ -123,10 +105,11 @@ static void makeHttpRequest(const HttpRequest& request, std::promise<std::vector
     CURLcode result = curl_easy_perform(curl);
     if (result != CURLE_OK)
     {
-        returnTable["Ok"] = false;
-        returnTable["Status"] = 0;
-        returnTable["Body"] = curl_easy_strerror(result);
-        Out->set_value({ returnTable });
+        Out->set_value({ Reflection::GenericValue::MapPairs({
+            { "Ok", false },
+            { "Status", 0 },
+            { "Body", curl_easy_strerror(result) },
+        }) });
 
         curl_easy_cleanup(curl);
         return;
@@ -153,11 +136,12 @@ static void makeHttpRequest(const HttpRequest& request, std::promise<std::vector
         prev = h;
     }
 
-    returnTable["Ok"] = responseCode >= 200 && responseCode < 300;
-    returnTable["Status"] = responseCode;
-    returnTable["Headers"] = headers;
-    returnTable["Body"] = std::string_view(responseBody.begin(), responseBody.end());
-    Out->set_value({ returnTable });
+    Out->set_value({ Reflection::GenericValue::MapPairs({
+        { "Ok", responseCode >= 200 && responseCode < 300 },
+        { "Status", responseCode },
+        { "Headers", headers },
+        { "Body", std::string_view(responseBody.begin(), responseBody.end()) },
+    }) });
 
     curl_easy_cleanup(curl);
 }

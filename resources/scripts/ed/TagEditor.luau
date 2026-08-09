@@ -2,6 +2,8 @@
 local DeveloperTools = game:GetService("DeveloperTools")
 local Collections = game:GetService("Collections")
 
+local State = require("@ed/State")
+
 local Viewer = {}
 Viewer.Open = false
 
@@ -22,12 +24,14 @@ function Viewer.Render()
     table.sort(tags)
 
     for _, tag in tags do
-        if imgui.treenode(tag, "ar | dlf") then
+        if string.find(tag, "Phoenix_") ~= 0 and imgui.treenode(tag, "dlf | fw") then
+            local tagged = Collections:GetTagged(tag)
+
             if imgui.itemclicked() then
-                DeveloperTools:SetExplorerSelections(Collections:GetTagged(tag))
+                DeveloperTools:SetExplorerSelections(tagged)
             end
 
-            for _, object in Collections:GetTagged(tag) do
+            for _, object in tagged do
                 if imgui.textlink(object:GetFullName()) then
                     DeveloperTools:SetExplorerSelections({ object })
                 end

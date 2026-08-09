@@ -1,5 +1,6 @@
 // DeveloperTools service, 31/03/2026
 #include "component/DeveloperToolsService.hpp"
+#include "Reflection.hpp"
 #include "datatype/GameObject.hpp"
 #include "DeveloperTools.hpp"
 #include "Utilities.hpp"
@@ -177,13 +178,14 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
         } },
 
         { "OpenTextDocument", Reflection::MethodDescriptor{
-            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer) }),
+            REFLECTION_SPAN({ Reflection::ValueType::String, REFLECTION_OPTIONAL(Integer), REFLECTION_OPTIONAL(Boolean) }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 DeveloperTools::OpenTextDocument(
                     inputs[0].AsString(),
-                    inputs.size() > 1 ? (int)inputs[1].AsInteger() : 1
+                    inputs.size() > 1 ? (int)inputs[1].AsInteger() : 1,
+                    inputs.size() > 2 ? inputs[2].AsBoolean() : true
                 );
 
                 return {};
@@ -209,7 +211,97 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
                 return {};
             }
         } },
+
+        { "GetOpenTextDocuments", Reflection::MethodDescriptor{
+            {},
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
+            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
+            {
+                const std::vector<std::string_view> opened = DeveloperTools::GetOpenTextDocuments();
+                std::vector<Reflection::GenericValue> ret;
+                ret.reserve(opened.size());
+
+                for (const std::string_view& path : opened)
+                    ret.emplace_back(path);
+
+                return { Reflection::GenericValue(ret) };
+            }
+        } },
+
+        { "GetDocumentBreakpoints", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::vector<DebugBreakpoint> breakpoints = DeveloperTools::GetDocumentBreakpoints(inputs[0].AsString());
+                std::vector<Reflection::GenericValue> rets;
+                rets.reserve(breakpoints.size());
+
+                for (const DebugBreakpoint& bp : breakpoints)
+                {
+                    rets.push_back(Reflection::GenericValue::MapPairs({
+                        { "Line", bp.Line },
+                        { "Enabled", bp.Enabled },
+                        { "ConditionEnabled", bp.ConditionEnabled },
+                        { "Condition", bp.Condition },
+                    }));
+                }
+
+                return { Reflection::GenericValue(std::span<Reflection::GenericValue>(rets)) };
+            }
+        } },
+
+        { "SetDocumentBreakpoints", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::Array }),
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::string& file = inputs[0].AsString();
+                const std::span<Reflection::GenericValue>& bparr = inputs[1].AsArray();
+
+                std::vector<DebugBreakpoint> breakpoints;
+                breakpoints.reserve(bparr.size());
+
+                for (const Reflection::GenericValue& bpg : bparr)
+                {
+                    DebugBreakpoint bp;
+
+                    bpg.ForEachMapPair([&](const Reflection::GenericValue& key, const Reflection::GenericValue& value)
+                    {
+                        const std::string_view& field = key.AsStringView();
+
+                        if (field == "Line")
+                            bp.Line = (int)value.AsInteger();
+                        else if (field == "Enabled")
+                            bp.Enabled = value.AsBoolean();
+                        else if (field == "ConditionEnabled")
+                            bp.ConditionEnabled = value.AsBoolean();
+                        else if (field == "Condition")
+                            bp.Condition = value.AsString();
+                        else
+                            RAISE_RT("Invalid field '{}' with value '{}' ()", field, value.ToString(), Reflection::TypeAsString(value.Type));
+                    });
+
+                    breakpoints.push_back(bp);
+                }
+
+                DeveloperTools::SetDocumentBreakpoints(file, breakpoints);
+                return {};
+            }
+        } },
     };
 
     return methods;
+}
+
+const Reflection::StaticEventMap& DeveloperToolsComponentManager::GetEvents()
+{
+    static const Reflection::StaticEventMap events = {
+        REFLECTION_EVENT(EcDeveloperToolsService, BreakpointUpdated, Reflection::ValueType::String, Reflection::ValueType::Map),
+        REFLECTION_EVENT(EcDeveloperToolsService, BreakpointRemoved, Reflection::ValueType::String, Reflection::ValueType::Integer),
+
+        REFLECTION_EVENT(EcDeveloperToolsService, DebuggerRequestedStop),
+    };
+
+    return events;
 }

@@ -194,6 +194,13 @@ declare plugin: {
     ProjectWorkspace: GameObject & EcWorkspace,
 }?
 
+export type DebugBreakpointInfo = {
+    Enabled: boolean,
+    Line: number,
+    ConditionEnabled: boolean,
+    Condition: string,
+}
+
 -- Finish intro --
 
 type Services = {
@@ -420,15 +427,22 @@ export type EcDeveloperTools = {
   ShadersShown: boolean,
 
   CloseTextDocuments: (self: EcDeveloperTools) -> (),
+  GetDocumentBreakpoints: (self: EcDeveloperTools, File: string) -> { DebugBreakpointInfo },
   GetExplorerSelections: (self: EcDeveloperTools) -> { GameObject },
+  GetOpenTextDocuments: (self: EcDeveloperTools) -> { string },
   GetToolNames: (self: EcDeveloperTools) -> { string },
   Initialize: (self: EcDeveloperTools) -> (),
   IsToolEnabled: (self: EcDeveloperTools, ToolName: string) -> (boolean),
-  OpenTextDocument: (self: EcDeveloperTools, Path: string, Line: number?) -> (),
+  OpenTextDocument: (self: EcDeveloperTools, Path: string, Line: number?, TakeFocus: boolean?) -> (),
   SaveTextDocuments: (self: EcDeveloperTools) -> (),
+  SetDocumentBreakpoints: (self: EcDeveloperTools, File: string, Breakpoints: { read DebugBreakpointInfo }) -> (),
   SetExplorerRoot: (self: EcDeveloperTools, Root: GameObject) -> (),
   SetExplorerSelections: (self: EcDeveloperTools, Selections: { GameObject }) -> (),
   SetToolEnabled: (self: EcDeveloperTools, ToolName: string, Enabled: boolean) -> (),
+
+  BreakpointRemoved: EventSignal<(string, number)>,
+  BreakpointUpdated: EventSignal<(string, DebugBreakpointInfo)>,
+  DebuggerRequestedStop: EventSignal<()>,
 }
 
 export type EcDirectionalLight = {
@@ -600,6 +614,7 @@ export type EcScriptEngine = {
   CreateVM: (self: EcScriptEngine, VmName: string) -> (),
   DetachDebuggerFromVM: (self: EcScriptEngine, VM: string) -> (),
   RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string) -> (boolean, string?),
+  SetScriptBreakpoint: (self: EcScriptEngine, VM: string, ScriptPath: string, Line: number, Enabled: boolean) -> number,
   SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
 }
 
@@ -1149,6 +1164,7 @@ declare imgui: {
   scrollherey: ((  ) -> ()),
   separator: ((  ) -> ()),
   separatortext: (( Text: string ) -> ()),
+  setclipboardtext: (Text: string) -> (),
   setcursorposition: ((Position: vector) -> ()) & ((X: number, Y: number) -> ()),
   setitemtooltip: (( Text: string ) -> ()),
   setnextitemopen: (( Open: boolean? ) -> ()),

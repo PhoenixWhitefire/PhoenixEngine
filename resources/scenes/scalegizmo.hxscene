@@ -46,9 +46,7 @@ PHOENIXF
         "Transform"
       ],
       "$_objectId": 1,
-      "$_tags": [
-        "Ed_ReimportableModel"
-      ],
+      "$_tags": [],
       "ImportPath": "/home/erinv/Documents/3d/arrow.glb",
       "LocalTransform": [
         [
@@ -209,9 +207,7 @@ PHOENIXF
         "Transform"
       ],
       "$_objectId": 5,
-      "$_tags": [
-        "Ed_ReimportableModel"
-      ],
+      "$_tags": [],
       "ImportPath": "/home/erinv/Documents/3d/arrow.glb",
       "LocalTransform": [
         [
@@ -372,9 +368,7 @@ PHOENIXF
         "Transform"
       ],
       "$_objectId": 9,
-      "$_tags": [
-        "Ed_ReimportableModel"
-      ],
+      "$_tags": [],
       "ImportPath": "/home/erinv/Documents/3d/arrow.glb",
       "LocalTransform": [
         [

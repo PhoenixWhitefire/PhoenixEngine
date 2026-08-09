@@ -19,6 +19,7 @@
 #include "Log.hpp"
 
 LUAU_FASTFLAG(LuauUdataMetatablePinned)
+LUAU_FASTFLAG(LuauAutoStack)
 
 struct LuauType
 {
@@ -44,22 +45,22 @@ static const LuauType s_ValueTypeToLuauType[] = {
     LUA_TSTRING,
     LUA_TBUFFER,
 
-    { LUA_TUSERDATA, UserdataTag::Color      }, // Color
-    { LUA_TVECTOR,   UserdataTag::__invalid  },   // Vector2
-    { LUA_TVECTOR,   UserdataTag::__invalid  },   // Vector3
-    { LUA_TUSERDATA, UserdataTag::Matrix     }, // Matrix
-    { LUA_TUSERDATA, UserdataTag::GameObject }, // GameObject
+    { LUA_TUSERDATA, UserdataTag::Color      },
+    { LUA_TVECTOR,   UserdataTag::__invalid  }, // Vector2
+    { LUA_TVECTOR,   UserdataTag::__invalid  }, // Vector3
+    { LUA_TUSERDATA, UserdataTag::Matrix     },
+    { LUA_TUSERDATA, UserdataTag::GameObject },
 
     LUA_TFUNCTION,
 
     LUA_TTABLE, // Array
     LUA_TTABLE, // Map,
 
-    { LUA_TUSERDATA, UserdataTag::EventSignal    }, // EventSignal
-    { LUA_TUSERDATA, UserdataTag::InputEvent     }, // InputEvent
-    { LUA_TUSERDATA, UserdataTag::NumberGradient }, // NumberGradient
-    { LUA_TUSERDATA, UserdataTag::VectorGradient }, // VectorGradient
-    { LUA_TUSERDATA, UserdataTag::ColorGradient  }, // ColorGradient
+    { LUA_TUSERDATA, UserdataTag::EventSignal    },
+    { LUA_TUSERDATA, UserdataTag::InputEvent     },
+    { LUA_TUSERDATA, UserdataTag::NumberGradient },
+    { LUA_TUSERDATA, UserdataTag::VectorGradient },
+    { LUA_TUSERDATA, UserdataTag::ColorGradient  },
 };
 static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
 
@@ -73,6 +74,7 @@ static int luauAssertHandler(const char* expression, const char* file, int line,
 void ScriptEngine::Initialize()
 {
     FFlag::LuauUdataMetatablePinned.value = true;
+    FFlag::LuauAutoStack.value = true;
 
     RegisterNewVM(ROOT_LVM_NAME);
 
@@ -284,6 +286,11 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
     ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(Name.data(), Name.size());
 
+    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
+
+    if (vmud->BeingDebugged)
+        return;
+
     std::deque<YieldedCoroutine>* yieldedCoros;
     if (YieldedOverride)
         yieldedCoros = YieldedOverride;
@@ -304,13 +311,8 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
     for (size_t i = 0; i < yieldedCoros->size(); i++)
         processing[i] = &(*yieldedCoros)[i];
 
-    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
     bool isSynchronized = !vmud->PVM || !vmud->PVM->Desynchronized;
-
     double stepStarted = GetRunningTime();
-    bool beingDebugged = vmud->BeingDebugged;
-    bool canExitDebug = false;
-    vmud->BeingDebugged = false;
 
     for (YieldedCoroutine* yc : processing)
     {
@@ -334,17 +336,6 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
         lua_State* coroutine = yc->Coroutine;
         L::StateUserdata* corUd = (L::StateUserdata*)lua_getthreaddata(coroutine);
         assert(!corUd->BeingDebugged && "That should only be set on the main thread!");
-
-        if (beingDebugged || vmud->BeingDebugged)
-        {
-            if (corUd->DebuggerResume)
-            {
-                canExitDebug = true;
-                corUd->DebuggerResume = false;
-            }
-            else
-                continue;
-        }
 
         int corRef = yc->CoroutineReference;
 
@@ -388,14 +379,6 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
             if (vmud->BeingDebugged)
                 break;
         }
-    }
-
-    if (beingDebugged && !vmud->BeingDebugged)
-    {
-        if (canExitDebug)
-            DeveloperTools::LeaveDebugger();
-        else
-            vmud->BeingDebugged = true;
     }
 }
 
@@ -758,6 +741,10 @@ static bool isCodeGenResultErroneous(Luau::CodeGen::CodeGenCompilationResult res
         && result != Luau::CodeGen::CodeGenCompilationResult::NotNativeModule;
 }
 
+#define REGISTRY_CHUNKS ("CHUNK")
+
+static std::unordered_map<std::string, std::vector<std::pair<int, bool>>> QueuedScriptBreakpoints;
+
 int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, const std::string& ChunkName)
 {
     ZoneScoped;
@@ -786,6 +773,36 @@ int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, c
                 }
             }
         }
+
+        if (ChunkName[0] == '@')
+        {
+            int chunk = lua_gettop(L);
+            std::string path = FileRW::ResolvePathAbsolute(ChunkName.substr(1, ChunkName.size() - 1));
+
+            if (std::filesystem::is_regular_file(path))
+            {
+                lua_getfield(L, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);
+                assert(lua_type(L, -1) == LUA_TTABLE);
+
+                if (lua_getfield(L, -1, path.c_str()) == LUA_TNIL)
+                {
+                    lua_pop(L, 1);
+                    lua_pushvalue(L, chunk);
+                    lua_setfield(L, -2, path.c_str());
+                }
+
+                assert(lua_gettop(L) > chunk);
+                lua_settop(L, chunk);
+
+                if (const auto& it = QueuedScriptBreakpoints.find(path); it != QueuedScriptBreakpoints.end())
+                {
+                    for (const auto& [ line, enabled ] : it->second)
+                        lua_breakpoint(L, chunk, line, (int)enabled);
+
+                    QueuedScriptBreakpoints.erase(it);
+                }
+            }
+        }
     }
 
     return status;
@@ -800,6 +817,35 @@ int ScriptEngine::CompileAndLoad(lua_State* L, const std::string_view& SourceCod
     int result = LoadBytecode(L, bytecode, ChunkName);
 
     return result;
+}
+
+int ScriptEngine::SetScriptBreakpoint(const std::string& VM, const std::string& Script, int Line, bool Enabled)
+{
+    const auto& lvmit = VMs.find(VM);
+    if (lvmit == VMs.end())
+        RAISE_RT("Invalid Luau VM '{}'", VM);
+
+    LuauVM& lvm = lvmit->second;
+    std::string path = FileRW::ResolvePathAbsolute(Script);
+
+    lua_getfield(lvm.MainThread, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);
+    assert(lua_type(lvm.MainThread, -1) == LUA_TTABLE);
+
+    int lineApplied = Line;
+
+    if (lua_getfield(lvm.MainThread, -1, path.c_str()) == LUA_TNIL)
+    {
+        std::vector<std::pair<int, bool>>& queued = QueuedScriptBreakpoints[path];
+        queued.emplace_back(Line, Enabled);
+    }
+    else
+    {
+        assert(lua_type(lvm.MainThread, -1) == LUA_TFUNCTION);
+        lineApplied = lua_breakpoint(lvm.MainThread, -1, Line, (int)Enabled);
+    }
+
+    lua_pop(lvm.MainThread, 1);
+    return lineApplied;
 }
 
 #define SEENTABLES "ToGenericValueTemp_SeenTables"
@@ -1250,10 +1296,8 @@ int ScriptEngine::L::HandleMethodCall(
     int numParams = static_cast<int32_t>(paramTypes.size());
     int minArgs = 0;
 
-    for (int i = 0; i < numParams; i++)
+    for (Reflection::ValueType param : paramTypes)
     {
-        const Reflection::ValueType& param = paramTypes[i];
-
         if (!(param & Reflection::ValueType::Null))
             minArgs++;
         else
@@ -1868,6 +1912,9 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     // Load runtime-specific libraries
     luhx_openlibs(state);
 
+    lua_createtable(state, 0, 8);
+    lua_setfield(state, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);
+
     std::filesystem::path* requirePath = new std::filesystem::path;
     luaopen_require(
         state,
@@ -2022,70 +2069,31 @@ static void breakHere(lua_State* L, DebugBreakReason Reason)
     }
 }
 
-static void scheduleDebuggedCoro(lua_State* L, ScriptEngine::L::StateUserdata* vmud, ScriptEngine::L::StateUserdata* lud)
-{
-    lua_pushthread(L);
-    int ref = lua_ref(L, -1);
-
-    lua_getglobal(L, "game");
-    Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
-    GameObject* dm = GameObjectManager::Get()->FromGenericValue(dmgv);
-    lua_pop(L, 1);
-
-    ScriptEngine::YieldedCoroutine yc = {
-        .DebugString = "scheduleDebuggedCoro",
-        .Coroutine = L,
-        .CoroutineReference = ref,
-        .DataModel = dm,
-        .RmDeferred = {
-            .ResumeAt = 0.0,
-            .Arguments = nullptr,
-            .ArgumentsRef = -1
-        },
-        .Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred
-    };
-
-    // resume when thread leaves BREAK state
-    ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines.push_back(yc);
-    lud->DebuggerResume = false;
-}
-
 static lua_Status finishCoroutine(lua_State* L, int status)
 {
     using namespace ScriptEngine;
     using namespace L;
     ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-    ScriptEngine::L::StateUserdata* lud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
-    //bool maybeEnteredDebugger = vmud->DebuggerAttached;
 
-    if (!vmud->PVM && !vmud->BeingDebugged && !lud->DebuggerResume)
+    if (!vmud->PVM && !vmud->BeingDebugged)
     {
         if (status == LUA_BREAK)
-        {
             breakHere(L, DebugBreakReason::BrokeIntoDebugger);
-            scheduleDebuggedCoro(L, vmud, lud);
-        }
         else if (status == LUA_ERRRUN)
+            breakHere(L, DebugBreakReason::Error);
+    }
+
+    if (status == LUA_YIELD || status == LUA_OK)
+    {
+        while (!vmud->UnfinishedProfilerZones.empty())
         {
-            if (status == LUA_ERRRUN)
-                breakHere(L, DebugBreakReason::Error);
+            const std::string_view& name = vmud->UnfinishedProfilerZones.top();
+            Log.WarningF("Profiler zone '{}' was not finished, did you forget to call `debug.zoneend()`?", name);
+
+            tracy::LuauZoneEndImpl();
+            vmud->UnfinishedProfilerZones.pop();
         }
     }
-
-    // NOTE debugger does its own checks to see if the hook was called
-    //if (maybeEnteredDebugger)
-    //    DeveloperTools::LeaveDebugger(L);
-
-    /*
-    while (!vmud->UnfinishedProfilerZones.empty())
-    {
-        const std::string_view& name = vmud->UnfinishedProfilerZones.top();
-        Log.WarningF("Profiler zone '{}' was not finished, did you forget to call `debug.zoneend()`?", name);
-
-        tracy::LuauZoneEndImpl();
-        vmud->UnfinishedProfilerZones.pop();
-    }
-    */
 
     return (lua_Status)status;
 }

@@ -8,7 +8,6 @@ local Engine = game:GetService("Engine")
 local EditorSettingsMenu = require("@ed/EditorSettingsMenu")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
-local folder = require("../../../Vendor/luau/tests/require/config_tests/with_config_luau/parent_ambiguity/folder")
 
 function ExternalCodeEditor.Open(ProjectName: string)
     if not Preferences.CodeEditorPath or #Preferences.CodeEditorPath == 0 then

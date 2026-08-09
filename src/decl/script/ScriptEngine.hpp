@@ -11,7 +11,7 @@
 #include <lua.h>
 
 #include "datatype/GameObject.hpp"
-#include "DebugBreakReason.hpp"
+#include "script/Debugging.hpp"
 
 #define ROOT_LVM_NAME "RootLVM"
 
@@ -32,6 +32,13 @@ namespace ScriptEngine
     int CompileAndLoad(lua_State*, const std::string_view& SourceCode, const std::string& ChunkName);
     nlohmann::json DumpApiToJson();
     lua_Type ReflectionTypeToLuauType(Reflection::ValueType);
+
+    int SetScriptBreakpoint(
+        const std::string& VM,
+        const std::string& File,
+        int Line,
+        bool Enabled
+    );
 
     struct YieldedCoroutine
     {
@@ -183,6 +190,5 @@ namespace ScriptEngine::L
         ParallelVM* PVM = nullptr;
         bool DebuggerAttached = false;
         bool BeingDebugged = false;
-        bool DebuggerResume = false;
     };
 };
