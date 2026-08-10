@@ -45,9 +45,9 @@ const Reflection::StaticEventMap& LoggingComponentManager::GetEvents()
 
 void LoggingComponentManager::SignalNewLogMessage(double Time, Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags, const Reflection::GenericValue& Value)
 {
-    for (const EcLoggingService& cl : m_Components)
+    for (const EcLoggingService& cl : Components)
     {
         if (cl.Valid)
-            REFLECTION_SIGNAL_EVENT(cl.OnMessagedCallbacks, Time, (int)MessageType, Message, ExtraTags, Value);
+            Reflection::SignalEvent(cl.OnMessagedCallbacks, { Time, (int)MessageType, Message, ExtraTags, Value }, "Logging.OnMessaged");
     }
 }

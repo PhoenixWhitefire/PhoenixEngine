@@ -11,8 +11,8 @@
 uint32_t SoundComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcSound>::CreateComponent(Object);
-	m_Components[id].Object = Object;
-	m_Components[id].EcId = id;
+	Components[id].Object = Object;
+	Components[id].EcId = id;
 	//AudioStreamPromises.emplace_back();
 
     return id;
@@ -21,7 +21,7 @@ uint32_t SoundComponentManager::CreateComponent(GameObject* Object)
 void SoundComponentManager::DeleteComponent(uint32_t Id)
 {
     // TODO id reuse with handles that have a counter per re-use to reduce memory growth
-	EcSound& sound = m_Components[Id];
+	EcSound& sound = Components[Id];
 	if (sound.SoundInstance)
 		ma_sound_uninit(sound.SoundInstance);
 
@@ -201,7 +201,7 @@ static void initializeSound(SoundComponentManager* SoundManager)
 SoundComponentManager::SoundComponentManager()
 {
     ZoneScoped;
-	m_Components.reserve(16);
+	Components.reserve(16);
 }
 
 void SoundComponentManager::UpdateListener(const glm::mat4& CameraTransform)
@@ -265,7 +265,7 @@ void EcSound::Reload()
 		return;
 	}
 
-	REFLECTION_SIGNAL_EVENT(OnLoadedCallbacks, SoundFile);
+	Reflection::SignalEvent(OnLoadedCallbacks, { SoundFile }, "Sound.OnLoaded");
 	FinishedLoading = true;
 	LoadSucceeded = true;
 }

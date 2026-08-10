@@ -56,8 +56,8 @@ static void recomputeWorldTransforms(EcTransform* ct)
 uint32_t TransformComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcTransform>::CreateComponent(Object);
-    m_Components[id].Object = Object;
-    m_Components[id].RecomputeTransformTree();
+    Components[id].Object = Object;
+    Components[id].RecomputeTransformTree();
 
     return id;
 }
@@ -76,7 +76,7 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
                 glm::mat4 prevTrans = ct->LocalTransform;
                 ct->SetLocalTransform(gv.AsMatrix());
 
-                REFLECTION_SIGNAL_EVENT(ct->OnScriptMovedCallbacks, prevTrans, ct->Transform);
+                Reflection::SignalEvent(ct->OnScriptMovedCallbacks, { prevTrans, ct->Transform }, "Transform.OnScriptMoved");
             },
             .Type = Reflection::ValueType::Matrix,
             .ParallelReadSafe = false, // Physics
@@ -93,7 +93,7 @@ const Reflection::StaticPropertyMap& TransformComponentManager::GetProperties()
                 glm::mat4 prevTrans = ct->Transform;
                 ct->SetWorldTransform(gv.AsMatrix());
 
-                REFLECTION_SIGNAL_EVENT(ct->OnScriptMovedCallbacks, prevTrans, ct->Transform);
+                Reflection::SignalEvent(ct->OnScriptMovedCallbacks, { prevTrans, ct->Transform }, "Transform.OnScriptMoved");
             },
             .Type = Reflection::ValueType::Matrix,
             .Serializes = false,

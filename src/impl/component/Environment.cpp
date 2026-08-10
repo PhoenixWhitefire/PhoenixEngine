@@ -140,7 +140,7 @@ EcEnvironmentService* EnvironmentComponentManager::GetService() const
 uint32_t EnvironmentComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcEnvironmentService>::CreateComponent(Object);
-    m_Components[id].Object = Object;
+    Components[id].Object = Object;
 
     return id;
 }

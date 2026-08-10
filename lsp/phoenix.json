@@ -1642,14 +1642,18 @@
   "@phoenix/globaltype/DataModel.VM": {
     "documentation": "The Luau Virtual Machine that Scripts bound to this Data Model will run in"
   },
-  "@phoenix/globaltype/DeveloperTools.BreakpointRemoved": {},
+  "@phoenix/globaltype/DeveloperTools.BreakpointRemoved": {
+    "documentation": "Fires when a breakpoint is removed, providing the file and line number"
+  },
   "@phoenix/globaltype/DeveloperTools.BreakpointUpdated": {
     "documentation": "Fires when a breakpoint is added or modified"
   },
   "@phoenix/globaltype/DeveloperTools.CloseTextDocuments": {
     "documentation": "Saves and closes all open text documents"
   },
-  "@phoenix/globaltype/DeveloperTools.DebuggerRequestedStop": {},
+  "@phoenix/globaltype/DeveloperTools.DebuggerRequestedStop": {
+    "documentation": "Fires when the developer clicks 'Stop' in the debugger"
+  },
   "@phoenix/globaltype/DeveloperTools.DocumentationShown": {
     "documentation": "Whether the Documentation tool is enabled"
   },
@@ -2235,6 +2239,9 @@
   "@phoenix/globaltype/RigidBody.Restitution": {
     "documentation": "Restitution"
   },
+  "@phoenix/globaltype/ScriptEngine.BreakpointMoved": {
+    "documentation": "Fires when a breakpoint queued by `:SetScriptBreakpoint` is applied to a different line number than originally requested"
+  },
   "@phoenix/globaltype/ScriptEngine.CloseVM": {
     "documentation": "Closes the specified Luau VM, releasing its resources"
   },
@@ -2251,7 +2258,7 @@
     "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
   },
   "@phoenix/globaltype/ScriptEngine.SetScriptBreakpoint": {
-    "documentation": "Sets the breakpoint for a given script"
+    "documentation": "Sets the breakpoint for a given script, returning the line number it was applied to. If the script has not loaded yet, it will queue the breakpoint and return the requested line number. The line number may be different than what was requested. Changes for queued breakpoints are signaled by `.BreakpointMoved`"
   },
   "@phoenix/globaltype/ScriptEngine.SetVMAllowedExecutionTime": {
     "documentation": "Sets how long script coroutines are allowed to run for, in seconds, before yielding. Scripts that overrun this duration will error"
@@ -2322,7 +2329,9 @@
   "@phoenix/globaltype/TreeLink.Target": {
     "documentation": "The target to link"
   },
-  "@phoenix/globaltype/UIButton.OnClicked": {},
+  "@phoenix/globaltype/UIButton.OnClicked": {
+    "documentation": "Fires when the button is clicked"
+  },
   "@phoenix/globaltype/UIFrame.BackgroundColor": {
     "documentation": "The color of the frame"
   },

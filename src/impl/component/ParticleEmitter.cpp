@@ -16,8 +16,8 @@ static std::default_random_engine s_RandGenerator = std::default_random_engine(s
 uint32_t ParticleEmitterComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcParticleEmitter>::CreateComponent(Object);
-	m_Components[id].Image = TextureManager::Get()->LoadFromPath("textures/image-placeholder.png");
-    m_Components[id].Object = Object;
+	Components[id].Image = TextureManager::Get()->LoadFromPath("textures/image-placeholder.png");
+    Components[id].Object = Object;
 
     return id;
 }

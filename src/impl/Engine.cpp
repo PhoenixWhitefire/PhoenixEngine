@@ -190,7 +190,7 @@ static void windowFocusChangedCallback(GLFWwindow*, int focused)
 
 static void windowKeyCallback(GLFWwindow*, int key, int scancode, int action, int mods)
 {
-	REFLECTION_SIGNAL_EVENT(EcPlayerInput::KeyEventCallbacks, InputEvent{
+	EcPlayerInput::SignalKeyEvent({ InputEvent{
 		.Key = {
 			.Button = key,
 			.Scancode = scancode,
@@ -198,30 +198,30 @@ static void windowKeyCallback(GLFWwindow*, int key, int scancode, int action, in
 			.Modifiers = mods
 		},
 		.Type = InputEventType::Key
-	});
+	} });
 }
 
 static void windowMouseCallback(GLFWwindow*, int button, int action, int mods)
 {
-	REFLECTION_SIGNAL_EVENT(EcPlayerInput::MouseButtonEventCallbacks, InputEvent{
+	EcPlayerInput::SignalMouseButtonEvent({ InputEvent{
 		.MouseButton = {
 			.Button = button,
 			.Action = action,
 			.Modifiers = mods
 		},
 		.Type = InputEventType::MouseButton
-	});
+	} });
 }
 
 static void windowScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-	REFLECTION_SIGNAL_EVENT(EcPlayerInput::ScrollEventCallbacks, InputEvent{
+	EcPlayerInput::SignalScrollEvent({ InputEvent{
 		.Scroll = {
 			.XOffset = xoffset,
 			.YOffset = yoffset
 		},
 		.Type = InputEventType::Scroll
-	});
+	} });
 }
 
 static void errorCallback(int code, const char* message)
@@ -1139,7 +1139,7 @@ void Engine::Start()
 		if (!IsHeadlessMode)
 			workspaceComponent->UpdateSoundListener();
 
-        REFLECTION_SIGNAL_EVENT(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, deltaTime);
+        Reflection::SignalEvent(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
         waitForParallelVMs();      // tsan ??
         ScriptEngine::StepVMs();   // serial phase

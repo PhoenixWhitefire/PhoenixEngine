@@ -14,12 +14,12 @@
 #include "script/TracyLuau.hpp"
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
+#include "component/ScriptEngineService.hpp"
 #include "DeveloperTools.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
 LUAU_FASTFLAG(LuauUdataMetatablePinned)
-LUAU_FASTFLAG(LuauAutoStack)
 
 struct LuauType
 {
@@ -74,7 +74,6 @@ static int luauAssertHandler(const char* expression, const char* file, int line,
 void ScriptEngine::Initialize()
 {
     FFlag::LuauUdataMetatablePinned.value = true;
-    FFlag::LuauAutoStack.value = true;
 
     RegisterNewVM(ROOT_LVM_NAME);
 
@@ -334,7 +333,8 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
         }
 
         lua_State* coroutine = yc->Coroutine;
-        assert(!((L::StateUserdata*)lua_getthreaddata(coroutine))->BeingDebugged && "That should only be set on the main thread!");
+        L::StateUserdata* corUd = (L::StateUserdata*)lua_getthreaddata(coroutine);
+        assert(!corUd->BeingDebugged && "That should only be set on the main thread!");
 
         int corRef = yc->CoroutineReference;
 
@@ -347,6 +347,12 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
         {
             ZoneScopedN("Resume");
             ZoneText(yc->DebugString.data(), yc->DebugString.size());
+
+            if (lua_Debug ar = {}; lua_getinfo(coroutine, 0, "sl", &ar))
+                ZoneTextF("%s:%d", ar.short_src, ar.currentline);
+            else
+                ZoneText(corUd->SpawnTrace.data(), corUd->SpawnTrace.size());
+
             yc->Dead = true;
 
             // TODO parallel debugger
@@ -796,7 +802,12 @@ int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, c
                 if (const auto& it = QueuedScriptBreakpoints.find(path); it != QueuedScriptBreakpoints.end())
                 {
                     for (const auto& [ line, enabled ] : it->second)
-                        lua_breakpoint(L, chunk, line, (int)enabled);
+                    {
+                        int actualLine = lua_breakpoint(L, chunk, line, (int)enabled);
+
+                        if (actualLine != line)
+                            EcScriptEngineService::SignalBreakpointMoved({ path, line, actualLine });
+                    }
 
                     QueuedScriptBreakpoints.erase(it);
                 }
@@ -826,6 +837,7 @@ int ScriptEngine::SetScriptBreakpoint(const std::string& VM, const std::string& 
 
     LuauVM& lvm = lvmit->second;
     std::string path = FileRW::ResolvePathAbsolute(Script);
+    int initial = lua_gettop(lvm.MainThread);
 
     lua_getfield(lvm.MainThread, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);
     assert(lua_type(lvm.MainThread, -1) == LUA_TTABLE);
@@ -843,7 +855,8 @@ int ScriptEngine::SetScriptBreakpoint(const std::string& VM, const std::string& 
         lineApplied = lua_breakpoint(lvm.MainThread, -1, Line, (int)Enabled);
     }
 
-    lua_pop(lvm.MainThread, 1);
+    assert(lua_gettop(lvm.MainThread) >= initial);
+    lua_settop(lvm.MainThread, initial);
     return lineApplied;
 }
 
@@ -1282,10 +1295,6 @@ int ScriptEngine::L::HandleMethodCall(
     ReflectorRef Reflector
 )
 {
-    lua_Debug ar = {};
-    lua_getinfo(L, 1, "sl", &ar);
-    Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("Script:{},Line:{}", ar.short_src, ar.currentline) };
-
     const std::span<const Reflection::ValueType>& paramTypes = func->Inputs;
     int numArgs = lua_gettop(L) - 1;
     assert(numArgs >= 0);
@@ -1608,8 +1617,11 @@ void ScriptEngine::L::DumpStacktrace(
 
         if (ar.short_src)
         {
-            const char* shorter = strstr(ar.short_src, "scripts/");
-            line.append(shorter ? shorter : ar.short_src);
+            std::string_view shortened = ar.short_src;
+            if (size_t scriptsPos = shortened.find("resources/scripts/"); scriptsPos != std::string::npos)
+                shortened = shortened.substr(scriptsPos + strlen("resources/"), shortened.size() - scriptsPos - strlen("resources/"));
+
+            line.append(shortened);
         }
 
         if (ar.currentline > 0)

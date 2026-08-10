@@ -704,6 +704,9 @@
       },
       "ScriptEngine": {
         "Description": "Managing Luau",
+        "Events": {
+          "BreakpointMoved": "Fires when a breakpoint queued by `:SetScriptBreakpoint` is applied to a different line number than originally requested"
+        },
         "Methods": {
           "CloseVM": {
             "Description": "Closes the specified Luau VM, releasing its resources",
@@ -730,7 +733,7 @@
             "In": "VmName: string, Code: string, ChunkName: string"
           },
           "SetScriptBreakpoint": {
-            "Description": "Sets the breakpoint for a given script",
+            "Description": "Sets the breakpoint for a given script, returning the line number it was applied to. If the script has not loaded yet, it will queue the breakpoint and return the requested line number. The line number may be different than what was requested. Changes for queued breakpoints are signaled by `.BreakpointMoved`",
             "In": "VM: string, ScriptPath: string, Line: number, Enabled: boolean",
             "Out": "number"
           },

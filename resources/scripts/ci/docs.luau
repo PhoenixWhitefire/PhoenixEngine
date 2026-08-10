@@ -699,17 +699,18 @@ local function dumpReflectionApi(t, d, cn, externType)
 
             for _, n in orderedEvents do
                 local v = t.Events[n]
+                local desc = d.Events and (if typeof(d.Events[n]) == "table" then d.Events[n].Description else d.Events[n])
 
-                if not d.Events or not d.Events[n] or (typeof(d.Events[n]) == "table" and not d.Events[n].Description) then
+                if not desc then
                     docWarn(`Missing doc comment for Event '{ cn }.{ n }'`)
                     continue
                 end
 
                 local argTypes = if d.Events[n].ArgumentTypes then `({d.Events[n].ArgumentTypes})` else rtolsub(v)
 
-                s ..= `* \`{ n }{ argTypes }\`: { d.Events[n].Description }\n`
+                s ..= `* \`{ n }{ argTypes }\`: { desc }\n`
                 documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
-                    documentation = d.Events[n].Description
+                    documentation = desc
                 }
 
                 if d.Events[n].ArgumentTypes then

@@ -450,8 +450,8 @@ void GameObject::Destroy()
 			if (const auto& it = std::find(collection.Items.begin(), collection.Items.end(), ObjectId); it != collection.Items.end())
 				collection.Items.erase(it);
 
-			REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
-			REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, ObjectManager->Collections[tagId].Name);
+			Reflection::SignalEvent(collection.RemovedEvent.Callbacks, { this->ToGenericValue() }, "TagRemovedSignal");
+			Reflection::SignalEvent(OnTagRemovedCallbacks, { ObjectManager->Collections[tagId].Name }, "GameObject.OnTagRemoved");
 		}
 		Tags.clear();
 
@@ -541,10 +541,13 @@ void GameObject::EvaluateOwners()
 		if (newOwningWorkspace != this->OwningWorkspace)
 		{
 			GameObjectManager* objectManager = GameObjectManager::Get();
-			REFLECTION_SIGNAL_EVENT(
+			Reflection::SignalEvent(
 				OnWorkspaceChangedCallbacks,
-				GameObject::s_ToGenericValue(objectManager->FindById(OwningWorkspace)),
-				GameObject::s_ToGenericValue(objectManager->FindById(newOwningWorkspace)),
+				{
+					GameObject::s_ToGenericValue(objectManager->FindById(OwningWorkspace)),
+					GameObject::s_ToGenericValue(objectManager->FindById(newOwningWorkspace)),
+				},
+				"GameObject.OnWorkspaceChanged"
 			);
 
 			this->ForEachDescendant([newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
@@ -575,10 +578,13 @@ void GameObject::EvaluateOwners()
 			newOwningWorkspace = ObjectId;
 
 		GameObjectManager* objectManager = GameObjectManager::Get();
-		REFLECTION_SIGNAL_EVENT(
+		Reflection::SignalEvent(
 			OnWorkspaceChangedCallbacks,
-			GameObject::s_ToGenericValue(objectManager->FindById(OwningWorkspace)),
-			GameObject::s_ToGenericValue(objectManager->FindById(newOwningWorkspace)),
+			{
+				GameObject::s_ToGenericValue(objectManager->FindById(OwningWorkspace)),
+				GameObject::s_ToGenericValue(objectManager->FindById(newOwningWorkspace)),
+			},
+			"GameObject.OnWorkspaceChanged"
 		);
 
 		this->ForEachDescendant([newOwningDataModel, newOwningWorkspace](const ObjectHandle& d) noexcept -> bool {
@@ -729,7 +735,7 @@ void GameObject::SetEnabled(bool Enabled)
 			return true;
 		});
 
-		REFLECTION_SIGNAL_EVENT(OnTreeEnabledChangedCallbacks, TreeEnabled);
+		Reflection::SignalEvent(OnTreeEnabledChangedCallbacks, { TreeEnabled }, "GameObject.OnTreeEnabledChanged");
 	}
 
 	if (EcSound* sound = FindComponent<EcSound>())
@@ -1306,8 +1312,8 @@ void GameObject::AddTag(const std::string& Tag)
 		Tags.push_back(collection.Id);
 		collection.Items.push_back(ObjectId);
 
-		REFLECTION_SIGNAL_EVENT(collection.AddedEvent.Callbacks, this->ToGenericValue());
-		REFLECTION_SIGNAL_EVENT(OnTagAddedCallbacks, Tag);
+		Reflection::SignalEvent(collection.AddedEvent.Callbacks, { this->ToGenericValue() }, "TagAddedSignal");
+		Reflection::SignalEvent(OnTagAddedCallbacks, { Tag }, "GameObject.OnTagAdded");
 
 		if (History* history = History::Get(); history->IsRecordingEnabled)
 		{
@@ -1339,8 +1345,8 @@ void GameObject::RemoveTag(const std::string& Tag)
 
 		GameObjectManager::Collection& collection = ObjectManager->Collections[it->second];
 		collection.Items.erase(std::find(collection.Items.begin(), collection.Items.end(), ObjectId));
-		REFLECTION_SIGNAL_EVENT(collection.RemovedEvent.Callbacks, this->ToGenericValue());
-		REFLECTION_SIGNAL_EVENT(OnTagRemovedCallbacks, Tag);
+		Reflection::SignalEvent(collection.RemovedEvent.Callbacks, { this->ToGenericValue() }, "OnTagRemovedSignal");
+		Reflection::SignalEvent(OnTagRemovedCallbacks, { Tag }, "GameObject.OnTagRemoved");
 
 		if (History* history = History::Get(); history->IsRecordingEnabled)
 		{

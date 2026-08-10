@@ -305,3 +305,39 @@ const Reflection::StaticEventMap& DeveloperToolsComponentManager::GetEvents()
 
     return events;
 }
+
+void EcDeveloperToolsService::SignalBreakpointUpdated(const std::vector<Reflection::GenericValue>& Arguments)
+{
+    ZoneScoped;
+    const DeveloperToolsComponentManager* manager = (DeveloperToolsComponentManager*)DeveloperToolsComponentManager::Get();
+
+    for (const EcDeveloperToolsService& ed : manager->Components)
+    {
+        if (ed.Valid)
+            Reflection::SignalEvent(ed.BreakpointUpdatedCallbacks, Arguments, "DeveloperTools.BreakpointUpdated");
+    }
+}
+
+void EcDeveloperToolsService::SignalBreakpointRemoved(const std::vector<Reflection::GenericValue>& Arguments)
+{
+    ZoneScoped;
+    const DeveloperToolsComponentManager* manager = (DeveloperToolsComponentManager*)DeveloperToolsComponentManager::Get();
+
+    for (const EcDeveloperToolsService& ed : manager->Components)
+    {
+        if (ed.Valid)
+            Reflection::SignalEvent(ed.BreakpointRemovedCallbacks, Arguments, "DeveloperTools.BreakpointRemoved");
+    }
+}
+
+void EcDeveloperToolsService::SignalDebuggerRequestedStop(const std::vector<Reflection::GenericValue>& Arguments)
+{
+    ZoneScoped;
+    const DeveloperToolsComponentManager* manager = (DeveloperToolsComponentManager*)DeveloperToolsComponentManager::Get();
+
+    for (const EcDeveloperToolsService& ed : manager->Components)
+    {
+        if (ed.Valid)
+            Reflection::SignalEvent(ed.DebuggerRequestedStopCallbacks, Arguments, "DeveloperTools.DebuggerRequestedStop");
+    }
+}

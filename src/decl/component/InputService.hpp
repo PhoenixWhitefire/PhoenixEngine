@@ -7,9 +7,13 @@
 
 struct EcPlayerInput : public Component<EntityComponent::PlayerInput>
 {
-    static inline std::vector<Reflection::EventConnection> KeyEventCallbacks;
-    static inline std::vector<Reflection::EventConnection> MouseButtonEventCallbacks;
-    static inline std::vector<Reflection::EventConnection> ScrollEventCallbacks;
+    static void SignalKeyEvent(const std::vector<Reflection::GenericValue>&);
+    static void SignalMouseButtonEvent(const std::vector<Reflection::GenericValue>&);
+    static void SignalScrollEvent(const std::vector<Reflection::GenericValue>&);
+
+    std::vector<Reflection::EventConnection> KeyEventCallbacks;
+    std::vector<Reflection::EventConnection> MouseButtonEventCallbacks;
+    std::vector<Reflection::EventConnection> ScrollEventCallbacks;
 
     bool Valid = true;
 };

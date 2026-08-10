@@ -14,7 +14,7 @@
 uint32_t DataModelComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcDataModel>::CreateComponent(Object);
-    m_Components[id].Object = Object;
+    Components[id].Object = Object;
     Object->OwningDataModel = Object->ObjectId;
 
     return id;
@@ -22,7 +22,7 @@ uint32_t DataModelComponentManager::CreateComponent(GameObject* Object)
 
 void DataModelComponentManager::DeleteComponent(uint32_t Id)
 {
-    EcDataModel& dm = m_Components.at(Id);
+    EcDataModel& dm = Components.at(Id);
     dm.Close();
 
     //for (lua_State* L : dm.Modules)
@@ -166,7 +166,7 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
                     RAISE_RT("Exit code '{}' is out of bounds for a 32-bit integer ([{}, {}])", exitCode, INT32_MIN, INT32_MAX);
 
                 dm->Closed = true;
-                REFLECTION_SIGNAL_EVENT(dm->ClosingCallbacks);
+                Reflection::SignalEvent(dm->ClosingCallbacks, {}, "DataModel.Closing");
 
                 return {};
             }
@@ -339,7 +339,7 @@ void EcDataModel::Close()
 {
     if (CloseCallback.Func)
     {
-        REFLECTION_SIGNAL_EVENT(ClosingCallbacks);
+        Reflection::SignalEvent(ClosingCallbacks, {}, "DataModel.Closing");
 
         (*CloseCallback.Func)({});
         (*CloseCallback.Cleanup)();
@@ -354,7 +354,7 @@ void EcDataModel::Close()
 
 void DataModelComponentManager::NotifyAllOfShutdown()
 {
-    for (EcDataModel& dm : m_Components)
+    for (EcDataModel& dm : Components)
     {
         if (dm.Valid)
             dm.Close();

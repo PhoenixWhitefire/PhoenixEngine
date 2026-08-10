@@ -213,3 +213,39 @@ void PlayerInputComponentManager::Shutdown()
         DevCursor = nullptr;
     }
 }
+
+void EcPlayerInput::SignalKeyEvent(const std::vector<Reflection::GenericValue>& Arguments)
+{
+    ZoneScoped;
+    const PlayerInputComponentManager* manager = (PlayerInputComponentManager*)PlayerInputComponentManager::Get();
+
+    for (const EcPlayerInput& ep : manager->Components)
+    {
+        if (ep.Valid)
+            Reflection::SignalEvent(ep.KeyEventCallbacks, Arguments, "PlayerInput.KeyEvent");
+    }
+}
+
+void EcPlayerInput::SignalMouseButtonEvent(const std::vector<Reflection::GenericValue>& Arguments)
+{
+    ZoneScoped;
+    const PlayerInputComponentManager* manager = (PlayerInputComponentManager*)PlayerInputComponentManager::Get();
+
+    for (const EcPlayerInput& ep : manager->Components)
+    {
+        if (ep.Valid)
+            Reflection::SignalEvent(ep.MouseButtonEventCallbacks, Arguments, "PlayerInput.MouseButtonEvent");
+    }
+}
+
+void EcPlayerInput::SignalScrollEvent(const std::vector<Reflection::GenericValue>& Arguments)
+{
+    ZoneScoped;
+    const PlayerInputComponentManager* manager = (PlayerInputComponentManager*)PlayerInputComponentManager::Get();
+
+    for (const EcPlayerInput& ep : manager->Components)
+    {
+        if (ep.Valid)
+            Reflection::SignalEvent(ep.ScrollEventCallbacks, Arguments, "PlayerInput.ScrollEvent");
+    }
+}

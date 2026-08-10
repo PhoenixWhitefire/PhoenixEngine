@@ -792,3 +792,31 @@ void Reflection::EventCleanup(std::vector<EventConnection>& Callbacks)
         }
     }
 }
+
+void Reflection::SignalEvent(const std::vector<EventConnection>& Connections, const std::vector<GenericValue>& Arguments, const std::string_view Name)
+{
+    ZoneScoped;
+    ZoneText(Name.data(), Name.size());
+
+    const std::vector<Reflection::EventConnection> dispatching = Connections;
+
+    for (uint32_t id = 0; id < (uint32_t)dispatching.size(); id++)
+    {
+        if (const Reflection::EventCallbackFunction& callback = dispatching[id].Callback)
+            callback(Arguments, id, UINT32_MAX);
+    }
+}
+
+void Reflection::SignalRestrictedEvent(uint32_t From, const std::vector<EventConnection>& Connections, const std::vector<GenericValue>& Arguments, const std::string_view Name)
+{
+    ZoneScoped;
+    ZoneText(Name.data(), Name.size());
+
+    const std::vector<Reflection::EventConnection> dispatching = Connections;
+
+    for (uint32_t id = 0; id < (uint32_t)dispatching.size(); id++)
+    {
+        if (const Reflection::EventCallbackFunction& callback = dispatching[id].Callback)
+            callback(Arguments, id, From);
+    }
+}

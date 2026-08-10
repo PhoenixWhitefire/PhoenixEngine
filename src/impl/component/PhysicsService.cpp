@@ -53,7 +53,7 @@ const Reflection::StaticMethodMap& PhysicsComponentManager::GetMethods()
 uint32_t PhysicsComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcPhysicsService>::CreateComponent(Object);
-    m_Components[id].Object = Object;
+    Components[id].Object = Object;
 
     return id;
 }

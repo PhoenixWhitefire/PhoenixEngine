@@ -4,7 +4,7 @@
 uint32_t TreeLinkComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcTreeLink>::CreateComponent(Object);
-	m_Components[id].Object = Object;
+	Components[id].Object = Object;
 
     return id;
 }

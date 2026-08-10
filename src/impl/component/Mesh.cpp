@@ -29,7 +29,7 @@ uint32_t MeshComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcMesh>::CreateComponent(Object);
 
-	EcMesh& cm = m_Components[id];
+	EcMesh& cm = Components[id];
 	cm.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
 	cm.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
 	cm.ComponentId = id;
@@ -42,7 +42,7 @@ void MeshComponentManager::DeleteComponent(uint32_t Id)
 {
     // TODO id reuse with handles that have a counter per re-use to reduce memory growth
 
-	EcMesh& mesh = m_Components[Id];
+	EcMesh& mesh = Components[Id];
 	tryMarkFreeSkinnedMeshPseudoAsset(mesh);
 
 	ComponentManager<EcMesh>::DeleteComponent(Id);

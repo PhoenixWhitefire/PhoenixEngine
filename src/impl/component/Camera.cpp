@@ -12,7 +12,7 @@
 uint32_t CameraComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcCamera>::CreateComponent(Object);
-	m_Components[id].Object = Object;
+	Components[id].Object = Object;
 
 	return id;
 }

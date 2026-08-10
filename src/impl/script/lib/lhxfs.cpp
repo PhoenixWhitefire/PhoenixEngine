@@ -33,7 +33,7 @@
 static void setSelfAlias(lua_State* L)
 {
     lua_Debug ar = {};
-    if (!lua_getinfo(L, 1, "s", &ar) || strlen(ar.short_src) < 2)
+    if (!lua_getinfo(L, 1, "s", &ar) || strlen(ar.short_src) < 2 || ar.short_src[0] != '@')
     {
         FileRW::DefineAlias("self", "");
         FileRW::DefineAlias("selfdir", "");

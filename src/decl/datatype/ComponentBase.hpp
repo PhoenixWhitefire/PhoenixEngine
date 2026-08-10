@@ -79,37 +79,37 @@ public:
 
         if (id == UINT32_MAX)
         {
-            id = static_cast<uint32_t>(m_Components.size());
-            m_Components.emplace_back();
+            id = static_cast<uint32_t>(Components.size());
+            Components.emplace_back();
 
-            T& component = m_Components.back();
+            T& component = Components.back();
             component.Object = ref;
             component.Valid = true;
             assert(component.Valid);
         }
         else
         {
-            T& component = m_Components[id];
+            T& component = Components[id];
             NextFreeId = component.NextFreeId;
             component = T();
         }
 
-        REFLECTION_SIGNAL_EVENT_RESTRICT(ComponentCreatedCallbacks, ref.TargetId, Reflection::GenericValue(ref));
+        Reflection::SignalRestrictedEvent(ref.TargetId, ComponentCreatedCallbacks, { Reflection::GenericValue(ref) }, "ComponentCreatedSignal");
         return id;
     }
 
     virtual BaseComponent* GetComponent(uint32_t Id) override
     {
-        T& component = m_Components.at(Id);
+        T& component = Components.at(Id);
         return component.Valid ? (BaseComponent*)&component : nullptr;
     }
 
     virtual std::vector<BaseComponent*> GetComponents() override
     {
         std::vector<BaseComponent*> v;
-        v.reserve(m_Components.size());
+        v.reserve(Components.size());
 
-        for (T& component : m_Components)
+        for (T& component : Components)
         {
             if (component.Valid)
                 v.push_back((BaseComponent*)&component);
@@ -120,14 +120,14 @@ public:
 
     virtual void ForEachComponent(const std::function<bool(BaseComponent*)> Continue) override
     {
-        for (T& component : m_Components)
+        for (T& component : Components)
             if (component.Valid && !Continue((BaseComponent*)&component))
                 break;
     }
 
     virtual void DeleteComponent(uint32_t Id) override
     {
-        T& component = m_Components.at(Id);
+        T& component = Components.at(Id);
         for (auto& [ _, event ] : GetEvents())
             event.Cleanup((void*)&component);
 
@@ -135,7 +135,7 @@ public:
         NextFreeId = Id;
 
         component.Valid = false;
-        REFLECTION_SIGNAL_EVENT_RESTRICT(ComponentDeletedCallbacks, component.Object.TargetId, Reflection::GenericValue(component.Object));
+        Reflection::SignalRestrictedEvent(component.Object.TargetId, ComponentDeletedCallbacks, { Reflection::GenericValue(component.Object) }, "ComponentDeletedSignal");
     }
 
     virtual void BindService(uint32_t) override
@@ -148,7 +148,7 @@ public:
 
     virtual void Shutdown() override
     {
-        m_Components.clear();
+        Components.clear();
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -185,7 +185,7 @@ public:
         RegisterComponentManager(T::Type, this);
     }
 
-    std::vector<T> m_Components;
+    std::vector<T> Components;
     uint32_t NextFreeId = UINT32_MAX;
 };
 

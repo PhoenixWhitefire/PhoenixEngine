@@ -16,11 +16,11 @@ local ProjectEditing = require("@ed/stages/ProjectEditing")
 
 local GameClosedConnection = nil
 
-local function valuesOf<T>(t: { read [unknown]: T }): { T }
+local function valuesOf<I, V>(t: { read [I]: V }): { V }
     local values = {}
 
     for _, v in t do
-        table.insert(values, t)
+        table.insert(values, v)
     end
 
     return values
@@ -32,6 +32,22 @@ DeveloperTools.DebuggerRequestedStop:Connect(function()
     else
         warn(`Got debugger stop signal while in { State.CurrentStage }`)
     end
+end)
+
+ScriptEngine.BreakpointMoved:Connect(function(Script, OriginalLine, NewLine)
+    local scriptBreakpoints = ProjectEditing.Breakpoints[Script]
+
+    if not scriptBreakpoints then
+        warn(`Breakpoint { Script } moved from { OriginalLine } -> { NewLine }, but breakpoints were never applied?`)
+        return
+    end
+
+    local breakpoint = scriptBreakpoints[OriginalLine]
+    scriptBreakpoints[OriginalLine] = nil
+    scriptBreakpoints[NewLine] = breakpoint
+    breakpoint.Line = NewLine
+
+    DeveloperTools:SetDocumentBreakpoints(Script, valuesOf(scriptBreakpoints))
 end)
 
 function ProjectPlaying.Enter(_prev)
@@ -54,7 +70,7 @@ function ProjectPlaying.Enter(_prev)
 
     if Preferences.DebuggerEnabled then
         for scriptPath, breakpointsForScript in ProjectEditing.Breakpoints do
-            for _, breakpoint in breakpointsForScript do
+            for _, breakpoint in valuesOf(breakpointsForScript) do
                 local realLine = ScriptEngine:SetScriptBreakpoint(
                     Configuration.PlaytestVMName,
                     scriptPath,
@@ -63,10 +79,13 @@ function ProjectPlaying.Enter(_prev)
                 )
 
                 if realLine ~= breakpoint.Line then
+                    breakpointsForScript[breakpoint.Line] = nil
+                    breakpointsForScript[realLine] = breakpoint
                     breakpoint.Line = realLine
-                    DeveloperTools:SetDocumentBreakpoints(scriptPath, valuesOf(breakpointsForScript))
                 end
             end
+
+            DeveloperTools:SetDocumentBreakpoints(scriptPath, valuesOf(breakpointsForScript))
         end
     else
         ScriptEngine:DetachDebuggerFromVM(Configuration.PlaytestVMName)

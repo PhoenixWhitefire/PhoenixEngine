@@ -203,3 +203,24 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
 
     return methods;
 }
+
+const Reflection::StaticEventMap& ScriptEngineComponentManager::GetEvents()
+{
+    static const Reflection::StaticEventMap events = {
+        REFLECTION_EVENT(EcScriptEngineService, BreakpointMoved, Reflection::ValueType::String, Reflection::ValueType::Integer, Reflection::ValueType::Integer),
+    };
+
+    return events;
+}
+
+void EcScriptEngineService::SignalBreakpointMoved(const std::vector<Reflection::GenericValue>& Arguments)
+{
+    ZoneScoped;
+    const ScriptEngineComponentManager* manager = (ScriptEngineComponentManager*)ScriptEngineComponentManager::Get();
+
+    for (const EcScriptEngineService& ed : manager->Components)
+    {
+        if (ed.Valid)
+            Reflection::SignalEvent(ed.BreakpointMovedCallbacks, Arguments, "ScriptEngine.BreakpointMoved");
+    }
+}

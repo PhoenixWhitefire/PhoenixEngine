@@ -77,9 +77,9 @@ static void updateSpatialHash(EcRigidBody* crb)
 uint32_t RigidBodyComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcRigidBody>::CreateComponent(Object);
-	m_Components[id].Object = Object;
+	Components[id].Object = Object;
 
-	updateSpatialHash(&m_Components[id]);
+	updateSpatialHash(&Components[id]);
 	return id;
 }
 

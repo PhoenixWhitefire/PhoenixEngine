@@ -327,6 +327,9 @@
         }
       },
       "ScriptEngine": {
+        "Events": {
+          "BreakpointMoved": "(String, Integer, Integer)"
+        },
         "Methods": {
           "CloseVM": "(String) -> ()",
           "CompileToBytecode": "(String, Integer?, Integer?) -> (Buffer)",

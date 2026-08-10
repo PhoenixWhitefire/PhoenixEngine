@@ -5,8 +5,8 @@
 uint32_t CollectionsComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcCollections>::CreateComponent(Object);
-    m_Components[id].Reference = { id, EntityComponent::Collections };
-    m_Components[id].Object = Object;
+    Components[id].Reference = { id, EntityComponent::Collections };
+    Components[id].Object = Object;
 
     return id;
 }

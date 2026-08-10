@@ -162,7 +162,7 @@ const Reflection::StaticPropertyMap& AnimationStateComponentManager::GetProperti
 uint32_t AnimatorComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcAnimator>::CreateComponent(Object);
-    m_Components[id].Object = Object;
+    Components[id].Object = Object;
 
     return id;
 }

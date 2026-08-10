@@ -77,20 +77,6 @@
     } \
 }
 
-#define REFLECTION_SIGNAL_EVENT(CbListOg, ...) { ZoneScopedN(#CbListOg); \
-    std::vector<Reflection::EventConnection> CbList = CbListOg; \
-    for (size_t cbi = 0; cbi < CbList.size(); cbi++) \
-        if (const Reflection::EventCallbackFunction& cb = CbList[cbi].Callback) \
-            cb({ __VA_ARGS__ }, (uint32_t)cbi, UINT32_MAX); \
-} \
-
-#define REFLECTION_SIGNAL_EVENT_RESTRICT(CbListOg, DataModelDescendingObject, ...) { ZoneScopedN(#CbListOg); \
-    std::vector<Reflection::EventConnection> CbList = CbListOg; \
-    for (size_t cbi = 0; cbi < CbList.size(); cbi++) \
-        if (const Reflection::EventCallbackFunction& cb = CbList[cbi].Callback) \
-            cb({ __VA_ARGS__ }, (uint32_t)cbi, DataModelDescendingObject); \
-} \
-
 #define REFLECTION_OPTIONAL(ty) (Reflection::ValueType)(Reflection::ValueType::ty + Reflection::ValueType::Null)
 
 // bleh
@@ -337,6 +323,8 @@ namespace Reflection
     uint32_t EventConnect(std::vector<EventConnection>&, const Reflection::EventConnection&);
     void EventDisconnect(std::vector<EventConnection>&, uint32_t);
     void EventCleanup(std::vector<EventConnection>&);
+    void SignalEvent(const std::vector<EventConnection>& Connections, const std::vector<GenericValue>&, const std::string_view Name);
+    void SignalRestrictedEvent(uint32_t From, const std::vector<EventConnection>& Connections, const std::vector<GenericValue>&, const std::string_view Name);
 
     typedef std::unordered_map<std::string_view, Reflection::PropertyDescriptor> StaticPropertyMap;
     typedef std::unordered_map<std::string_view, Reflection::MethodDescriptor> StaticMethodMap;

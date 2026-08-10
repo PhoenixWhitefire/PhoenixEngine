@@ -616,6 +616,8 @@ export type EcScriptEngine = {
   RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string) -> (boolean, string?),
   SetScriptBreakpoint: (self: EcScriptEngine, VM: string, ScriptPath: string, Line: number, Enabled: boolean) -> number,
   SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
+
+  BreakpointMoved: EventSignal<(string, number, number)>,
 }
 
 export type EcSound = {

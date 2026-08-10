@@ -24,8 +24,8 @@ static ObjectHandle createCamera()
 uint32_t WorkspaceComponentManager::CreateComponent(GameObject* Object)
 {
     uint32_t id = ComponentManager<EcWorkspace>::CreateComponent(Object);
-    m_Components[id].Object = Object;
-    m_Components[id].Object->OwningWorkspace = Object->ObjectId;
+    Components[id].Object = Object;
+    Components[id].Object->OwningWorkspace = Object->ObjectId;
     Object->EvaluateOwners();
 
     return id;
@@ -33,7 +33,7 @@ uint32_t WorkspaceComponentManager::CreateComponent(GameObject* Object)
 
 void WorkspaceComponentManager::DeleteComponent(uint32_t Id)
 {
-    EcWorkspace& wp = m_Components[Id];
+    EcWorkspace& wp = Components[Id];
 
     if (uint32_t sceneCamId = wp.m_SceneCameraId; sceneCamId != PHX_GAMEOBJECT_NULL_ID && sceneCamId != s_FallbackCamera->ObjectId)
     {

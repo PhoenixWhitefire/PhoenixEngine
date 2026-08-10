@@ -36,7 +36,7 @@ static Bone* getUnderlyingBone(EcBone* BoneComponent)
 uint32_t BoneComponentManager::CreateComponent(GameObject* Object)
 {
 	uint32_t id = ComponentManager<EcBone>::CreateComponent(Object);
-	m_Components[id].Object = Object;
+	Components[id].Object = Object;
 
     return id;
 }

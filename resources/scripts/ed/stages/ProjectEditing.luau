@@ -33,9 +33,9 @@ local NewCameraCreatedConnection: EventConnection? = nil
 local Breakpoints: { [string]: { [number]: DebugBreakpointInfo } } = {}
 ProjectEditing.Breakpoints = Breakpoints
 
-type BreakpointsData = { File: string, Breakpoints: { DebugBreakpointInfo } }
+type BreakpointsData = { File: string, Breakpoints: { DebugBreakpointInfo }? }
 
-local function valuesOf<T>(t: { read [unknown]: T }): { T }
+local function valuesOf<I, V>(t: { read [I]: V }): { V }
     local values = {}
 
     for _, v in t do
@@ -59,22 +59,36 @@ DeveloperTools.BreakpointUpdated:Connect(function(file, breakpoint)
         local realLine = ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, file, breakpoint.Line, breakpoint.Enabled or breakpoint.ConditionEnabled)
 
         if breakpoint.Line ~= realLine then
+            breakpointsForScript[breakpoint.Line] = nil
+            breakpointsForScript[realLine] = breakpoint
             breakpoint.Line = realLine
-            DeveloperTools:SetDocumentBreakpoints(file, valuesOf(breakpointsForScript))
         end
     end
+
+    DeveloperTools:SetDocumentBreakpoints(file, valuesOf(breakpointsForScript))
 end)
 
 DeveloperTools.BreakpointRemoved:Connect(function(file, line)
     local breakpointsForScript = Breakpoints[file]
 
     if breakpointsForScript then
-        breakpointsForScript[line] = nil
+        if breakpointsForScript[line] then
+            breakpointsForScript[line] = nil
+        end
+    else
+        breakpointsForScript = {}
+        Breakpoints[file] = {}
     end
 
     if State.CurrentStage == "ProjectPlaying" then
-        ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, file, line, false)
+        local realLine = ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, file, line, false)
+
+        if breakpointsForScript[realLine] then
+            breakpointsForScript[realLine] = nil
+        end
     end
+
+    DeveloperTools:SetDocumentBreakpoints(file, valuesOf(breakpointsForScript or {}))
 end)
 
 local function makeVisualizerForObject(Object: GameObject, Visualization: GameObject & EcTransform)
@@ -145,7 +159,14 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
 
         if edFile.Breakpoints then
             for _, breakpointsInfo in edFile.Breakpoints :: { BreakpointsData } do
-                DeveloperTools:SetDocumentBreakpoints(breakpointsInfo.File, breakpointsInfo.Breakpoints)
+                DeveloperTools:SetDocumentBreakpoints(breakpointsInfo.File, assert(breakpointsInfo.Breakpoints))
+
+                local dictionary = {}
+                for _, bp in breakpointsInfo.Breakpoints do
+                    dictionary[bp.Line] = bp
+                end
+
+                Breakpoints[breakpointsInfo.File] = dictionary
             end
         end
 

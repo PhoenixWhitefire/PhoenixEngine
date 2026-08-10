@@ -6,9 +6,13 @@
 
 struct EcDeveloperToolsService : public Component<EntityComponent::DeveloperTools>
 {
-    static inline std::vector<Reflection::EventConnection> BreakpointUpdatedCallbacks;
-    static inline std::vector<Reflection::EventConnection> BreakpointRemovedCallbacks;
-    static inline std::vector<Reflection::EventConnection> DebuggerRequestedStopCallbacks;
+    static void SignalBreakpointUpdated(const std::vector<Reflection::GenericValue>&);
+    static void SignalBreakpointRemoved(const std::vector<Reflection::GenericValue>&);
+    static void SignalDebuggerRequestedStop(const std::vector<Reflection::GenericValue>&);
+
+    std::vector<Reflection::EventConnection> BreakpointUpdatedCallbacks;
+    std::vector<Reflection::EventConnection> BreakpointRemovedCallbacks;
+    std::vector<Reflection::EventConnection> DebuggerRequestedStopCallbacks;
 
     bool Valid = true;
 };
