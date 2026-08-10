@@ -792,6 +792,8 @@ static void renderTextEditors()
             textEditorSaveFile(tab);
             ImGui::End();
 
+            s_QueuedBreakpoints[tab.FilePath] = DeveloperTools::GetDocumentBreakpoints(tab.FilePath);
+
             s_TextEditors.erase(s_TextEditors.begin() + index);
             index--;
 
@@ -5904,15 +5906,13 @@ static void resetScriptTimeouts()
 
 static bool singleStepShouldBreak(lua_State* L, int PrevDepth, const lua_Debug* ar)
 {
-    return (ar->currentline > debuggerAr.currentline
-        || ar->short_src != debuggerAr.short_src)
+    return ar->currentline > debuggerAr.currentline
         && PrevDepth >= lua_stackdepth(L);
 }
 
 static bool stepIntoShouldBreak(lua_State* L, int PrevDepth, const lua_Debug* ar)
 {
     return ar->currentline != debuggerAr.currentline
-        || ar->short_src != debuggerAr.short_src
         || PrevDepth < lua_stackdepth(L);
 }
 
@@ -5936,10 +5936,10 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
             if (ShouldBreak(L, PrevDepth, ar))
             {
                 lua_getinfo(L, 0, "slnu", &debuggerAr);
-                debuggerAr.currentline = ar->currentline;
+                //debuggerAr.currentline = ar->currentline;
                 lua_break(L);
 
-                DeveloperTools::OnDebugBreak(L, &debuggerAr, DebugBreakReason::DebuggerStep);
+                //DeveloperTools::OnDebugBreak(L, &debuggerAr, DebugBreakReason::DebuggerStep);
             }
         };
 
@@ -5950,8 +5950,13 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
         DeveloperTools::LeaveDebugger();
     else
     {
-        lua_getinfo(L, 0, "sln", &debuggerAr);
-        DeveloperTools::OnDebugBreak(L, &debuggerAr, status == LUA_ERRRUN ? DebugBreakReason::Error : DebugBreakReason::BrokeIntoDebugger);
+        TextEditorTab& tab = invokeTextEditor(debuggerAr.short_src ? debuggerAr.short_src : "!InlineDocument:Unknown source");
+        tab.DebuggerCurrentLine = debuggerAr.currentline;
+        tab.JumpToLine = debuggerAr.currentline;
+        tab.SetUIFocus = true;
+
+        //lua_getinfo(L, 0, "sln", &debuggerAr);
+        //DeveloperTools::OnDebugBreak(L, &debuggerAr, status == LUA_ERRRUN ? DebugBreakReason::Error : DebugBreakReason::BrokeIntoDebugger);
     }
 }
 
@@ -6238,21 +6243,7 @@ void renderDebugger()
             ImGui::PushID(coroutine);
 
             lua_Debug car = {};
-
-            int li = 0;
-            lua_getinfo(coroutine, li, "slnu", &car);
-
-            while (!car.short_src || (strcmp(car.short_src, "[C]") == 0))
-            {
-                li++;
-
-                if (!lua_getinfo(coroutine, li, "slnu", &car))
-                {
-                    lua_getinfo(coroutine, 0, "slnu", &car);
-                    car.short_src = nullptr;
-                    break;
-                }
-            }
+            lua_getinfo(coroutine, 0, "slnu", &car);
 
             const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
             std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
@@ -6502,20 +6493,9 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
 
     InDebugger = true;
 
-    int li = 0;
-    lua_getinfo(L, li, "slnu", ar);
-
-    while (!ar->short_src || (strcmp(ar->short_src, "[C]") == 0))
-    {
-        li++;
-
-        if (!lua_getinfo(L, li, "slnu", ar))
-        {
-            lua_getinfo(L, 0, "slnu", ar);
-            ar->short_src = "Failed to find function at call frame";
-            break;
-        }
-    }
+    lua_getinfo(L, 0, "slnu", ar);
+    if (ar->what[0] == 'C')
+        lua_getinfo(L, 1, "slnu", ar);
 
     TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
     for (TextEditorTab& otherTab : s_TextEditors)
@@ -6549,12 +6529,12 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
         cvii++;
     }
 
+    if (Reason == DebugBreakReason::Breakpoint && (debuggerL != L || debuggerAr.currentline != ar->currentline))
+        lua_break(L);
+
     debuggerL = L;
     debuggerAr = *ar;
     debuggerReason = Reason;
-
-    if (Reason == DebugBreakReason::Breakpoint)
-        lua_break(L);
 }
 
 void DeveloperTools::LeaveDebugger()

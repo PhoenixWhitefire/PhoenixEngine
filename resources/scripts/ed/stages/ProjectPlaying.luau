@@ -16,6 +16,16 @@ local ProjectEditing = require("@ed/stages/ProjectEditing")
 
 local GameClosedConnection = nil
 
+local function valuesOf<T>(t: { read [unknown]: T }): { T }
+    local values = {}
+
+    for _, v in t do
+        table.insert(values, t)
+    end
+
+    return values
+end
+
 DeveloperTools.DebuggerRequestedStop:Connect(function()
     if State.CurrentStage == "ProjectPlaying" then
         State.ChangeStageTo("ProjectEditing")
@@ -45,7 +55,17 @@ function ProjectPlaying.Enter(_prev)
     if Preferences.DebuggerEnabled then
         for scriptPath, breakpointsForScript in ProjectEditing.Breakpoints do
             for _, breakpoint in breakpointsForScript do
-                ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, scriptPath, breakpoint.Line, breakpoint.Enabled or breakpoint.ConditionEnabled)
+                local realLine = ScriptEngine:SetScriptBreakpoint(
+                    Configuration.PlaytestVMName,
+                    scriptPath,
+                    breakpoint.Line,
+                    breakpoint.Enabled or breakpoint.ConditionEnabled
+                )
+
+                if realLine ~= breakpoint.Line then
+                    breakpoint.Line = realLine
+                    DeveloperTools:SetDocumentBreakpoints(scriptPath, valuesOf(breakpointsForScript))
+                end
             end
         end
     else

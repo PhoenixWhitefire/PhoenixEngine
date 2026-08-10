@@ -35,20 +35,34 @@ ProjectEditing.Breakpoints = Breakpoints
 
 type BreakpointsData = { File: string, Breakpoints: { DebugBreakpointInfo } }
 
+local function valuesOf<T>(t: { read [unknown]: T }): { T }
+    local values = {}
+
+    for _, v in t do
+        table.insert(values, v)
+    end
+
+    return values
+end
+
 DeveloperTools.BreakpointUpdated:Connect(function(file, breakpoint)
     local breakpointsForScript = Breakpoints[file]
 
     if not breakpointsForScript then
-        breakpoint.Enabled = true
         breakpointsForScript = {}
         Breakpoints[file] = breakpointsForScript
     end
 
-    if not breakpointsForScript[breakpoint.Line] then
-        breakpoint.Enabled = true
-    end
-
     breakpointsForScript[breakpoint.Line] = breakpoint
+
+    if State.CurrentStage == "ProjectPlaying" then
+        local realLine = ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, file, breakpoint.Line, breakpoint.Enabled or breakpoint.ConditionEnabled)
+
+        if breakpoint.Line ~= realLine then
+            breakpoint.Line = realLine
+            DeveloperTools:SetDocumentBreakpoints(file, valuesOf(breakpointsForScript))
+        end
+    end
 end)
 
 DeveloperTools.BreakpointRemoved:Connect(function(file, line)
