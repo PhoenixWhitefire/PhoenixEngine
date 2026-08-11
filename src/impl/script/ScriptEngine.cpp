@@ -1959,7 +1959,19 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
             {
                 StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
                 if (vmud->DebuggerAttached)
-                    DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::Breakpoint);
+                {
+                    if (lua_isyieldable(L))
+                        DeveloperTools::OnDebugBreak(L, ar, DebugBreakReason::Breakpoint);
+                    else
+                    {
+                        lua_getinfo(L, 0, "s", ar);
+
+                        Log.ErrorF(
+                            "Breakpoint {}:{} cannot be hit as it is not within a yieldable context (metamethod/C-call boundary)",
+                            ar->short_src, ar->currentline
+                        );
+                    }
+                }
             };
         cb->debuginterrupt = [](lua_State* L, lua_Debug* ar)
             {

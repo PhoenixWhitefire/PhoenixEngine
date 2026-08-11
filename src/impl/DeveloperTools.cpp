@@ -5949,17 +5949,27 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
         {
             if (ShouldBreak(L, PrevDepth, ar))
             {
-                DebuggerSteppingLine = ar->currentline;
-                lua_break(L);
+                if (lua_isyieldable(L))
+                {
+                    DebuggerSteppingLine = ar->currentline;
+                    lua_break(L);
+                }
+                else
+                {
+                    lua_getinfo(L, 0, "s", ar);
+
+                    Log.ErrorF(
+                        "Step to {}:{} will not break because it is not within a yieldable context (metamethod/C-call boundary)",
+                        ar->short_src, ar->currentline
+                    );
+                }
             }
         };
 
     lua_singlestep(L, true);
     lua_Status status = ScriptEngine::L::Resume(L, L, 0);
 
-    if (status != LUA_BREAK && status != LUA_ERRRUN)
-        DeveloperTools::LeaveDebugger();
-    else
+    if (status == LUA_BREAK)
     {
         lua_getinfo(L, 0, "slnu", &debuggerAr);
 
@@ -5968,6 +5978,16 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
         tab.JumpToLine = debuggerAr.currentline;
         tab.SetUIFocus = true;
     }
+    else if (status == LUA_ERRRUN)
+    {
+        lua_getinfo(L, 0, "slnu", &debuggerAr);
+        if (debuggerAr.what[0] == 'C')
+            lua_getinfo(L, 1, "slnu", &debuggerAr);
+
+        DeveloperTools::OnDebugBreak(debuggerL, &debuggerAr, DebugBreakReason::Error);
+    }
+    else
+        DeveloperTools::LeaveDebugger();
 }
 
 static bool isSteppable(const ScriptEngine::L::StateUserdata* vmud, DebugBreakReason Reason, lua_State* L)
@@ -6056,6 +6076,18 @@ void renderDebugger()
         ImGui::SetNextWindowFocus();
         DebuggerFirstFrame = false;
         DebuggerSecondFrame = true;
+
+        if (debuggerReason == DebugBreakReason::Breakpoint)
+        {
+            DebuggerSteppingLine = debuggerAr.currentline;
+            debuggerStep(debuggerL, singleStepShouldBreak);
+
+            lua_getinfo(debuggerL, 0, "l", &debuggerAr);
+
+            TextEditorTab& tab = invokeTextEditor(debuggerAr.short_src ? debuggerAr.short_src : "!InlineDocument:Unknown source");
+            tab.DebuggerCurrentLine = debuggerAr.currentline;
+            tab.JumpToLine = debuggerAr.currentline;
+        }
     }
 
     if (DebuggerSecondFrame)
@@ -6504,9 +6536,11 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
 
     InDebugger = true;
 
-    lua_getinfo(L, 0, "slnu", ar);
+    const char* infostr = Reason == DebugBreakReason::Breakpoint ? "snu" : "slnu";
+
+    lua_getinfo(L, 0, infostr, ar);
     if (ar->what[0] == 'C')
-        lua_getinfo(L, 1, "slnu", ar);
+        lua_getinfo(L, 1, infostr, ar);
 
     TextEditorTab& tab = invokeTextEditor(ar->short_src ? ar->short_src : "!InlineDocument:Unknown source");
     for (TextEditorTab& otherTab : s_TextEditors)
@@ -6540,13 +6574,20 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
         cvii++;
     }
 
+    DebuggerSteppingLine = ar->currentline;
+
     if (Reason == DebugBreakReason::Breakpoint && (debuggerL != L || debuggerAr.currentline != ar->currentline))
+    {
         lua_break(L);
+
+        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+        vmud->BeingDebugged = true;
+        DebuggerSteppingLine++;
+    }
 
     debuggerL = L;
     debuggerAr = *ar;
     debuggerReason = Reason;
-    DebuggerSteppingLine = debuggerAr.currentline;
 }
 
 void DeveloperTools::LeaveDebugger()
