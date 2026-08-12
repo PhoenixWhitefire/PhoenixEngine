@@ -519,7 +519,7 @@ void TextureManager::FinalizeAsyncLoadedTextures()
             image.TMP_ImageByteData = loadedImage.TMP_ImageByteData;
 
         m_UploadTextureToGpu(image);
-        
+
         m_TexPromises.erase(m_TexPromises.begin() + promiseIndex);
         m_TexFutures.erase(m_TexFutures.begin() + promiseIndex);
 

@@ -65,7 +65,7 @@ static void handleInputs(double deltaTime)
     double mouseX;
     double mouseY;
     glfwGetCursorPos(window, &mouseX, &mouseY);
-    
+
     if (camera->UseSimpleController && camera->Object->FindComponent<EcTransform>())
     {
         bool rmbPressed = (!GuiIO->WantCaptureMouse || UserInput::ShouldIgnoreUIInputSinking()) && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
@@ -211,10 +211,10 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
             "Initializing Dear ImGui {}...",
             IMGUI_VERSION
         );
-    
+
         if (!IMGUI_CHECKVERSION())
             RAISE_RT("Dear ImGui detected a version mismatch");
-    
+
         ImGui::CreateContext();
         GuiIO = &ImGui::GetIO();
         ImGui::StyleColorsDark();
@@ -239,11 +239,11 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
             if (std::filesystem::is_regular_file(defaultLayoutFile))
                 std::filesystem::copy_file(defaultLayoutFile, "imgui.ini");
         }
-    
+
         Log.Info("Dear ImGui initialized");
-    
+
         engine->OnFrameStart.Connect(handleInputs);
-    
+
         if (InitConfig.Developer.value_or(engine->Config.value("Developer", false)))
         {
             Log.Info("Developer-mode specific functionality");
@@ -285,7 +285,7 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
 
         roots.push_back(dm);
     }
-    
+
     /*
     std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
     memalloctest.reserve(5000);

@@ -44,7 +44,7 @@ std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 
     if (std::filesystem::is_regular_file(actualPath))
         file.open(actualPath, std::ios::binary);
-    
+
     if (file && file.is_open())
     {
         if (Success)
@@ -130,7 +130,7 @@ bool FileRW::WriteFileCreateDirectories(
     std::string dirPath = path.substr(0, containingDirLoc);
 
     std::error_code ec;
-    
+
     if (!createDirectoryRecursive(dirPath, ec) && ErrorMessage)
     {
         *ErrorMessage = std::format("Failed to recursively create directories to '{}': {}", path, ec.message());
@@ -176,7 +176,7 @@ static std::string resolveAliasRecursive(std::string Path)
 
     if (Path[0] == '@')
         Path = resolveAliasRecursive(Path);
-    
+
     return Path;
 }
 
