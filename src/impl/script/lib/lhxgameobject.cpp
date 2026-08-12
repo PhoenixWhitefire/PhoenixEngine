@@ -107,8 +107,8 @@ static int gameobject_fromTemplate(lua_State* L)
 	ObjectHandle newObject = GameObjectManager::s_Create(ec);
 	newObject->Name = std::string(component, len);
 
-	for (EntityComponent ec : GetCommonDependenciesForComponent(ec))
-		newObject->AddComponent(ec);
+	for (EntityComponent dep : GetCommonDependenciesForComponent(ec))
+		newObject->AddComponent(dep);
 
 	luhx_pushgameobject(L, newObject.Dereference());
 	return 1;
@@ -337,9 +337,9 @@ int luhxopen_GameObject(lua_State* L)
     luaL_register(L, LUHX_GAMEOBJECTLIBNAME, gameobject_funcs);
     createmetatable(L);
 
-    lua_createtable(L, (int)EntityComponent::__count, 0);
+    lua_createtable(L, (int)EntityComponent::count, 0);
 
-	for (uint8_t i = 1; i < (int)EntityComponent::__count; i++)
+	for (uint8_t i = 1; i < (int)EntityComponent::count; i++)
 	{
 		lua_pushinteger(L, i);
 		lua_pushlstring(L, s_EntityComponentNames[i].data(), s_EntityComponentNames[i].length());

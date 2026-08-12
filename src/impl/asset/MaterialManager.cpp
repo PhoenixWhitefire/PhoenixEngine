@@ -111,8 +111,6 @@ void RenderMaterial::Reload()
 				"Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
 				this->Name, uniformName, value.type_name()
 			);
-
-			break;
 		}
 		}
 	}

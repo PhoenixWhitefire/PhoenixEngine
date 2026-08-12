@@ -7,7 +7,6 @@
 #include "component/EngineService.hpp"
 #include "datatype/JsonGenerics.hpp"
 #include "asset/TextureManager.hpp"
-#include "GlobalJsonConfig.hpp"
 #include "Version.hpp"
 #include "Engine.hpp"
 #include "FileRW.hpp"
@@ -174,30 +173,8 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
             REFLECTION_SPAN({ Reflection::ValueType::Any }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
-                return { JsonToGeneric(EngineJsonConfig[inputs[0].AsStringView()]) };
-            }
-        } },
-
-        { "SetConfigValue", Reflection::MethodDescriptor{
-            REFLECTION_SPAN({ Reflection::ValueType::String, Reflection::ValueType::Any }),
-            {},
-            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
-            {
-                EngineJsonConfig[inputs[0].AsStringView()] = GenericToJson(inputs[1]);
-
-                return {};
-            }
-        } },
-
-        { "SaveConfig", Reflection::MethodDescriptor{
-            {},
-            REFLECTION_SPAN({ Reflection::ValueType::Boolean, Reflection::ValueType::String }),
-            [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
-            {
-                std::string error;
-                bool writeSuccess = FileRW::WriteFile("./phoenix.conf", EngineJsonConfig.dump(2), &error);
-
-                return { writeSuccess, error };
+                const Engine* engine = Engine::Get();
+                return { JsonToGeneric(engine->Config[inputs[0].AsStringView()]) };
             }
         } },
     };

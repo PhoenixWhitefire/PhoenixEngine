@@ -1,14 +1,14 @@
 #include <imgui.h>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wstrict-aliasing"
 #endif
 
 #include <imgui_internal.h>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
 
 #include "component/InputService.hpp"
@@ -182,13 +182,6 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
     return methods;
 }
 
-// TODO: report bug
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-
 const Reflection::StaticEventMap& PlayerInputComponentManager::GetEvents()
 {
     static const Reflection::StaticEventMap events = {
@@ -199,11 +192,6 @@ const Reflection::StaticEventMap& PlayerInputComponentManager::GetEvents()
 
     return events;
 }
-
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
-#pragma GCC diagnostic pop
-#endif
 
 void PlayerInputComponentManager::Shutdown()
 {

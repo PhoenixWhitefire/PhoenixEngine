@@ -142,6 +142,7 @@ static void queueEvent(
                 for (size_t i = 0; i < Inputs.size(); i++)
                 {
                     assert(Reflection::TypeFits(rev->CallbackInputs[i], Inputs[i].Type));
+                    (void)rev;
                     ScriptEngine::L::PushGenericValue(L, Inputs[i]);
                 }
 
@@ -295,7 +296,7 @@ static int sig_namecall(lua_State* L)
         ec->ConnectionId = rev->Connect(
             reflector.Referred(),
             Reflection::EventConnection{
-                .Callback = [resume, rev, reflector, values, fromDataModel, ec](const std::vector<Reflection::GenericValue>& Values, uint32_t, uint32_t FromDataModel)
+                .Callback = [resume, values, fromDataModel](const std::vector<Reflection::GenericValue>& Values, uint32_t, uint32_t FromDataModel)
                 -> void
                 {
                     *values = Values;

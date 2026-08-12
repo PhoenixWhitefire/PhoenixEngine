@@ -25,8 +25,8 @@ struct InputEvent
 			int Modifiers = 0;
 		} MouseButton;
 		struct {
-			double XOffset = 0.0f;
-			double YOffset = 0.0f;
+			double XOffset = 0.0;
+			double YOffset = 0.0;
 		} Scroll;
 	};
 

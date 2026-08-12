@@ -17,11 +17,11 @@ Color::Color(float S)
 	B = S;
 }
 
-Color::Color(float R, float G, float B)
+Color::Color(float r, float g, float b)
 {
-	this->R = R;
-	this->G = G;
-	this->B = B;
+	this->R = r;
+	this->G = g;
+	this->B = b;
 }
 
 Color::Color(const Reflection::GenericValue& gv)

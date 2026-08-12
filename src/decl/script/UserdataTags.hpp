@@ -4,7 +4,7 @@
 struct UserdataTag_
 {
     enum UdT {
-        __start = 1,
+        start = 1,
 
         Mutex = 1,
         SharedBuffer = 2,
@@ -19,9 +19,9 @@ struct UserdataTag_
         VectorGradient = 11,
         ColorGradient = 12,
 
-        __count,
-        __tag_limit = 127,
-        __invalid = 128,
+        count,
+        tagLimit = 127,
+        invalid = 128,
     };
 };
 
@@ -43,4 +43,4 @@ const std::string_view UserdataTagNames[] = {
     "ColorGradient",
 };
 
-static_assert(std::size(UserdataTagNames) == UserdataTag::__count);
+static_assert(std::size(UserdataTagNames) == UserdataTag::count);

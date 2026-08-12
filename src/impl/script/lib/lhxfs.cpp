@@ -2,20 +2,24 @@
 #include <chrono>
 #include <lualib.h>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wundef"
-#pragma GCC diagnostic ignored "-Wswitch-default"
-#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor"
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#pragma GCC diagnostic ignored "-Wunused-result"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wundef"
+#pragma clang diagnostic ignored "-Wswitch-default"
+#pragma clang diagnostic ignored "-Wtype-limits"
+#pragma clang diagnostic ignored "-Wunused-result"
+#pragma clang diagnostic ignored "-Wshadow-field-in-constructor"
+#pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
+#pragma clang diagnostic ignored "-Wcast-align"
+#pragma clang diagnostic ignored "-Wunused-template"
+
 #endif
 
 #include <Vendor/filewatch/FileWatch.hpp>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
 
 #include <tracy/Tracy.hpp>
@@ -650,7 +654,7 @@ static int fs_watch(lua_State* L)
 
     filewatch::FileWatch<std::string>* watcher = new filewatch::FileWatch<std::string>(
         path,
-        [WL, path, data](const std::string& File, filewatch::Event Type)
+        [WL, path](const std::string& File, filewatch::Event Type)
         {
             FileWatcherEvent fwe = {
                 .Thread = WL,

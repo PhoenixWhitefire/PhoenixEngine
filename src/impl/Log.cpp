@@ -61,19 +61,6 @@ static void appendToLog(const std::string_view& Message, bool NoNewline = false)
 		ProgramLog.append(loggedString);
 		std::cout << loggedString;
 	}
-
-	// log > 24 megabytes... just in case something goes wrong
-	// 10/11/2024
-	if (ProgramLog.size() > 24e6)
-	{
-		ThrewLogCapacityExceededException = true;
-
-		// Log Size Limit Exceeded Throwing Exception
-		ProgramLog.append("\nLSLETE: Log size limit exceeded, throwing exception\n");
-		Logging::Save();
-
-		RAISE_RT("Program log exceeds maximum size of 24e6 bytes (24 megabytes)");
-	}
 }
 
 static constexpr std::string_view TypeTags[] = {

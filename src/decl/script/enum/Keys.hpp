@@ -1,3 +1,5 @@
+extern const char* KeyNames[];
+
 const char* KeyNames[] = {
     nullptr,
     nullptr,

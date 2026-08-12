@@ -1,6 +1,23 @@
 #include <luau/Require/include/Luau/Require.h>
 #include <lualib.h>
+
+#ifdef __clang__
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow-field-in-constructor"
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#pragma clang diagnostic ignored "-Wweak-vtables"
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
+#pragma clang diagnostic ignored "-Wunused-template"
+
+#endif
+
 #include <Luau/Compiler.h>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
 #include <imgui.h>
@@ -32,7 +49,7 @@ struct LuauType
     {}
 
     int Type = LUA_TNONE;
-    UserdataTag Tag = UserdataTag::__invalid;
+    UserdataTag Tag = UserdataTag::invalid;
 };
 
 // depends on the ordering of `Reflection::ValueType`!!
@@ -46,8 +63,8 @@ static const LuauType s_ValueTypeToLuauType[] = {
     LUA_TBUFFER,
 
     { LUA_TUSERDATA, UserdataTag::Color      },
-    { LUA_TVECTOR,   UserdataTag::__invalid  }, // Vector2
-    { LUA_TVECTOR,   UserdataTag::__invalid  }, // Vector3
+    { LUA_TVECTOR,   UserdataTag::invalid  }, // Vector2
+    { LUA_TVECTOR,   UserdataTag::invalid  }, // Vector3
     { LUA_TUSERDATA, UserdataTag::Matrix     },
     { LUA_TUSERDATA, UserdataTag::GameObject },
 
@@ -62,7 +79,8 @@ static const LuauType s_ValueTypeToLuauType[] = {
     { LUA_TUSERDATA, UserdataTag::VectorGradient },
     { LUA_TUSERDATA, UserdataTag::ColorGradient  },
 };
-static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::__lastBase);
+
+static_assert(std::size(s_ValueTypeToLuauType) == Reflection::ValueType::lastBase);
 
 static int luauAssertHandler(const char* expression, const char* file, int line, const char* function)
 {
@@ -1149,7 +1167,7 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
 
         if (lty.Type == LUA_TUSERDATA)
         {
-            if (lty.Tag == UserdataTag::__invalid)
+            if (lty.Tag == UserdataTag::invalid)
                 luaL_typeerror(L, StackIndex, Reflection::TypeAsString(Type).c_str());
             else
                 luaL_checkudatatagged(L, StackIndex, lty.Tag);
@@ -1295,7 +1313,7 @@ int ScriptEngine::L::HandleMethodCall(
     ReflectorRef Reflector
 )
 {
-    const std::span<const Reflection::ValueType>& paramTypes = func->Inputs;
+    const std::span<const Reflection::ValueType>& paramTypes = func->Parameters;
     int numArgs = lua_gettop(L) - 1;
     assert(numArgs >= 0);
     // missing parameter declarations?
@@ -1333,8 +1351,6 @@ int ScriptEngine::L::HandleMethodCall(
             "Function expects at least %i arguments, got %i instead%s", 
             numParams, numArgs, argsString.c_str()
         );
-
-        return 0;
     }
     else if (numArgs > minArgs)
     {
@@ -1379,7 +1395,7 @@ int ScriptEngine::L::HandleMethodCall(
             0,
             [func, inputs, Reflector](YieldedCoroutine& yc)
             {
-                std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunc(Reflector.Referred(), inputs);
+                std::promise<std::vector<Reflection::GenericValue>>* sf = func->YieldFunction(Reflector.Referred(), inputs);
                 yc.Mode = YieldedCoroutine::ResumptionMode::Promise;
                 yc.RmPromise = sf;
                 yc.RmPromise_Future = sf->get_future().share();
@@ -1392,19 +1408,19 @@ int ScriptEngine::L::HandleMethodCall(
 
     try
     {
-        outputs = func->Func(Reflector.Referred(), inputs);
+        outputs = func->Function(Reflector.Referred(), inputs);
     }
     catch (const std::runtime_error& err)
     {
         luaL_error(L, "%s", err.what());
     }
 
-    assert(outputs.size() == func->Outputs.size());
+    assert(outputs.size() == func->Returns.size());
 
     for (size_t i = 0; i < outputs.size(); i++)
     {
         const Reflection::GenericValue& output = outputs[i];
-        assert(Reflection::TypeFits(func->Outputs[i], output.Type));
+        assert(Reflection::TypeFits(func->Returns[i], output.Type));
 
         L::PushGenericValue(L, output);
     }
@@ -1412,7 +1428,7 @@ int ScriptEngine::L::HandleMethodCall(
     StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
     vmud->LastResumed = GetRunningTime(); // don't count external methods like `Engine:ShowMessageBox`
 
-    return (int)func->Outputs.size();
+    return (int)outputs.size();
 
     // ... kinda expected more, but ngl i feel SOOOO gigabrain for
     // giving ::GenericValue an Array, like, it all just clicks in now!
@@ -1423,15 +1439,15 @@ int ScriptEngine::L::HandleMethodCall(
     // 15/08/2024
 }
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wstrict-aliasing"
 #endif
 
 #include <imgui_internal.h> // needed for `ImGuiContext`
 
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
 
 int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure, std::deque<YieldedCoroutine>* YieldedCorosOverride)
@@ -1507,11 +1523,15 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
     int yieldResult = lua_yield(L, NumResults);
     lua_pushthread(L);
 
+    lua_Debug currar = {};
+    lua_getinfo(L, 0, "n", &currar);
+
     YieldedCoroutine yc = YieldedCoroutine{
+        .DebugString = currar.name ? currar.name : "<unknown>",
         .Coroutine = L,
         .CoroutineReference = lua_ref(L, -1),
         .DataModel = dmObject,
-        .Mode = YieldedCoroutine::ResumptionMode::INVALID
+        .Mode = YieldedCoroutine::ResumptionMode::INVALID,
     };
     L::DumpStacktrace(L, &yc.DebugString);
 
@@ -1537,7 +1557,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 
 void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
 {
-    assert(false && "NOT IMPLEMENTED");
+    //assert(false && "NOT IMPLEMENTED");
 
     // if we dont do this then comparison will not work
     // ex: `game.Close == game.Close`
@@ -1855,7 +1875,6 @@ static void initRequireConfig(luarequire_Configuration* config)
                 lua_pop(GL, 1);
                 // `sourceCodeOrBytecode` or error message from `FileRW::ReadFile`
                 luaL_error(L, "%s", sourceCodeOrBytecode.c_str());
-                return 1;
             }
 
             if (isAotBytecode)
@@ -1936,7 +1955,7 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     lua_pushlightuserdatatagged(state, requirePath, LightUserdataTag::RequirerContext);
     lua_rawseti(state, LUA_ENVIRONINDEX, 67);
 
-    for (uint8_t i = LightUserdataTag::__start; i < LightUserdataTag::__count; i++)
+    for (uint8_t i = LightUserdataTag::start; i < LightUserdataTag::count; i++)
         lua_setlightuserdataname(state, i, LightUserdataTagNames[i].data());
 
     GameObjectManager* ObjectManager = GameObjectManager::Get();
@@ -2294,7 +2313,7 @@ nlohmann::json ScriptEngine::DumpApiToJson()
         lua_pop(luhx, 1);
     }
 
-    for (int dei = UserdataTag::__start; dei < UserdataTag::__count; dei++)
+    for (int dei = UserdataTag::start; dei < UserdataTag::count; dei++)
     {
         const std::string_view& name = UserdataTagNames[dei];
         if (json["Datatypes"].find(name) == json["Datatypes"].end())

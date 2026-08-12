@@ -369,12 +369,12 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 
 			meshObject->MetalnessFactor = material.MetallicFactor;
 			meshObject->RoughnessFactor = material.RoughnessFactor;
+
+			break;
 		}
 
 		case ModelNode::NodeType::Bone:
-		{
 			break;
-		}
 
 		default:
 		{

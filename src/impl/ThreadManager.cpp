@@ -106,7 +106,7 @@ void ThreadManager::Initialize(int NumThreadsOverride)
 {
 	ZoneScoped;
 
-	size_t numThreads = static_cast<size_t>(std::max(std::thread::hardware_concurrency() * 0.75f, 3.f));
+	size_t numThreads = static_cast<size_t>(std::max((float)std::thread::hardware_concurrency() * 0.75f, 3.f));
 	numThreads = std::min(numThreads, static_cast<size_t>(8ull));
 
 	if (NumThreadsOverride > -1)

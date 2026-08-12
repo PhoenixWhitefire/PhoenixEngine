@@ -1,10 +1,10 @@
-#ifndef __GNUC__
+#ifdef __clang__
 
-#define EXPORT_SYMBOL __declspec(dllexport)
+#define EXPORT_SYMBOL __attribute__((visibility("default")))
 
 #else
 
-#define EXPORT_SYMBOL __attribute__((visibility("default")))
+#define EXPORT_SYMBOL __declspec(dllexport)
 
 #endif
 
@@ -14,14 +14,18 @@ extern "C"
 	// request discrete GPU for NVIDIA and AMD respectively
 	// (i'm so inclusive, even though i have an NV card i added the flag for AMD)
 
-	EXPORT_SYMBOL unsigned long NvOptimusEnablement = 0x00000001;
-	EXPORT_SYMBOL int AmdPowerXpressRequestHighPerformance = 1;
+	EXPORT_SYMBOL extern unsigned long NvOptimusEnablement;
+	EXPORT_SYMBOL extern int AmdPowerXpressRequestHighPerformance;
+
+	unsigned long NvOptimusEnablement = 0x00000001;
+	int AmdPowerXpressRequestHighPerformance = 1;
 }
 
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <string>
 #include <format>
+#include <map>
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
@@ -35,7 +39,6 @@ extern "C"
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
-#include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "Timing.hpp"
 #include "Log.hpp"
@@ -119,15 +122,17 @@ static void GLDebugCallback(
 	// ID 131218:
 	// "Vertex shader in program is being recompiled based on GL state"
 	if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
-		if (EngineJsonConfig.value("render_glerrorsarefatal", true))
+	{
+		if (Renderer::Get()->OpenGLErrorsAreFatal)
 			RAISE_RT_NF(debugString);
+	}
 }
 
 static Renderer* s_Instance = nullptr;
 
-Renderer::Renderer(uint32_t Width, uint32_t Height, GLFWwindow* Window)
+Renderer::Renderer(uint32_t Width, uint32_t Height, GLFWwindow* MainWindow)
 {
-	this->Initialize(Width, Height, Window);
+	this->Initialize(Width, Height, MainWindow);
 }
 
 void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindow)
@@ -542,7 +547,7 @@ void Renderer::DrawMesh(
 		Shader.SetUniform("Phoenix_IsInstanced", true);
 		Shader.Activate();
 
-		glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0, NumInstances);
+		glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, nullptr, NumInstances);
 	}
 	else
 	{
@@ -550,7 +555,7 @@ void Renderer::DrawMesh(
 		Shader.SetUniform("Phoenix_Transform", Transform);
 		Shader.Activate();
 
-		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, nullptr);
 	}
 }
 

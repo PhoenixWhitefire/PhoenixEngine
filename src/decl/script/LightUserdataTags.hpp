@@ -4,7 +4,7 @@
 struct LightUserdataTag_
 {
     enum LUdT {
-        __start = 1,
+        start = 1,
 
         RequirerContext = 1,
         GameObjectRawEquality = 2,
@@ -14,9 +14,9 @@ struct LightUserdataTag_
         AtomicIntegerRawEquality = 6,
         EventConnectionData = 7,
 
-        __count,
-        __tag_limit = 127,
-        __invalid = 128,
+        count,
+        tagLimit = 127,
+        invalid = 128,
     };
 };
 
@@ -33,4 +33,4 @@ const std::string_view LightUserdataTagNames[] = {
     "EventConnectionData",
 };
 
-static_assert(std::size(LightUserdataTagNames) == LightUserdataTag::__count);
+static_assert(std::size(LightUserdataTagNames) == LightUserdataTag::count);

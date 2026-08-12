@@ -162,7 +162,6 @@ Reflection::GenericValue::GenericValue(const InputEvent& ie)
 }
 
 Reflection::GenericValue::GenericValue(const ObjectRef& Object)
-    : Type(ValueType::GameObject)
 {
     const GenericValue& gv = Object->ToGenericValue();
     *this = gv;
@@ -741,7 +740,7 @@ static std::string_view BaseNames[] = {
 };
 
 static_assert(
-    std::size(BaseNames) == (size_t)Reflection::ValueType::__lastBase,
+    std::size(BaseNames) == (size_t)Reflection::ValueType::lastBase,
     "'ValueTypeNames' does not have the same number of elements as 'ValueType'"
 );
 

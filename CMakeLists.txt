@@ -84,15 +84,15 @@ if (MSVC)
 
 	message(STATUS "Recognized compiler as MSVC")
 
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	include(cmake/gnug.txt)
-	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="G++")
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	include(cmake/clang.txt)
+	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="Clang++")
 	target_link_libraries(PhoenixEngine PRIVATE X11) # audible sigh when i checked `imgui_impl_glfw.cpp` line 1266
 
-	message(STATUS "Recognized compiler as G++")
+	message(STATUS "Recognized compiler as Clang++")
 
 else()
-	message(WARNING "Unsupported compiler - expected either MSVC or GNU (G++)")
+	message(FATAL_ERROR "Unsupported compiler - expected either MSVC or Clang, got ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
 target_link_libraries(PhoenixEngine PRIVATE
@@ -153,8 +153,8 @@ add_subdirectory(Vendor/miniaudio EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Vendor/curl EXCLUDE_FROM_ALL)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	include(cmake/gnug-configuresubprojects.txt)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	include(cmake/clang-configuresubprojects.txt)
 endif()
 
 # organize VS folders

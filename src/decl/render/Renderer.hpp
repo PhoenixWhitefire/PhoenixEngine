@@ -63,6 +63,8 @@ public:
 	uint32_t AccumulatedDrawCallCount = 0;
 	uint32_t InstancingBuffer = UINT32_MAX;
 
+	bool OpenGLErrorsAreFatal = true;
+
 private:
 	void m_SetMaterialData(const RenderItem&, bool DebugWireframeRendering);
 

@@ -237,7 +237,7 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
 		if (!LinearlySmoothened)
 			texManager->BindNearestNeighbourSampler(0);
 
-		glDrawElements(GL_TRIANGLES, quadGpu.NumIndices, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, quadGpu.NumIndices, GL_UNSIGNED_INT, nullptr);
 		renderer->AccumulatedDrawCallCount++;
 
 		if (!LinearlySmoothened)

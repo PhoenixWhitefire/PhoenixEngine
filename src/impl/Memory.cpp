@@ -10,12 +10,6 @@
 
 #include <tracy/Tracy.hpp>
 #include <assert.h>
-// 05/02/2025 HUH
-// why is G++ like this
-// builds in Debug, but not Release
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
 #include <format>
 #include <stdexcept>
 
@@ -28,7 +22,7 @@ struct alignas(std::max_align_t) AllocHeader
 	uint32_t Size = UINT32_MAX;
 	uint8_t Category = UINT8_MAX;
 	uint8_t Check = MEMORY_CHECK_MAGIC;
-	uint8_t Padding[sizeof(std::max_align_t) - 6];
+	uint8_t Padding[sizeof(std::max_align_t) - 6] = {};
 };
 
 static_assert(sizeof(AllocHeader) % alignof(std::max_align_t) == 0);
@@ -61,7 +55,7 @@ void Memory::FrameFinish()
 
 #else
 
-static std::array<std::atomic_size_t, static_cast<size_t>(Memory::Category::__count)> s_ActivityWip{ 0 };
+static std::array<std::atomic_size_t, static_cast<size_t>(Memory::Category::count)> s_ActivityWip{ 0 };
 
 void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 {
@@ -180,7 +174,7 @@ void Memory::Free(void* Pointer)
 
 	Pointer = GetPointerInfo(Pointer, &size, &memcat);
 
-	assert(memcat < static_cast<uint8_t>(Memory::Category::__count));
+	assert(memcat < static_cast<uint8_t>(Memory::Category::count));
 
 #ifdef TRACY_ENABLE
 	if (memcat != static_cast<uint8_t>(Memory::Category::Default))

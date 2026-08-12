@@ -35,7 +35,7 @@ const Reflection::StaticPropertyMap& PhysicsComponentManager::GetProperties()
 
 const Reflection::StaticMethodMap& PhysicsComponentManager::GetMethods()
 {
-    static const Reflection::StaticMethodMap& methods = {
+    static const Reflection::StaticMethodMap methods = {
         { "SetSimulationForcePaused", Reflection::MethodDescriptor{
             REFLECTION_SPAN({ Reflection::ValueType::Boolean }),
             {},

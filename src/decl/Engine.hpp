@@ -23,10 +23,12 @@
 class Engine
 {
 public:
-	Engine();
+	Engine() = default;
 	~Engine();
 
 	static Engine* Get();
+
+	void Initialize(int ThreadCount = -1, bool Headless = false);
 
 	// Initializes main engine loop
 	void Start();
@@ -44,6 +46,8 @@ public:
 	void Close();
 
 	ImVec2 GetViewportInputRectSize() const;
+
+	nlohmann::json Config;
 
 	GameObjectManager ObjectManager;
 	AllComponentManagers ComponentManagers;

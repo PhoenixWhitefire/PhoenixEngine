@@ -217,6 +217,7 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
             }
         } }
     };
+
     return funcs;
 }
 
@@ -249,7 +250,8 @@ glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
     ));
 
     glm::vec4 eyeCoords = projectionMatrixInv * clipCoords;
-    eyeCoords.z = -1.f, eyeCoords.w = 0.f;
+    eyeCoords.z = -1.f;
+    eyeCoords.w = 0.f;
 
     glm::vec3 position = glm::vec3(trans[3]);
     glm::vec3 forwardVec = -glm::vec3(trans[2]);

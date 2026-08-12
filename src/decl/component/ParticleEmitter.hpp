@@ -39,7 +39,7 @@ struct EcParticleEmitter : public Component<EntityComponent::ParticleEmitter>
 
 	std::vector<Particle> m_Particles;
 
-	double m_TimeSinceLastSpawn = 0.f;
+	double m_TimeSinceLastSpawn = 0.0;
 	bool Emitting = true;
 	bool ParticlesAreAttached = false;
 	bool LinearlySmoothened = true;

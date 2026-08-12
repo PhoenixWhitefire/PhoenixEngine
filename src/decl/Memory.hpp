@@ -34,7 +34,7 @@ namespace Memory
 		Sound,
 		Glfw,
 
-		__count
+		count
 	};
 
 	// can only be de-alloc'd correctly by `::Free`
@@ -48,8 +48,8 @@ namespace Memory
 
 	void FrameFinish();
 
-	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::__count)> Counters;
-	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::__count)> Activity;
+	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::count)> Counters;
+	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::count)> Activity;
 
 	static inline const char* CategoryNames[] = {
 		"Default",
@@ -63,10 +63,10 @@ namespace Memory
 		"Physics",
 		"Luau",
 		"Sound",
-		"Glfw"
+		"Glfw",
 	};
 
-	static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::__count);
+	static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::count);
 
 	// stl-conforming allocator
 	template <class T, Category C = Category::Default>

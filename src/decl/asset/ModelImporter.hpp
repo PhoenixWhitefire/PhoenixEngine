@@ -59,10 +59,10 @@ private:
 
 		NodeType Type = NodeType::Primitive;
 
-		Mesh Data;
-		MeshMaterial Material;
+		Mesh Data = {};
+		MeshMaterial Material = {};
 		glm::mat4 LocalTransform = { 1.f };
-		std::vector<BoneInfo> Bones;
+		std::vector<BoneInfo> Bones = {};
 	};
 
 	ModelLoader() = delete;

@@ -37,7 +37,7 @@ struct Texture
 
 	// De-allocated after the Texture is uploaded to the GPU
 	void* TMP_ImageByteData = nullptr;
-	std::string FailureReason;
+	std::string FailureReason = "";
 };
 
 class TextureManager

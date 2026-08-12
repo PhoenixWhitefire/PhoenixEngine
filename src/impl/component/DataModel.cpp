@@ -176,13 +176,6 @@ const Reflection::StaticMethodMap& DataModelComponentManager::GetMethods()
     return methods;
 }
 
-// TODO: report bug
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-
 const Reflection::StaticEventMap& DataModelComponentManager::GetEvents()
 {
     static Reflection::StaticEventMap events = {
@@ -192,11 +185,6 @@ const Reflection::StaticEventMap& DataModelComponentManager::GetEvents()
 
     return events;
 }
-
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
-#pragma GCC diagnostic pop
-#endif
 
 static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 {

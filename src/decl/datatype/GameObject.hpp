@@ -149,20 +149,20 @@ public:
 	GameObject* FromGenericValue(const Reflection::GenericValue&);
 
 	hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
-	std::array<IComponentManager*, (size_t)EntityComponent::__count> ComponentManagers{};
+	std::array<IComponentManager*, (size_t)EntityComponent::count> ComponentManagers{};
 	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
 	uint32_t NextFreeId = UINT32_MAX;
 
 	struct Collection
 	{
 		std::string Name;
-		std::vector<uint32_t> Items;
+		std::vector<uint32_t> Items = {};
 
 		struct Event
 		{
 			// We want these to exist in the same memory location for the entire lifetime of the Engine
 			Reflection::EventDescriptor* Descriptor = nullptr;
-			std::vector<Reflection::EventConnection> Callbacks;
+			std::vector<Reflection::EventConnection> Callbacks = {};
 		};
 
 		Event AddedEvent;

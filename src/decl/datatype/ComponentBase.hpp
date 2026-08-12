@@ -18,6 +18,7 @@ public:
     virtual void BindService(uint32_t) = 0;
     virtual void UnbindService() = 0;
     virtual void Shutdown() = 0;
+    virtual ~IComponentManager(); // just default, but moved to a .cpp file to anchor vtable
 
     virtual const Reflection::StaticPropertyMap& GetProperties() = 0;
     virtual const Reflection::StaticMethodMap& GetMethods() = 0;

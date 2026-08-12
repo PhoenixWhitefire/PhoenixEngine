@@ -38,7 +38,7 @@ static void loadMeshDataFromMap(const std::vector<Reflection::GenericValue>& inp
                             RAISE_RT("Paint field requires 4 components");
 
                         for (int i = 0; i < 4; i++)
-                            v.Paint[i] = components[i].AsDouble();
+                            v.Paint[i] = (float)components[i].AsDouble();
                     }
                     else if (vname == "UV")
                         v.TextureUV = vvalue.AsVector3();

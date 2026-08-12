@@ -1,20 +1,23 @@
 #include <GLFW/glfw3.h>
 #include <lualib.h>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wundef"
-#pragma GCC diagnostic ignored "-Wswitch-default"
-#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor"
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#pragma GCC diagnostic ignored "-Wunused-result"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wundef"
+#pragma clang diagnostic ignored "-Wswitch-default"
+#pragma clang diagnostic ignored "-Wtype-limits"
+#pragma clang diagnostic ignored "-Wunused-result"
+#pragma clang diagnostic ignored "-Wshadow-field-in-constructor"
+#pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
+#pragma clang diagnostic ignored "-Wcast-align"
+#pragma clang diagnostic ignored "-Wunused-template"
 #endif
 
 #include <Vendor/filewatch/FileWatch.hpp>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
 
 #include "script/luhx.hpp"
@@ -173,9 +176,9 @@ int luhxopen_Enum(lua_State* L)
 
     lua_setfield(L, -2, "Cursor");
 
-    lua_createtable(L, 0, Reflection::ValueType::__lastBase + 3);
+    lua_createtable(L, 0, Reflection::ValueType::lastBase + 3);
 
-    for (int i = Reflection::ValueType::Boolean; i < Reflection::ValueType::__lastBase; i++)
+    for (int i = Reflection::ValueType::Boolean; i < Reflection::ValueType::lastBase; i++)
     {
         lua_pushinteger(L, i);
         lua_setfield(L, -2, Reflection::TypeAsString((Reflection::ValueType)i).c_str());

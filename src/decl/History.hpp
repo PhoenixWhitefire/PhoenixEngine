@@ -53,7 +53,7 @@ public:
     struct Action
     {
         std::string Name;
-        std::vector<Event> Events;
+        std::vector<Event> Events = {};
         size_t Id = 0;
     };
 

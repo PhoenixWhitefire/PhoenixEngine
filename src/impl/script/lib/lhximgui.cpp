@@ -66,10 +66,7 @@ static ImGuiWindowFlags strToWindowFlags(lua_State* L, const char* flagsstr)
             }
 
             default:
-            {
                 luaL_error(L, "Invalid option to flag 'n': '%c'", *flagsstr);
-                break;
-            }
             }
 
             break;
@@ -85,9 +82,7 @@ static ImGuiWindowFlags strToWindowFlags(lua_State* L, const char* flagsstr)
             break;
 
         default:
-        {
             luaL_error(L, "Unknown flag '%c'", *flagsstr);
-        }
         }
     }
 

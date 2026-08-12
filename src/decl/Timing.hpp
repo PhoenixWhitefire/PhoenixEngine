@@ -21,12 +21,12 @@ namespace Timing
 	void Finish();
 
 	// when each timer started
-	inline double StartTimes[UINT8_MAX] = { 0.f };
+	inline double StartTimes[UINT8_MAX] = { 0.0 };
 	// the length of time each timer took
-	inline double AccumulatedTimes[UINT8_MAX] = { 0.f };
+	inline double AccumulatedTimes[UINT8_MAX] = { 0.0 };
 	// after an entire frame, `AccumulatedTimes` is copied over into this
 	// and reset
-	inline double FinalFrameTimes[UINT8_MAX] = { 0.f };
+	inline double FinalFrameTimes[UINT8_MAX] = { 0.0 };
 
 	inline const char* TimerNames[UINT8_MAX] = { NULL };
 

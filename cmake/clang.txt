@@ -13,20 +13,37 @@ target_compile_options(PhoenixEngine PRIVATE -MP)
 
 target_compile_options(PhoenixEngine PRIVATE $<$<CONFIG:DebugTSan>:-Wno-error=tsan>) # atomic_thread_fence in tracy_concurrentqueue.h
 
-# https://stackoverflow.com/a/9862800
 target_compile_options(PhoenixEngine PRIVATE
-	-pedantic -Wall -Wextra -Wcast-align
-	-Wcast-qual -Wdisabled-optimization
-	-Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations
-	-Wmissing-include-dirs -Woverloaded-virtual
-	-Wshadow -Wsign-promo
-	-Wstrict-null-sentinel -Wstrict-overflow=2 -Wswitch-default
-	-Wundef -Werror
-	-Wno-shadow -Wstrict-aliasing=2 -Wno-missing-field-initializers
-	-Wno-maybe-uninitialized
-	-Wno-sign-compare
-	-Wuninitialized
-	-Wno-format-truncation
+    -Weverything
+    -Werror
+
+    -Wno-c++98-compat -Wno-c++98-compat-pedantic
+    -Wno-padded
+    -Wno-documentation -Wno-documentation-unknown-command
+    -Wreserved-macro-identifier
+    -Wno-old-style-cast
+    -Wno-nested-anon-types
+    -Wno-reserved-identifier -Wno-reserved-macro-identifier
+    -Wno-extra-semi
+    -Wno-covered-switch-default
+    -Wno-suggest-destructor-override
+    -Wno-extra-semi-stmt
+    -Wno-float-equal
+    -Wno-implicit-int-conversion # tracy
+    -Wno-unaligned-access # tracy
+    -Wno-exit-time-destructors
+    -Wno-global-constructors
+    -Wno-sign-conversion
+    -Wno-double-promotion
+    -Wno-switch-enum
+    -Wno-nrvo
+    -Wno-unsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call
+    -Wno-shadow-uncaptured-local
+    -Wno-date-time
+    -Wno-implicit-float-conversion
+    -Wno-shadow-field -Wno-gnu-zero-variadic-macro-arguments -Wno-deprecated-dynamic-exception-spec # luau
+    -Wno-missing-designated-field-initializers
+    -fsafe-buffer-usage-suggestions
 )
 
 # including Vendor/luau/Ast/include/luau/Ast.h
@@ -64,16 +81,16 @@ add_link_options($<$<CONFIG:Release>:-flto>)
 add_link_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 
 if (NOT CMAKE_OBJCOPY)
-	set(CMAKE_OBJCOPY objcopy)
+    set(CMAKE_OBJCOPY objcopy)
 endif()
 
 set(TARGET_FILE_NAME "$<TARGET_FILE:PhoenixEngine>")
 
 add_custom_command(TARGET PhoenixEngine POST_BUILD
-	COMMAND ${CMAKE_OBJCOPY} --only-keep-debug;${TARGET_FILE_NAME} ${TARGET_FILE_NAME}.debug
-	COMMAND ${CMAKE_OBJCOPY} --strip-debug ${TARGET_FILE_NAME}
+    COMMAND ${CMAKE_OBJCOPY} --only-keep-debug;${TARGET_FILE_NAME} ${TARGET_FILE_NAME}.debug
+    COMMAND ${CMAKE_OBJCOPY} --strip-debug ${TARGET_FILE_NAME}
 
-	COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=${TARGET_FILE_NAME}.debug ${TARGET_FILE_NAME}
+    COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=${TARGET_FILE_NAME}.debug ${TARGET_FILE_NAME}
 
-	VERBATIM
+    VERBATIM
 )

@@ -24,7 +24,10 @@ static HttpRequest parseRequestFromReflection(const Reflection::GenericValue& gv
         const std::string_view& field = key.AsStringView();
 
         if (field == "Url")
-            request.Url = value.AsString(), gotUrl = true;
+        {
+            request.Url = value.AsString();
+            gotUrl = true;
+        }
         else if (field == "Method")
             request.Method = value.AsString();
         else if (field == "Headers")

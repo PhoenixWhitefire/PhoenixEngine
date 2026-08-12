@@ -11,9 +11,9 @@
 struct RenderItem
 {
 	uint32_t RenderMeshId = UINT32_MAX;
-	glm::mat4 Transform;
+	glm::mat4 Transform = { 1.f };
 	uint32_t MaterialId = UINT32_MAX;
-	glm::vec3 TintColor;
+	glm::vec3 TintColor = { 1.f, 1.f, 1.f };
 	float Transparency = 0.f;
 	float MetalnessFactor = 0.f;
 	float RoughnessFactor = 0.f;
@@ -27,13 +27,13 @@ enum class LightType : uint8_t { Directional, Point, Spot };
 struct LightItem
 {
 	// acts as the direction for Directional Lights
-	glm::vec3 Position;
-	glm::vec3 LightColor;
+	glm::vec3 Position = {};
+	glm::vec3 LightColor = { 1.f, 1.f, 1.f };
 
 	// spot & pointlights
 	float Range = 60.f;
 	// spotlights
-	glm::vec3 SpotLightDirection;
+	glm::vec3 SpotLightDirection = {};
 	float Angle = 60.f;
 
 	LightType Type = LightType::Point;

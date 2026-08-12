@@ -4,20 +4,9 @@
 #pragma once
 
 #include <string>
-#include <future>
-#include <cfloat>
 #include <glm/mat4x4.hpp>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-
 #include <miniaudio/miniaudio.h>
-
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
-#endif
 
 #include "datatype/ComponentBase.hpp"
 

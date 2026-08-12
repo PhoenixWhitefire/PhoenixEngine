@@ -5,13 +5,11 @@
 #include <unordered_map>
 #include <cstdint>
 #include <future>
-#include <thread>
 #include <deque>
 #include <stack>
 #include <lua.h>
 
 #include "datatype/GameObject.hpp"
-#include "script/Debugging.hpp"
 
 #define ROOT_LVM_NAME "RootLVM"
 
@@ -61,29 +59,29 @@ namespace ScriptEngine
 
         lua_State* Coroutine = nullptr;
         int CoroutineReference = INT32_MAX;
-        ObjectRef DataModel;
+        ObjectRef DataModel = {};
 
         union {
             struct {
-                double YieldedAt = 0.f;
-                double ResumeAt = 0.f;
+                double YieldedAt = 0.0;
+                double ResumeAt = 0.0;
             } RmWait;
             struct {
-                double ResumeAt = 0.f;
+                double ResumeAt = 0.0;
                 lua_State* Arguments = nullptr;
                 int ArgumentsRef = 0;
             } RmDeferred;
             struct {
                 const Reflection::EventDescriptor* Event = nullptr;
-                ReflectorRef Reflector;
+                ReflectorRef Reflector = {};
                 uint32_t ConnectionId = UINT32_MAX;
                 uint32_t RestrictDataModel = UINT32_MAX;
-            } RmEventCallback;
+            } RmEventCallback = {};
         };
 
-        std::promise<std::vector<Reflection::GenericValue>>* RmPromise;
-        std::shared_future<std::vector<Reflection::GenericValue>> RmPromise_Future;
-        std::function<int(lua_State*)> RmPoll;
+        std::promise<std::vector<Reflection::GenericValue>>* RmPromise = nullptr;
+        std::shared_future<std::vector<Reflection::GenericValue>> RmPromise_Future = {};
+        std::function<int(lua_State*)> RmPoll = {};
 
         ResumptionMode Mode = ResumptionMode::INVALID;
         bool Dead = false;
@@ -100,8 +98,8 @@ namespace ScriptEngine
         void StepScheduler(std::deque<YieldedCoroutine>* Yielded = nullptr);
         void Close();
 
-        std::deque<YieldedCoroutine> YieldedCoroutines;
-        std::vector<SharedMutex*> LockedSharedMutexes;
+        std::deque<YieldedCoroutine> YieldedCoroutines = {};
+        std::vector<SharedMutex*> LockedSharedMutexes = {};
         std::string Name;
         lua_State* MainThread = nullptr;
     };
@@ -186,7 +184,7 @@ namespace ScriptEngine::L
         std::vector<std::string> YieldBlockers;
         std::stack<std::string> UnfinishedProfilerZones;
         double AllowedExecutionTime = 0.0;
-        double LastResumed = 0.f;
+        double LastResumed = 0.0;
         ParallelVM* PVM = nullptr;
         bool DebuggerAttached = false;
         bool BeingDebugged = false;

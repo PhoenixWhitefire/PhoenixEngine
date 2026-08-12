@@ -3,12 +3,14 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/ComponentDependencies.hpp"
 
+IComponentManager::~IComponentManager() = default;
+
 const std::unordered_map<std::string_view, EntityComponent> s_ComponentNameToType = []()
 {
 	std::unordered_map<std::string_view, EntityComponent> map;
-	map.reserve((size_t)EntityComponent::__count);
+	map.reserve((size_t)EntityComponent::count);
 
-	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+	for (size_t i = 0; i < (size_t)EntityComponent::count; i++)
 		map[s_EntityComponentNames[i]] = (EntityComponent)i;
 
 	return map;

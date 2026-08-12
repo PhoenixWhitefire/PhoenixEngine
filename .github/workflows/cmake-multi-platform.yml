@@ -31,25 +31,21 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
         build_type: [Release, Debug, ReleaseTSan, DebugTSan]
-        c_compiler: [cl, gcc]
+        c_compiler: [cl, clang]
         include:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
           - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: gcc
+            c_compiler: clang
+            cpp_compiler: clang
         exclude:
-          - os: windows-latest
-            c_compiler: gcc
           - os: windows-latest
             c_compiler: clang
           - os: windows-latest
             build_type: ReleaseTSan
           - os: windows-latest
             build_type: DebugTSan
-          - os: ubuntu-latest
-            c_compiler: clang
           - os: ubuntu-latest
             c_compiler: cl
           - os: ubuntu-latest
@@ -69,8 +65,6 @@ jobs:
         sudo apt-get install libdbus-1-dev
         sudo apt-get install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
         sudo apt-get install libwayland-client0
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
 
     # - name: Setup PATH for Windows Address Sanitizer
     #   if: runner.os == 'Windows'
@@ -78,35 +72,19 @@ jobs:
     #   run: call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\Common7\Tools\VsDevCmd.bat"
 
     - name: Configure CMake (Windows)
-      if: runner.os == 'Windows'
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       # TODO removing causes the wrong build type to be selected?
       run: >
-        cmake -B x64
+        cmake -B build
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -S ${{ github.workspace }}
-        -DPHX_ASAN=OFF
-
-    - name: Configure CMake (Linux)
-      if: runner.os == 'Linux'
-      env:
-        CXX: g++
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      # TODO removing causes the wrong build type to be selected?
-      run: >
-        cmake -B x64
-        -DCMAKE_CXX_COMPILER=g++-14
-        -DCMAKE_C_COMPILER=gcc-14
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -S ${{ github.workspace }}
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build x64 -j4 --config ${{ matrix.build_type }}
+      run: cmake --build build -j4 --config ${{ matrix.build_type }}
 
     - name: Configure CMake for Profiler
       if: matrix.build_type == 'Release' && runner.os == 'Windows'
@@ -120,14 +98,14 @@ jobs:
       if: runner.os == 'Windows'
       shell: cmd
       run: |
-        move "x64\\${{ matrix.build_type }}\\PhoenixEngine.exe" ".\\PhoenixEngine.exe"
+        move "build\\${{ matrix.build_type }}\\PhoenixEngine.exe" ".\\PhoenixEngine.exe"
         move ".github\\wiki" ".\\wiki"
 
     - name: Move executable and Wiki (Linux)
       if: runner.os == 'Linux'
       run: |
-        mv "x64/${{ matrix.build_type }}/PhoenixEngine" "./PhoenixEngine"
-        mv "x64/${{ matrix.build_type }}/PhoenixEngine.debug" "./PhoenixEngine.debug"
+        mv "build/${{ matrix.build_type }}/PhoenixEngine" "./PhoenixEngine"
+        mv "build/${{ matrix.build_type }}/PhoenixEngine.debug" "./PhoenixEngine.debug"
         mv ".github/wiki" "./wiki"
 
     - name: Upload build artifact (Windows)

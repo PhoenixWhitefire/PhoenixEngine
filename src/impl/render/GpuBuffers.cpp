@@ -152,7 +152,8 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
 {
 	ZoneScoped;
 
-	this->Width = TargetWidth, this->Height = TargetHeight;
+	this->Width = TargetWidth;
+	this->Height = TargetHeight;
 
 	glGenFramebuffers(1, &m_GpuId);
 	
@@ -253,7 +254,8 @@ void GpuFrameBuffer::ChangeResolution(int NewWidth, int NewHeight)
 	this->Bind();
 	this->BindTexture();
 
-	this->Width = NewWidth, this->Height = NewHeight;
+	this->Width = NewWidth;
+	this->Height = NewHeight;
 
 	// "TODO fix msaa"
 	// 21/10/2024:

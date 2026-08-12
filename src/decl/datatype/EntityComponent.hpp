@@ -48,7 +48,7 @@ enum EC : uint8_t
 	AnimationState,
 	ScriptEngine,
 
-	__count
+	count
 };
 };
 
@@ -93,7 +93,7 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"ScriptEngine",
 };
 
-static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::__count);
+static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::count);
 
 const std::string_view s_DataModelServices[] = {
 	"AssetManager",
@@ -146,7 +146,7 @@ namespace std
 		size_t operator()(const ReflectorRef& r) const noexcept
 		{
 			return ((size_t)r.Id << 32) + (size_t)r.Type;
-		};
+		}
 	};
 }
 

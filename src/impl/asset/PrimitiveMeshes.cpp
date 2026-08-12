@@ -1,6 +1,4 @@
-#define _USE_MATH_DEFINES
 #include <cmath>
-#include <map>
 
 #include "asset/PrimitiveMeshes.hpp"
 
@@ -119,12 +117,12 @@ Mesh PrimitiveMeshes::Sphere()
     for (int y = 0; y <= HorizontalLines; y++)
     {
         float v = (float)y / HorizontalLines;
-        float phi = v * M_PI;
+        float phi = v * (float)M_PI;
 
         for (int x = 0; x <= VerticalLines; x++)
         {
             float u = (float)x / VerticalLines;
-            float theta = u * 2.f * M_PI;
+            float theta = u * 2.f * (float)M_PI;
 
             glm::vec3 pos = glm::normalize(glm::vec3(
                 sin(phi) * cos(theta),
@@ -176,9 +174,9 @@ Mesh PrimitiveMeshes::Cylinder()
 
     for (uint32_t i = 0; i <= NumSegments; i++)
     {
-        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
-        float x = 0.5f * cos(angle);
-        float y = 0.5f * sin(angle);
+        float angle = (float)i * (2.f * (float)M_PI / (float)NumSegments);
+        float x = 0.5f * (float)cos(angle);
+        float y = 0.5f * (float)sin(angle);
         float u = (float)i / (float)NumSegments;
         glm::vec3 normal = glm::normalize(glm::vec3(x, 0.f, y));
 
@@ -208,9 +206,9 @@ Mesh PrimitiveMeshes::Cylinder()
     uint32_t topRingStart = (uint32_t)vertices.size();
     for (uint32_t i = 0; i <= NumSegments; i++)
     {
-        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
-        float x = 0.5f * cos(angle);
-        float y = 0.5f * sin(angle);
+        float angle = (float)i * (2.f * (float)M_PI / (float)NumSegments);
+        float x = 0.5f * (float)cos(angle);
+        float y = 0.5f * (float)sin(angle);
         vertices.push_back(Vertex{ glm::vec3(x, 0.5f, y), VecYAxis, White, glm::vec2(x + 0.5f, y + 0.5f) });
     }
 
@@ -227,9 +225,9 @@ Mesh PrimitiveMeshes::Cylinder()
     uint32_t bottomRingStart = (uint32_t)vertices.size();
     for (uint32_t i = 0; i <= NumSegments; i++)
     {
-        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
-        float x = 0.5f * cos(angle);
-        float y = 0.5f * sin(angle);
+        float angle = (float)i * (2.f * (float)M_PI / (float)NumSegments);
+        float x = 0.5f * (float)cos(angle);
+        float y = 0.5f * (float)sin(angle);
         vertices.push_back(Vertex{ glm::vec3(x, -0.5f, y), -VecYAxis, White, glm::vec2(x + 0.5f, y + 0.5f) });
     }
 
@@ -258,9 +256,9 @@ Mesh PrimitiveMeshes::Cone()
 
     for (uint32_t i = 0; i < NumSegments; i++)
     {
-        float angle = (float)i / (float)NumSegments * 2.f * M_PI;
-        float x = 0.5f * cos(angle);
-        float y = 0.5f * sin(angle);
+        float angle = (float)i / (float)NumSegments * 2.f * (float)M_PI;
+        float x = 0.5f * (float)cos(angle);
+        float y = 0.5f * (float)sin(angle);
         glm::vec3 normal = glm::normalize(glm::vec3(x, 0.f, y));
 
         vertices.push_back(Vertex{ glm::vec3(x, -0.5f, y), normal, White, glm::vec2(x, y) });
@@ -280,9 +278,9 @@ Mesh PrimitiveMeshes::Cone()
     uint32_t bottomRingStart = (uint32_t)vertices.size();
     for (uint32_t i = 0; i <= NumSegments; i++)
     {
-        float angle = (float)i * (2.f * M_PI / (float)NumSegments);
-        float x = 0.5f * cos(angle);
-        float y = 0.5f * sin(angle);
+        float angle = (float)i * (2.f * (float)M_PI / (float)NumSegments);
+        float x = 0.5f * (float)cos(angle);
+        float y = 0.5f * (float)sin(angle);
         vertices.push_back(Vertex{ glm::vec3(x, -0.5f, y), -VecYAxis, White, glm::vec2(x + 0.5f, y + 0.5f) });
     }
 

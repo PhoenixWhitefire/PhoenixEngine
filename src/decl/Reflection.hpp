@@ -122,7 +122,7 @@ namespace Reflection
         ColorGradient,
 
         // BEFORE Null
-        __lastBase,
+        lastBase,
 
         Null = 0b01000000,
         Any = 0b10000000 // Only for type definitions
@@ -130,7 +130,7 @@ namespace Reflection
     };
     using ValueType = ValueType_::VT;
 
-    static_assert(ValueType::__lastBase < ValueType::Null);
+    static_assert(ValueType::lastBase < ValueType::Null);
 
     std::string TypeAsString(ValueType);
     // `Target` is the documented definition, `Value` is the actual value
@@ -282,9 +282,9 @@ namespace Reflection
             const std::span<const ValueType>& Outputs,
             const MethodFunction Func
         )
-        : Inputs(Inputs),
-          Outputs(Outputs),
-          Func(Func)
+        : Parameters(Inputs),
+          Returns(Outputs),
+          Function(Func)
         {
         }
 
@@ -293,18 +293,18 @@ namespace Reflection
             const std::span<const ValueType>& Outputs,
             const YieldingMethodFunction YieldFunc
         )
-        : Inputs(Inputs),
-          Outputs(Outputs),
-          YieldFunc(YieldFunc),
+        : Parameters(Inputs),
+          Returns(Outputs),
+          YieldFunction(YieldFunc),
           Yields(true)
         {
         }
 
-        const std::span<const ValueType> Inputs;
-        const std::span<const ValueType> Outputs;
+        const std::span<const ValueType> Parameters;
+        const std::span<const ValueType> Returns;
 
-        YieldingMethodFunction YieldFunc = nullptr;
-        MethodFunction Func = nullptr;
+        YieldingMethodFunction YieldFunction = nullptr;
+        MethodFunction Function = nullptr;
         bool ParallelSafe = false;
         bool Yields = false;
     };
@@ -326,13 +326,13 @@ namespace Reflection
     void SignalEvent(const std::vector<EventConnection>& Connections, const std::vector<GenericValue>&, const std::string_view Name);
     void SignalRestrictedEvent(uint32_t From, const std::vector<EventConnection>& Connections, const std::vector<GenericValue>&, const std::string_view Name);
 
-    typedef std::unordered_map<std::string_view, Reflection::PropertyDescriptor> StaticPropertyMap;
-    typedef std::unordered_map<std::string_view, Reflection::MethodDescriptor> StaticMethodMap;
-    typedef std::unordered_map<std::string_view, Reflection::EventDescriptor> StaticEventMap;
+    using StaticPropertyMap = std::unordered_map<std::string_view, Reflection::PropertyDescriptor>;
+    using StaticMethodMap = std::unordered_map<std::string_view, Reflection::MethodDescriptor>;
+    using StaticEventMap = std::unordered_map<std::string_view, Reflection::EventDescriptor>;
 
-    typedef std::unordered_map<std::string_view, const Reflection::PropertyDescriptor*> PropertyMap;
-    typedef std::unordered_map<std::string_view, const Reflection::MethodDescriptor*> MethodMap;
-    typedef std::unordered_map<std::string_view, const Reflection::EventDescriptor*> EventMap;
+    using PropertyMap = std::unordered_map<std::string_view, const Reflection::PropertyDescriptor*>;
+    using MethodMap = std::unordered_map<std::string_view, const Reflection::MethodDescriptor*>;
+    using EventMap = std::unordered_map<std::string_view, const Reflection::EventDescriptor*>;
 
     struct StaticApi
     {
@@ -407,6 +407,11 @@ namespace std
             case ValueType::Null:
                 return h;
 
+            case ValueType::Buffer: case ValueType::EventSignal: case ValueType::InputEvent:
+            case ValueType::NumberGradient: case ValueType::VectorGradient:
+            case ValueType::ColorGradient: case ValueType::lastBase:
+            case ValueType::Any:
+                [[fallthrough]];
             [[unlikely]] default:
             {
                 assert(false);

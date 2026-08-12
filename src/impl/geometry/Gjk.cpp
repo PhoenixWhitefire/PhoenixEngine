@@ -3,7 +3,6 @@
 
 #include <tracy/Tracy.hpp>
 #include <cassert>
-#include <array>
 #include <cfloat>
 
 #include "geometry/Gjk.hpp"
@@ -11,18 +10,6 @@
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 #include "asset/MeshProvider.hpp"
-
-static const glm::vec3 CubePoints[] = {
-    glm::vec3(-0.5f, -0.5f, -0.5f),
-    glm::vec3( 0.5f, -0.5f, -0.5f),
-    glm::vec3( 0.5f,  0.5f, -0.5f),
-    glm::vec3(-0.5f,  0.5f, -0.5f),
-
-    glm::vec3(-0.5f, -0.5f,  0.5f),
-    glm::vec3( 0.5f, -0.5f,  0.5f),
-    glm::vec3( 0.5f,  0.5f,  0.5f),
-    glm::vec3(-0.5f,  0.5f,  0.5f),
-};
 
 static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Direction, const Mesh& mesh, float* maxDistance, glm::vec3 maxPoint, const glm::mat4& submeshTrans = glm::mat4(1.f))
 {
@@ -343,11 +330,13 @@ RaycastResult Gjk::FindRayIntersection(const EcRigidBody* A, const glm::vec3& Or
 
 	glm::vec3 dir = Direction;
 
+	glm::vec3 a = point;
+	glm::vec3 b = findFurthestPoint(A, -dir);
 	SupportPoint s = {
-		.A = point,
-		.B = findFurthestPoint(A, -dir)
+		.P = a - b,
+		.A = a,
+		.B = b,
 	};
-	s.P = s.A - s.B;
 
 	RaycastResult result = {};
 	result.Simp.push_front(s);
@@ -356,11 +345,13 @@ RaycastResult Gjk::FindRayIntersection(const EcRigidBody* A, const glm::vec3& Or
 
 	for (int i = 0; i < 64; i++)
 	{
+		a = point;
+		b = findFurthestPoint(A, -dir);
 		s = {
-			.A = point,
-			.B = findFurthestPoint(A, -dir)
+			.P = a - b,
+			.A = a,
+			.B = b,
 		};
-		s.P = s.A - s.B;
 
 		result.Simp.push_front(s);
 

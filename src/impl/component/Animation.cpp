@@ -238,7 +238,7 @@ void EcAnimator::Step(double DeltaTime)
 
         const AnimationData& animation = acm->Animations.at(animationState->AnimationAssetId);
 
-        animationState->Time += DeltaTime;
+        animationState->Time += (float)DeltaTime;
         if (animationState->Time > animation.Length)
         {
             animationState->Time = 0.f;

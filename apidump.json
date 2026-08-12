@@ -168,8 +168,6 @@
           "BindDataModel": "(GameObject) -> ()",
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
-          "SaveConfig": "() -> (Boolean, String)",
-          "SetConfigValue": "(String, Any) -> ()",
           "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)"
         },
         "Properties": {

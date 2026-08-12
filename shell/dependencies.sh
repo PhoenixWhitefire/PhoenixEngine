@@ -12,3 +12,6 @@ sudo apt-get install libxkbcommon-dev
 
 echo Installing xorg-dev
 sudo apt-get install xorg-dev
+
+echo Installing clang
+sudo apt-get install clang

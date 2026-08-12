@@ -1,20 +1,10 @@
 /*
 
-Phoenix Engine
+    Phoenix Engine
 
-The oldest files I can find show that I started working on this on the 2nd of November, 2021.
-Today, it is the 5th of March, 2023
+    The oldest files I can find show that I started working on this on the 2nd of November, 2021.
 
-This is a melting, sphaghetti code hodgepodge of random things I thought was cool when I was writing it
-that SOMEHOW works without crashing atleast 50 times a frame.
-
-Anyway, here is a small tour:
-
-- "phoenix.conf" contains some configuration. Set "Developer" to "false" to disable the debug UIs.
-- WASD to move horizontally, Q/E to move down/up. Left-click+drag to look around. LShift to move slower.
-- F11 to toggle fullscreen.
-
-https://github.com/Phoenixwhitefire/PhoenixEngine
+    https://github.com/Phoenixwhitefire/PhoenixEngine
 
 */
 
@@ -24,7 +14,7 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include <csignal>
 #include <chrono>
 
-#ifdef __GNUG__
+#ifdef __clang__
 #include <sys/prctl.h>
 #include <sys/wait.h>
 #include <fcntl.h>
@@ -47,7 +37,6 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 #include "component/Camera.hpp"
 #include "script/ScriptEngine.hpp"
 
-#include "GlobalJsonConfig.hpp"
 #include "DeveloperTools.hpp"
 #include "UserInput.hpp"
 #include "Utilities.hpp"
@@ -58,8 +47,8 @@ https://github.com/Phoenixwhitefire/PhoenixEngine
 static bool PreviouslyPressingF11 = false;
 static bool WasRmbPressed = false;
 static bool RmbTrigger = false;
-static const float MouseSensitivity = 400.f;
-static const float MovementSpeed = 15.f;
+static const double MouseSensitivity = 400.0;
+static const float MovementSpeed = 15.0;
 static double PrevMouseX, PrevMouseY = 0;
 
 static ImGuiIO* GuiIO = nullptr;
@@ -68,282 +57,290 @@ static int s_ExitCode = 0;
 
 static void handleInputs(double deltaTime)
 {
-	Engine* engine = Engine::Get();
+    Engine* engine = Engine::Get();
 
-	EcCamera* camera = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
-	GLFWwindow* window = engine->Window;
+    EcCamera* camera = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
+    GLFWwindow* window = engine->Window;
 
-	double mouseX;
-	double mouseY;
-	glfwGetCursorPos(window, &mouseX, &mouseY);
-	
-	if (camera->UseSimpleController && camera->Object->FindComponent<EcTransform>())
-	{
-		bool rmbPressed = (!GuiIO->WantCaptureMouse || UserInput::ShouldIgnoreUIInputSinking()) && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
+    double mouseX;
+    double mouseY;
+    glfwGetCursorPos(window, &mouseX, &mouseY);
+    
+    if (camera->UseSimpleController && camera->Object->FindComponent<EcTransform>())
+    {
+        bool rmbPressed = (!GuiIO->WantCaptureMouse || UserInput::ShouldIgnoreUIInputSinking()) && UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT);
 
-		glm::mat4 camTrans = camera->GetWorldTransform();
+        glm::mat4 camTrans = camera->GetWorldTransform();
 
-		const glm::vec3 WorldUp = { 0.f, 1.f, 0.f };
-		glm::vec3 camForward = -glm::vec3(camTrans[2]);
-		glm::vec3 camRight = glm::normalize(glm::cross(camForward, WorldUp));
-		glm::vec3 camUp = glm::vec3(camTrans[1]);
+        const glm::vec3 WorldUp = { 0.f, 1.f, 0.f };
+        glm::vec3 camForward = -glm::vec3(camTrans[2]);
+        glm::vec3 camRight = glm::normalize(glm::cross(camForward, WorldUp));
+        glm::vec3 camUp = glm::vec3(camTrans[1]);
 
-		if (!GuiIO->WantCaptureKeyboard || UserInput::ShouldIgnoreUIInputSinking())
-		{
-			float speed = MovementSpeed * static_cast<float>(deltaTime);
+        if (!GuiIO->WantCaptureKeyboard || UserInput::ShouldIgnoreUIInputSinking())
+        {
+            float speed = MovementSpeed * static_cast<float>(deltaTime);
 
-			if (UserInput::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
-				speed *= 0.5f;
+            if (UserInput::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
+                speed *= 0.5f;
 
-			glm::vec3 move = {};
+            glm::vec3 move = {};
 
-			if (UserInput::IsKeyDown(GLFW_KEY_W))
-				move += camForward * speed;
+            if (UserInput::IsKeyDown(GLFW_KEY_W))
+                move += camForward * speed;
 
-			if (UserInput::IsKeyDown(GLFW_KEY_S))
-				move -= camForward * speed;
+            if (UserInput::IsKeyDown(GLFW_KEY_S))
+                move -= camForward * speed;
 
-			if (UserInput::IsKeyDown(GLFW_KEY_A))
-				move -= camRight * speed;
+            if (UserInput::IsKeyDown(GLFW_KEY_A))
+                move -= camRight * speed;
 
-			if (UserInput::IsKeyDown(GLFW_KEY_D))
-				move += camRight * speed;
+            if (UserInput::IsKeyDown(GLFW_KEY_D))
+                move += camRight * speed;
 
-			if (UserInput::IsKeyDown(GLFW_KEY_Q))
-				move -= camUp * speed;
+            if (UserInput::IsKeyDown(GLFW_KEY_Q))
+                move -= camUp * speed;
 
-			if (UserInput::IsKeyDown(GLFW_KEY_E))
-				move += camUp * speed;
+            if (UserInput::IsKeyDown(GLFW_KEY_E))
+                move += camUp * speed;
 
-			camTrans[3] += glm::vec4(move, 0.f);
-		}
+            camTrans[3] += glm::vec4(move, 0.f);
+        }
 
-		RmbTrigger = false;
-		if (rmbPressed && !WasRmbPressed)
-			RmbTrigger = true;
+        RmbTrigger = false;
+        if (rmbPressed && !WasRmbPressed)
+            RmbTrigger = true;
 
-		if (rmbPressed && !WasRmbPressed)
-		{
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			GuiIO->ConfigFlags |= ImGuiConfigFlags_NoMouse;
-		}
-		else if (!rmbPressed && WasRmbPressed)
-		{
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			GuiIO->ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
-		}
+        if (rmbPressed && !WasRmbPressed)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            GuiIO->ConfigFlags |= ImGuiConfigFlags_NoMouse;
+        }
+        else if (!rmbPressed && WasRmbPressed)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            GuiIO->ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+        }
 
-		WasRmbPressed = rmbPressed;
+        WasRmbPressed = rmbPressed;
 
-		if (rmbPressed)
-		{
-			float deltaMouseX = mouseX - PrevMouseX;
-			float deltaMouseY = mouseY - PrevMouseY;
+        if (rmbPressed)
+        {
+            double deltaMouseX = mouseX - PrevMouseX;
+            double deltaMouseY = mouseY - PrevMouseY;
 
-			float rotationX = deltaMouseY / MouseSensitivity;
-			float rotationY = deltaMouseX / MouseSensitivity;
+            double rotationX = deltaMouseY / MouseSensitivity;
+            double rotationY = deltaMouseX / MouseSensitivity;
 
-			glm::vec3 newForward = glm::rotate(
-				camForward,
-				-rotationX,
-				glm::normalize(glm::cross(camForward, WorldUp))
-			);
+            glm::vec3 newForward = glm::rotate(
+                camForward,
+                (float)-rotationX,
+                glm::normalize(glm::cross(camForward, WorldUp))
+            );
 
-			if (abs(glm::angle(newForward, WorldUp) - glm::radians(90.f)) <= glm::radians(85.f))
-				camForward = newForward;
+            if (abs(glm::angle(newForward, WorldUp) - glm::radians(90.f)) <= glm::radians(85.f))
+                camForward = newForward;
 
-			camForward = glm::rotate(camForward, -rotationY, WorldUp);
+            camForward = glm::rotate(camForward, (float)-rotationY, WorldUp);
 
-			glm::vec3 forward = camForward;
-			glm::vec3 right = glm::normalize(glm::cross(forward, WorldUp));
-			glm::vec3 up = glm::cross(right, forward);
+            glm::vec3 forward = camForward;
+            glm::vec3 right = glm::normalize(glm::cross(forward, WorldUp));
+            glm::vec3 up = glm::cross(right, forward);
 
-			camTrans[0] = glm::vec4(right, 0.f);
-			camTrans[1] = glm::vec4(up, 0.f);
-			camTrans[2] = glm::vec4(-camForward, 0.f);
-		}
+            camTrans[0] = glm::vec4(right, 0.f);
+            camTrans[1] = glm::vec4(up, 0.f);
+            camTrans[2] = glm::vec4(-camForward, 0.f);
+        }
 
-		camera->SetWorldTransform(camTrans);
-	}
+        camera->SetWorldTransform(camTrans);
+    }
 
-	PrevMouseX = mouseX;
-	PrevMouseY = mouseY;
+    PrevMouseX = mouseX;
+    PrevMouseY = mouseY;
 
-	if (UserInput::IsKeyDown(GLFW_KEY_F11))
-	{
-		if (!PreviouslyPressingF11)
-		{
-			PreviouslyPressingF11 = true;
-			engine->SetIsFullscreen(!engine->IsFullscreen);
-		}
-	}
-	else
-		PreviouslyPressingF11 = false;
+    if (UserInput::IsKeyDown(GLFW_KEY_F11))
+    {
+        if (!PreviouslyPressingF11)
+        {
+            PreviouslyPressingF11 = true;
+            engine->SetIsFullscreen(!engine->IsFullscreen);
+        }
+    }
+    else
+        PreviouslyPressingF11 = false;
 }
 
 static void doApiDump()
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	Log.Info("Dumping API...");
+    Log.Info("Dumping API...");
 
-	nlohmann::json apiDump;
-	apiDump["GameObject"] = GameObject::DumpApiToJson();
-	apiDump["ScriptEnv"] = ScriptEngine::DumpApiToJson();
+    nlohmann::json apiDump;
+    apiDump["GameObject"] = GameObject::DumpApiToJson();
+    apiDump["ScriptEnv"] = ScriptEngine::DumpApiToJson();
 
-	PHX_CHECK(FileRW::WriteFile("./apidump.json", apiDump.dump(2)));
-	Log.Info("API dump finished");
+    PHX_CHECK(FileRW::WriteFile("./apidump.json", apiDump.dump(2)));
+    Log.Info("API dump finished");
 }
+
+struct EngineInitConfig
+{
+    std::optional<int> ThreadManagerThreadCount;
+    std::optional<const char*> ScriptTool;
+    std::optional<std::string> RootScene;
+    std::optional<bool> Developer;
+    std::optional<bool> Headless;
+    bool DoApiDump = false;
+};
 
 static const char* MapFileFromArgs = nullptr;
 static const char* ScriptTool = nullptr;
 
-static void init()
+static void init(Engine* engine, const EngineInitConfig& InitConfig)
 {
-	ZoneScoped;
+    ZoneScoped;
+    engine->Initialize(InitConfig.ThreadManagerThreadCount.value_or(-1), InitConfig.Headless.value_or(false));
 
-	Engine* engine = Engine::Get();
+    if (InitConfig.DoApiDump)
+        doApiDump();
 
-	if (!engine->IsHeadlessMode)
-	{
-		Log.InfoF(
-			"Initializing Dear ImGui {}...",
-			IMGUI_VERSION
-		);
-	
-		if (!IMGUI_CHECKVERSION())
-			RAISE_RT("Dear ImGui detected a version mismatch");
-	
-		ImGui::CreateContext();
-		GuiIO = &ImGui::GetIO();
-		ImGui::StyleColorsDark();
-		GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		GuiIO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		GuiIO->ConfigDpiScaleFonts = true;
-		GuiIO->ConfigDpiScaleViewports = true;
+    if (!engine->IsHeadlessMode)
+    {
+        Log.InfoF(
+            "Initializing Dear ImGui {}...",
+            IMGUI_VERSION
+        );
+    
+        if (!IMGUI_CHECKVERSION())
+            RAISE_RT("Dear ImGui detected a version mismatch");
+    
+        ImGui::CreateContext();
+        GuiIO = &ImGui::GetIO();
+        ImGui::StyleColorsDark();
+        GuiIO->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        GuiIO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        GuiIO->ConfigDpiScaleFonts = true;
+        GuiIO->ConfigDpiScaleViewports = true;
 
-		float displayScale = 0.f;
-		glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &displayScale, nullptr);
+        float displayScale = 0.f;
+        glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &displayScale, nullptr);
 
-		ImGui::GetStyle().ScaleAllSizes(displayScale);
-		ImGui::GetStyle().DisplayWindowPadding = ImVec2(19.f, 19.f);
+        ImGui::GetStyle().ScaleAllSizes(displayScale);
+        ImGui::GetStyle().DisplayWindowPadding = ImVec2(19.f, 19.f);
 
-		PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW");
-		PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
+        PHX_ENSURE_MSG(ImGui_ImplGlfw_InitForOpenGL(engine->Window, true), "Failed to initialize Dear ImGui for GLFW");
+        PHX_ENSURE_MSG(ImGui_ImplOpenGL3_Init("#version 460"), "Failed to initialize Dear ImGui for OpenGL");
 
-		if (!std::filesystem::is_regular_file("imgui.ini"))
-		{
-			std::string defaultLayoutFile = EngineJsonConfig.value("DearImGuiDefaultLayoutFile", "default-layout.ini");
+        if (!std::filesystem::is_regular_file("imgui.ini"))
+        {
+            std::string defaultLayoutFile = engine->Config.value("DearImGuiDefaultLayoutFile", "default-layout.ini");
 
-			if (std::filesystem::is_regular_file(defaultLayoutFile))
-				std::filesystem::copy_file(defaultLayoutFile, "imgui.ini");
-		}
-	
-		Log.Info("Dear ImGui initialized");
-	
-		engine->OnFrameStart.Connect(handleInputs);
-	
-		if (EngineJsonConfig.value("Developer", false))
-		{
-			Log.Info("Developer-mode specific functionality");
-			DeveloperTools::Initialize(&engine->RendererContext);
-		}
-	}
+            if (std::filesystem::is_regular_file(defaultLayoutFile))
+                std::filesystem::copy_file(defaultLayoutFile, "imgui.ini");
+        }
+    
+        Log.Info("Dear ImGui initialized");
+    
+        engine->OnFrameStart.Connect(handleInputs);
+    
+        if (InitConfig.Developer.value_or(engine->Config.value("Developer", false)))
+        {
+            Log.Info("Developer-mode specific functionality");
+            DeveloperTools::Initialize(&engine->RendererContext);
+        }
+    }
 
-	Log.Info("Loading Root Scene from file...");
+    Log.Info("Loading Root Scene from file...");
 
-	const std::string& mapFile = MapFileFromArgs ?
-									MapFileFromArgs
-									: EngineJsonConfig.value("RootScene", "scenes/root.world");
-	
-	bool worldLoadSuccess = true;
-	std::vector<ObjectHandle> roots;
+    const std::string mapFile = InitConfig.RootScene.value_or(engine->Config.value("RootScene", "scenes/root.world"));
 
-	if (!ScriptTool)
-	{
-		bool fileRead = true;
-		std::string fileContentsOrError = FileRW::ReadFile(mapFile, &fileRead);
+    bool worldLoadSuccess = true;
+    std::vector<ObjectHandle> roots;
 
-		if (!fileRead)
-			RAISE_RT("Failed to read root scene file '{}': {}", mapFile, fileContentsOrError);
+    if (!ScriptTool)
+    {
+        bool fileRead = true;
+        std::string fileContentsOrError = FileRW::ReadFile(mapFile, &fileRead);
 
-		roots = SceneFormat::Deserialize(fileContentsOrError, &worldLoadSuccess);
-	}
-	else
-	{
-		ObjectHandle dm = GameObjectManager::s_Create(EntityComponent::DataModel);
-		ObjectHandle wp = GameObjectManager::s_Create(EntityComponent::Workspace);
-		ObjectHandle cam = GameObjectManager::s_Create(EntityComponent::Camera);
-		ObjectHandle light = GameObjectManager::s_Create(EntityComponent::DirectionalLight);
+        if (!fileRead)
+            RAISE_RT("Failed to read root scene file '{}': {}", mapFile, fileContentsOrError);
 
-		wp->SetParent(dm);
-		cam->SetParent(wp);
-		light->SetParent(wp);
-		wp->FindComponent<EcWorkspace>()->SetSceneCamera(cam);
-		cam->FindComponent<EcCamera>()->UseSimpleController = true;
+        roots = SceneFormat::Deserialize(fileContentsOrError, &worldLoadSuccess);
+    }
+    else
+    {
+        ObjectHandle dm = GameObjectManager::s_Create(EntityComponent::DataModel);
+        ObjectHandle wp = GameObjectManager::s_Create(EntityComponent::Workspace);
+        ObjectHandle cam = GameObjectManager::s_Create(EntityComponent::Camera);
+        ObjectHandle light = GameObjectManager::s_Create(EntityComponent::DirectionalLight);
 
-		dm->FindComponent<EcDataModel>()->LiveScripts = ScriptTool;
+        wp->SetParent(dm);
+        cam->SetParent(wp);
+        light->SetParent(wp);
+        wp->FindComponent<EcWorkspace>()->SetSceneCamera(cam);
+        cam->FindComponent<EcCamera>()->UseSimpleController = true;
 
-		roots.push_back(dm);
-	}
-	
-	/*
-	std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
-	memalloctest.reserve(5000);
-	memalloctest.shrink_to_fit();
-	*/
+        dm->FindComponent<EcDataModel>()->LiveScripts = ScriptTool;
 
-	PHX_ENSURE_MSG(worldLoadSuccess, "World failed to load: " + SceneFormat::GetLastErrorString());
+        roots.push_back(dm);
+    }
+    
+    /*
+    std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
+    memalloctest.reserve(5000);
+    memalloctest.shrink_to_fit();
+    */
 
-	if (roots.size() > 1)
-		Log.Warning("More than 1 root object in the World, anything other than the first will be ignored");
+    PHX_ENSURE_MSG(worldLoadSuccess, "World failed to load: " + SceneFormat::GetLastErrorString());
 
-	PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
+    if (roots.size() > 1)
+        Log.Warning("More than 1 root object in the World, anything other than the first will be ignored");
 
-	const ObjectHandle& root = roots[0];
-	PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
+    PHX_ENSURE_MSG(!roots.empty(), "No root objects in World!");
 
-	engine->BindDataModel(root);
-	engine->PrimaryDataModel = root;
+    const ObjectHandle& root = roots[0];
+    PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
+
+    engine->BindDataModel(root);
+    engine->PrimaryDataModel = root;
 }
 
 static bool isBoolArgument(const char* v, const char* param)
 {
-	return (strlen(param) == (strlen(v) - 2) || strlen(param) == strlen(v)) && memcmp(v, param, strlen(param)) == 0;
+    return (strlen(param) == (strlen(v) - 2) || strlen(param) == strlen(v)) && memcmp(v, param, strlen(param)) == 0;
 }
 
 static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)
 {
-	size_t alen = strlen(arg);
-	size_t vlen = strlen(v);
+    size_t alen = strlen(arg);
+    size_t vlen = strlen(v);
 
-	if (vlen == alen) // no `:`
-		return defaultVal;
+    if (vlen == alen) // no `:`
+        return defaultVal;
 
-	assert(vlen > alen); // shouldve been caught by `isBoolArgument`
+    assert(vlen > alen); // shouldve been caught by `isBoolArgument`
 
-	if (v[alen] != ':')
-	{
-		Log.ErrorF("Malformed boolean argument '{}' (matching '{}')", v, arg);
-		return defaultVal;
-	}
+    if (v[alen] != ':')
+    {
+        Log.ErrorF("Malformed boolean argument '{}' (matching '{}')", v, arg);
+        return defaultVal;
+    }
 
-	if (vlen < alen + 2)
-	{
-		Log.ErrorF("Missing Y/N after '{}' (matching '{}')", v, arg);
-		return defaultVal;
-	}
+    if (vlen < alen + 2)
+    {
+        Log.ErrorF("Missing Y/N after '{}' (matching '{}')", v, arg);
+        return defaultVal;
+    }
 
-	if (v[alen + 1] == 'Y')
-		return true;
-	if (v[alen + 1] == 'N')
-		return false;
+    if (v[alen + 1] == 'Y')
+        return true;
+    if (v[alen + 1] == 'N')
+        return false;
 
-	Log.ErrorF("Invalid option for boolean '{}' in '{}' (matching '{}'), expected Y/N", v[alen+1], v, arg);
-	return defaultVal;
+    Log.ErrorF("Invalid option for boolean '{}' in '{}' (matching '{}'), expected Y/N", v[alen+1], v, arg);
+    return defaultVal;
 }
-
-static bool DoApiDump = false;
 
 #define CRASHED_DIR "crash/"
 #define CRASHED_APP_LOG CRASHED_DIR "application.txt"
@@ -356,83 +353,83 @@ static bool DoApiDump = false;
 
 #define APPLICATION_ARG "--application"
 
-static void processCliArgs(int argc, char** argv)
+static void processCliArgs(EngineInitConfig& InitConfig, int argc, char** argv)
 {
-	for (int i = 1; i < argc; i++)
-	{
-		const char* v = argv[i];
+    for (int i = 1; i < argc; i++)
+    {
+        const char* v = argv[i];
 
-		if (isBoolArgument(v, "--dev"))
-		{
-			EngineJsonConfig["Developer"] = checkBoolArgument(v, "--dev", true);
-		}
-		else if (strcmp(v, "--threads") == 0)
-		{
-			if (i + 1 < argc)
-			{
-				EngineJsonConfig["ThreadManagerThreadCount"] = std::stoi(argv[i + 1]);
-				i++;
-			}
-			else
-				Log.Error("'--threads' argument from command-line was not followed by the desired Thread Count");
-		}
-		else if (strcmp(v, "--tracy") == 0)
-		{
-			DeveloperTools::LaunchTracy();
-		}
-		else if (strcmp(v, "--apidump") == 0)
-		{
-			DoApiDump = true;
-		}
-		else if (strcmp(v, "--loadmap") == 0)
-		{
-			if (i + 1 < argc)
-			{
-				MapFileFromArgs = argv[i + 1];
+        if (isBoolArgument(v, "--dev"))
+        {
+            InitConfig.Developer = checkBoolArgument(v, "--dev", true);
+        }
+        else if (strcmp(v, "--threads") == 0)
+        {
+            if (i + 1 < argc)
+            {
+                InitConfig.ThreadManagerThreadCount = std::stoi(argv[i + 1]);
+                i++;
+            }
+            else
+                RAISE_RT("'--threads' argument from command-line was not followed by the desired Thread Count");
+        }
+        else if (strcmp(v, "--tracy") == 0)
+        {
+            DeveloperTools::LaunchTracy();
+        }
+        else if (strcmp(v, "--apidump") == 0)
+        {
+            InitConfig.DoApiDump = true;
+        }
+        else if (strcmp(v, "--loadmap") == 0)
+        {
+            if (i + 1 < argc)
+            {
+                MapFileFromArgs = argv[i + 1];
 
-				Log.InfoF(
-					"Map to load specified from launch argument. Map was: {}",
-					MapFileFromArgs
-				);
+                Log.InfoF(
+                    "Map to load specified from launch argument. Map was: {}",
+                    MapFileFromArgs
+                );
 
-				i++;
-			}
-			else
-				Log.Error("'--loadmap' argument from command-line was not followed by the desired File");
-		}
-		else if (strcmp(v, "--tool") == 0)
-		{
-			if (i + 1 < argc)
-			{
-				ScriptTool = argv[i + 1];
+                i++;
+            }
+            else
+                RAISE_RT("'--loadmap' argument from command-line was not followed by the desired File");
+        }
+        else if (strcmp(v, "--tool") == 0)
+        {
+            if (i + 1 < argc)
+            {
+                ScriptTool = argv[i + 1];
 
-				Log.InfoF(
-					"Standalone tool: {}",
-					ScriptTool
-				);
+                Log.InfoF(
+                    "Standalone tool: {}",
+                    ScriptTool
+                );
 
-				i++;
-			}
-			else
-				Log.Error("'--tool' argument from command-line was not followed by the desired File");
-		}
-		else if (isBoolArgument(v, "--headless"))
-		{
-			EngineJsonConfig["Headless"] = checkBoolArgument(v, "--headless", true);
-		}
-		else if (strcmp(v, "--x11") == 0)
-		{
-			glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
-		}
-		else if (strcmp(v, APPLICATION_ARG) == 0)
-		{
-			// Handler in `main`
-		}
-		else
-		{
-			Log.InfoF("Argument '{}' was not processed by Engine", v);
-		}
-	}
+                i++;
+            }
+            else
+                RAISE_RT("'--tool' argument from command-line was not followed by the desired File");
+        }
+        else if (isBoolArgument(v, "--headless"))
+        {
+            InitConfig.Headless = checkBoolArgument(v, "--headless", true);
+        }
+        else if (strcmp(v, "--x11") == 0)
+        {
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+        }
+        else if (strcmp(v, APPLICATION_ARG) == 0)
+        {
+            // Handler in `main`
+        }
+        else
+        {
+            Log.InfoF("Argument '{}' was not processed by Engine", v);
+        }
+    }
 }
 
 #if PHX_HEADLESS_BUILD
@@ -441,25 +438,25 @@ static void processCliArgs(int argc, char** argv)
 #define IS_HEADLESS_STR "No"
 #endif
 
-#ifdef __GNUG__
+#ifdef __clang__
 
 extern "C" void handleCrashSignal(int sig);
 extern "C" void handleCrashSignal(int sig)
 {
-	// create a basic trace back in case the system won't generate a coredump
-	void* frames[64];
-	int n = backtrace(frames, 64);
+    // create a basic trace back in case the system won't generate a coredump
+    void* frames[64];
+    int n = backtrace(frames, 64);
 
-	int traceDescriptor = open(APP_TRACE, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    int traceDescriptor = open(APP_TRACE, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 
-	if (traceDescriptor >= 0)
-	{
-		backtrace_symbols_fd(frames, n, traceDescriptor);
-		close(traceDescriptor);
-	}
+    if (traceDescriptor >= 0)
+    {
+        backtrace_symbols_fd(frames, n, traceDescriptor);
+        close(traceDescriptor);
+    }
 
-	signal(sig, SIG_DFL);
-	raise(sig); // re-raise so normal coredump is still generated if possible
+    signal(sig, SIG_DFL);
+    raise(sig); // re-raise so normal coredump is still generated if possible
 }
 
 static int LauncherPendingSignalToForward = 0;
@@ -467,49 +464,49 @@ static int LauncherPendingSignalToForward = 0;
 extern "C" void launcherForwardSignal(int sig);
 extern "C" void launcherForwardSignal(int sig)
 {
-	LauncherPendingSignalToForward = sig;
+    LauncherPendingSignalToForward = sig;
 }
 
 #endif
 
 static void installCrashSignalHandlers()
 {
-#ifdef __GNUG__
+#ifdef __clang__
 
-	for (int sig : { SIGSEGV, SIGABRT, SIGILL, SIGBUS })
-		signal(sig, handleCrashSignal);
+    for (int sig : { SIGSEGV, SIGABRT, SIGILL, SIGBUS })
+        signal(sig, handleCrashSignal);
 
 #endif
 }
 
 #define EXCEPTION_MESSAGE_PREFIX "Terminate called with std::exception: "
 
-static void terminateHandler()
+[[noreturn]] static void terminateHandler()
 {
-	std::exception_ptr exception = std::current_exception();
+    std::exception_ptr exception = std::current_exception();
 
-	if (exception)
-	{
-		try
-		{
-			std::rethrow_exception(exception);
-		}
-		catch (const std::exception& error)
-		{
-			Log.ErrorF(EXCEPTION_MESSAGE_PREFIX "{}", error.what());
-		}
-		catch (...)
-		{
-			Log.ErrorF("Terminate called with exception of unknown type");
-		}
-	}
-	else
-	{
-		Log.ErrorF("Terminate called without active exception");
-	}
+    if (exception)
+    {
+        try
+        {
+            std::rethrow_exception(exception);
+        }
+        catch (const std::exception& error)
+        {
+            Log.ErrorF(EXCEPTION_MESSAGE_PREFIX "{}", error.what());
+        }
+        catch (...)
+        {
+            Log.ErrorF("Terminate called with exception of unknown type");
+        }
+    }
+    else
+    {
+        Log.ErrorF("Terminate called without active exception");
+    }
 
-	Logging::Save();
-	std::abort(); // default terminate behavior, still want to generate coredump
+    Logging::Save();
+    std::abort(); // default terminate behavior, still want to generate coredump
 }
 
 static void unsetQuitSignalHandlers()
@@ -530,18 +527,17 @@ extern "C" void handleQuitSignal(int signal)
 
 static void application(int argc, char** argv)
 {
-	std::set_terminate(terminateHandler);
-	installCrashSignalHandlers();
-	processCliArgs(argc, argv);
+    std::set_terminate(terminateHandler);
+    installCrashSignalHandlers();
+
+    EngineInitConfig initConfig = {};
+    processCliArgs(initConfig, argc, argv);
 
     {
         Engine engine;
         Logging::IsGameObjectManagerAlive = true;
 
-        if (DoApiDump)
-            doApiDump();
-
-        init();
+        init(&engine, initConfig);
         engine.argc = argc;
         engine.argv = argv;
 
@@ -566,219 +562,226 @@ static void application(int argc, char** argv)
 
 static void launcher(int argc, char** argv)
 {
-#ifdef __GNUG__
-	pid_t launcherPid = getpid();
-	pid_t appPid = fork();
+#ifdef __clang__
+    pid_t launcherPid = getpid();
+    pid_t appPid = fork();
 
-	if (appPid < 0)
-	{
-		tinyfd_messageBox("Failed to launch", "fork failed", "ok", "error", 1);
-		Log.Error("`fork` failed: {}", strerror(errno));
-		s_ExitCode = 1;
+    if (appPid < 0)
+    {
+        tinyfd_messageBox("Failed to launch", "fork failed", "ok", "error", 1);
+        Log.Error("`fork` failed: {}", strerror(errno));
+        s_ExitCode = 1;
 
-		return;
-	}
+        return;
+    }
 
-	if (appPid == 0)
-	{
-		prctl(PR_SET_PDEATHSIG, SIGKILL);
+    if (appPid == 0)
+    {
+        prctl(PR_SET_PDEATHSIG, SIGKILL);
 
-		if (getppid() != launcherPid)
-		{
-			Logging::LogFile = "./" APP_LOG;
-			Log.Error("Launcher killed before application could initialize");
-			Logging::Save();
+        if (getppid() != launcherPid)
+        {
+            Logging::LogFile = "./" APP_LOG;
+            Log.Error("Launcher killed before application could initialize");
+            Logging::Save();
 
-			std::abort();
-		}
+            std::abort();
+        }
 
-		std::vector<char*> newArguments;
-		newArguments.push_back(argv[0]);
-		newArguments.push_back(const_cast<char*>(APPLICATION_ARG));
+        std::vector<char*> newArguments;
+        newArguments.push_back(argv[0]);
+        newArguments.push_back(const_cast<char*>(APPLICATION_ARG));
 
-		for (int i = 1; i < argc; i++)
-			newArguments.push_back(argv[i]);
+        for (int i = 1; i < argc; i++)
+            newArguments.push_back(argv[i]);
 
-		newArguments.push_back(nullptr);
+        newArguments.push_back(nullptr);
 
-		Log.Info("Launching application\n\n");
-		Logging::Save();
-		execv("/proc/self/exe", newArguments.data());
+        Log.Info("Launching application\n\n");
+        Logging::Save();
+        execv("/proc/self/exe", newArguments.data());
 
-		Logging::LogFile = "./" APP_LOG;
+        Logging::LogFile = "./" APP_LOG;
 
-		tinyfd_messageBox("Failed to launch", "execv failed", "ok", "error", 1);
-		Log.Error("`execv` failed: {}", strerror(errno));
-		Logging::Save();
+        tinyfd_messageBox("Failed to launch", "execv failed", "ok", "error", 1);
+        Log.Error("`execv` failed: {}", strerror(errno));
+        Logging::Save();
 
-		std::abort();
-	}
+        std::abort();
+    }
 
-	struct sigaction sa = {};
-	sa.sa_handler = launcherForwardSignal;
-	sa.sa_flags = 0;
-	sigemptyset(&sa.sa_mask);
+    struct sigaction sa = {};
 
-	sigaction(SIGTERM, &sa, nullptr);
-	signal(SIGINT, SIG_IGN); // terminal will broadcast it anyway
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
 
-	int status = 0;
-	while (waitpid(appPid, &status, 0) == -1 && errno == EINTR)
-	{
-		if (LauncherPendingSignalToForward != 0)
-		{
-			int sig = LauncherPendingSignalToForward;
-			LauncherPendingSignalToForward = 0;
-			kill(appPid, sig);
-		}
+    sa.sa_handler = launcherForwardSignal;
 
-		continue;
-	}
+#pragma clang diagnostic pop
 
-	Log.Append("\n\n");
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
 
-	if (WIFSIGNALED(status))
-	{
-		s_ExitCode = 1;
+    sigaction(SIGTERM, &sa, nullptr);
+    signal(SIGINT, SIG_IGN); // terminal will broadcast it anyway
 
-		int signal = WTERMSIG(status);
+    int status = 0;
+    while (waitpid(appPid, &status, 0) == -1 && errno == EINTR)
+    {
+        if (LauncherPendingSignalToForward != 0)
+        {
+            int sig = LauncherPendingSignalToForward;
+            LauncherPendingSignalToForward = 0;
+            kill(appPid, sig);
+        }
 
-		if (signal == SIGKILL)
-		{
-			Log.Warning("Application killed");
-			return;
-		}
+        continue;
+    }
 
-		std::string exceptionMessage = "Unknown error.\n";
+    Log.Append("\n\n");
 
-		bool logReadSuccess = true;
-		std::string logFileContents = FileRW::ReadFile("./" APP_LOG, &logReadSuccess);
+    if (WIFSIGNALED(status))
+    {
+        s_ExitCode = 1;
 
-		const std::string_view marker = EXCEPTION_MESSAGE_PREFIX;
+        int signal = WTERMSIG(status);
 
-		if (size_t pos = logFileContents.find(marker); pos != std::string::npos && pos < logFileContents.size() - marker.size())
-			exceptionMessage = logFileContents.substr(pos + marker.size(), logFileContents.size() - (pos + marker.size()));
+        if (signal == SIGKILL)
+        {
+            Log.Warning("Application killed");
+            return;
+        }
 
-		tinyfd_messageBox(
-			"Oops",
-			std::format(
-				"The game has crashed. Consider sending the core dump and logs :3\n\n{}\n"
-					"Log files will be recorded to the " CRASHED_DIR " directory. If it already exists, it will be overwritten.",
-				exceptionMessage
-			).c_str(),
-			"ok",
-			"error",
-			1
-		);
-		Log.ErrorF("Application crashed: {}", strsignal(signal));
-		Logging::Save();
+        std::string exceptionMessage = "Unknown error.\n";
 
-		if (std::filesystem::is_directory(CRASHED_DIR))
-		{
-			std::error_code ec;
-			std::filesystem::remove_all(CRASHED_DIR, ec);
+        bool logReadSuccess = true;
+        std::string logFileContents = FileRW::ReadFile("./" APP_LOG, &logReadSuccess);
 
-			if (ec)
-			{
-				std::string error = std::format("Error removing the pre-existing " CRASHED_DIR " directory: {}", ec.message());
-				tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "warning", 1);
-				Log.Error(error);
+        const std::string_view marker = EXCEPTION_MESSAGE_PREFIX;
 
-				return;
-			}
-		}
+        if (size_t pos = logFileContents.find(marker); pos != std::string::npos && pos < logFileContents.size() - marker.size())
+            exceptionMessage = logFileContents.substr(pos + marker.size(), logFileContents.size() - (pos + marker.size()));
 
-		if (!std::filesystem::is_directory(CRASHED_DIR))
-		{
-			std::error_code mkdirEc;
-			std::filesystem::create_directory(CRASHED_DIR, mkdirEc);
+        tinyfd_messageBox(
+            "Oops",
+            std::format(
+                "The game has crashed. Consider sending the core dump and logs :3\n\n{}\n"
+                    "Log files will be recorded to the " CRASHED_DIR " directory. If it already exists, it will be overwritten.",
+                exceptionMessage
+            ).c_str(),
+            "ok",
+            "error",
+            1
+        );
+        Log.ErrorF("Application crashed: {}", strsignal(signal));
+        Logging::Save();
 
-			if (mkdirEc)
-			{
-				std::string error = std::format("Failed to create " CRASHED_DIR " directory: {}", mkdirEc.message());
-				tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
-				Log.Error(error);
+        if (std::filesystem::is_directory(CRASHED_DIR))
+        {
+            std::error_code ec;
+            std::filesystem::remove_all(CRASHED_DIR, ec);
 
-				return;
-			}
-		}
+            if (ec)
+            {
+                std::string error = std::format("Error removing the pre-existing " CRASHED_DIR " directory: {}", ec.message());
+                tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "warning", 1);
+                Log.Error(error);
 
-		std::error_code appLogCopyEc;
-		std::filesystem::copy(APP_LOG, CRASHED_APP_LOG, appLogCopyEc);
+                return;
+            }
+        }
 
-		if (appLogCopyEc)
-		{
-			std::string error = std::format("Failed to copy application log file: {}", appLogCopyEc.message());
-			tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
-			Log.Error(error);
+        if (!std::filesystem::is_directory(CRASHED_DIR))
+        {
+            std::error_code mkdirEc;
+            std::filesystem::create_directory(CRASHED_DIR, mkdirEc);
 
-			return;
-		}
+            if (mkdirEc)
+            {
+                std::string error = std::format("Failed to create " CRASHED_DIR " directory: {}", mkdirEc.message());
+                tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+                Log.Error(error);
 
-		Logging::Save();
+                return;
+            }
+        }
 
-		std::error_code handlerLogCopyEc;
-		std::filesystem::copy(LAUNCHER_LOG, CRASHED_LAUNCHER_LOG, handlerLogCopyEc);
+        std::error_code appLogCopyEc;
+        std::filesystem::copy(APP_LOG, CRASHED_APP_LOG, appLogCopyEc);
 
-		if (handlerLogCopyEc)
-		{
-			std::string error = std::format("Failed to copy crash handler log file: {}", handlerLogCopyEc.message());
-			tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
-			Log.Error(error);
+        if (appLogCopyEc)
+        {
+            std::string error = std::format("Failed to copy application log file: {}", appLogCopyEc.message());
+            tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+            Log.Error(error);
 
-			return;
-		}
+            return;
+        }
 
-		Logging::LogFile = "./" CRASHED_LAUNCHER_LOG;
-		Logging::Save(); // re-open handle
+        Logging::Save();
 
-		if (std::filesystem::is_regular_file(APP_TRACE))
-		{
-			std::error_code ec;
-			std::filesystem::rename(APP_TRACE, CRASHED_APP_TRACE, ec);
+        std::error_code handlerLogCopyEc;
+        std::filesystem::copy(LAUNCHER_LOG, CRASHED_LAUNCHER_LOG, handlerLogCopyEc);
 
-			if (ec)
-			{
-				std::string error = std::format("Failed to move backtrace: {}", ec.message());
-				tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
-				Log.Error(error);
+        if (handlerLogCopyEc)
+        {
+            std::string error = std::format("Failed to copy crash handler log file: {}", handlerLogCopyEc.message());
+            tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+            Log.Error(error);
 
-				return;
-			}
-		}
+            return;
+        }
 
-		Log.Info("Created crash files successfully");
-	}
-	else
-	{
-		s_ExitCode = WEXITSTATUS(status);
-	}
+        Logging::LogFile = "./" CRASHED_LAUNCHER_LOG;
+        Logging::Save(); // re-open handle
+
+        if (std::filesystem::is_regular_file(APP_TRACE))
+        {
+            std::error_code ec;
+            std::filesystem::rename(APP_TRACE, CRASHED_APP_TRACE, ec);
+
+            if (ec)
+            {
+                std::string error = std::format("Failed to move backtrace: {}", ec.message());
+                tinyfd_messageBox("Error in crash handler", error.c_str(), "ok", "error", 1);
+                Log.Error(error);
+
+                return;
+            }
+        }
+
+        Log.Info("Created crash files successfully");
+    }
+    else
+    {
+        s_ExitCode = WEXITSTATUS(status);
+    }
 
 #else
-	(void)argc;
-	(void)argv;
+    (void)argc;
+    (void)argv;
 #endif
 }
 
 int main(int argc, char** argv)
 {
-	bool isLauncher = true;
+    bool isLauncher = true;
 
-#ifdef __GNUG__
+#ifdef __clang__
 
-	for (int i = 0; i < argc; i++)
-	{
-		if (strcmp(argv[i], APPLICATION_ARG) == 0)
-			isLauncher = false;
-	}
+    for (int i = 0; i < argc; i++)
+    {
+        if (strcmp(argv[i], APPLICATION_ARG) == 0)
+            isLauncher = false;
+    }
 
 #else
 
-	isLauncher = false;
+    isLauncher = false;
 
 #endif
 
-	Logging::LogFile = isLauncher ? "./" LAUNCHER_LOG : "./" APP_LOG;
+    Logging::LogFile = isLauncher ? "./" LAUNCHER_LOG : "./" APP_LOG;
 
     Logging::Initialize();
     Log.Info(isLauncher ? "Launcher startup" : "Application startup");
@@ -807,16 +810,16 @@ int main(int argc, char** argv)
 
     Log.InfoF("Now: {:%F %T %Z}", now);
 
-	if (isLauncher)
-		launcher(argc, argv);
-	else
-		application(argc, argv);
+    if (isLauncher)
+        launcher(argc, argv);
+    else
+        application(argc, argv);
 
     Log.Info(isLauncher ? "Launcher shutdown" : "Application shutdown");
     Logging::Save();
 
-	if (isLauncher)
-		std::filesystem::remove(LAUNCHER_LOG);
+    if (isLauncher)
+        std::filesystem::remove(LAUNCHER_LOG);
 
     return s_ExitCode;
 }

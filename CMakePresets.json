@@ -1,0 +1,42 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "clang-linux",
+      "displayName": "Clang Compiler",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Ninja Multi-Config",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "Debug",
+      "configurePreset": "clang-linux",
+      "configuration": "Debug"
+    },
+    {
+      "name": "Release",
+      "configurePreset": "clang-linux",
+      "configuration": "Release"
+    },
+    {
+      "name": "DebugTSan",
+      "configurePreset": "clang-linux",
+      "configuration": "DebugTSan"
+    },
+    {
+      "name": "ReleaseTSan",
+      "configurePreset": "clang-linux",
+      "configuration": "ReleaseTSan"
+    },
+    {
+      "name": "ReleaseAUSan",
+      "configurePreset": "clang-linux",
+      "configuration": "ReleaseAUSan"
+    }
+  ]
+}

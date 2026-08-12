@@ -276,7 +276,7 @@ static int sharedbuffer_namecall(lua_State* L)
         size_t length = lua_isnoneornil(L, 3) ? buffer->Size - start : checkSizeArgument(L, 3, "Length");
 
         if (buffer->Size < start + length)
-            luaL_error(L, "Slice at offset %zi with length %zi exceeds bounds of the shared buffer by %zi byte(s)", start, length, start + length - buffer->Size);
+            luaL_error(L, "Slice at offset %zu with length %zu exceeds bounds of the shared buffer by %zu byte(s)", start, length, start + length - buffer->Size);
 
         void* lb = lua_newbuffer(L, length);
         memcpy(lb, (void*)((size_t)buffer->Data + start), length);
@@ -292,7 +292,7 @@ static int sharedbuffer_namecall(lua_State* L)
         size_t length = lua_isnoneornil(L, 4) ? lblen : checkSizeArgument(L, 4, "Length");
 
         if (buffer->Size < start + length)
-            luaL_error(L, "Slice at offset %zi with length %zi exceeds bounds of the shared buffer by %zi byte(s)", start, length, start + length - buffer->Size);
+            luaL_error(L, "Slice at offset %zu with length %zu exceeds bounds of the shared buffer by %zu byte(s)", start, length, start + length - buffer->Size);
 
         memcpy((void*)((size_t)buffer->Data + start), lb, length);
         return 0;
@@ -327,8 +327,6 @@ static int atomicint_namecall(lua_State* L)
     else
         luaL_error(L, "Invalid method '%s'", k);
 }
-
-#define PARALLEL_REG "PARALLEL"
 
 static void pushSharedMutex(lua_State* L, SharedMutex* Mutex)
 {
@@ -433,7 +431,7 @@ static int parallel_sharedbuffer(lua_State* L)
     if (const auto& it = ParallelBuffers.find(name); it != ParallelBuffers.end())
     {
         if (it->second->Size != size)
-            luaL_error(L, "Size of %zi bytes for shared buffer with ID '%s' does not match previous instantiation of %zi bytes", size, name.c_str(), it->second->Size);
+            luaL_error(L, "Size of %zu bytes for shared buffer with ID '%s' does not match previous instantiation of %zu bytes", size, name.c_str(), it->second->Size);
 
         buffer = it->second;
     }

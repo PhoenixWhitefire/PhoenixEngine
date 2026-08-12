@@ -1783,12 +1783,6 @@
   "@phoenix/globaltype/Engine.IsHeadless": {
     "documentation": "Whether the Engine is currently running in headless mode"
   },
-  "@phoenix/globaltype/Engine.SaveConfig": {
-    "documentation": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)"
-  },
-  "@phoenix/globaltype/Engine.SetConfigValue": {
-    "documentation": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file"
-  },
   "@phoenix/globaltype/Engine.ShowMessageBox": {
     "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
   },

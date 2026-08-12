@@ -21,7 +21,7 @@ public:
 	glm::vec3 Gravity = { 0.f, -50.f, 0.f };
 
 	// Handled by `EcPhysicsService`
-	double Timescale = 1.f;
+	double Timescale = 1.0;
 	bool Simulating = true;
 	bool SimulatingForcePaused = false;
 	bool DebugCollisionAabbs = false;

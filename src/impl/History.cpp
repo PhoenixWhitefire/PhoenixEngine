@@ -103,7 +103,7 @@ void History::FinishAction(size_t Id)
         {
             // TODO multiple timelines
             // TODO Why does it need `+ 1`??
-            m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + m_CurrentWaypoint + 1);
+            m_ActionHistory = std::vector<Action>(m_ActionHistory.begin(), m_ActionHistory.begin() + (int64_t)m_CurrentWaypoint + 1);
         }
         else
             Log.Warning("Failed to overwrite History - Please report this bug if you figure out a consistent repro!");
@@ -173,7 +173,7 @@ void History::Undo()
 
     const Action& lastAction = m_ActionHistory[m_CurrentWaypoint];
 
-    for (int64_t i = (size_t)lastAction.Events.size() - 1; i >= 0; i--)
+    for (size_t i = lastAction.Events.size() - 1; i > 0; i--)
     {
         const Event& event = lastAction.Events[i];
 

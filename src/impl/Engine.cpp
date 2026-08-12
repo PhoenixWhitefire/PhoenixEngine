@@ -29,9 +29,7 @@
 #include "component/Light.hpp"
 #include "script/ScriptEngine.hpp"
 #include "render/TextureSlots.hpp"
-#include "GlobalJsonConfig.hpp"
 #include "DeveloperTools.hpp"
-#include "UserInput.hpp"
 #include "Utilities.hpp"
 #include "Timing.hpp"
 #include "FileRW.hpp"
@@ -63,7 +61,8 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
     this->WindowSizeX = NewSizeX;
     this->WindowSizeY = NewSizeY;
 
-    RendererContext.ChangeResolution(WindowSizeX, WindowSizeY);
+	assert(WindowSizeX > 0 && WindowSizeY > 0);
+    RendererContext.ChangeResolution((uint32_t)WindowSizeX, (uint32_t)WindowSizeY);
     Texture& fboRes = TextureManagerInstance.GetTextureResource(m_FboResourceId);
     fboRes.Width = NewSizeX;
     fboRes.Height = NewSizeY;
@@ -96,11 +95,11 @@ void Engine::SetIsFullscreen(bool MakeFullscreen)
 }
 
 template <class T>
-static T readFromConfiguration(const std::string_view& Key, const T& DefaultValue)
+static T readFromConfiguration(const nlohmann::json& Config, const std::string_view& Key, const T& DefaultValue)
 {
 	try
 	{
-		return EngineJsonConfig.value(Key, DefaultValue);
+		return Config.value(Key, DefaultValue);
 	}
 	catch (const nlohmann::json::type_error& Error)
 	{
@@ -127,8 +126,8 @@ void Engine::LoadConfiguration()
 			nlohmann::json config = nlohmann::json::parse(ConfigAscii);
 			
 			for (auto it = config.begin(); it != config.end(); it++)
-				if (EngineJsonConfig.find(it.key()) == EngineJsonConfig.end())
-					EngineJsonConfig[it.key()] = it.value();
+				if (Config.find(it.key()) == Config.end())
+					Config[it.key()] = it.value();
 		}
 		catch (const nlohmann::json::parse_error& err)
 		{
@@ -149,23 +148,9 @@ void Engine::LoadConfiguration()
 			"warn",
 			1
 		);
-
-		EngineJsonConfig = {
-			{ "ResourcesDirectory", "resources/" }
-		};
 	}
 
-	VSync = readFromConfiguration("VSync", false);
-	FpsCap = readFromConfiguration("FpsCap", 60);
-	ScriptEngine::DefaultVMAllowedExecutionTime = readFromConfiguration("DefaultVMAllowedExecutionTime", 10.0);
-
-	std::string_view resDir = readFromConfiguration("ResourcesDirectory", std::string_view("<NOT_SET>"));
-
-	if (resDir != "resources/")
-		Log.WarningF(
-			"Resources Directory was changed to '{}' instead of 'resources/'. Prepare for unforeseen consequences.",
-			resDir
-		);
+	ScriptEngine::DefaultVMAllowedExecutionTime = readFromConfiguration(Config, "DefaultVMAllowedExecutionTime", 10.0);
 
 	if (ConfigLoadSucceeded)
 		Log.Info("Configuration loaded");
@@ -291,7 +276,8 @@ void Engine::m_InitializeVideo()
 		.deallocate = [](void* ptr, void*)
 			{
 				Memory::Free(ptr);
-			}
+			},
+		.user = nullptr,
 	};
 	glfwInitAllocator(&allocator);
 
@@ -308,9 +294,8 @@ void Engine::m_InitializeVideo()
 	
 	glfwGetMonitorWorkarea(primaryDisplay, nullptr, nullptr, &WindowSizeX, &WindowSizeY);
 
-	nlohmann::json::array_t requestedGLVersion = readFromConfiguration("OpenGLVersion", nlohmann::json{ 4, 6 });
-	int requestedGLVersionMajor = requestedGLVersion[0];
-	int requestedGLVersionMinor = requestedGLVersion[1];
+	constexpr int requestedGLVersionMajor = 4;
+	constexpr int requestedGLVersionMinor = 6;
 
 	Log.InfoF(
 		"Requesting a Core OpenGL context with version {}.{}",
@@ -329,7 +314,7 @@ void Engine::m_InitializeVideo()
 
 	Window = glfwCreateWindow(
 		WindowSizeX, WindowSizeY,
-		readFromConfiguration<std::string_view>("GameTitle", "PhoenixEngine").data(),
+		readFromConfiguration<std::string_view>(Config, "GameTitle", "PhoenixEngine").data(),
 		nullptr, nullptr
 	);
 
@@ -342,7 +327,9 @@ void Engine::m_InitializeVideo()
 
 	Log.Info("Window created, initializing renderer...");
 
-	this->RendererContext.Initialize(this->WindowSizeX, this->WindowSizeY, this->Window);
+	assert(WindowSizeX > 0 && WindowSizeY > 0);
+	this->RendererContext.Initialize((uint32_t)this->WindowSizeX, (uint32_t)this->WindowSizeY, this->Window);
+	RendererContext.OpenGLErrorsAreFatal = readFromConfiguration(Config, "GLErrorsAreFatal", true);
 
 	Log.Info("Registering callbacks...");
 
@@ -394,7 +381,7 @@ std::string GetUserHomeDirectoryPath()
 	return home;
 }
 
-Engine::Engine()
+void Engine::Initialize(int ThreadCount, bool Headless)
 {
     ZoneScopedC(tracy::Color::Aqua);
 
@@ -403,8 +390,13 @@ Engine::Engine()
 
     this->LoadConfiguration();
 
-	if (PHX_HEADLESS_BUILD || readFromConfiguration("Headless", false))
-		this->IsHeadlessMode = true;
+	if (PHX_HEADLESS_BUILD)
+	{
+		if (Headless)
+			this->IsHeadlessMode = true;
+		else
+			RAISE_RT("Headless build requested to start in non-headless mode");
+	}
 
     m_InitializeVideo();
 
@@ -414,8 +406,7 @@ Engine::Engine()
 
     Log.Info("Initializing managers...");
 
-    ThreadManagerInstance.Initialize(EngineJsonConfig.value("ThreadManagerThreadCount", -1));
-
+    ThreadManagerInstance.Initialize(ThreadCount);
     TextureManagerInstance.Initialize(IsHeadlessMode);
     ShaderManagerInstance.Initialize(IsHeadlessMode);
     MaterialManagerInstance.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
@@ -660,7 +651,8 @@ static void traverseAndRenderUIHierarchy(
 			shader.SetUniform("Phoenix_IsImage", false);
 			shader.Activate();
 
-			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
+			assert(gpuMesh.NumIndices <= INT32_MAX);
+			glDrawElements(GL_TRIANGLES, (int32_t)gpuMesh.NumIndices, GL_UNSIGNED_INT, nullptr);
 			renderer.AccumulatedDrawCallCount++;
 		}
 
@@ -674,7 +666,8 @@ static void traverseAndRenderUIHierarchy(
 			shader.SetTextureUniform("Phoenix_Image", TextureManager->LoadFromPath(uimg->Image));
 			shader.Activate();
 
-			glDrawElements(GL_TRIANGLES, gpuMesh.NumIndices, GL_UNSIGNED_INT, 0);
+			assert(gpuMesh.NumIndices <= INT32_MAX);
+			glDrawElements(GL_TRIANGLES, (int32_t)gpuMesh.NumIndices, GL_UNSIGNED_INT, nullptr);
 			renderer.AccumulatedDrawCallCount++;
 		}
 
@@ -807,25 +800,17 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 		ZoneScopedN("ApplyPostFxSettings");
 
 		PostFxShader.SetUniform("Phoenix_PostFxEnabled", 1);
-		PostFxShader.SetUniform(
-			"Phoenix_ScreenEdgeBlurEnabled",
-			EngineJsonConfig.value("postfx_blurvignette", false)
-		);
-		PostFxShader.SetUniform(
-			"Phoenix_DistortionEnabled",
-			EngineJsonConfig.value("postfx_distortion", false)
-		);
+		PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
 		PostFxShader.SetUniform(
 			"Phoenix_Gamma",
 			env->GammaCorrection
 		);
+
 		SkyboxShader.SetUniform(
 			"Phoenix_HdrEnabled",
 			true
 		);
-
-		PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
 	}
 	else
 	{
@@ -1023,7 +1008,7 @@ void Engine::Start()
 		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
 
 		double deltaTime = RunningTime - LastFrame;
-		double fpsCapDelta = 1.f / throttledFpsCap;
+		double fpsCapDelta = 1.0 / (double)throttledFpsCap;
 		LastFrame = RunningTime;
 
 		// make sure the order of timers is
@@ -1073,7 +1058,7 @@ void Engine::Start()
 				
 				glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
 
-                for (int skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
+                for (uint32_t skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
                 {
                     Texture& texture = TextureManagerInstance.GetTextureResource(env->SkyboxFacesBeingLoaded.at(skyboxFaceIndex));
 
@@ -1299,7 +1284,7 @@ void Engine::Start()
 
 		OnFrameEnd.Fire(deltaTime);
 
-		if (RunningTime - LastSecond > 1.f)
+		if (RunningTime - LastSecond > 1.0)
 		{
 			LastSecond = RunningTime;
 
@@ -1352,7 +1337,7 @@ void Engine::Shutdown()
 
 	Log.Info("Shutting down Component Managers...");
 	// skip the first "None" component manager
-	for (size_t i = 1; i < (size_t)EntityComponent::__count; i++)
+	for (size_t i = 1; i < (size_t)EntityComponent::count; i++)
 	{
 		ZoneScopedN("Shutdown Component");
 		ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());

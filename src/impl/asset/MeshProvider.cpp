@@ -808,7 +808,7 @@ static void finishAndUploadMesh(Mesh& mesh, MeshProvider::GpuMesh& gpuMesh, bool
 		glVertexAttribDivisor(10, 0);
 		glVertexAttribDivisor(11, 0);
 
-		glVertexAttribIPointer(10, 4, GL_UNSIGNED_BYTE, skinnerStride, (void*)0);
+		glVertexAttribIPointer(10, 4, GL_UNSIGNED_BYTE, skinnerStride, nullptr);
 		glVertexAttribPointer(11, 4, GL_FLOAT, GL_FALSE, skinnerStride, (void*)4);
 
 		std::vector<uint8_t> data;
@@ -948,7 +948,7 @@ uint32_t MeshProvider::LoadFromPath(
 		
 			ThreadManager::Get()->Dispatch(
 				"AsyncMeshLoad",
-				[promise, resourceId, this, Path]()
+				[promise, this, Path]()
 				{
 					bool success = true;
 					std::string contents = FileRW::ReadFile(Path, &success);

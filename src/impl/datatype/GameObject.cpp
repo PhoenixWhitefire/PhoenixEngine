@@ -1142,7 +1142,7 @@ std::vector<Reflection::GenericValue> GameObject::CallMethod(const std::string_v
 	ReflectorRef ref;
 
 	if (const Reflection::MethodDescriptor* func = FindMethod(FuncName, &ref))
-		return func->Func(ref.Referred(), Inputs);
+		return func->Function(ref.Referred(), Inputs);
 
 	RAISE_RT("Invalid function '{}' in CallMethod", FuncName);
 }
@@ -1218,7 +1218,9 @@ ObjectHandle GameObjectManager::Create()
     {
         GameObject& reused = WorldArray[id];
         NextFreeId = reused.NextFreeId; // stole this trick from `lua_ref`
-        reused = GameObject();
+
+		reused.~GameObject();
+		new (&reused) GameObject();
     }
 
     GameObject& created = WorldArray[id];
@@ -1257,6 +1259,7 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 		uint16_t id = static_cast<uint16_t>(Collections.size());
 		CollectionNameToId[Name] = id;
 		Collections.push_back(Collection{
+			.Name = Name,
 			.AddedEvent = { .Descriptor = new Reflection::EventDescriptor{
 				.CallbackInputs = REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
 				.Connect = [this, id](void*, Reflection::EventConnection Callback) -> uint32_t
@@ -1286,14 +1289,11 @@ GameObjectManager::Collection& GameObjectManager::GetCollection(const std::strin
 				{
 					Reflection::EventCleanup(Collections[id].RemovedEvent.Callbacks);
 				},
-			} }
+			} },
+			.Id = id,
 		});
 
-		Collection& collection = Collections[id];
-		collection.Name = Name;
-		collection.Id = id;
-
-		return collection;
+		return Collections[id];
 	}
 	else
 		return Collections[it->second];
@@ -1395,7 +1395,7 @@ bool GameObject::HasTag(const std::string& Tag)
 	return tagIt != Tags.end();
 }
 
-static void dumpProperties(const Reflection::StaticPropertyMap& Properties, nlohmann::json& Json)
+static void dumpProperties(const Reflection::StaticPropertyMap Properties, nlohmann::json& Json)
 {
 	for (const auto& propIt : Properties)
 	{
@@ -1418,10 +1418,10 @@ static void dumpMethods(const Reflection::StaticMethodMap& Functions, nlohmann::
 		std::string istring = "";
 		std::string ostring = "";
 
-		for (Reflection::ValueType i : funcIt.second.Inputs)
+		for (Reflection::ValueType i : funcIt.second.Parameters)
 			istring += std::string(Reflection::TypeAsString(i)) + ", ";
 		
-		for (Reflection::ValueType o : funcIt.second.Outputs)
+		for (Reflection::ValueType o : funcIt.second.Returns)
 			ostring += std::string(Reflection::TypeAsString(o)) + ", ";
 		
 		istring = istring.substr(0, istring.size() - 2);
@@ -1457,7 +1457,7 @@ nlohmann::json GameObject::DumpApiToJson()
 	dumpMethods(s_Api.Methods, gameObjectApi);
 	dumpEvents(s_Api.Events, gameObjectApi);
 	
-	for (size_t i = 0; i < (size_t)EntityComponent::__count; i++)
+	for (size_t i = 0; i < (size_t)EntityComponent::count; i++)
 	{
 		IComponentManager* manager = GameObjectManager::Get()->ComponentManagers[i];
 

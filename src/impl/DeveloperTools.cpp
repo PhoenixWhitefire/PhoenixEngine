@@ -4,16 +4,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wstrict-aliasing"
 #endif
 
 // needed for ScrollToItem, BeginPopupEx, GetIO(context)
 #include <imgui_internal.h>
 
-#ifdef __GNUG__
-#pragma GCC diagnostic pop
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
 
 #include <tracy/Tracy.hpp>
@@ -23,7 +23,18 @@
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <tinyfiledialogs.h>
 #include <lualib.h>
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow-field-in-constructor"
+#endif
+
 #include <luau/VM/src/lgc.h> // needed for luaC_enumheap
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 #include <luau/VM/src/lstate.h> // needed for heap inspector
 #include <chrono>
 #include <set>
@@ -48,7 +59,6 @@
 #include "script/UserdataTags.hpp"
 #include "geometry/DecomposeTRS.hpp"
 
-#include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "UserInput.hpp"
 #include "History.hpp"
@@ -58,10 +68,8 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-constexpr uint32_t OBJECT_NEW_CLASSNAME_BUFSIZE = 16;
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 128;
-constexpr char MATERIAL_NEW_NAME_DEFAULT[] = "newmaterial";
 
 struct TextEditorTab
 {
@@ -146,7 +154,7 @@ static glm::mat4 MtlPreviewCamOffset = glm::translate(glm::mat4(1.f), glm::vec3(
 static glm::mat4 MtlPreviewCamDefaultRotation = glm::eulerAngleYXZ(glm::radians(168.f), glm::radians(12.f), 0.f);
 
 static std::string ErrorTooltipMessage = "No Error Dummy";
-static double ErrorTooltipTimeRemaining = 0.f;
+static double ErrorTooltipTimeRemaining = 0.0;
 
 static char MtlCreateNameBuf[MATERIAL_NEW_NAME_BUFSIZE] = "material";
 static char MtlDiffuseBuf[MATERIAL_TEXTUREPATH_BUFSIZE] = { 0 };
@@ -162,7 +170,7 @@ static ObjectHandle ExplorerRoot;
 static void setErrorMessage(std::string errm)
 {
     ErrorTooltipMessage = errm;
-    ErrorTooltipTimeRemaining = 2.5f;
+    ErrorTooltipTimeRemaining = 2.5;
     Log.Error(errm);
 }
 
@@ -632,7 +640,7 @@ static std::string textFileContentsFromPath(const std::string& Path)
     bool readSuccess = true;
     std::string scriptContents = FileRW::ReadFile(Path, &readSuccess);
 
-    if (!readSuccess || scriptContents.size() > 10e6)
+    if (!readSuccess || scriptContents.size() > (1 << 24))
     {
         std::string error = std::format(
             "File '{}' couldn't be read",
@@ -777,7 +785,7 @@ static void renderTextEditors()
     std::chrono::time_point<std::chrono::system_clock> time = std::chrono::system_clock::now();
     DeveloperTools::FocusedOnTextDocument = false;
 
-    for (int index = 0; index < (int)s_TextEditors.size(); index++)
+    for (size_t index = 0; index < s_TextEditors.size(); index++)
     {
         TextEditorTab& tab = s_TextEditors[index];
 
@@ -887,7 +895,7 @@ static void uniformsEditor(
     ImVec2 winSize = ImGui::GetWindowSize();
     ImGui::BeginChild(Name, ImVec2(0.f, 0.f), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY);
 
-    if ((*Selection) + 1ull > Uniforms.size())
+    if ((*Selection) + 1 > (int)Uniforms.size())
         *Selection = -1;
 
     static int NewTypeId = 0;
@@ -1396,7 +1404,7 @@ static void mtlEditorTexture(const char* Label, uint32_t* TextureIdPtr, char* Cu
     ImGui::Image(
         tx.GpuId,
         // Scale to 256 pixels wide, while maintaining aspect ratio
-        ImVec2(256.f, tx.Height * (256.f / tx.Width))
+        ImVec2(256.f, (float)tx.Height * (256.f / (float)tx.Width))
     );
 
     if (ImGui::IsItemHovered())
@@ -1680,7 +1688,7 @@ enum class ContextMenuAction : uint8_t
     Rename,
     AutoReimport,
 
-    __sectionSeparator
+    sectionSeparator
 };
 static const bool ContextMenuActionRequiresSelection[] = {
     true,
@@ -2519,7 +2527,7 @@ static void renderDocumentationViewer()
 
     if (sectionOpen)
     {
-        for (int i = 1; i < (int)EntityComponent::__count; i++)
+        for (int i = 1; i < (int)EntityComponent::count; i++)
         {
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | NodeFlags;
             flags |= (DocumentationViewerSection == 0 && DocumentationViewerSubPage == i) ? ImGuiTreeNodeFlags_Selected : 0;
@@ -3102,7 +3110,7 @@ static void renderExplorer()
     {
         for (ContextMenuAction action : ContextActionsForSelection)
         {
-            if (action == ContextMenuAction::__sectionSeparator)
+            if (action == ContextMenuAction::sectionSeparator)
                 ImGui::Separator();
             else
             {
@@ -3185,7 +3193,7 @@ static void renderExplorer()
 
 struct FilesystemNode // Either a file or a directory
 {
-    std::map<std::string, FilesystemNode> DirectoryContents;
+    std::map<std::string, FilesystemNode> DirectoryContents = {};
     std::filesystem::path Path;
     std::string Name;
     bool IsDirectory = false;
@@ -3193,7 +3201,7 @@ struct FilesystemNode // Either a file or a directory
 };
 
 static double FilesViewLastRefreshed = 0.0;
-static FilesystemNode FilesViewerRoot = { .Name = "scripts", .IsDirectory = true };
+static FilesystemNode FilesViewerRoot = { .Path = "./resources/scripts", .Name = "scripts", .IsDirectory = true };
 static std::string FilesViewerRootPath = "scripts";
 static std::filesystem::path RenameTarget;
 static std::string RenameNewValue;
@@ -3798,7 +3806,7 @@ static void followAssetProperty(const std::string_view& PropertyName, const std:
         MaterialManager* mtlManager = MaterialManager::Get();
         const std::vector<RenderMaterial>& materials = mtlManager->GetLoadedMaterials();
 
-        for (int i = 0; i < materials.size(); i++)
+        for (size_t i = 0; i < materials.size(); i++)
         {
             const RenderMaterial& mtl = materials[i];
             if (mtl.Name == Value)
@@ -4826,8 +4834,8 @@ struct LuauHeapSnapshotNode
     bool AlongSearchPath = false;
     bool IsSearchTarget = false;
 
-    std::unordered_map<std::string, std::vector<LuauHeapSnapshotLink>> Children;
-    std::unordered_set<const void*> Parents;
+    std::unordered_map<std::string, std::vector<LuauHeapSnapshotLink>> Children = {};
+    std::unordered_set<const void*> Parents = {};
 };
 
 struct LuauHeapSnapshotEdge
@@ -4839,10 +4847,10 @@ struct LuauHeapSnapshotEdge
 
 struct LuauHeapSnapshot
 {
-    std::unordered_map<const void*, LuauHeapSnapshotNode> Nodes;
-    std::vector<LuauHeapSnapshotEdge> Edges;
-    std::unordered_set<const void*> Roots;
-    std::unordered_set<const void*> NonRoots;
+    std::unordered_map<const void*, LuauHeapSnapshotNode> Nodes = {};
+    std::vector<LuauHeapSnapshotEdge> Edges = {};
+    std::unordered_set<const void*> Roots = {};
+    std::unordered_set<const void*> NonRoots = {};
 };
 
 static bool IsFilteringHeapSnapshot = false;
@@ -4903,7 +4911,7 @@ static void renderHeapSnapshotNodeRecursive(lua_State* L, const LuauHeapSnapshot
     if (ImGui::TreeNodeEx(&node, nodeFlags, "%s", node.Name.empty() ? "(node)" : node.Name.c_str()))
     {
         ImGui::TextUnformatted(luauBuiltinTypeName(L, node.Type));
-        ImGui::Text("%zi bytes", node.Size);
+        ImGui::Text("%zu bytes", node.Size);
         ImGui::Text("Memcat %i", (int)node.MemCat);
 
         if (seen.find(node.Pointer) == seen.end())
@@ -4984,7 +4992,7 @@ static void renderInfo(double DeltaTime)
         static size_t GraphPointer = 0;
 
         const double* times = Timing::FinalFrameTimes;
-        const std::array<std::atomic_size_t, (size_t)Memory::Category::__count>& memcounts = Memory::Counters;
+        const std::array<std::atomic_size_t, (size_t)Memory::Category::count>& memcounts = Memory::Counters;
 
         uint8_t numTimers = Timing::StaticMagicTimerThing::s_NumTimers;
 
@@ -4998,9 +5006,9 @@ static void renderInfo(double DeltaTime)
         GameObjectManager* objectManager = GameObjectManager::Get();
 
         ImGui::Text("FPS: %d", engine->FramesPerSecond);
-        ImGui::Text("Frame time: %zims", frameTime);
+        ImGui::Text("Frame time: %zums", frameTime);
         ImGui::Text("Draw calls: %u", engine->RendererContext.AccumulatedDrawCallCount);
-        ImGui::Text("World size: %zi", objectManager->WorldArray.size());
+        ImGui::Text("World size: %zu", objectManager->WorldArray.size());
 
         uint32_t live = 0;
         for (const GameObject& object : objectManager->WorldArray)
@@ -5066,7 +5074,7 @@ static void renderInfo(double DeltaTime)
             bool open = ImGui::TreeNodeEx(
                 (void*)(int64_t)i,
                 ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth,
-                "%s: %zims",
+                "%s: %zums",
                 Timing::TimerNames[i],
                 static_cast<size_t>(times[i] * 1000)
             );
@@ -5092,7 +5100,7 @@ static void renderInfo(double DeltaTime)
         ImGui::SeparatorText("Heap");
         ImGui::PushID("Heap");
 
-        for (int i = 0; i < (int)Memory::Category::__count; i++)
+        for (int i = 0; i < (int)Memory::Category::count; i++)
         {
             bool open = ImGui::TreeNodeEx(
                 (void*)(int64_t)i,
@@ -5121,7 +5129,7 @@ static void renderInfo(double DeltaTime)
         }
 
         if (IsSamplingStats)
-            for (int i = 0; i < (int)Memory::Category::__count; i++)
+            for (int i = 0; i < (int)Memory::Category::count; i++)
                 SampledCsv += std::to_string(memcounts[i]) + ",";
 
         ImGui::PopID();
@@ -5137,8 +5145,8 @@ static void renderInfo(double DeltaTime)
             NumSecondsSampled += DeltaTime;
             NumFramesSampled++;
 
-            ImGui::Text("Sampled %zi frames over %.1f seconds", NumFramesSampled, NumSecondsSampled);
-            ImGui::Text("Total size: %zi bytes (%zi bytes memory)", SampledCsv.size(), SampledCsv.capacity());
+            ImGui::Text("Sampled %zu frames over %.1f seconds", NumFramesSampled, NumSecondsSampled);
+            ImGui::Text("Total size: %zu bytes (%zu bytes memory)", SampledCsv.size(), SampledCsv.capacity());
 
             if (ImGui::Button("End sampling & save to CSV"))
             {
@@ -5190,7 +5198,7 @@ static void renderInfo(double DeltaTime)
 
                 for (int i = 0; i < numTimers; i++)
                     SampledCsv += Timing::TimerNames[i] + std::string(",");
-                for (int i = 0; i < (int)Memory::Category::__count; i++)
+                for (int i = 0; i < (int)Memory::Category::count; i++)
                     SampledCsv += Memory::CategoryNames[i] + std::string(",");
 
                 SampledCsv += "\n";
@@ -5425,54 +5433,6 @@ static void renderRendererSettings()
 
         if (!engine->VSync)
             ImGui::InputInt("FPS limit", &engine->FpsCap, 1, 30);
-
-        bool postFxEnabled = EngineJsonConfig.value("postfx_enabled", false);
-
-        ImGui::Checkbox("Post-Processing", &postFxEnabled);
-
-        EngineJsonConfig["postfx_enabled"] = postFxEnabled;
-
-        if (postFxEnabled)
-        {
-            float gammaCorrection = EngineJsonConfig.value("postfx_gamma", 1.f);
-
-            ImGui::InputFloat("Gamma", &gammaCorrection);
-
-            EngineJsonConfig["postfx_gamma"] = gammaCorrection;
-
-            bool blurVignette = EngineJsonConfig.value("postfx_blurvignette", false);
-            bool distortion = EngineJsonConfig.value("postfx_distortion", false);
-
-            ImGui::Checkbox("Blur vignette", &blurVignette);
-            ImGui::Checkbox("Distortion", &distortion);
-
-            EngineJsonConfig["postfx_blurvignette"] = blurVignette;
-            EngineJsonConfig["postfx_distortion"] = distortion;
-
-            if (EngineJsonConfig["postfx_blurvignette"])
-            {
-                float distFactorMultiplier = EngineJsonConfig.value("postfx_blurvignette_blurstrength", 2.f);
-                float weightExponent = EngineJsonConfig.value("postfx_blurvignette_weightexp", 2.f);
-                float weightMultiplier = EngineJsonConfig.value("postfx_blurvignette_weightmul", 2.5f);
-                float sampleRadius = EngineJsonConfig.value("postfx_blurvignette_sampleradius", 4.f);
-
-                ImGui::InputFloat("Vignette dist weight factor", &distFactorMultiplier);
-                ImGui::InputFloat("Vignette weight exponent", &weightExponent);
-                ImGui::InputFloat("Vignette weight multiplier", &weightMultiplier);
-                ImGui::InputFloat("Vignette sample radius", &sampleRadius);
-
-                EngineJsonConfig["postfx_blurvignette_blurstrength"] = distFactorMultiplier;
-                EngineJsonConfig["postfx_blurvignette_weightexp"] = weightExponent;
-                EngineJsonConfig["postfx_blurvignette_weightmul"] = weightMultiplier;
-                EngineJsonConfig["postfx_blurvignette_sampleradius"] = sampleRadius;
-            }
-        }
-
-        if (ImGui::Button("Save Post FX settings"))
-        {
-            PHX_CHECK(FileRW::WriteFile("phoenix.conf", EngineJsonConfig.dump(2)));
-            Log.Info("The JSON Config overwrote the pre-existing 'phoenix.conf'.");
-        }
 
         ImGui::Checkbox("Wireframe rendering", &engine->DebugWireframeRendering);
         ImGui::Checkbox("Debug Collision AABBs", &Physics::Get()->DebugCollisionAabbs);
@@ -6281,7 +6241,7 @@ void renderDebugger()
         if (numCoroutineIdChars < 3)
             numCoroutineIdChars = 3;
 
-        const auto renderCoroutine = [&L, &ar, vm, vms, numCoroutineIdChars](lua_State* coroutine)
+        const auto renderCoroutine = [vm, vms, numCoroutineIdChars](lua_State* coroutine)
         {
             ImGui::PushID(coroutine);
 
@@ -6380,8 +6340,8 @@ void renderDebugger()
 
             if (switchTo)
             {
-                L = coroutine;
-                ar = car;
+                debuggerL = coroutine;
+                debuggerAr = car;
 
                 TextEditorTab* tab = nullptr;
 
@@ -6403,7 +6363,7 @@ void renderDebugger()
 
             if (open)
             {
-                lua_Debug car = {};
+                car = {};
                 int i = 0;
 
                 if (!lua_getinfo(coroutine, 0, "sln", &car))
@@ -6447,7 +6407,6 @@ void renderDebugger()
 
                 if (lua_getthreaddata(coroutine))
                 {
-                    const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
                     if (ud->SpawnTrace.size() > 0)
                     {
                         ImGui::SeparatorText("Spawn trace");

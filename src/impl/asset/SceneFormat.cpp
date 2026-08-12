@@ -7,7 +7,6 @@
 
 #include "asset/SceneFormat.hpp"
 
-#include "asset/PrimitiveMeshes.hpp"
 #include "asset/MaterialManager.hpp"
 #include "asset/ModelImporter.hpp"
 #include "datatype/ComponentDependencies.hpp"
@@ -16,8 +15,6 @@
 #include "component/RigidBody.hpp"
 #include "component/Light.hpp"
 #include "component/Mesh.hpp"
-#include "geometry/DecomposeTRS.hpp"
-#include "FileRW.hpp"
 #include "Log.hpp"
 
 #define SF_WARN(err, ...) Log.WarningF( \
@@ -25,7 +22,7 @@
 	__VA_ARGS__                         \
 )                                       \
 
-thread_local std::string errorString = "No error";
+static thread_local std::string errorString = "No error";
 
 static glm::vec2 getVector2FromJson(const nlohmann::json& Json)
 {

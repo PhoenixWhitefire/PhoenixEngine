@@ -5,7 +5,6 @@
 #include <tracy/public/tracy/Tracy.hpp>
 
 #include "FileRW.hpp"
-#include "GlobalJsonConfig.hpp"
 #include "Utilities.hpp"
 #include "Log.hpp"
 
@@ -16,126 +15,129 @@
 //   false upon failure, and set the std::error_code & err accordingly.
 static bool createDirectoryRecursive(const std::string_view& dirName, std::error_code& err)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	err.clear();
-	if (!std::filesystem::create_directories(dirName, err))
-	{
-		if (std::filesystem::exists(dirName))
-		{
-			// The folder already exists:
-			err.clear();
-			return true;
-		}
-		return false;
-	}
-	return true;
+    err.clear();
+    if (!std::filesystem::create_directories(dirName, err))
+    {
+        if (std::filesystem::exists(dirName))
+        {
+            // The folder already exists:
+            err.clear();
+            return true;
+        }
+        return false;
+    }
+    return true;
 }
 
 std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	const std::string actualPath = FileRW::ResolvePathNormalized(ShortPath);
-	ZoneText(ShortPath.data(), ShortPath.size());
-	ZoneText(actualPath.data(), actualPath.size());
+    const std::string actualPath = FileRW::ResolvePathNormalized(ShortPath);
+    ZoneText(ShortPath.data(), ShortPath.size());
+    ZoneText(actualPath.data(), actualPath.size());
 
-	std::ifstream file;
-	std::string contents;
+    std::ifstream file;
+    std::string contents;
 
-	if (std::filesystem::is_regular_file(actualPath))
-		file.open(actualPath, std::ios::binary);
-	
-	if (file && file.is_open())
-	{
-		if (Success)
-			*Success = true;
+    if (std::filesystem::is_regular_file(actualPath))
+        file.open(actualPath, std::ios::binary);
+    
+    if (file && file.is_open())
+    {
+        if (Success)
+            *Success = true;
 
-		file.seekg(0, std::ios::end);
+        file.seekg(0, std::ios::end);
 
-		contents.resize(file.tellg());
-		file.seekg(0, std::ios::beg);
+        auto pos = file.tellg();
+        assert(pos >= 0);
 
-		file.read(&contents[0], contents.size());
+        contents.resize((size_t)pos);
+        file.seekg(0, std::ios::beg);
 
-		file.close();
+        file.read(&contents[0], (int64_t)contents.size());
 
-		return contents;
-	}
-	else
-	{
-		std::string shortError = std::strerror(errno);
-		if (std::filesystem::is_directory(actualPath))
-			shortError += " Not a file"; // "Succeeds" on Linux for some reason
+        file.close();
 
-		std::string fullError = std::format("Failed to read file '{}': {}", actualPath, shortError);
-		Log.Error(fullError);
+        return contents;
+    }
+    else
+    {
+        std::string shortError = strerror(errno);
+        if (std::filesystem::is_directory(actualPath))
+            shortError += " Not a file"; // "Succeeds" on Linux for some reason
 
-		if (Success)
-			*Success = false;
+        std::string fullError = std::format("Failed to read file '{}': {}", actualPath, shortError);
+        Log.Error(fullError);
 
-		return fullError;
-	}
+        if (Success)
+            *Success = false;
+
+        return fullError;
+    }
 }
 
 bool FileRW::WriteFile(
-	const std::string& ShortPath,
-	const std::string_view& Contents,
-	std::string* ErrorMessage
+    const std::string& ShortPath,
+    const std::string_view& Contents,
+    std::string* ErrorMessage
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::string path = FileRW::ResolvePathNormalized(ShortPath);
-	ZoneText(ShortPath.data(), ShortPath.size());
-	ZoneText(path.data(), path.size());
+    std::string path = FileRW::ResolvePathNormalized(ShortPath);
+    ZoneText(ShortPath.data(), ShortPath.size());
+    ZoneText(path.data(), path.size());
 
-	std::ofstream file(path.c_str(), std::ios::binary);
+    std::ofstream file(path.c_str(), std::ios::binary);
 
-	if (file && file.is_open())
-	{
-		file.write((const char*)Contents.data(), Contents.size());
-		file.close();
+    if (file && file.is_open())
+    {
+        file.write((const char*)Contents.data(), (int64_t)Contents.size());
+        file.close();
 
-		return true;
-	}
-	else
-	{
-		std::string shortError = std::strerror(errno);
-		std::string fullError = std::format("Failed to write {} bytes to file '{}': {}", Contents.size(), path, shortError);
-		Log.Error(fullError);
+        return true;
+    }
+    else
+    {
+        std::string shortError = strerror(errno);
+        std::string fullError = std::format("Failed to write {} bytes to file '{}': {}", Contents.size(), path, shortError);
+        Log.Error(fullError);
 
-		if (ErrorMessage)
-			*ErrorMessage = fullError;
+        if (ErrorMessage)
+            *ErrorMessage = fullError;
 
-		return false;
-	} 
+        return false;
+    } 
 }
 
 bool FileRW::WriteFileCreateDirectories(
-	const std::string& ShortPath,
-	const std::string_view& Contents,
-	std::string* ErrorMessage
+    const std::string& ShortPath,
+    const std::string_view& Contents,
+    std::string* ErrorMessage
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::string path = FileRW::ResolvePathNormalized(ShortPath);
-	ZoneText(ShortPath.data(), ShortPath.size());
-	ZoneText(path.data(), path.size());
+    std::string path = FileRW::ResolvePathNormalized(ShortPath);
+    ZoneText(ShortPath.data(), ShortPath.size());
+    ZoneText(path.data(), path.size());
 
-	size_t containingDirLoc = path.find_last_of("/");
-	std::string dirPath = path.substr(0, containingDirLoc);
+    size_t containingDirLoc = path.find_last_of("/");
+    std::string dirPath = path.substr(0, containingDirLoc);
 
-	std::error_code ec;
-	
-	if (!createDirectoryRecursive(dirPath, ec) && ErrorMessage)
-	{
-		*ErrorMessage = std::format("Failed to recursively create directories to '{}': {}", path, ec.message());
-		return false;
-	}
+    std::error_code ec;
+    
+    if (!createDirectoryRecursive(dirPath, ec) && ErrorMessage)
+    {
+        *ErrorMessage = std::format("Failed to recursively create directories to '{}': {}", path, ec.message());
+        return false;
+    }
 
-	return FileRW::WriteFile(path, Contents, ErrorMessage);
+    return FileRW::WriteFile(path, Contents, ErrorMessage);
 }
 
 static std::unordered_map<std::string, std::string> s_AliasMap;
@@ -143,123 +145,121 @@ static std::string s_CwdAliasing = "./";
 
 void FileRW::DefineAlias(const std::string& Alias, const std::string& Path)
 {
-	assert(Alias[0] != '@'); // you've probably made a mistake
-	s_AliasMap[Alias] = Path;
+    assert(Alias[0] != '@'); // you've probably made a mistake
+    s_AliasMap[Alias] = Path;
 }
 
 void FileRW::RemoveAlias(const std::string& Alias)
 {
-	if (const auto& it = s_AliasMap.find(Alias); it != s_AliasMap.end())
-		s_AliasMap.erase(it);
+    if (const auto& it = s_AliasMap.find(Alias); it != s_AliasMap.end())
+        s_AliasMap.erase(it);
 }
 
 void FileRW::MakeCwdAliasOf(const std::string& Alias)
 {
-	s_CwdAliasing = Alias;
+    s_CwdAliasing = Alias;
 }
 
 static std::string resolveAliasRecursive(std::string Path)
 {
-	size_t aliasEnd = Path.find_first_of('/');
-	if (aliasEnd == std::string::npos)
-		aliasEnd = Path.size();
+    size_t aliasEnd = Path.find_first_of('/');
+    if (aliasEnd == std::string::npos)
+        aliasEnd = Path.size();
 
-	std::string alias = Path.substr(1, aliasEnd - 1);
-	const auto& aliasIt = s_AliasMap.find(alias);
+    std::string alias = Path.substr(1, aliasEnd - 1);
+    const auto& aliasIt = s_AliasMap.find(alias);
 
-	if (aliasIt == s_AliasMap.end())
-		RAISE_RT("Invalid alias '{}' in path '{}'", alias, Path);
-	else
-		Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
+    if (aliasIt == s_AliasMap.end())
+        RAISE_RT("Invalid alias '{}' in path '{}'", alias, Path);
+    else
+        Path = aliasIt->second + Path.substr(aliasEnd, Path.size() - aliasEnd);
 
-	if (Path[0] == '@')
-		Path = resolveAliasRecursive(Path);
-	
-	return Path;
+    if (Path[0] == '@')
+        Path = resolveAliasRecursive(Path);
+    
+    return Path;
 }
 
 static bool isQualified(const std::string& Path)
 {
-	// TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
-	// and start from resources/ automatically
-	// currently, files that *are* from the root are specified by beginning the path with `.` (such as `./`)
-	// find a better method?
-	// 12/01/2025: `.` is for preceding `./`, `:` is for drive letters, such as
-	// `C:`, where we don't need to do anything
-	// 23/02/2025: `/` is for Linux paths which begin at the home directory, starting with a `/home`
-	// 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
-	return Path[0] == '.' || Path[0] == '/' || Path[0] == '~' || (Path.size() >= 2 && Path[1] == ':');
+    // TODO: allow paths specified in resource files (eg materials and levels etc) to not have to start from the root
+    // and start from resources/ automatically
+    // currently, files that *are* from the root are specified by beginning the path with `.` (such as `./`)
+    // find a better method?
+    // 12/01/2025: `.` is for preceding `./`, `:` is for drive letters, such as
+    // `C:`, where we don't need to do anything
+    // 23/02/2025: `/` is for Linux paths which begin at the home directory, starting with a `/home`
+    // 19/08/2025: `~` is a shortcut for `/home/<USERNAME>` on linux
+    return Path[0] == '.' || Path[0] == '/' || Path[0] == '~' || (Path.size() >= 2 && Path[1] == ':');
 }
 
 std::string FileRW::ResolvePathNormalized(std::string PathToNormalize)
 {
-	std::string Path = PathToNormalize;
+    std::string Path = PathToNormalize;
 
-	if (Path.size() == 0)
-	{
-		Log.Warning("`ResolvePathNormalized` given a path 0 bytes in length!");
-		return Path;
-	}
+    if (Path.size() == 0)
+    {
+        Log.Warning("`ResolvePathNormalized` given a path 0 bytes in length!");
+        return Path;
+    }
 
-	if (Path[0] == '!')
-		return Path;
+    if (Path[0] == '!')
+        return Path;
 
-	if (Path[0] == '@')
-		Path = resolveAliasRecursive(Path);
+    if (Path[0] == '@')
+        Path = resolveAliasRecursive(Path);
 
-	std::string resdir = EngineJsonConfig.type() != nlohmann::json::value_t::null
-							? EngineJsonConfig.value("ResourcesDirectory", "resources/")
-							: "resources/";
+    const std::string_view resdir = "resources/";
 
-	size_t whereRes = Path.find(resdir);
-	if (!isQualified(Path))
-	{
-		if (whereRes == std::string::npos)
-			Path.insert(0, resdir);
+    size_t whereRes = Path.find(resdir);
+    if (!isQualified(Path))
+    {
+        if (whereRes == std::string::npos)
+            Path.insert(0, resdir);
 
-		if (s_CwdAliasing.size() > 0)
-		{
-			Path.insert(0, s_CwdAliasing);
-			if (Path[0] == '@')
-				Path = resolveAliasRecursive(Path);
-		}
-	}
+        if (s_CwdAliasing.size() > 0)
+        {
+            Path.insert(0, s_CwdAliasing);
+            if (Path[0] == '@')
+                Path = resolveAliasRecursive(Path);
+        }
+    }
 
-	assert(Path[0] != '@');
-	if (!isQualified(Path))
-		Path = "./" + Path;
+    assert(Path[0] != '@');
+    if (!isQualified(Path))
+        Path = "./" + Path;
 
-	for (char& c : Path)
-		if (c == '\\')
-			c = '/';
+    for (char& c : Path)
+        if (c == '\\')
+            c = '/';
 
-	return Path;
+    return Path;
 }
 
 std::string FileRW::ResolvePathAbsolute(std::string Path)
 {
-	if (Path.size() == 0)
-	{
-		Log.Warning("`ResolvePathAbsolute` given a path 0 bytes in length!");
-		return Path;
-	}
+    if (Path.size() == 0)
+    {
+        Log.Warning("`ResolvePathAbsolute` given a path 0 bytes in length!");
+        return Path;
+    }
 
-	if (Path[0] == '!')
-		return Path;
+    if (Path[0] == '!')
+        return Path;
 
-	std::string abs = ResolvePathNormalized(Path);
+    std::string abs = ResolvePathNormalized(Path);
 
-	if (abs[0] == '.' && abs.size() > 2)
-		abs = abs.substr(2);
+    if (abs[0] == '.' && abs.size() > 2)
+        abs = abs.substr(2);
 
-	if (abs[0] != '/' && abs[0] != '~' && (abs.size() < 2 || abs[1] != ':'))
-		abs = (std::filesystem::current_path() / abs).string();
+    if (abs[0] != '/' && abs[0] != '~' && (abs.size() < 2 || abs[1] != ':'))
+        abs = (std::filesystem::current_path() / abs).string();
 
 #ifdef _WIN32
-	for (char& c : abs)
-		if (c == '/')
-			c = '\\';
+    for (char& c : abs)
+        if (c == '/')
+            c = '\\';
 #endif
 
-	return abs;
+    return abs;
 }

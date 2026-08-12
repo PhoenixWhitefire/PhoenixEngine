@@ -53,6 +53,7 @@ struct EcUIButton : public Component<EntityComponent::UIButton>
 
 class InterfaceComponentManager : public ComponentManager<EcInterfaceService>
 {
+    const Reflection::StaticPropertyMap& GetProperties() override;
 };
 
 class UITransformComponentManager : public ComponentManager<EcUITransform>
