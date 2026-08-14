@@ -97,6 +97,9 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, conn_eq, "EventConnection.__eq");
     lua_setfield(L, -2, "__eq");
 
+    lua_pushliteral(L, "The metatable is locked");
+	lua_setfield(L, -2, "__metatable");
+
     lua_setuserdatametatable(L, UserdataTag::EventConnection);
 
     lua_setuserdatadtor(L, UserdataTag::EventConnection, [](lua_State*, void* ud)

@@ -1,3 +1,4 @@
+#include "Reflection.hpp"
 #include <luau/Require/include/Luau/Require.h>
 #include <lualib.h>
 
@@ -878,18 +879,12 @@ int ScriptEngine::SetScriptBreakpoint(const std::string& VM, const std::string& 
     return lineApplied;
 }
 
-#define SEENTABLES "ToGenericValueTemp_SeenTables"
-#define MAXDEPTH 16
+#define MAXTABLEDEPTH (4)
 
 static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int Depth)
 {
     using namespace ScriptEngine;
     using namespace ScriptEngine::L;
-
-    if (Depth > MAXDEPTH)
-        return "[depth exceeded]";
-
-    luaL_checkstack(L, 5, "toGenericValue");
 
     switch (lua_type(L, StackIndex))
     {
@@ -908,19 +903,17 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
     case LUA_TSTRING:
     {
         size_t len = 0;
-        const char* str = luaL_tolstring(L, StackIndex, &len);
-        Reflection::GenericValue val = std::string_view(str, len);
+        const char* str = lua_tolstring(L, StackIndex, &len);
 
-        lua_pop(L, 1);
-        return val;
+        return std::string_view(str, len);
     }
     case LUA_TBUFFER:
     {
         size_t len = 0;
         void* p = lua_tobuffer(L, StackIndex, &len);
+
         Reflection::GenericValue val = std::string_view((char*)p, len);
         val.Type = Reflection::ValueType::Buffer;
-
         return val;
     }
     case LUA_TVECTOR:
@@ -1009,120 +1002,64 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
     }
     case LUA_TTABLE:
     {
-        if (Depth >= MAXDEPTH)
-            return "[depth exceeded - table]";
-
-        lua_getfield(L, LUA_REGISTRYINDEX, SEENTABLES);
-        int seenTablesIndex = lua_gettop(L);
+        if (Depth > MAXTABLEDEPTH)
+            luaL_error(L, "Table depth limit exceeded during serialization");
 
         std::vector<Reflection::GenericValue> items;
-        bool isArray = true;
+        int keyType = LUA_TNONE;
         int lastIndex = 0;
 
-        lua_pushvalue(L, StackIndex < 0 ? StackIndex - 1 : StackIndex);
-
-        // https://www.lua.org/manual/5.1/manual.html#lua_next
-        lua_pushnil(L);
-
-        while (lua_next(L, -2) != 0)
+        // luau.org/api/#tables
+        for (int iter = 0; (iter = lua_rawiter(L, StackIndex, iter)) != -1;)
         {
-            if (lua_type(L, -2) == LUA_TTABLE)
-            {
-                luaL_tolstring(L, -2, nullptr);
-                lua_pushvalue(L, -3);
-                lua_remove(L, -4);
-                lua_remove(L, -4);
-                isArray = false;
-            }
+            int currentKeyType = lua_type(L, -2);
 
-            if (lua_type(L, -1) == LUA_TTABLE)
+            if (currentKeyType != keyType)
             {
-                lua_pushvalue(L, -1);
-                if (lua_gettable(L, seenTablesIndex) != LUA_TNIL)
-                {
-                    lua_pop(L, 2);
-                    lua_pushliteral(L, "[cycle]");
-                    isArray = false;
-                }
+                if (keyType == LUA_TNONE)
+                    keyType = currentKeyType;
                 else
                 {
-                    lua_pop(L, 1);
+                    luaL_error(
+                        L,
+                        "Mixed tables are not allowed. Previous key type: %s, current key type: %s",
+                        lua_typename(L, keyType), lua_typename(L, currentKeyType)
+                    );
+                }
+            }
 
-                    if (lua_gettop(L) > 50)
+            if (keyType == LUA_TNUMBER)
+            {
+                double index = lua_tonumber(L, -2);
+
+                if (index == std::floor(index))
+                {
+                    if ((int)index == lastIndex + 1)
                     {
-                        lua_pop(L, 1);
-                        lua_pushliteral(L, "[stack limit exceeded]");
+                        items.push_back(toGenericValue(L, -1, Depth + 1));
+                        lastIndex = (int)index;
                     }
                     else
-                    {
-                        luaL_checkstack(L, 5, "table depth");
-
-                        lua_pushvalue(L, -1);
-                        lua_pushboolean(L, true);
-                        lua_settable(L, seenTablesIndex);
-                    }
+                        luaL_error(L, "Expected consecutive array indices, got index %d with previous index %d", (int)index, lastIndex);
                 }
-            }
-
-            int kt = lua_type(L, -2);
-
-            if (isArray)
-            {
-                if (kt != LUA_TNUMBER)
-                    isArray = false;
                 else
-                {
-                    int index = lua_tointeger(L, -2);
-
-                    bool isNonIntegerIndex = lua_tonumber(L, -2) != (double)index;
-                    bool isOutOfOrderIndex = isNonIntegerIndex || (index < 1 || index != lastIndex + 1);
-
-                    if (isNonIntegerIndex || isOutOfOrderIndex)
-                        isArray = false;
-                }
-
-                if (isArray)
-                    lastIndex = lua_tointeger(L, -2);
+                    luaL_error(L, "Numerical indices are expected to be positive integers for arrays, got %f", index);
             }
-
-            items.push_back(toGenericValue(L, -2, Depth + 1));
-            items.push_back(toGenericValue(L, -1, Depth + 1));
-
-            if (lua_type(L, -1) == LUA_TTABLE)
+            else
             {
-                lua_pushvalue(L, -1);
-                lua_pushnil(L);
-                lua_settable(L, seenTablesIndex);
+                items.push_back(toGenericValue(L, -2, Depth + 1));
+                items.push_back(toGenericValue(L, -1, Depth + 1));
             }
 
-            if (Depth >= MAXDEPTH)
-                break;
-
-            lua_pop(L, 1);
+            lua_pop(L, 2);
         }
-        lua_pop(L, 1);
-        lua_pop(L, 1); // SeenTables
 
-        if (isArray)
-        {
-            std::vector<Reflection::GenericValue> array;
-            array.reserve(items.size() / 2);
+        Reflection::GenericValue value = Reflection::GenericValue(items);
 
-            for (uint32_t i = 1; i < items.size(); i += 2)
-            {
-                assert(items[i-1].Type == Reflection::ValueType::Double && items[i-1].AsDouble() == ((double)i + 1.0) / 2.0);
-                array.push_back(items[i]);
-            }
+        if (keyType != LUA_TNONE && keyType != LUA_TNUMBER)
+            value.Type = Reflection::ValueType::Map;
 
-            return array;
-        }
-        else
-        {
-            Reflection::GenericValue map = items;
-            map.Type = Reflection::ValueType::Map;
-
-            return map;
-        }
+        return value;
     }
     default:
     {
@@ -1135,15 +1072,7 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
 
 Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex)
 {
-    lua_newtable(L);
-    lua_setfield(L, LUA_REGISTRYINDEX, SEENTABLES);
-
-    Reflection::GenericValue gv = toGenericValue(L, StackIndex, 0);
-
-    lua_pushnil(L);
-    lua_setfield(L, LUA_REGISTRYINDEX, SEENTABLES);
-
-    return gv;
+    return toGenericValue(L, StackIndex, 0);
 }
 
 void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int StackIndex)

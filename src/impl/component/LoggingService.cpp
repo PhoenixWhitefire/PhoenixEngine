@@ -2,6 +2,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "component/LoggingService.hpp"
+#include "Reflection.hpp"
 #include "Utilities.hpp"
 
 const Reflection::StaticMethodMap& LoggingComponentManager::GetMethods()
@@ -43,11 +44,37 @@ const Reflection::StaticEventMap& LoggingComponentManager::GetEvents()
     return events;
 }
 
-void LoggingComponentManager::SignalNewLogMessage(double Time, Logging::MessageType MessageType, const std::string_view& Message, const std::string_view& ExtraTags, const Reflection::GenericValue& Value)
+void LoggingComponentManager::SignalNewLogMessage(
+    double Time,
+    Logging::MessageType MessageType,
+    const std::string_view& Message,
+    const std::string_view& ExtraTags,
+    const std::vector<Reflection::GenericValue>& Values
+)
 {
+    std::optional<Reflection::GenericValue> niceValues;
+
     for (const EcLoggingService& cl : Components)
     {
         if (cl.Valid)
-            Reflection::SignalEvent(cl.OnMessagedCallbacks, { Time, (int)MessageType, Message, ExtraTags, Value }, "Logging.OnMessaged");
+        {
+            if (!niceValues)
+            {
+                std::vector<Reflection::GenericValue> array;
+                array.reserve(Values.size());
+
+                for (const Reflection::GenericValue& v : Values)
+                {
+                    array.push_back(Reflection::GenericValue::MapPairs({
+                        { "String", v.ToString() },
+                        { "Value", v },
+                    }));
+                }
+
+                niceValues = Reflection::GenericValue(array);
+            }
+
+            Reflection::SignalEvent(cl.OnMessagedCallbacks, { Time, (int)MessageType, Message, ExtraTags, niceValues.value() }, "Logging.OnMessaged");
+        }
     }
 }

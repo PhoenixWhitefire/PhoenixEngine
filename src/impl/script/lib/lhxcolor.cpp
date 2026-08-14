@@ -102,6 +102,9 @@ static void createmetatable(lua_State* L)
 	lua_pushstring(L, LUHX_COLORLIBNAME);
 	lua_setfield(L, -2, "__type");
 
+	lua_pushliteral(L, "The metatable is locked");
+	lua_setfield(L, -2, "__metatable");
+
 	lua_setuserdatametatable(L, UserdataTag::Color);
 }
 

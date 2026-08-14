@@ -13,24 +13,23 @@ local Preferences = require("@ed/Preferences")
 local Theme = require("@ed/Theme")
 local State = require("@ed/State")
 
-type LogMessageItem = {
-    Content: string,
-    DirectValue: unknown,
-    Newline: boolean,
-    ExtraTags: string,
+type LogMessageComponent = {
+    String: string,
+    Value: unknown,
+    Metatable: unknown,
+    HasExplicitName: boolean,
     CanInteract: boolean,
     Tooltip: string,
 }
 
 type LogMessage = {
-    Closed: boolean,
-    Message: { LogMessageItem },
+    Components: { LogMessageComponent },
     Type: EnumLogType,
+    ExtraTags: string,
     Time: string,
     Source: string?,
     Line: number?,
     OpenTables: { [unknown]: boolean },
-    TablesWithAnyElements: { [unknown]: boolean? },
     TablePrettyOpen: { [string]: boolean },
     TablePrettyChangeOpen: { [string]: boolean },
     RepeatCount: number,
@@ -39,6 +38,146 @@ type LogMessage = {
 
 local NewLogMessage = false
 local LogMessageHovering = nil
+
+local renderTable
+
+local function renderTableElement(t, k: unknown, v, message: LogMessage, startX: number, depth: number, more: boolean?, formatName: boolean?)
+    formatName = if formatName == nil then true else formatName
+
+    imgui.setcursorposition(imgui.cursorposition() + vector.create(startX - 20, 0))
+    local kstr = tostring(k)
+
+    if formatName then
+        if typeof(k) == "string" then
+            if not k:match("%W") then
+                kstr = k
+            else
+                kstr = `["{ k }"]`
+            end
+        else
+            kstr = `[{ k }]`
+        end
+    end
+
+    if typeof(v) == "table" then
+        local tpos = imgui.cursorposition()
+        if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
+            imgui.treepop()
+        end
+
+        if imgui.itemclicked() then
+            local cid = tostring(v)
+            message.TablePrettyChangeOpen[cid] = not message.TablePrettyOpen[cid]
+        end
+
+        imgui.sameline()
+        imgui.setcursorposition(imgui.cursorposition() - vector.create(12, 0))
+        -- TODO luau cast
+        renderTable(v :: any, nil, depth + 1, tpos, startX, message)
+    else
+        if typeof(k) == "GameObject" then
+            if imgui.textlink(kstr) then
+                DeveloperTools:SetExplorerSelections({ k })
+            end
+            imgui.sameline()
+            imgui.text(" = ")
+        else
+            if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
+                imgui.treepop()
+            end
+        end
+
+        imgui.sameline()
+        imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+
+        if typeof(v) == "GameObject" then
+            if imgui.textlink(tostring(v)) then
+                -- TODO luau cast
+                DeveloperTools:SetExplorerSelections({ v :: any })
+            end
+
+            if imgui.itemclicked(Enum.MouseButton.Right) then
+                imgui.setclipboardtext(tostring(v))
+                imgui.settooltip("Copied")
+            end
+
+            -- TODO luau cast https://github.com/luau-lang/luau/issues/2627
+            if more or next(t :: any, k) then
+                imgui.sameline()
+                imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
+                imgui.text(",")
+            end
+        else
+            local vts = tostring(v)
+            if typeof(v) == "string" then
+                vts = `"{ v }"`
+            elseif typeof(v) ~= "number" and typeof(v) ~= "boolean" then
+                vts = `[{ v }]`
+            end
+
+            -- TODO luau case https://github.com/luau-lang/luau/issues/2627
+            imgui.text(vts .. if more or next(t :: any, k) then "," else "")
+
+            if imgui.itemclicked(Enum.MouseButton.Right) then
+                imgui.setclipboardtext(vts)
+                imgui.settooltip("Copied")
+            end
+        end
+    end
+end
+
+function renderTable(t: { read [unknown]: unknown }, meta: unknown, depth: number, pos: vector?, startX: number, message: LogMessage)
+    local id = tostring(t)
+    imgui.pushid(id)
+
+    local open = message.OpenTables[t]
+    -- TODO luau cast https://github.com/luau-lang/luau/issues/2627
+    local hasElements = meta or next(t :: any) ~= nil
+
+    if message.TablePrettyChangeOpen[id] ~= nil then
+        imgui.setnextitemopen(message.TablePrettyChangeOpen[id])
+        message.TablePrettyChangeOpen[id] = nil
+    end
+
+    local prev = imgui.cursorposition()
+    local nodeOpen = imgui.treenode("##", "aw | ar | " .. (if depth == 0 then "dlf" else "")  .. (if hasElements then "" else " lf"))
+    local after = imgui.cursorposition()
+
+    if imgui.itemclicked() then
+        message.TablePrettyChangeOpen[id] = not message.TablePrettyOpen[id]
+    end
+
+    imgui.dummy(64, 64)
+    imgui.setcursorposition(prev + vector.create(16, 0))
+    imgui.text(if (open and hasElements) then "{" else (if hasElements then "{...}" else "{}"))
+    imgui.setcursorposition(after)
+
+    message.TablePrettyOpen[id] = nodeOpen
+
+    if nodeOpen then
+        message.OpenTables[t] = true
+
+        for k, v in t do
+            renderTableElement(t, k, v, message, startX, depth, meta ~= nil)
+        end
+
+        if meta then
+            renderTableElement(t, "@metatable", meta, message, startX, depth, false, false)
+        end
+
+        imgui.treepop()
+
+        if hasElements then
+            local p = (if depth > 0 then assert(pos) + vector.create(13, 0) else prev)
+            imgui.setcursorposition(vector.create(assert(p.x) + 8, imgui.cursorposition().y))
+            imgui.text("}")
+        end
+    else
+        message.OpenTables[t] = false
+    end
+
+    imgui.popid()
+end
 
 local function canInteractWithLogSubMessage(ExtraTags: string, DirectValue: unknown, source: string?): (boolean, string)
     if typeof(DirectValue) == "GameObject" then
@@ -110,6 +249,8 @@ function Output.Render()
 
             imgui.popstylecolor()
 
+            local context = message.ExtraTags
+
             local LogColors = {
                 [Enum.LogType.None]    = Theme.OutputLogNone,
                 [Enum.LogType.Info]    = Theme.OutputLogInfo,
@@ -121,53 +262,26 @@ function Output.Render()
             imgui.pushstylecolor(Enum.ImGuiColor.Text, logColor)
             imgui.pushstylecolor(Enum.ImGuiColor.TextLink, logColor)
 
-            for smi, subMessage in message.Message do
+            for smi, component in message.Components do
                 smid += 1
 
-                if #subMessage.Content == 0 then
+                if component.String == "" then
                     continue
                 end
 
-                local prev = message.Message[smi - 1]
-                if not prev or prev.Newline then
-                    imgui.sameline()
-                end
+                imgui.sameline()
 
-                local tooltip = subMessage.Tooltip
-                local context = message.Message[1].ExtraTags
-                if #context <= 2 or context == "LogContext:Main" then
-                    context = ""
+                local tooltip = component.Tooltip or select(2, canInteractWithLogSubMessage(context, component.Value))
 
-                    for _, m in message.Message do
-                        if #m.ExtraTags > 2 then
-                            context = m.ExtraTags
-                            tooltip = m.Tooltip
-                            break
-                        end
-                    end
-                end
-
-                local _
-                _, tooltip = canInteractWithLogSubMessage(context, subMessage.DirectValue)
-
-                if #tooltip == 0 then
-                    for _, m in message.Message do
-                        if #m.Tooltip > 0 then
-                            tooltip = m.Tooltip
-                            break
-                        end
-                    end
-                end
-
-                local canInteract = (message.Source or subMessage.CanInteract) and LogMessageHovering == smid and tooltip ~= "From Command Bar"
+                local canInteract = (message.Source or component.CanInteract) and LogMessageHovering == smid and tooltip ~= "From Command Bar"
                 local doInteract = false
-                local isPrettyPrintableTable = typeof(subMessage.DirectValue) == "table"
+                local isPrettyPrintableTable = typeof(component.Value) == "table"
 
-                if not isPrettyPrintableTable or subMessage.Content:find("table: 0x") ~= 1 then
+                if not isPrettyPrintableTable or component.String:find("table: 0x") ~= 1 then
                     if canInteract then
-                        doInteract = imgui.textlink(subMessage.Content)
+                        doInteract = imgui.textlink(component.String)
                     else
-                        imgui.text(subMessage.Content)
+                        imgui.text(if component.HasExplicitName then component.String else tostring(component.Value))
                     end
                 end
 
@@ -178,156 +292,15 @@ function Output.Render()
                         message.OpenTables = {}
                     end
 
-                    if not message.TablesWithAnyElements then
-                        message.TablesWithAnyElements = {}
-                    end
-
-                    local function hasAnyElements(t): boolean
-                        local cached = message.TablesWithAnyElements[t]
-
-                        if cached == nil then
-                            for _ in t do
-                                message.TablesWithAnyElements[t] = true
-                                return true
-                            end
-                            message.TablesWithAnyElements[t] = false
-                            return false
-                        else
-                            return cached
-                        end
-                    end
-
                     local startX = imgui.cursorposition().x
-
-                    local function renderTable(t: { [unknown]: unknown }, depth: number, pos: vector?)
-                        local id = tostring(t)
-                        imgui.pushid(id)
-
-                        local open = message.OpenTables[t]
-                        local hasElements = hasAnyElements(t)
-
-                        if message.TablePrettyChangeOpen[id] ~= nil then
-                            imgui.setnextitemopen(message.TablePrettyChangeOpen[id])
-                            message.TablePrettyChangeOpen[id] = nil
-                        end
-
-                        local prev = imgui.cursorposition()
-                        local nodeOpen = imgui.treenode("##", "aw | ar | " .. (if depth == 0 then "dlf" else "")  .. (if hasElements then "" else " lf"))
-                        local after = imgui.cursorposition()
-
-                        if imgui.itemclicked() then
-                            message.TablePrettyChangeOpen[id] = not message.TablePrettyOpen[id]
-                        end
-
-                        imgui.dummy(64, 64)
-                        imgui.setcursorposition(prev + vector.create(16, 0))
-                        imgui.text(if (open and hasElements) then "{" else (if hasElements then "{...}" else "{}"))
-                        imgui.setcursorposition(after)
-
-                        message.TablePrettyOpen[id] = nodeOpen
-
-                        if nodeOpen then
-                            message.OpenTables[t] = true
-                            for k, v in t do
-                                imgui.setcursorposition(imgui.cursorposition() + vector.create(startX - 20, 0))
-
-                                local kstr = k
-                                if typeof(k) == "string" then
-                                    if not k:match("%W") then
-                                        kstr = k
-                                    else
-                                        kstr = `["{ k }"]`
-                                    end
-                                else
-                                    kstr = `[{ k }]`
-                                end
-
-                                if typeof(v) == "table" then
-                                    local tpos = imgui.cursorposition()
-                                    if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
-                                        imgui.treepop()
-                                    end
-
-                                    if imgui.itemclicked() then
-                                        local cid = tostring(v)
-                                        message.TablePrettyChangeOpen[cid] = not message.TablePrettyOpen[cid]
-                                    end
-
-                                    imgui.sameline()
-                                    imgui.setcursorposition(imgui.cursorposition() - vector.create(12, 0))
-                                    -- TODO luau cast
-                                    renderTable(v :: any, depth + 1, tpos)
-                                else
-                                    if typeof(k) == "GameObject" then
-                                        if imgui.textlink(kstr) then
-                                            DeveloperTools:SetExplorerSelections({ k })
-                                        end
-                                        imgui.sameline()
-                                        imgui.text(" = ")
-                                    else
-                                        if imgui.treenode(kstr :: string .. " = ", "dlf | lf") then
-                                            imgui.treepop()
-                                        end
-                                    end
-
-                                    imgui.sameline()
-                                    imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
-
-                                    if typeof(v) == "GameObject" then
-                                        if imgui.textlink(tostring(v)) then
-                                            -- TODO luau cast
-                                            DeveloperTools:SetExplorerSelections({ v :: any })
-                                        end
-
-                                        if imgui.itemclicked(Enum.MouseButton.Right) then
-                                            imgui.setclipboardtext(tostring(v))
-                                            imgui.settooltip("Copied")
-                                        end
-
-                                        if next(t, k) then
-                                            imgui.sameline()
-                                            imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
-                                            imgui.text(",")
-                                        end
-                                    else
-                                        local vts = tostring(v)
-                                        if typeof(v) == "string" then
-                                            vts = `"{ v }"`
-                                        elseif typeof(v) ~= "number" and typeof(v) ~= "boolean" then
-                                            vts = `[{ v }]`
-                                        end
-
-                                        imgui.text(vts .. if next(t, k) then "," else "")
-
-                                        if imgui.itemclicked(Enum.MouseButton.Right) then
-                                            imgui.setclipboardtext(vts)
-                                            imgui.settooltip("Copied")
-                                        end
-                                    end
-                                end
-                            end
-
-                            imgui.treepop()
-
-                            if hasElements then
-                                local p = (if depth > 0 then assert(pos) + vector.create(13, 0) else prev)
-                                imgui.setcursorposition(vector.create(assert(p.x) + 8, imgui.cursorposition().y))
-                                imgui.text("}")
-                            end
-                        else
-                            message.OpenTables[t] = false
-                        end
-
-                        imgui.popid()
-                    end
 
                     imgui.setcursorposition(imgui.cursorposition() - vector.create(8, 0))
                     -- TODO luau cast
-                    renderTable(subMessage.DirectValue :: any, 0)
+                    renderTable(component.Value :: any, component.Metatable, 0, nil, startX, message)
                 end
 
                 if doInteract then
-                    interactWithLogSubMessage(context, subMessage.DirectValue)
+                    interactWithLogSubMessage(context, component.Value)
                 end
 
                 if message.Source and message.Line and message.Source ~= "CommandBar" then
@@ -402,26 +375,88 @@ function Output.Render()
     end
 end
 
-Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
-    if typeof(Value) == "table" then
-        table.freeze(Value :: any)
+local function equivalent(a, b)
+    if typeof(a) == "table" and typeof(b) == "table" then
+        if #a ~= #b then
+            return false
+        end
+
+        for k, v in a do
+            if not equivalent(v, b[k]) then
+                return false
+            end
+        end
+
+        for k, v in b do
+            if not equivalent(a[k], v) then
+                return false
+            end
+        end
+
+        return true
+    else
+        return a == b
+    end
+end
+
+Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Values)
+    table.freeze(Values)
+
+    local metatables = {}
+    local hasExplicitName = {}
+
+    for _, v in Values do
+        local val = v.Value
+
+        if typeof(val) == "table" then
+            val = val :: { [unknown]: unknown }
+
+            -- TODO luau cast
+            for sanitized, value in val do
+                if sanitized == "(metatable)" then
+                    metatables[v] = value
+                    val[sanitized] = nil
+
+                elseif sanitized == "(name)" then
+                    v.String = if typeof(value) == "string" then value else v.String
+                    hasExplicitName[v] = true
+                    val[sanitized] = nil
+
+                elseif typeof(sanitized) == "string" and sanitized:sub(1, 1) == "\\" then
+                    val[sanitized] = nil
+                    sanitized = sanitized:sub(2, #sanitized)
+                    val[sanitized] = value
+                end
+            end
+
+            table.freeze(v)
+        end
+    end
+
+    local prev = Output.Log[#Output.Log]
+
+    if prev then
+        if #prev.Components == #Values + 1 and prev.Components[1].String == Message then
+            local isDuplicate = true
+
+            for i = 2, #prev.Components do
+                -- TODO luau cast
+                if prev.Components[i].String ~= Values[i - 1].String or not equivalent(Values[i - 1] :: any, prev.Components[i].Value :: any) then
+                    isDuplicate = false
+                    break
+                end
+            end
+
+            if isDuplicate then
+                prev.RepeatCount += 1
+                return
+            end
+        end
     end
 
     if State.CurrentStage == "ProjectPlaying" and Message:find("Script VM was timed-out") and Preferences.CancelPlaytestWhenScriptTimesOut then
         Engine:ShowMessageBox("Playtest cancelled", "The playtest was cancelled because of a script timing-out.\nYou may disable this behavior in Editor Settings.", "ok", "error")
         task.defer(State.ChangeStageTo, "ProjectEditing")
-    end
-
-    local createsNewline = false
-
-    if Message == " &&" then
-        Message = ""
-        createsNewline = true
-    end
-
-    if #Message >= 2 and Message:sub(-#("&&")) == "&&" then
-        Message = Message:sub(1, #Message - 2)
-        createsNewline = true
     end
 
     local source = ExtraTags:match("Script:.+,") or ExtraTags:match("SourceChunkName:.+,")
@@ -436,51 +471,39 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Value)
         line = lineMatch and tonumber(lineMatch:sub(#("Line:") + 1))
     end
 
-    local canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags, Value, source)
+    local canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags, nil, source)
 
-    local lastLog = Output.Log[#Output.Log]
-    if lastLog and not lastLog.Closed then
-        if Type == Enum.LogType.None then
-            table.insert(lastLog.Message, {
-                Content = Message,
-                DirectValue = Value,
-                ExtraTags = ExtraTags,
-                CanInteract = canInteract,
-                Tooltip = tooltip,
-                Newline = createsNewline,
-            })
-            lastLog.RawContent ..= " " .. Message
-
-            return
-        else
-            lastLog.Closed = true
-
-            local prev = Output.Log[#Output.Log - 1]
-            if prev and prev.RawContent == lastLog.RawContent then
-                table.remove(Output.Log)
-                prev.RepeatCount += 1
-            end
-        end
-    end
-
-    local firstItem: LogMessageItem = {
-        Content = Message,
-        DirectValue = Value,
-        ExtraTags = ExtraTags,
+    local firstItem: LogMessageComponent = {
+        String = Message,
+        Value = Message,
+        HasExplicitName = false,
         CanInteract = canInteract,
         Tooltip = tooltip,
-        Newline = createsNewline,
     }
 
+    local components = table.create(#Values + 1, firstItem)
+
+    for i = 1, #Values do
+        canInteract, tooltip = canInteractWithLogSubMessage(ExtraTags, Values[i], source)
+
+        table.insert(components, {
+            String = Values[i].String,
+            Value = Values[i].Value,
+            Metatable = metatables[Values[i]],
+            HasExplicitName = hasExplicitName[Values[i]] ~= nil,
+            CanInteract = canInteract,
+            Tooltip = tooltip,
+        })
+    end
+
     local logMessage: LogMessage = {
-        Closed = false,
-        Message = { firstItem },
+        Components = components,
         Type = Type,
+        ExtraTags = ExtraTags,
         Time = os.date("%H:%M:%S", os.time() - (game.Time - Time)),
         Source = source,
         Line = line,
         OpenTables = {},
-        TablesWithAnyElements = {},
         TablePrettyOpen = {},
         TablePrettyChangeOpen = {},
         RepeatCount = 1,

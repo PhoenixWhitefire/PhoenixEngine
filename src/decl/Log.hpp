@@ -2,7 +2,7 @@
 
 #include <string>
 #include <format>
-#include <atomic>
+#include <vector>
 
 namespace Reflection
 {
@@ -33,7 +33,7 @@ namespace Logging
 		void Warning(const std::string_view&, const std::string_view& ExtraTags = "") const;
 		void Error(const std::string_view&, const std::string_view& ExtraTags = "") const;
 		void Append(const std::string_view&, const std::string_view& ExtraTags = "") const;
-		void AppendWithValue(const std::string_view&, const Reflection::GenericValue&, const std::string_view& ExtraTags = "") const;
+		void AppendWithValues(MessageType Type, const std::string_view&, const std::vector<Reflection::GenericValue>&, const std::string_view& ExtraTags = "") const;
 		void Write(const std::string_view& Message, MessageType Type, const std::string_view& ExtraTags = "") const;
 
 		template <typename ...Args>

@@ -201,6 +201,8 @@ export type DebugBreakpointInfo = {
     Condition: string,
 }
 
+type LoggingLogValue = { String: string, Value: unknown }
+
 -- Finish intro --
 
 type Services = {
@@ -514,7 +516,7 @@ export type EcLogging = {
 
   Write: (self: EcLogging, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
 
-  OnMessaged: EventSignal<(number, EnumLogType, string, string, unknown)>,
+  OnMessaged: EventSignal<(number, EnumLogType, string, string, { LoggingLogValue })>,
 }
 
 export type EcMesh = {

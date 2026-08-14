@@ -78,7 +78,9 @@ function ProjectPlaying.Enter(_prev)
                     breakpoint.Enabled or breakpoint.ConditionEnabled
                 )
 
-                if realLine ~= breakpoint.Line then
+                if realLine == -1 then
+                    warn(`Failed to apply breakpoint { scriptPath }:{ breakpoint.Line } at playtest start`)
+                elseif realLine ~= breakpoint.Line then
                     breakpointsForScript[breakpoint.Line] = nil
                     breakpointsForScript[realLine] = breakpoint
                     breakpoint.Line = realLine

@@ -433,6 +433,7 @@
         "Metatable": {
           "__eq": "function",
           "__index": "function",
+          "__metatable": "string",
           "__tostring": "function",
           "__type": "string"
         }
@@ -449,6 +450,7 @@
         },
         "Metatable": {
           "__index": "function",
+          "__metatable": "string",
           "__namecall": "function",
           "__newindex": "function",
           "__tostring": "function",
@@ -469,6 +471,7 @@
           "__add": "function",
           "__eq": "function",
           "__index": "function",
+          "__metatable": "string",
           "__mul": "function",
           "__sub": "function",
           "__type": "string"

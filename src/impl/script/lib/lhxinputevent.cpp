@@ -81,6 +81,9 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, ie_index, "InputEvent.__index");
     lua_setfield(L, -2, "__index");
 
+    lua_pushliteral(L, "The metatable is locked");
+	lua_setfield(L, -2, "__metatable");
+
     lua_setuserdatametatable(L, UserdataTag::InputEvent);
 }
 

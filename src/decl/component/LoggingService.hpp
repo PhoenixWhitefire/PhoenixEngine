@@ -21,6 +21,6 @@ public:
         Logging::MessageType Type,
         const std::string_view& Message,
         const std::string_view& ExtraTags,
-        const Reflection::GenericValue& Value = Reflection::GenericValue::Null()
+        const std::vector<Reflection::GenericValue>& Values = {}
     );
 };

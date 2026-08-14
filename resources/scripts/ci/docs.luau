@@ -265,6 +265,8 @@ export type DebugBreakpointInfo = {
     Condition: string,
 }
 
+type LoggingLogValue = { String: string, Value: unknown }
+
 -- Finish intro --
 ]]
 

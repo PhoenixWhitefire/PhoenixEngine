@@ -318,6 +318,9 @@ static void createmetatable(lua_State* L)
     lua_pushcfunction(L, obj_tostring, "GameObject.__tostring");
     lua_setfield(L, -2, "__tostring");
 
+	lua_pushliteral(L, "The metatable is locked");
+	lua_setfield(L, -2, "__metatable");
+
     lua_setuserdatametatable(L, UserdataTag::GameObject);
 	lua_setuserdatadtor(L, UserdataTag::GameObject, [](lua_State*, void* ptrToId)
     {

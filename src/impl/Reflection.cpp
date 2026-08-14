@@ -339,12 +339,7 @@ std::string Reflection::GenericValue::ToString() const
         return std::format("<{} bytes>", Size);
 
     case ValueType::String:
-    {
-        if (this->Size + 1 > REFLECTION_GV_SSO)
-            return std::string(Val.Str, this->Size);
-        else
-            return Val.StrSso;
-    }
+        return AsString();
 
     case ValueType::Color:
         return Color(*this).ToString();
@@ -368,59 +363,16 @@ std::string Reflection::GenericValue::ToString() const
     }
 
     case ValueType::Array:
-    {
-        std::span<GenericValue> arr = this->AsArray();
-
-        if (!arr.empty())
-        {
-            uint32_t numTypes = 0;
-            std::string typesString = "";
-
-            for (const GenericValue& element : arr)
-            {
-                numTypes++;
-                if (numTypes > 4)
-                {
-                    typesString += "...|";
-                    break;
-                }
-                else
-                    typesString += TypeAsString(element.Type) + "|";
-            }
-
-            typesString = typesString.substr(0, typesString.size() - 1);
-
-            return std::format("Array<{}>", typesString);
-        }
-        else
-            return "Empty Array";
-    }
+        return "Array";
 
     case ValueType::Map:
-    {
-        std::span<GenericValue> arr = this->AsArray();
-
-        if (!arr.empty())
-        {
-            if (arr.size() % 2 != 0)
-                return "Invalid Map (Odd number of Array elements)";
-
-            return std::format(
-                "Map<{}:{}>",
-                TypeAsString(arr[0].Type),
-                TypeAsString(arr[1].Type)
-            );
-        }
-        else
-            return "Empty Map";
-    }
+        return "Map";
 
     case ValueType::Matrix:
     {
         glm::mat4 mat = this->AsMatrix();
 
-        float pos[3] =
-        {
+        float pos[3] = {
             mat[3][0],
             mat[3][1],
             mat[3][2]
@@ -430,8 +382,7 @@ std::string Reflection::GenericValue::ToString() const
 
         glm::extractEulerAngleXYZ(mat, rotrads.x, rotrads.y, rotrads.z);
 
-        float rotdegs[3] =
-        {
+        float rotdegs[3] = {
             glm::degrees(rotrads.x),
             glm::degrees(rotrads.y),
             glm::degrees(rotrads.z)

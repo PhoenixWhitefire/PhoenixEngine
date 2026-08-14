@@ -58,10 +58,12 @@ DeveloperTools.BreakpointUpdated:Connect(function(file, breakpoint)
     if State.CurrentStage == "ProjectPlaying" then
         local realLine = ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, file, breakpoint.Line, breakpoint.Enabled or breakpoint.ConditionEnabled)
 
-        if breakpoint.Line ~= realLine then
+        if realLine == -1 then
+            warn(`Failed to apply breakpoint { file }:{ breakpoint.Line }`);
+        elseif breakpoint.Line ~= realLine then
             breakpointsForScript[breakpoint.Line] = nil
             breakpointsForScript[realLine] = breakpoint
-            breakpoint.Line = realLine
+            breakpoint.Line = realLine;
         end
     end
 

@@ -2,6 +2,10 @@
 
 #include "asset/PrimitiveMeshes.hpp"
 
+#ifndef M_PI
+#define M_PI (3.14159265358979323846264338327950288)
+#endif
+
 constexpr glm::vec3 VecXAxis = { 1.f, 0.f, 0.f };
 constexpr glm::vec3 VecYAxis = { 0.f, 1.f, 0.f };
 constexpr glm::vec3 VecZAxis = { 0.f, 0.f, 1.f };

@@ -62,6 +62,11 @@ jobs:
         bash ./shell/chmod.sh
         ./shell/dependencies.sh
 
+    - name: (Linux) Install Clang 19
+      uses: KyleMayes/install-llvm-action@v2
+      with:
+        version: 19
+
     # - name: Setup PATH for Windows Address Sanitizer
     #   if: runner.os == 'Windows'
     #   shell: cmd

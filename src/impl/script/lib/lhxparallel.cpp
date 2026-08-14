@@ -504,6 +504,9 @@ int luhxopen_parallel(lua_State* L)
     lua_pushliteral(L, "Mutex");
     lua_setfield(L, -2, "__type");
 
+    lua_pushliteral(L, "The metatable is locked");
+	lua_setfield(L, -2, "__metatable");
+
     lua_setuserdatametatable(L, UserdataTag::Mutex);
 
     lua_setuserdatadtor(L, UserdataTag::SharedBuffer, [](lua_State*, void* ud)
@@ -523,6 +526,9 @@ int luhxopen_parallel(lua_State* L)
     lua_pushliteral(L, "SharedBuffer");
     lua_setfield(L, -2, "__type");
 
+    lua_pushliteral(L, "The metatable is locked");
+	lua_setfield(L, -2, "__metatable");
+
     lua_setuserdatametatable(L, UserdataTag::SharedBuffer);
 
     lua_setuserdatadtor(L, UserdataTag::AtomicInteger, [](lua_State*, void* ud)
@@ -538,6 +544,9 @@ int luhxopen_parallel(lua_State* L)
 
     lua_pushliteral(L, "AtomicInteger");
     lua_setfield(L, -2, "__type");
+
+    lua_pushliteral(L, "The metatable is locked");
+	lua_setfield(L, -2, "__metatable");
 
     lua_setuserdatametatable(L, UserdataTag::AtomicInteger);
 
