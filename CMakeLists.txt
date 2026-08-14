@@ -85,11 +85,16 @@ if (MSVC)
 	message(STATUS "Recognized compiler as MSVC")
 
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-	include(cmake/clang.txt)
-	target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="Clang++")
-	target_link_libraries(PhoenixEngine PRIVATE X11) # audible sigh when i checked `imgui_impl_glfw.cpp` line 1266
 
-	message(STATUS "Recognized compiler as Clang++")
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "19.0.0")
+		include(cmake/clang.txt)
+		target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_COMPILER="Clang++")
+		target_link_libraries(PhoenixEngine PRIVATE X11) # `imgui_impl_glfw.cpp`
+
+		message(STATUS "Recognized compiler as Clang++ ${CMAKE_CXX_COMPILER_VERSION}")
+	else()
+		message(FATAL_ERROR "A minimum of Clang 19 is required")
+	endif()
 
 else()
 	message(FATAL_ERROR "Unsupported compiler - expected either MSVC or Clang, got ${CMAKE_CXX_COMPILER_ID}")

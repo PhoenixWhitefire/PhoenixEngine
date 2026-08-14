@@ -59,12 +59,8 @@ jobs:
     - name: Install Linux dependencies
       if: runner.os == 'Linux'
       run: |
-        sudo apt-get update
-        sudo apt-get install libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
-        sudo apt-get install xorg-dev
-        sudo apt-get install libdbus-1-dev
-        sudo apt-get install libegl1-mesa-dev libgl1-mesa-dev libwayland-egl1
-        sudo apt-get install libwayland-client0
+        bash ./shell/chmod.sh
+        ./shell/dependencies.sh
 
     # - name: Setup PATH for Windows Address Sanitizer
     #   if: runner.os == 'Windows'

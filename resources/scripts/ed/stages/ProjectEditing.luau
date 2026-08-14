@@ -83,8 +83,12 @@ DeveloperTools.BreakpointRemoved:Connect(function(file, line)
     if State.CurrentStage == "ProjectPlaying" then
         local realLine = ScriptEngine:SetScriptBreakpoint(Configuration.PlaytestVMName, file, line, false)
 
-        if breakpointsForScript[realLine] then
-            breakpointsForScript[realLine] = nil
+        if realLine == -1 then
+            warn(`Breakpoint { file }:{ line } not present at removal`)
+        else
+            if breakpointsForScript[realLine] then
+                breakpointsForScript[realLine] = nil
+            end
         end
     end
 
@@ -327,7 +331,6 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
     State.Project.IsTempPath = true
     State.Project.DataModel = nil
 
-    Engine:SaveConfig()
     ScriptEngine:CloseVM(Configuration.GameEditingVMName)
 end
 

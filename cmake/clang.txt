@@ -36,7 +36,6 @@ target_compile_options(PhoenixEngine PRIVATE
     -Wno-sign-conversion
     -Wno-double-promotion
     -Wno-switch-enum
-    -Wno-nrvo
     -Wno-unsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call
     -Wno-shadow-uncaptured-local
     -Wno-date-time
@@ -45,6 +44,10 @@ target_compile_options(PhoenixEngine PRIVATE
     -Wno-missing-designated-field-initializers
     -fsafe-buffer-usage-suggestions
 )
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "21.0.0")
+    target_compile_options(PhoenixEngine PRIVATE "-Wno-nrvo")
+endif()
 
 # including Vendor/luau/Ast/include/luau/Ast.h
 set_property(SOURCE src/impl/script/ScriptEngine.cpp PROPERTY COMPILE_OPTIONS "-Wno-unused-parameter")

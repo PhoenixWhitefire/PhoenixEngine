@@ -6011,6 +6011,184 @@ static void processDebuggerAction()
     }
 }
 
+static void renderCoroutine(lua_State* coroutine, size_t numCoroutineIdChars)
+{
+    ImGui::PushID(coroutine);
+
+    lua_Debug car = {};
+    lua_getinfo(coroutine, 0, "slnu", &car);
+
+    const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
+    std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
+    std::string targetFile = car.short_src ? car.short_src : "";
+    int targetLine = car.currentline;
+
+    if (targetFile.size() == 0)
+    {
+        if (size_t pathBegin = identifier.find('.'); pathBegin != std::string::npos)
+        {
+            std::string_view fromPathOnwards = { identifier.begin() + pathBegin, identifier.end() };
+
+            if (size_t pathEnd = fromPathOnwards.find(".luau"); pathEnd != std::string::npos)
+            {
+                targetFile = std::string(identifier.begin() + pathBegin, identifier.begin() + pathBegin + pathEnd + strlen(".luau"));
+
+                if (size_t lineBegin = fromPathOnwards.find(':'); lineBegin != std::string::npos)
+                {
+                        std::string_view fromLineOnwards = { fromPathOnwards.begin() + lineBegin, fromPathOnwards.end() };
+
+                    if (size_t lineEnd = fromLineOnwards.find('\n'); lineEnd != std::string::npos)
+                        targetLine = std::stoi(std::string(fromLineOnwards.begin() + 1, fromLineOnwards.begin() + lineEnd));
+                }
+            }
+        }
+    }
+
+    bool noSourceInformation = false;
+
+    if (identifier.size() == 2) // ":0"
+    {
+        identifier = "<coroutine>";
+        noSourceInformation = true;
+    }
+
+    if (size_t pathStartLoc = identifier.find("scripts/"); pathStartLoc != std::string::npos)
+        identifier = { identifier.begin() + pathStartLoc, identifier.end() };
+
+    if (size_t newlLoc = identifier.find('\n'); newlLoc != std::string::npos && newlLoc != 0)
+        identifier = { identifier.begin(), identifier.begin() + newlLoc };
+
+    if (!car.short_src && lua_mainthread(coroutine) != coroutine) // means we are showing the spawn trace and not the actual current call frame
+        identifier = "Spawned from " + identifier;
+
+    if (coroutine == lua_mainthread(coroutine) || noSourceInformation || lua_stackdepth(coroutine) == 0)
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5, 0.5, 0.5, 1.f));
+    else
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
+
+    std::string treeNodeIdentifier = identifier;
+    if (treeNodeIdentifier.size() > numCoroutineIdChars)
+        treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
+
+    if (s_CallstackJumpToCurrentThread && coroutine == debuggerL)
+        ImGui::SetNextItemOpen(true);
+
+    bool open = ImGui::TreeNodeEx(
+        coroutine,
+        ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow | (coroutine == debuggerL ? ImGuiTreeNodeFlags_Selected : 0),
+        "%s",
+        treeNodeIdentifier.c_str()
+    );
+    bool switchTo = ImGui::IsItemActivated() && lua_stackdepth(coroutine) > 0;
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("%s", identifier.c_str());
+
+    ImGui::SameLine();
+
+    ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
+
+    const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
+    const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(lua_mainthread(coroutine), coroutine)];
+
+    ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
+    ImGui::TextUnformatted(lsdi.Id);
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("%s", lsdi.Description);
+
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
+    ImGui::TextUnformatted(lcsdi.Id);
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("%s", lcsdi.Description);
+
+    if (s_CallstackJumpToCurrentThread && coroutine == debuggerL)
+    {
+        ImGui::SetScrollHereY();
+        s_CallstackJumpToCurrentThread = false;
+    }
+
+    if (switchTo)
+    {
+        TextEditorTab* tab = nullptr;
+
+        if (lua_mainthread(debuggerL) != coroutine)
+        {
+            tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
+                "!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
+                ud->VM, ud->SpawnTrace
+            ));
+        }
+        else
+        {
+            tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", ud->VM));
+        }
+
+        tab->DebuggerCurrentLine = targetLine;
+        tab->JumpToLine = targetLine;
+        debuggerL = coroutine;
+        debuggerAr = car;
+    }
+
+    if (open)
+    {
+        car = {};
+        int i = 0;
+
+        if (!lua_getinfo(coroutine, 0, "sln", &car))
+            i = 1;
+
+        for (i = 0; lua_getinfo(coroutine, i, "sln", &car); i++)
+        {
+            ImGui::PushID(i);
+
+            if (car.currentline > 0)
+            {
+                std::string_view srcShortened = car.short_src;
+                if (size_t loc = srcShortened.find("resources/scripts/"); loc != std::string::npos)
+                    srcShortened = std::string_view(srcShortened.begin() + loc, srcShortened.end());
+
+                ImGui::PushStyleColor(
+                    ImGuiCol_TextLink,
+                    ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
+                );
+
+                if (ImGui::TextLink(std::format(
+                    "{}:{} in {}",
+                    srcShortened, car.currentline, car.name ? car.name : "<anonmyous>"
+                ).c_str()))
+                {
+                    invokeTextEditor(car.short_src).JumpToLine = car.currentline;
+                    lua_getinfo(coroutine, i, "sln", &debuggerAr);
+                }
+
+                ImGui::SetItemTooltip("View source");
+                ImGui::PopStyleColor();
+            }
+            else
+            {
+                ImGui::Text("%s in %s", car.short_src, car.name);
+                ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
+            }
+
+            ImGui::PopID();
+        }
+
+        if (lua_getthreaddata(coroutine))
+        {
+            if (ud->SpawnTrace.size() > 0)
+            {
+                ImGui::SeparatorText("Spawn trace");
+                ImGui::TextUnformatted(ud->SpawnTrace.c_str());
+            }
+        }
+
+        ImGui::TreePop();
+    }
+
+    ImGui::PopID();
+}
+
 void renderDebugger()
 {
     if (!InDebugger)
@@ -6210,7 +6388,7 @@ void renderDebugger()
 
             break;
         }
-        [[unlikely]] default: { assert(false); }
+        [[unlikely]] default: assert(false);
 
         }
     }
@@ -6218,211 +6396,15 @@ void renderDebugger()
 
     if (ImGui::Begin("Callstack"))
     {
-        std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>> vms;
-        vms.reserve(ScriptEngine::VMs.size());
-
-        for (auto& [ name, vm ] : ScriptEngine::VMs)
-            vms.emplace_back(name, vm);
-
-        if (CurrentVMIndex >= (int)vms.size())
-            CurrentVMIndex = 0;
-
-        /*
-        ImGui::Combo("##", &CurrentVMIndex, [](void* vmsPtr, int index) -> const char*
-            {
-                const auto vms = (std::vector<std::pair<std::string_view, const ScriptEngine::LuauVM&>>*)vmsPtr;
-                return vms->at(index).first.data();
-            }, &vms, (int)vms.size());
-        */
-
-        const ScriptEngine::LuauVM& vm = vms[CurrentVMIndex].second;
+        const ScriptEngine::LuauVM& vm = ScriptEngine::VMs.at(corUd->VM);
 
         size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
         if (numCoroutineIdChars < 3)
             numCoroutineIdChars = 3;
 
-        const auto renderCoroutine = [vm, vms, numCoroutineIdChars](lua_State* coroutine)
-        {
-            ImGui::PushID(coroutine);
-
-            lua_Debug car = {};
-            lua_getinfo(coroutine, 0, "slnu", &car);
-
-            const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
-            std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
-            std::string targetFile = car.short_src ? car.short_src : "";
-            int targetLine = ar.currentline;
-
-            if (targetFile.size() == 0)
-            {
-                if (size_t pathBegin = identifier.find('.'); pathBegin != std::string::npos)
-                {
-                    std::string_view fromPathOnwards = { identifier.begin() + pathBegin, identifier.end() };
-
-                    if (size_t pathEnd = fromPathOnwards.find(".luau"); pathEnd != std::string::npos)
-                    {
-                        targetFile = std::string(identifier.begin() + pathBegin, identifier.begin() + pathBegin + pathEnd + strlen(".luau"));
-
-                        if (size_t lineBegin = fromPathOnwards.find(':'); lineBegin != std::string::npos)
-                        {
-                                std::string_view fromLineOnwards = { fromPathOnwards.begin() + lineBegin, fromPathOnwards.end() };
-
-                            if (size_t lineEnd = fromLineOnwards.find('\n'); lineEnd != std::string::npos)
-                                targetLine = std::stoi(std::string(fromLineOnwards.begin() + 1, fromLineOnwards.begin() + lineEnd));
-                        }
-                    }
-                }
-            }
-
-            bool noSourceInformation = false;
-
-            if (identifier.size() == 2) // ":0"
-            {
-                identifier = "<coroutine>";
-                noSourceInformation = true;
-            }
-
-            if (size_t pathStartLoc = identifier.find("scripts/"); pathStartLoc != std::string::npos)
-                identifier = { identifier.begin() + pathStartLoc, identifier.end() };
-
-            if (size_t newlLoc = identifier.find('\n'); newlLoc != std::string::npos && newlLoc != 0)
-                identifier = { identifier.begin(), identifier.begin() + newlLoc };
-
-            if (!car.short_src && lua_mainthread(coroutine) != coroutine) // means we are showing the spawn trace and not the actual current call frame
-                identifier = "Spawned from " + identifier;
-
-            if (coroutine == vm.MainThread || noSourceInformation || lua_stackdepth(coroutine) == 0)
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5, 0.5, 0.5, 1.f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 1.f, 1.f));
-
-            std::string treeNodeIdentifier = identifier;
-            if (treeNodeIdentifier.size() > numCoroutineIdChars)
-                treeNodeIdentifier = std::string(treeNodeIdentifier.begin(), treeNodeIdentifier.begin() + numCoroutineIdChars - 3) + "...";
-
-            if (s_CallstackJumpToCurrentThread && coroutine == L)
-                ImGui::SetNextItemOpen(true);
-
-            bool open = ImGui::TreeNodeEx(
-                coroutine,
-                ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_OpenOnArrow | (coroutine == L ? ImGuiTreeNodeFlags_Selected : 0),
-                "%s",
-                treeNodeIdentifier.c_str()
-            );
-            bool switchTo = ImGui::IsItemActivated() && lua_stackdepth(coroutine) > 0;
-            ImGui::PopStyleColor();
-            ImGui::SetItemTooltip("%s", identifier.c_str());
-
-            ImGui::SameLine();
-
-            ImGui::SetCursorPosX(ImGui::GetWindowSize().x * 0.75f + ImGui::CalcTextSize("OK FIN").x);
-
-            const LuauStatusDisplayInfo& lsdi = LuauStatuses[lua_status(coroutine)];
-            const LuauCoroutineStatusDisplayInfo& lcsdi = LuauCoroutineStatuses[lua_costatus(lua_mainthread(coroutine), coroutine)];
-
-            ImGui::PushStyleColor(ImGuiCol_Text, lsdi.Color);
-            ImGui::TextUnformatted(lsdi.Id);
-            ImGui::PopStyleColor();
-            ImGui::SetItemTooltip("%s", lsdi.Description);
-
-            ImGui::SameLine();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, lcsdi.Color);
-            ImGui::TextUnformatted(lcsdi.Id);
-            ImGui::PopStyleColor();
-            ImGui::SetItemTooltip("%s", lcsdi.Description);
-
-            if (s_CallstackJumpToCurrentThread && coroutine == L)
-            {
-                ImGui::SetScrollHereY();
-                s_CallstackJumpToCurrentThread = false;
-            }
-
-            if (switchTo)
-            {
-                debuggerL = coroutine;
-                debuggerAr = car;
-
-                TextEditorTab* tab = nullptr;
-
-                if (lua_mainthread(L) != L)
-                {
-                    tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
-                        "!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
-                        ud->VM, ud->SpawnTrace
-                    ));
-                }
-                else
-                {
-                    tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", vms[CurrentVMIndex].first));
-                }
-
-                tab->DebuggerCurrentLine = targetLine;
-                tab->JumpToLine = targetLine;
-            }
-
-            if (open)
-            {
-                car = {};
-                int i = 0;
-
-                if (!lua_getinfo(coroutine, 0, "sln", &car))
-                    i = 1;
-
-                for (i = 0; lua_getinfo(coroutine, i, "sln", &car); i++)
-                {
-                    ImGui::PushID(i);
-
-                    if (car.currentline > 0)
-                    {
-                        std::string_view srcShortened = car.short_src;
-                        if (size_t loc = srcShortened.find("resources/scripts/"); loc != std::string::npos)
-                            srcShortened = std::string_view(srcShortened.begin() + loc, srcShortened.end());
-
-                        ImGui::PushStyleColor(
-                            ImGuiCol_TextLink,
-                            ImVec4(1.f, 1.f, 1.f, 1.f) - ImGui::GetStyleColorVec4(ImGuiCol_WindowBg) + ImVec4(0.f, 0.f, 0.f, 1.f)
-                        );
-
-                        if (ImGui::TextLink(std::format(
-                            "{}:{} in {}",
-                            srcShortened, car.currentline, car.name ? car.name : "<anonmyous>"
-                        ).c_str()))
-                        {
-                            invokeTextEditor(car.short_src).JumpToLine = car.currentline;
-                            lua_getinfo(coroutine, i, "sln", &ar);
-                        }
-
-                        ImGui::SetItemTooltip("View source");
-                        ImGui::PopStyleColor();
-                    }
-                    else
-                    {
-                        ImGui::Text("%s in %s", car.short_src, car.name);
-                        ImGui::SetItemTooltip("Cannot view the source of functions defined in C++");
-                    }
-
-                    ImGui::PopID();
-                }
-
-                if (lua_getthreaddata(coroutine))
-                {
-                    if (ud->SpawnTrace.size() > 0)
-                    {
-                        ImGui::SeparatorText("Spawn trace");
-                        ImGui::TextUnformatted(ud->SpawnTrace.c_str());
-                    }
-                }
-
-                ImGui::TreePop();
-            }
-
-            ImGui::PopID();
-        };
-
-        renderCoroutine(vm.MainThread);
+        renderCoroutine(vm.MainThread, numCoroutineIdChars);
         for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread))->Coroutines)
-            renderCoroutine(coroutine);
+            renderCoroutine(coroutine, numCoroutineIdChars);
     }
     ImGui::End();
 
