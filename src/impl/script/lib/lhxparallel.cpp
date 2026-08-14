@@ -437,7 +437,7 @@ static int parallel_sharedbuffer(lua_State* L)
     if (const auto& it = ParallelBuffers.find(name); it != ParallelBuffers.end())
     {
         if (it->second->Size != size)
-            luaL_error(L, "Size of %zu bytes for shared buffer with ID '%s' does not match previous instantiation of %zu bytes", size, name.c_str(), it->second->Size);
+            luaL_error(L, "Size of %u bytes for shared buffer with ID '%s' does not match previous instantiation of %zu bytes", size, name.c_str(), it->second->Size);
 
         buffer = it->second;
     }

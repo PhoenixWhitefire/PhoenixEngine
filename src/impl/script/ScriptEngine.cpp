@@ -37,8 +37,6 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-LUAU_FASTFLAG(LuauUdataMetatablePinned)
-
 struct LuauType
 {
     LuauType(lua_Type BaseType)
@@ -92,8 +90,6 @@ static int luauAssertHandler(const char* expression, const char* file, int line,
 
 void ScriptEngine::Initialize()
 {
-    FFlag::LuauUdataMetatablePinned.value = true;
-
     RegisterNewVM(ROOT_LVM_NAME);
 
     // changing a reference to a static function variable
