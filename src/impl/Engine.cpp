@@ -390,13 +390,10 @@ void Engine::Initialize(int ThreadCount, bool Headless)
 
     this->LoadConfiguration();
 
-	if (PHX_HEADLESS_BUILD)
-	{
-		if (Headless)
-			this->IsHeadlessMode = true;
-		else
-			RAISE_RT("Headless build requested to start in non-headless mode");
-	}
+	if (Headless)
+		this->IsHeadlessMode = true;
+	else if (PHX_HEADLESS_BUILD)
+		RAISE_RT("Headless build requested to start in non-headless mode");
 
     m_InitializeVideo();
 
