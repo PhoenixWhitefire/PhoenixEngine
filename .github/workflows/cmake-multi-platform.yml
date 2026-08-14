@@ -38,7 +38,7 @@ jobs:
             cpp_compiler: cl
           - os: ubuntu-latest
             c_compiler: clang
-            cpp_compiler: clang
+            cpp_compiler: clang++
         exclude:
           - os: windows-latest
             c_compiler: clang
@@ -63,6 +63,7 @@ jobs:
         ./shell/dependencies.sh
 
     - name: (Linux) Install Clang 19
+      if: runner.os == 'Linux'
       uses: KyleMayes/install-llvm-action@v2
       with:
         version: 19
@@ -76,12 +77,17 @@ jobs:
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       # TODO removing causes the wrong build type to be selected?
+      if: runner.os == 'Windows'
       run: >
         cmake -B build
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -S ${{ github.workspace }}
+
+    - name: Configure CMake (Linux)
+      if: runner.os == 'Linux'
+      run: cmake --preset clang-linux
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
