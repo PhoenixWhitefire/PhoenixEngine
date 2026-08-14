@@ -55,6 +55,9 @@ add_link_options($<$<CONFIG:DebugTSan>:-fsanitize=thread>)
 add_link_options($<$<CONFIG:Release>:-flto>)
 add_link_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
+
 if (NOT CMAKE_OBJCOPY)
     set(CMAKE_OBJCOPY objcopy)
 endif()

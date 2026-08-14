@@ -33,3 +33,6 @@ sudo apt-get install libwayland-client0
 
 echo Installing clang
 sudo apt-get install clang
+
+echo Installing lld
+sudo apt-get install lld
