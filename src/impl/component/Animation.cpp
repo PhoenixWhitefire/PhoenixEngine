@@ -47,7 +47,8 @@ void EcAnimationAsset::SetAnimation(const std::string& Asset)
         return;
     }
 
-    uint32_t id = acm->Animations.size();
+    assert(acm->Animations.size() < (size_t)UINT32_MAX);
+    uint32_t id = (uint32_t)acm->Animations.size();
     AnimationData& data = acm->Animations.emplace_back();
     acm->RegisteredAnimations[path] = id;
     data.Path = path;

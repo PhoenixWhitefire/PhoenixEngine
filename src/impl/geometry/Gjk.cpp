@@ -84,7 +84,7 @@ static glm::vec3 findFurthestPoint_Hulls(const EcRigidBody* Rb, glm::vec3 Direct
 {
 	MeshProvider* meshProv = MeshProvider::Get();
 	float maxDistance = -FLT_MAX;
-	glm::vec3 maxPoint;
+	glm::vec3 maxPoint = {};
 
 	for (const EcRigidBody::Hull& hull : Rb->Hulls)
 	{

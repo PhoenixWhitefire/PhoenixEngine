@@ -114,7 +114,7 @@ static void fromArray(Reflection::GenericValue& G, const std::span<const Reflect
         return;
     }
 
-    assert(allocSize <= UINT32_MAX);
+    assert(allocSize <= (size_t)UINT32_MAX);
     G.Val.Array = (Reflection::GenericValue*)Memory::Alloc((uint32_t)allocSize, Memory::Category::Reflection);
 
     if (!G.Val.Array)
@@ -174,7 +174,8 @@ Reflection::GenericValue Reflection::GenericValue::Null()
 
 Reflection::GenericValue Reflection::GenericValue::MapPairs(const std::span<const Pair>& Pairs)
 {
-    uint32_t numElems = Pairs.size() * 2;
+    assert(Pairs.size() * 2 <= (size_t)UINT32_MAX);
+    uint32_t numElems = (uint32_t)Pairs.size() * 2;
 
     Reflection::GenericValue gv = {};
     gv.Type = ValueType::Map;

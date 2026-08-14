@@ -3811,7 +3811,7 @@ static void followAssetProperty(const std::string_view& PropertyName, const std:
             const RenderMaterial& mtl = materials[i];
             if (mtl.Name == Value)
             {
-                MtlCurItem = i;
+                MtlCurItem = (int)i;
                 DeveloperTools::MaterialsShown = true;
                 break;
             }
@@ -5214,11 +5214,11 @@ static void renderInfo(double DeltaTime)
         for (const auto& [ name, vm ] : ScriptEngine::VMs)
         {
             if (name == SelectedVM)
-                selectionIndex = vms.size();
+                selectionIndex = (int)vms.size();
             vms.push_back(name.c_str());
         }
 
-        ImGui::Combo("##vmcombo", &selectionIndex, vms.data(), vms.size());
+        ImGui::Combo("##vmcombo", &selectionIndex, vms.data(), (int)vms.size());
         SelectedVM = vms[selectionIndex];
 
         if (ImGui::Button("Create and inspect Luau VM heap snapshot"))

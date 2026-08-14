@@ -813,9 +813,12 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 		}
 	}
 
+	if (keyframes.size() > (size_t)UINT32_MAX)
+		RAISE_RT("Too many keyframes!");
+
 	WriteU32(data, 0); // flags
 	WriteF32(data, animLength);
-	WriteU32(data, keyframes.size());
+	WriteU32(data, (int)keyframes.size());
 	WriteU16(data, (uint16_t)boneNames.size());
 
 	for (const std::string& name : boneNames)

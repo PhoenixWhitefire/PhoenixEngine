@@ -251,7 +251,7 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 
 	auto [normals, minFace] = getFaceNormals(polytope, faces);
 
-	glm::vec3 minNormal;
+	glm::vec3 minNormal = {};
 	float minDistance = -FLT_MAX;
 
 	while (minDistance == -FLT_MAX)

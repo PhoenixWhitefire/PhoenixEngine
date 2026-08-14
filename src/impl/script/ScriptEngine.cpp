@@ -287,7 +287,7 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
             ScriptEngine::L::PushGenericValue(L, gv);
 
         ZoneNamedN(resumezone, "resume", true);
-        result = lua_resume(L, nullptr, arguments.size());
+        result = lua_resume(L, nullptr, (int)arguments.size());
 
         if (result != LUA_OK && result != LUA_YIELD && result != LUA_BREAK)
         {
@@ -1484,7 +1484,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
     return yieldResult; // will probably always be -1 but just in case
 }
 
-void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
+void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* /* Method */, ReflectorRef /* Reflector */)
 {
     //assert(false && "NOT IMPLEMENTED");
 

@@ -136,7 +136,7 @@ static std::unordered_map<std::string, SharedAtomicInt*> ParallelAtomicInts;
 static std::mutex ParallelAtomicIntsMutex;
 
 // supports both number and integer
-static size_t checkSizeArgument(lua_State* L, int Index, const char* Arg, bool AllowZero = false)
+static uint32_t checkSizeArgument(lua_State* L, int Index, const char* Arg, bool AllowZero = false)
 {
     if (lua_isnumber(L, Index))
     {
@@ -150,10 +150,13 @@ static size_t checkSizeArgument(lua_State* L, int Index, const char* Arg, bool A
         else
         {
             if (n < 1.f || std::floor(n) != n)
-                luaL_error(L, "%s argument #%i (%lf) cannot be zero, negative, or fractional", Arg, Index, n);
+                luaL_error(L, "%s argument #%i (%lf) must be positive and whole", Arg, Index, n);
         }
 
-        return (size_t)n;
+        if (n > (double)UINT32_MAX)
+            luaL_error(L, "Size exceeds maximum of 2^32 bytes");
+
+        return (uint32_t)n;
     }
     else if (lua_isinteger64(L, Index))
     {
@@ -167,10 +170,13 @@ static size_t checkSizeArgument(lua_State* L, int Index, const char* Arg, bool A
         else
         {
             if (i < 1)
-                luaL_error(L, "%s argument #%i (%zi) cannot be zero, negative, or above int64 maximum", Arg, Index, i);
+                luaL_error(L, "%s argument #%i (%zi) must be positive or below int64 maximum", Arg, Index, i);
         }
 
-        return (size_t)i;
+        if (i > (int64_t)UINT32_MAX)
+            luaL_error(L, "Size exceeds maximum of 2^32 bytes");
+
+        return (uint32_t)i;
     }
     else
         luaL_typeerror(L, Index, "number or integer");
@@ -423,7 +429,7 @@ static int parallel_sharedbuffer(lua_State* L)
     const char* cstr = luaL_checklstring(L, 1, &nlen);
     std::string name = { cstr, nlen };
 
-    size_t size = checkSizeArgument(L, 2, "Size");
+    uint32_t size = checkSizeArgument(L, 2, "Size");
 
     SharedBuffer* buffer = nullptr;
     std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ParallelBuffersMutex);
