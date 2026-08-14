@@ -75,7 +75,7 @@ target_include_directories(PhoenixEngine PUBLIC
 	"Vendor/glad/include"
 )
 
-target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="${PHX_BUILD_TYPE}")
+target_compile_definitions(PhoenixEngine PRIVATE PHX_BUILD_TYPE="$<CONFIG>" "PHOENIX_$<CONFIG>=1")
 
 if (MSVC)
 	include(cmake/msvc.txt)

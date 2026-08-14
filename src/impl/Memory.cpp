@@ -27,7 +27,7 @@ struct alignas(std::max_align_t) AllocHeader
 
 static_assert(sizeof(AllocHeader) % alignof(std::max_align_t) == 0);
 
-#if 0
+#ifdef PHOENIX_ReleaseTSan
 
 void* Memory::GetPointerInfo(void* Ptr, uint32_t*, uint8_t*)
 {
