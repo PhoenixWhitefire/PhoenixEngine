@@ -20,8 +20,8 @@ const Reflection::StaticPropertyMap& RendererComponentManager::GetProperties()
                 Engine* engine = Engine::Get();
                 const glm::vec2& size = gv.AsVector2();
 
-                if (size.x < INT32_MIN || size.x > INT32_MAX
-                    || size.y < INT32_MIN || size.y > INT32_MAX
+                if (size.x < INT32_MIN || size.x > (float)INT32_MAX - 1
+                    || size.y < INT32_MIN || size.y > (float)INT32_MAX - 1
                 )
                     RAISE_RT("Size out-of-bounds");
 

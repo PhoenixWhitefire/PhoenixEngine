@@ -281,7 +281,7 @@ function Output.Render()
                     if canInteract then
                         doInteract = imgui.textlink(component.String)
                     else
-                        imgui.text(if component.HasExplicitName then component.String else tostring(component.Value))
+                        imgui.text(if component.HasExplicitName then component.String else if typeof(component.Value) == "table" then "" else tostring(component.Value))
                     end
                 end
 

@@ -1,5 +1,6 @@
 // Logging service component, 02/03/2026
 #include <tracy/Tracy.hpp>
+#include <optional>
 
 #include "component/LoggingService.hpp"
 #include "Reflection.hpp"
