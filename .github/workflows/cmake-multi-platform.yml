@@ -165,11 +165,15 @@ jobs:
         Expand-Archive procdump.zip -DestinationPath procdump
         echo "${{ github.workspace }}\procdump" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+    - name: vsdev
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: dlls
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        $needed = (& "dumpbin.exe" /dependents PhoenixEngine.exe) 2>&1
+        $needed = (& dumpbin /dependents PhoenixEngine.exe) 2>&1
         Write-Host $needed
         foreach ($line in $needed) {
           if ($line -match '^\s+(\S+\.dll)') {
