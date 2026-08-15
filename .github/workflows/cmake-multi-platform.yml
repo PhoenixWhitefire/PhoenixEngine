@@ -170,7 +170,7 @@ jobs:
       continue-on-error: true
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\Common7\Tools\VsDevCmd.bat"
         procdump -accepteula -e -ma -x . "PhoenixEngine.exe" --headless --tool scripts/ci/docs.luau
 
     - name: upload crash dump (Windows)
@@ -180,7 +180,7 @@ jobs:
         name: "crashdump-${{ matrix.build_type }}"
         path: |
           *.dmp
-          x64/${{ matrix.build_type }}/PhoenixEngine.pdb
+          build/${{ matrix.build_type }}/PhoenixEngine.pdb
         if-no-files-found: ignore
         retention-days: 1
 
