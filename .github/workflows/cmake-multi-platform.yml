@@ -29,8 +29,8 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [windows-latest]
-        build_type: [Release, Debug]
+        os: [windows-latest, ubuntu-latest]
+        build_type: [Release, Debug, ReleaseTSan, DebugTSan]
         c_compiler: [cl, clang]
         include:
           - os: windows-latest
@@ -157,52 +157,15 @@ jobs:
           PhoenixEngine
         retention-days: 7
 
-    - name: install procdump (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        Invoke-WebRequest -Uri "https://download.sysinternals.com/files/Procdump.zip" -OutFile procdump.zip
-        Expand-Archive procdump.zip -DestinationPath procdump
-        echo "${{ github.workspace }}\procdump" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-    - name: vsdev
+    - name: Setup VS Dev environment (Windows)
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: dlls
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        $needed = (& dumpbin /dependents PhoenixEngine.exe) 2>&1
-        Write-Host $needed
-        foreach ($line in $needed) {
-          if ($line -match '^\s+(\S+\.dll)') {
-            $dll = $matches[1]
-            $found = Get-Command $dll -ErrorAction SilentlyContinue
-            if (-not $found) {
-              Write-Host "MISSING $dll"
-            }
-          }
-        }
-
     - name: Doc Gen (Windows)
       if: runner.os == 'Windows'
-      continue-on-error: true
-      shell: pwsh
+      shell: cmd
       run: |
-        & ".\PhoenixEngine.exe" --headless --tool scripts/ci/docs.luau
-        Write-Host "Exit code: $LASTEXITCODE"
-
-    - name: upload crash dump (Windows)
-      if: runner.os == 'Windows'
-      uses: actions/upload-artifact@v6
-      with:
-        name: "crashdump-${{ matrix.build_type }}"
-        path: |
-          *.dmp
-          build/${{ matrix.build_type }}/PhoenixEngine.pdb
-        if-no-files-found: ignore
-        retention-days: 1
+        "PhoenixEngine.exe" --headless --tool scripts/ci/docs.luau
 
     - name: Test (Windows)
       if: runner.os == 'Windows'
