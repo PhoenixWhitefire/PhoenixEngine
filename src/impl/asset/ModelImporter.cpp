@@ -8,6 +8,7 @@
 #include "asset/TextureManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "asset/Binary.hpp"
+#include "datatype/GameObject.hpp"
 #include "component/Transform.hpp"
 #include "component/Animation.hpp"
 #include "component/Model.hpp"
@@ -523,7 +524,7 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
     const nlohmann::json& nodeJson = m_JsonData["nodes"][NodeIndex];
 
     // Get translation if it exists
-    glm::vec3 translation;
+    glm::vec3 translation = {};
     if (const auto transIt = nodeJson.find("translation"); transIt != nodeJson.end())
     {
         const nlohmann::json& trans = transIt.value();

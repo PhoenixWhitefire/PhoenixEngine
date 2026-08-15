@@ -26,8 +26,40 @@ const Reflection::StaticPropertyMap& AnimationComponentManager::GetProperties()
 
         REFLECTION_PROPERTY_SIMPLE(EcAnimation, Time, Double),
         REFLECTION_PROPERTY_SIMPLE(EcAnimation, Weight, Double),
-        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Playing, Boolean),
         REFLECTION_PROPERTY_SIMPLE(EcAnimation, Looped, Boolean),
+
+        { "Playing", Reflection::PropertyDescriptor{
+            .Name = "Playing",
+            .Get = REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Playing),
+            .Set = [](void* p, const Reflection::GenericValue& gv)
+            {
+                EcAnimation* ea = static_cast<EcAnimation*>(p);
+                bool playing = gv.AsBoolean();
+
+                if (playing)
+                {
+                    GameObject* parent = ea->Object->GetParent();
+                    while (parent)
+                    {
+                        if (EcAnimator* animator = parent->FindComponent<EcAnimator>())
+                        {
+                            if (ea->AnimationId == UINT32_MAX)
+                                ea->SetAnimation(ea->Animation);
+
+                            animator->LoadAnimation(ea->Object, ea->AnimationId);
+                            break;
+                        }
+
+                        parent = parent->GetParent();
+                    }
+
+                    ea->Playing = true;
+                }
+                else
+                    ea->Playing = false;
+            },
+            .Type = Reflection::ValueType::Boolean,
+        } },
     };
 
     return props;
@@ -206,10 +238,7 @@ void EcAnimator::LoadAnimation(ObjectHandle stateObj, uint32_t Id)
     for (const ObjectHandle& loaded : Animations)
     {
         if (EcAnimation* eas = loaded->FindComponent<EcAnimation>(); eas && eas->AnimationId == Id)
-        {
-            Log.WarningF("Animation {} was already loaded into {}", eas->Animation, Object->GetFullName());
             return;
-        }
     }
 
     stateObj->FindComponent<EcAnimation>()->AnimationId = Id;

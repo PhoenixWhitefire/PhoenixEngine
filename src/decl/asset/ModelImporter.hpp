@@ -2,8 +2,9 @@
 
 #include <unordered_map>
 #include <vector>
+#include <nljson.hpp>
 
-#include "datatype/GameObject.hpp"
+#include "datatype/Ref.hpp"
 #include "asset/Mesh.hpp"
 
 class ModelLoader
@@ -55,7 +56,7 @@ private:
 
 		std::string Name;
 		uint32_t NodeId = UINT32_MAX;
-		uint32_t Parent;
+		uint32_t Parent = UINT32_MAX;
 
 		NodeType Type = NodeType::Primitive;
 

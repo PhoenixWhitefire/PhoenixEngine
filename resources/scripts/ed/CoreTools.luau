@@ -311,7 +311,6 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     if PlayerInput:IsKeyPressed(Enum.Key.F) and not PlayerInput.IsKeyboardSunk then
         local size = target.Transform.Scale
         local pos = target.Transform.Translation - (cam.Transform.Forward * math.max(size.x, size.y, size.z) * 1.5)
-        -- TODO fix 180* flip
         cam.Transform = Matrix.lookAt(pos, target.Transform.Translation)
     end
 
@@ -361,7 +360,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
 
     if target ~= GizmoPrevTarget or target.Transform ~= GizmoPrevTargetTransform or cam.Transform.Translation ~= PrevCamPos then
         local scale = vector.one * vector.magnitude(cam.Transform.Translation - target.Transform.Translation) * math.rad(cam.FieldOfView) / 20
-        local gtrans = Matrix.translated(target.Transform.Translation) * Matrix.rotated(target.Transform:ExtractAngles()) * Matrix.scaled(scale)
+        local gtrans = Matrix.translated(target.Transform.Translation) * Matrix.rotated(target.Transform:ExtractAngles()) * Matrix.scaled(vector.clamp(scale, vector.zero, vector.one * 1000))
         GizmoContainer.Transform = gtrans
         PrevCamPos = cam.Transform.Translation
     end
