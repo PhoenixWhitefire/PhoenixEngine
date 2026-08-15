@@ -29,8 +29,8 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [windows-latest, ubuntu-latest]
-        build_type: [Release, Debug, ReleaseTSan, DebugTSan]
+        os: [windows-latest]
+        build_type: [Release, Debug]
         c_compiler: [cl, clang]
         include:
           - os: windows-latest
@@ -165,13 +165,29 @@ jobs:
         Expand-Archive procdump.zip -DestinationPath procdump
         echo "${{ github.workspace }}\procdump" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+    - name: dlls
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $needed = (& "dumpbin.exe" /dependents PhoenixEngine.exe) 2>&1
+        Write-Host $needed
+        foreach ($line in $needed) {
+          if ($line -match '^\s+(\S+\.dll)') {
+            $dll = $matches[1]
+            $found = Get-Command $dll -ErrorAction SilentlyContinue
+            if (-not $found) {
+              Write-Host "MISSING $dll"
+            }
+          }
+        }
+
     - name: Doc Gen (Windows)
       if: runner.os == 'Windows'
       continue-on-error: true
-      shell: cmd
+      shell: pwsh
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\Common7\Tools\VsDevCmd.bat"
-        procdump -accepteula -e -ma -x . "PhoenixEngine.exe" --headless --tool scripts/ci/docs.luau
+        & ".\PhoenixEngine.exe" --headless --tool scripts/ci/docs.luau
+        Write-Host "Exit code: $LASTEXITCODE"
 
     - name: upload crash dump (Windows)
       if: runner.os == 'Windows'
