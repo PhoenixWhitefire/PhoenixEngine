@@ -157,6 +157,10 @@ jobs:
           PhoenixEngine
         retention-days: 7
 
+    - name: Setup VS Dev environment (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Doc Gen (Windows)
       if: runner.os == 'Windows'
       shell: cmd
