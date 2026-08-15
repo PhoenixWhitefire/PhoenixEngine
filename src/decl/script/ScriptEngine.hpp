@@ -153,7 +153,6 @@ namespace ScriptEngine::L
 
     void PushGenericValue(lua_State*, const Reflection::GenericValue&);
     void PushJson(lua_State*, const nlohmann::json&);
-    void PushMethod(lua_State* L, const Reflection::MethodDescriptor*, ReflectorRef);
 
     void DumpStacktrace(lua_State* L, std::string* Into = nullptr, int Level = 0, const char* Message = nullptr);
 

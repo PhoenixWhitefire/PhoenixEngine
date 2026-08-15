@@ -17,6 +17,7 @@
 #ifdef __clang__
 #include <sys/prctl.h>
 #include <sys/wait.h>
+#include <execinfo.h>
 #include <fcntl.h>
 #endif
 
@@ -138,7 +139,7 @@ static void handleInputs(double deltaTime)
                 glm::normalize(glm::cross(camForward, WorldUp))
             );
 
-            if (abs(glm::angle(newForward, WorldUp) - glm::radians(90.f)) <= glm::radians(85.f))
+            if (std::abs(glm::angle(newForward, WorldUp) - glm::radians(90.f)) <= glm::radians(85.f))
                 camForward = newForward;
 
             camForward = glm::rotate(camForward, (float)-rotationY, WorldUp);

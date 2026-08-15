@@ -1,7 +1,9 @@
 #include <unordered_map>
 #include <filesystem>
 #include <fstream>
+#include <cstring>
 #include <format>
+#include <cerrno>
 #include <tracy/public/tracy/Tracy.hpp>
 
 #include "FileRW.hpp"

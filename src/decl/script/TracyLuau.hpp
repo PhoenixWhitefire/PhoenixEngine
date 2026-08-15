@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <limits>
 
+#ifdef TRACY_ENABLE
+
 #include "tracy/public/common/TracyColor.hpp"
 #include "tracy/public/common/TracyAlign.hpp"
 #include "tracy/public/common/TracyForceInline.hpp"
@@ -15,6 +17,7 @@
 
 // 24/06/2026
 // Ported from `tracy/public/TracyLua.hpp`
+
 namespace tracy
 {
 
@@ -334,3 +337,36 @@ static inline void LuaHook( lua_State* L, lua_Debug* ar )
 #endif
 
 }
+
+#else
+
+namespace tracy
+{
+
+static inline int LuauZoneBeginNImpl(lua_State*, std::string*)
+{
+    return 0;
+}
+
+static inline int LuauZoneEnd(lua_State* L)
+{
+    return 0;
+}
+
+static inline int LuauZoneText(lua_State*)
+{
+    return 0;
+}
+
+static inline int LuauMessage(lua_State*)
+{
+    return  0;
+}
+
+static inline void LuauZoneEndImpl()
+{
+}
+
+}
+
+#endif

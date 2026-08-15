@@ -56,22 +56,22 @@ static ScriptEngine::L::StateUserdata* getVmUserdata(lua_State* L)
 static int debug_zonebegin(lua_State* L)
 {
     std::string zoneName;
-    int retCount = tracy::LuauZoneBeginNImpl(L, &zoneName);
+    tracy::LuauZoneBeginNImpl(L, &zoneName);
 
     ScriptEngine::L::StateUserdata* vmud = getVmUserdata(L);
     vmud->UnfinishedProfilerZones.push(zoneName);
 
-    return retCount;
+    return 0;
 }
 
 static int debug_zoneend(lua_State* L)
 {
-    int retCount = tracy::LuauZoneEnd(L);
+    tracy::LuauZoneEnd(L);
 
     ScriptEngine::L::StateUserdata* vmud = getVmUserdata(L);
     vmud->UnfinishedProfilerZones.pop();
 
-    return retCount;
+    return 0;
 }
 
 const luaL_Reg xdebug_funcs[] = {

@@ -37,6 +37,8 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
+LUAU_FASTFLAG(LuauManagedDebugNames)
+
 struct LuauType
 {
     LuauType(lua_Type BaseType)
@@ -90,6 +92,8 @@ static int luauAssertHandler(const char* expression, const char* file, int line,
 
 void ScriptEngine::Initialize()
 {
+    FFlag::LuauManagedDebugNames.value = true;
+
     RegisterNewVM(ROOT_LVM_NAME);
 
     // changing a reference to a static function variable
@@ -1478,58 +1482,6 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
         YieldedCorosOverride->push_back(yc);
 
     return yieldResult; // will probably always be -1 but just in case
-}
-
-void ScriptEngine::L::PushMethod(lua_State* L, const Reflection::MethodDescriptor* /* Method */, ReflectorRef /* Reflector */)
-{
-    //assert(false && "NOT IMPLEMENTED");
-
-    // if we dont do this then comparison will not work
-    // ex: `game.Close == game.Close`
-
-    //Reflection::MethodDescriptor* methodMut =
-    //lua_rawgetptagged(L, LUA_REGISTRYINDEX, const_cast<Reflection::MethodDescriptor*>(Method), LightUserdataTag::GameObjectMethod);
-
-    if (lua_isnil(L, -1))
-    {
-        lua_pop(L, 1); // remove `nil`, stack empty
-
-        // TODO WTF is this doing??
-        /*
-        static_assert(sizeof(Reflector) <= sizeof(void*));
-        void* data = nullptr;
-        memcpy(&data, &Reflector, sizeof(Reflector));
-
-        lua_pushlightuserdatatagged(L, const_cast<Reflection::MethodDescriptor*>(Method));
-        lua_pushlightuserdata(L, data);
-
-        lua_pushcclosure(
-            L,
-            [](lua_State* L)
-            {
-                Reflection::MethodDescriptor* fn =
-                    static_cast<Reflection::MethodDescriptor*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
-                ReflectorRef& fc = *static_cast<ReflectorRef*>(lua_tolightuserdata(L, lua_upvalueindex(2)));
-
-                return ScriptEngine::L::HandleMethodCall(
-                    L,
-                    fn,
-                    fc
-                );
-            },
-
-            "PushMethodThunk",
-            1
-        ); // stack is now just closure
-
-        lua_pushlightuserdata(L, const_cast<Reflection::MethodDescriptor*>(Method));  // stack: closure, lud
-        lua_pushvalue(L, -2);                                                 // stack: closure, lud, closure
-        lua_rawsetptagged(L, LUA_REGISTERINDEX, );                                    // map closure (value) to lud (key)
-
-        // stack is now just closure
-        */
-    }
-    // value we fetch from `_ENVIRON` will be closure that was pushed earlier
 }
 
 // modified version of `db_traceback` from `VM/src/ldblib.cpp`

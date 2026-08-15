@@ -5,6 +5,7 @@
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
 #include "script/UserdataTags.hpp"
+#include "script/LightUserdataTags.hpp"
 
 #define OBJECT_REG "OBJECT"
 
@@ -129,17 +130,68 @@ static const luaL_Reg gameobject_funcs[] = {
     { NULL, NULL }
 };
 
+static void pushMethod(lua_State* L, std::string_view Name, const Reflection::MethodDescriptor* Method, ReflectorRef Reflector)
+{
+    // need rawequality for repeated accesses
+    Reflection::MethodDescriptor* methodMut = const_cast<Reflection::MethodDescriptor*>(Method);
+    lua_rawgetptagged(L, LUA_REGISTRYINDEX, methodMut, LightUserdataTag::GameObjectMethod);
+
+    if (lua_isnil(L, -1))
+    {
+        lua_pop(L, 1); // remove `nil`, stack empty
+
+        static_assert(sizeof(Reflector) <= sizeof(void*));
+        void* data = nullptr;
+        memcpy(&data, &Reflector, sizeof(void*));
+
+        lua_pushlstring(L, Name.data(), Name.size());
+
+        lua_pushcclosure(
+            L,
+            [](lua_State* L)
+            {
+				GameObject* object = luhx_checkgameobject(L, 1);
+
+				size_t len = 0;
+                const char* name = lua_tolstring(L, lua_upvalueindex(1), &len);
+
+				ReflectorRef ref = {};
+				const Reflection::MethodDescriptor* method = object->FindMethod({ name, len }, &ref);
+
+				if (!method)
+					luaL_error(L, "%s not available on %s", name, object->GetFullName().c_str());
+
+                return ScriptEngine::L::HandleMethodCall(
+                    L,
+                    method,
+                    ref
+                );
+            },
+
+            Name.data(),
+            1
+        ); // stack is now just closure
+
+        lua_pushvalue(L, -1);
+        lua_rawsetptagged(L, LUA_REGISTRYINDEX, methodMut, LightUserdataTag::GameObjectMethod);
+
+        // stack is now just closure
+    }
+
+    // value we fetch from registry will be closure that was pushed earlier
+}
+
 static int obj_index(lua_State* L)
 {
 	ZoneScopedC(tracy::Color::LightSkyBlue);
 
 	GameObject* obj = luhx_checkgameobject(L, 1);
-	const char* key = luaL_checkstring(L, 2);
 
-	ZoneText(key, strlen(key));
+	size_t len = 0;
+	const char* keyCstr = luaL_checklstring(L, 2, &len);
+	const std::string_view key = { keyCstr, len };
 
-    if (!obj)
-        luaL_error(L, "Tried to index '%s' of a deleted Game Object (bug!)", key);
+	ZoneText(key.data(), key.size());
 
     ReflectorRef ref;
 
@@ -149,7 +201,7 @@ static int obj_index(lua_State* L)
         if (ScriptEngine::ParallelVM* P = ud->PVM)
         {
             if (P->Desynchronized && !prop->ParallelReadSafe)
-                luaL_error(L, "`%s` is not safe to read while desynchronized", key);
+                luaL_error(L, "`%s` is not safe to read while desynchronized", key.data());
         }
 
 		Reflection::GenericValue gv = prop->Get(ref.Referred());
@@ -159,7 +211,10 @@ static int obj_index(lua_State* L)
 	}
 
 	else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &ref))
-		luhx_pushsignal(L, event, ref, key, UINT32_MAX);
+		luhx_pushsignal(L, event, ref, key.data(), UINT32_MAX);
+
+	else if (const Reflection::MethodDescriptor* method = obj->FindMethod(key, &ref))
+		pushMethod(L, key, method, ref);
 
 	else
 	{
@@ -171,7 +226,7 @@ static int obj_index(lua_State* L)
 			// 18/05/2025
 			// this is going to be an error because i spent an entire 26 seconds
 			// trying to figure out why something wasnt working
-			luaL_error(L, "No child or member '%s' of %s", key, obj->GetFullName().c_str());
+			luaL_error(L, "No child or member '%s' of %s", key.data(), obj->GetFullName().c_str());
 	}
 
 	return 1;

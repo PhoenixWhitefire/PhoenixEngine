@@ -42,9 +42,9 @@ target_compile_definitions(PhoenixEngine PRIVATE $<$<CONFIG:Release>:NDEBUG TRAC
 
 set(PHX_BUILD_TYPE $<IF:$<CONFIG:Debug>,Debug,$<IF:$<CONFIG:Release>,Release,$<IF:$<CONFIG:DebugTSan>,DebugTSan,$<IF:$<CONFIG:ReleaseAUSan>,ReleaseAUSan,ReleaseTSan>>>>)
 
-if (MSVC OR NOT (CMAKE_BUILD_TYPE STREQUAL "DebugTSan"))
-	target_compile_definitions(PhoenixEngine PRIVATE $<IF:$<CONFIG:DebugTSan>,,TRACY_ENABLE>)
-	target_compile_definitions(PhoenixEngine PRIVATE $<IF:$<CONFIG:DebugTSan>,,TRACY_FIBERS>)
+if (MSVC OR NOT (CMAKE_BUILD_TYPE STREQUAL "DebugTSan") OR NOT (CMAKE_BUILD_TYPE STREQUAL "ReleaseTSan"))
+	target_compile_definitions(PhoenixEngine PRIVATE $<IF:$<OR:$<CONFIG:DebugTSan>,$<CONFIG:ReleaseTSan>>,,TRACY_ENABLE>)
+	target_compile_definitions(PhoenixEngine PRIVATE $<IF:$<OR:$<CONFIG:DebugTSan>,$<CONFIG:ReleaseTSan>>,,TRACY_FIBERS>)
 endif()
 
 target_compile_definitions(PhoenixEngine PRIVATE PHX_TARGET_PLATFORM="${CMAKE_SYSTEM_NAME}")
@@ -121,10 +121,10 @@ if (MSVC)
 endif()
 
 # not letting me put multiple definitions in the same expression waaa
-if (MSVC OR NOT (CMAKE_BUILD_TYPE STREQUAL "DebugTSan"))
-	add_compile_definitions($<IF:$<CONFIG:DebugTSan>,,TRACY_ENABLE>)
-	add_compile_definitions($<IF:$<CONFIG:DebugTSan>,,TRACY_FIBERS>)
-	target_link_libraries(PhoenixEngine PRIVATE $<IF:$<CONFIG:DebugTSan>,,TracyClient>)
+if (MSVC OR NOT (CMAKE_BUILD_TYPE STREQUAL "DebugTSan") OR NOT (CMAKE_BUILD_TYPE STREQUAL "ReleaseTSan"))
+	add_compile_definitions($<IF:$<OR:$<CONFIG:DebugTSan>,$<CONFIG:ReleaseTSan>>,,TRACY_ENABLE>)
+	add_compile_definitions($<IF:$<OR:$<CONFIG:DebugTSan>,$<CONFIG:ReleaseTSan>>,,TRACY_FIBERS>)
+	target_link_libraries(PhoenixEngine PRIVATE $<IF:$<OR:$<CONFIG:DebugTSan>,$<CONFIG:ReleaseTSan>>,,TracyClient>)
 endif()
 add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
 add_compile_definitions($<$<CONFIG:Release>:TRACY_ON_DEMAND>)

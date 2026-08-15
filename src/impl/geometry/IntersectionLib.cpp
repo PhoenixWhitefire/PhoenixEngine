@@ -262,7 +262,7 @@ static IntersectionLib::CollisionPoints epa(const Gjk::Simplex& Simp, const EcRi
 		Gjk::SupportPoint support = B ?  Gjk::Support(A, B, minNormal) : Gjk::Support(A, Point, minNormal);
 		float sDistance = glm::dot(minNormal, support.P);
 
-		if (abs(sDistance - minDistance) > 0.001f)
+		if (std::abs(sDistance - minDistance) > 0.001f)
 		{
 			minDistance = FLT_MAX;
 
