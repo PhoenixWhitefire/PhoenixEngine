@@ -332,7 +332,7 @@ export type GameObject = {
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
   FindChildWithComponent: <T>(self: GameObject, T & keyof<Components>) -> GameObject & index<Components, T>,
   GetChildren: (self: GameObject) -> { GameObject },
-  GetComponents: (self: GameObject) -> keyof<Creatables>,
+  GetComponents: (self: GameObject) -> { keyof<Creatables> },
   GetDescendants: (self: GameObject) -> { GameObject },
   GetFullName: (self: GameObject) -> (string),
   GetTags: (self: GameObject) -> { string },

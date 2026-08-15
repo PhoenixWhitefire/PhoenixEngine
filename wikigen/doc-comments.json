@@ -56,7 +56,7 @@
         },
         "GetComponents": {
           "Description": "Returns a list of the names of all Components that the Object currently has",
-          "Out": "keyof<Creatables>"
+          "Out": "{ keyof<Creatables> }"
         },
         "GetDescendants": {
           "Description": "Returns all descendants of the Object (i.e. its children, and their children, etc)",

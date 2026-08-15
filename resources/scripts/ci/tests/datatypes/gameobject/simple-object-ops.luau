@@ -64,8 +64,8 @@ return function(test: Types.Test, expect: Types.Expect)
 
     test("Non-namecall method calls work", function()
         local o = GameObject.new()
-        o.AddTag(o, "Hello")
-        expect(o:GetTags()):toBe({ "Hello" })
+        o.AddComponent(o, "Transform")
+        expect(o:GetComponents()):toBe({ "Transform" })
         o:Destroy()
     end)
 
