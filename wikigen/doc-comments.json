@@ -380,11 +380,8 @@
         "Description": "Inspect and manipulate various parts of the Engine",
         "Methods": {
           "BindDataModel": {
-            "Description": "Switches Data Models to the specified Object",
-            "ParameterNames": [
-              "DataModel"
-            ],
-            "Type": "(GameObject & EcDataModel) : ()"
+            "Description": "Binds the datamodel provided. Bound datamodels fire their `OnFrameBegin` events",
+            "Type": "(self, DataModel: GameObject & EcDataModel) : ()"
           },
           "Exit": {
             "Description": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)",
@@ -411,9 +408,17 @@
             "Description": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
             "ParameterNames": "VmName"
           },
+          "SetForegroundDataModel": {
+            "Description": "Switches the foreground datamodel to the one provided. Foreground datamodels are what are rendered on screen",
+            "Type": "(self, DataModel: GameObject & EcDataModel) : ()"
+          },
           "ShowMessageBox": {
             "Description": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",
             "Type": "(self, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) : number"
+          },
+          "UnbindDataModel": {
+            "Description": "Unbinds a previously bound datamodel",
+            "Type": "(self, DataModel: GameObject & EcDataModel) : ()"
           }
         },
         "Properties": {

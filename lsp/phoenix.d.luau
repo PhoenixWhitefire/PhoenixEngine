@@ -461,7 +461,6 @@ export type EcDirectionalLight = {
 }
 
 export type EcEngine = {
-  read BoundDataModel: GameObject,
   read CommitHash: string,
   read CommitTag: string,
   read Framerate: number,
@@ -473,7 +472,9 @@ export type EcEngine = {
   BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
   GetCliArguments: (self: EcEngine) -> { string },
   GetConfigValue: (self: EcEngine, Key: string) -> JsonDecodable,
+  SetForegroundDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
   ShowMessageBox: (self: EcEngine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> number,
+  UnbindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
 }
 
 export type EcEnvironment = {

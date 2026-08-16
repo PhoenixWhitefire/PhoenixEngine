@@ -184,7 +184,14 @@ local function stageUpdate(State, DeltaTime)
     debug.zoneend()
 end
 
-local StageUpdateConnection: EventConnection?
+local EditorFrameConnection = game.OnFrameBegin:Connect(function(dt)
+    if Engine.IsHeadless then
+        return
+    end
+
+    stageUpdate(State, dt)
+end)
+
 local IsSessionJustPlaytest = false
 
 function State.ChangeStageTo(NewStage: Types.Stage)
@@ -199,11 +206,6 @@ function State.ChangeStageTo(NewStage: Types.Stage)
     if IsSessionJustPlaytest and NewStage ~= "ProjectPlaying" then
         game:Close()
         return
-    end
-
-    if StageUpdateConnection then
-        StageUpdateConnection:Disconnect()
-        StageUpdateConnection = nil
     end
 
     local leave = Stages[State.CurrentStage].Leave
@@ -221,19 +223,7 @@ function State.ChangeStageTo(NewStage: Types.Stage)
 
     PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
     CoreTools.OnEditorStageChanged(NewStage)
-    StageUpdateConnection = targetDm.OnFrameBegin:Connect(function(dt)
-        if Engine.IsHeadless then
-            return
-        end
-
-        stageUpdate(State, dt)
-    end)
-
     State.CurrentStage = NewStage
-
-    if not Engine.IsHeadless and not shuttingDown then
-        stageUpdate(State, 0)
-    end
 end
 
 game:BindToClose(handleEngineShutdown)
@@ -241,11 +231,7 @@ task.defer(checkIfLatestVersionBuilt)
 
 if table.find(Engine:GetCliArguments(), "-ed_ci") then
     task.defer(State.ChangeStageTo, "SelectProject")
-
-    if StageUpdateConnection then
-        StageUpdateConnection:Disconnect()
-        StageUpdateConnection = nil
-    end
+    EditorFrameConnection:Disconnect()
 
     coroutine.wrap(function()
         print("Running Editor CI checks")
@@ -313,8 +299,5 @@ if loadProjectIndex then
 end
 
 if Engine.IsHeadless then
-    if StageUpdateConnection then
-        StageUpdateConnection:Disconnect()
-        StageUpdateConnection = nil
-    end
+    EditorFrameConnection:Disconnect()
 end

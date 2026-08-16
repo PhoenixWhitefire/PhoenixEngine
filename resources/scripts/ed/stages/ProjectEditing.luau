@@ -247,53 +247,53 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
         end
 
         return
-    else
-        local openDocuments = DeveloperTools:GetOpenTextDocuments()
-
-        local edFile = json.parse(fs.read("@project/phoenix.editor") :: string) :: { [string]: JsonEncodable }
-        edFile.OpenDocuments = openDocuments
-
-        local breakpointInfos = edFile.Breakpoints :: { BreakpointsData }?
-        if not breakpointInfos then
-            breakpointInfos = {} :: { BreakpointsData }
-            -- TODO luau cast
-            edFile.Breakpoints = breakpointInfos :: { [string]: JsonEncodable }
-        end
-        assert(breakpointInfos)
-
-        for _, doc in openDocuments do
-            local info: BreakpointsData = {
-                File = doc,
-                Breakpoints = DeveloperTools:GetDocumentBreakpoints(doc)
-            }
-
-            local hasExisting = false
-
-            for index, existing in breakpointInfos :: { BreakpointsData } do
-                if existing.File == doc then
-                    breakpointInfos[index] = info
-                    hasExisting = true
-
-                    break
-                end
-            end
-
-            if not hasExisting then
-                table.insert(breakpointInfos, info)
-            end
-        end
-
-        fs.write("@project/phoenix.editor", json.encode(edFile))
-
-        DeveloperTools:CloseTextDocuments()
-
-        for _, watcher in Reimport.Watchers do
-            assert(watcher)
-            watcher.Disconnect()
-        end
-
-        table.clear(Reimport.Watchers)
     end
+
+    local openDocuments = DeveloperTools:GetOpenTextDocuments()
+
+    local edFile = json.parse(fs.read("@project/phoenix.editor") :: string) :: { [string]: JsonEncodable }
+    edFile.OpenDocuments = openDocuments
+
+    local breakpointInfos = edFile.Breakpoints :: { BreakpointsData }?
+    if not breakpointInfos then
+        breakpointInfos = {} :: { BreakpointsData }
+        -- TODO luau cast
+        edFile.Breakpoints = breakpointInfos :: { [string]: JsonEncodable }
+    end
+    assert(breakpointInfos)
+
+    for _, doc in openDocuments do
+        local info: BreakpointsData = {
+            File = doc,
+            Breakpoints = DeveloperTools:GetDocumentBreakpoints(doc)
+        }
+
+        local hasExisting = false
+
+        for index, existing in breakpointInfos :: { BreakpointsData } do
+            if existing.File == doc then
+                breakpointInfos[index] = info
+                hasExisting = true
+
+                break
+            end
+        end
+
+        if not hasExisting then
+            table.insert(breakpointInfos, info)
+        end
+    end
+
+    fs.write("@project/phoenix.editor", json.encode(edFile))
+
+    DeveloperTools:CloseTextDocuments()
+
+    for _, watcher in Reimport.Watchers do
+        assert(watcher)
+        watcher.Disconnect()
+    end
+
+    table.clear(Reimport.Watchers)
 
     for o, cs in VisualizationsChangedConnections do
         -- TODO .Connected checks?
@@ -328,13 +328,14 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
         State:SaveProject()
     end
 
+    Engine:UnbindDataModel(assert(State.Project.DataModel))
+    ScriptEngine:CloseVM(Configuration.GameEditingVMName)
+
     State.Project.DataModel:Destroy()
     State.Project.Workspace = nil
     State.Project.Name = "Should not be visible"
     State.Project.IsTempPath = true
     State.Project.DataModel = nil
-
-    ScriptEngine:CloseVM(Configuration.GameEditingVMName)
 end
 
 return ProjectEditing

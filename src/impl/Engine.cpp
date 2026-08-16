@@ -715,7 +715,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     ImVec2 viewportSize = GetViewportInputRectSize();
     float aspectRatio = viewportSize.x / viewportSize.y;
 
-    const ObjectHandle& sceneCamObject = WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera();
+    const ObjectHandle& sceneCamObject = m_Workspace->FindComponent<EcWorkspace>()->GetSceneCamera();
     EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
     // we do this AFTER  `traverseHierarchy` in case any Scripts
@@ -784,7 +784,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
-	if (GameObject* interface = DataModelRef->FindChildWithComponent(EntityComponent::Interface))
+	if (GameObject* interface = ForegroundDataModel->FindChildWithComponent(EntityComponent::Interface))
 		renderUIElements(interface, RendererContext);
 
 	//Do framebuffer stuff after everything is drawn
@@ -866,31 +866,47 @@ static void ensureDataModelValid(const ObjectHandle& DataModel)
 	ZoneScoped;
 	PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
 
-	GameObject* workspace = DataModel->FindChild("Workspace");
+	GameObject* workspace = DataModel->FindChildWithComponent(EntityComponent::Workspace);
 	PHX_ENSURE_MSG(workspace, "DataModel has no Workspace!");
-	PHX_ENSURE_MSG(workspace->FindComponent<EcWorkspace>(), "Workspace masquerading!");
-	PHX_ENSURE_MSG(DataModel->FindComponent<EcDataModel>(), "DataModel masquerading!");
+	PHX_ENSURE_MSG(DataModel->FindComponent<EcDataModel>(), "DataModel has no DataModel component!");
 }
 
-void Engine::BindDataModel(const ObjectHandle& NewDataModel)
+void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
 {
     ZoneScoped;
-    ensureDataModelValid(NewDataModel);
+    ensureDataModelValid(Foreground);
 
-    if (DataModelRef)
+	if (std::find(BoundDataModels.begin(), BoundDataModels.end(), Foreground) == BoundDataModels.end())
+		RAISE_RT("Tried to make an unbound datamodel the foreground datamodel");
+
+    if (ForegroundDataModel)
     {
-        EcDataModel* dm = DataModelRef->FindComponent<EcDataModel>();
+        EcDataModel* dm = ForegroundDataModel->FindComponent<EcDataModel>();
         PHX_ENSURE(dm);
 
         dm->UnbindServices();
     }
 
-    DataModelRef = NewDataModel;
-    WorkspaceRef = NewDataModel->FindChild("Workspace");
-    assert(WorkspaceRef.Dereference());
+    ForegroundDataModel = Foreground;
 
-    ObjectManager.DataModel = NewDataModel->ObjectId;
-    NewDataModel->FindComponent<EcDataModel>()->BindServices();
+    ObjectManager.DataModel = Foreground->ObjectId;
+    Foreground->FindComponent<EcDataModel>()->BindServices();
+}
+
+void Engine::BindDataModel(const ObjectHandle& DataModel)
+{
+	if (std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel) == BoundDataModels.end())
+		BoundDataModels.push_back(DataModel);
+	else
+		Log.WarningF("{} was already a bound datamodel", DataModel->Name);
+}
+
+void Engine::UnbindDataModel(const ObjectHandle& DataModel)
+{
+	if (const auto& it = std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel); it != BoundDataModels.end())
+		BoundDataModels.erase(it);
+	else
+		RAISE_RT("{} was not a bound datamodel", DataModel->Name);
 }
 
 static void dispatchParallelVMs(Engine* engine)
@@ -937,7 +953,7 @@ void Engine::Start()
     }
 
     Log.Info("Validating DataModel...");
-    ensureDataModelValid(DataModelRef.Dereference());
+    ensureDataModelValid(ForegroundDataModel.Dereference());
 
     Log.Info("Final initializations...");
 
@@ -971,17 +987,16 @@ void Engine::Start()
 		TIME_SCOPE_AS_N("EntireFrame", EntireFrameTimerScope);
 		ZoneScopedNC("Frame", tracy::Color::PaleTurquoise);
 
-		if (DataModelRef->IsDestructionPending)
+		if (ForegroundDataModel->IsDestructionPending)
 		{
 			Log.Warning("`Destroy` called on DataModel, shutting down");
 			break;
 		}
 
-		if (WorkspaceRef->IsDestructionPending)
-		{
-			Log.Warning("`Destroy` called on Workspace, shutting down");
-			break;
-		}
+		m_Workspace = ForegroundDataModel->FindChildWithComponent(EntityComponent::Workspace);
+
+		if (!m_Workspace)
+			RAISE_RT("Workspace was removed");
 
 		if (EcDataModel* dm = PrimaryDataModel->FindComponent<EcDataModel>())
 		{
@@ -1026,7 +1041,7 @@ void Engine::Start()
 		firstFrame = false;
 		Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
 
-		DataModelRef->FindComponent<EcDataModel>()->Bind();
+		ForegroundDataModel->FindComponent<EcDataModel>()->Bind();
 
 		if (!IsHeadlessMode)
 			TextureManagerInstance.FinalizeAsyncLoadedTextures();
@@ -1114,14 +1129,26 @@ void Engine::Start()
 			}
 		}
 
-		EcWorkspace* workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
+		EcWorkspace* workspaceComponent = m_Workspace->FindComponent<EcWorkspace>();
 		ObjectHandle sceneCamObject = workspaceComponent->GetSceneCamera();
 		EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
 		if (!IsHeadlessMode)
 			workspaceComponent->UpdateSoundListener();
 
-        Reflection::SignalEvent(DataModelRef->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
+		for (size_t i = 0; i < BoundDataModels.size();)
+		{
+			if (!BoundDataModels[i]->FindComponent<EcDataModel>())
+			{
+				Log.WarningF("Bound datamodel {} lost its datamodel component", BoundDataModels[i]->Name);
+				BoundDataModels.erase(BoundDataModels.begin() + i);
+			}
+			else
+				i++;
+		}
+
+		for (const ObjectHandle& bound : BoundDataModels)
+			Reflection::SignalEvent(bound->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
         waitForParallelVMs();      // tsan ??
         ScriptEngine::StepVMs();   // serial phase
@@ -1146,7 +1173,7 @@ void Engine::Start()
 				CurrentScene,
 				physWorld,
 				particleEmittersRenderList,
-				WorkspaceRef.Dereference(),
+				m_Workspace.Referred(),
 				sceneCamera,
 				deltaTime,
 				&sun,
@@ -1163,7 +1190,7 @@ void Engine::Start()
 
             if (PhysicsInstance.DebugSpatialHeat)
             {
-                workspaceComponent = WorkspaceRef->FindComponent<EcWorkspace>();
+                workspaceComponent = m_Workspace->FindComponent<EcWorkspace>();
                 assert(workspaceComponent);
 
                 for (const auto& it : workspaceComponent->SpatialHash)
@@ -1310,10 +1337,11 @@ void Engine::Shutdown()
 	ComponentManagers.DataModel.NotifyAllOfShutdown();
 	ScriptEngine::StepVMs(); // step event callbacks
 
-	DataModelRef->Destroy();
+	ForegroundDataModel->Destroy();
+	ForegroundDataModel.Clear();
 	PrimaryDataModel.Clear();
-	DataModelRef.Clear();
-	WorkspaceRef.Clear();
+	m_Workspace = {};
+	BoundDataModels.clear();
 
 	DeveloperTools::Shutdown();
 

@@ -263,7 +263,10 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
             return nullptr;
         }
         else
+        {
+            lua_pop(mainThread, 1);
             return L;
+        }
     }
     else
     {

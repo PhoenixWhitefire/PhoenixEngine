@@ -6,10 +6,8 @@
 
 #include "component/EngineService.hpp"
 #include "datatype/JsonGenerics.hpp"
-#include "asset/TextureManager.hpp"
 #include "Version.hpp"
 #include "Engine.hpp"
-#include "FileRW.hpp"
 
 const Reflection::StaticPropertyMap& EngineComponentManager::GetProperties()
 {
@@ -84,16 +82,6 @@ const Reflection::StaticPropertyMap& EngineComponentManager::GetProperties()
             },
             nullptr
         ),
-        REFLECTION_PROPERTY(
-            "BoundDataModel",
-            GameObject,
-            [](void*) -> Reflection::GenericValue
-            {
-                Engine* engine = Engine::Get();
-                return engine->DataModelRef->ToGenericValue();
-            },
-            nullptr
-        )
     };
 
     return props;
@@ -102,6 +90,18 @@ const Reflection::StaticPropertyMap& EngineComponentManager::GetProperties()
 const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
+        { "SetForegroundDataModel", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+                engine->SetForegroundDataModel(GameObjectManager::Get()->FromGenericValue(inputs[0]));
+
+                return {};
+            }
+        } },
+
         { "BindDataModel", Reflection::MethodDescriptor{
             REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
             {},
@@ -109,6 +109,18 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
             {
                 Engine* engine = Engine::Get();
                 engine->BindDataModel(GameObjectManager::Get()->FromGenericValue(inputs[0]));
+
+                return {};
+            }
+        } },
+
+        { "UnbindDataModel", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }),
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+                engine->UnbindDataModel(GameObjectManager::Get()->FromGenericValue(inputs[0]));
 
                 return {};
             }

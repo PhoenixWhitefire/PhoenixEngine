@@ -173,7 +173,8 @@ void History::Undo()
 
     const Action& lastAction = m_ActionHistory[m_CurrentWaypoint];
 
-    for (size_t i = lastAction.Events.size() - 1; i > 0; i--)
+    // Index must be unsigned
+    for (int64_t i = (int64_t)lastAction.Events.size() - 1; i >= 0; i--)
     {
         const Event& event = lastAction.Events[i];
 

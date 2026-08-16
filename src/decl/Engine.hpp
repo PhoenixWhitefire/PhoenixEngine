@@ -22,100 +22,104 @@
 class Engine
 {
 public:
-	Engine() = default;
-	~Engine();
+    Engine() = default;
+    ~Engine();
 
-	static Engine* Get();
+    static Engine* Get();
 
-	void Initialize(int ThreadCount = -1, bool Headless = false);
+    void Initialize(int ThreadCount = -1, bool Headless = false);
 
-	// Initializes main engine loop
-	void Start();
-	void Shutdown();
+    // Initializes main engine loop
+    void Start();
+    void Shutdown();
 
-	void SetIsFullscreen(bool IsFullscreen);
-	// Resize to a different resolution, also runs `Engine->OnWindowResized`
-	void ResizeWindow(int NewSizeX, int NewSizeY);
-	// Handle changes to the window size. Exists in case the size changes from
-	// something other than `ResizeWindow`
-	void OnWindowResized(int NewSizeX, int NewSizeY);
+    void SetIsFullscreen(bool IsFullscreen);
+    // Resize to a different resolution, also runs `Engine->OnWindowResized`
+    void ResizeWindow(int NewSizeX, int NewSizeY);
+    // Handle changes to the window size. Exists in case the size changes from
+    // something other than `ResizeWindow`
+    void OnWindowResized(int NewSizeX, int NewSizeY);
 
-	void LoadConfiguration();
-	void BindDataModel(const ObjectHandle&);
-	void Close();
+    void LoadConfiguration();
+    void Close();
 
-	ImVec2 GetViewportInputRectSize() const;
+    void SetForegroundDataModel(const ObjectHandle&);
+    void BindDataModel(const ObjectHandle&);
+    void UnbindDataModel(const ObjectHandle&);
 
-	nlohmann::json Config;
+    ImVec2 GetViewportInputRectSize() const;
 
-	GameObjectManager ObjectManager;
-	AllComponentManagers ComponentManagers;
+    nlohmann::json Config;
 
-	// Use `BindDataModel` when switching DataModels
-	ObjectHandle DataModelRef;
-	ObjectHandle WorkspaceRef;
-	ObjectHandle PrimaryDataModel;
+    GameObjectManager ObjectManager;
+    AllComponentManagers ComponentManagers;
 
-	Renderer RendererContext;
-	GLFWwindow* Window = nullptr;
+    ObjectHandle ForegroundDataModel; // rendered
+    ObjectHandle PrimaryDataModel;
+    std::vector<ObjectHandle> BoundDataModels; // OnFrameBegin fires
 
-	EventSignal<double> OnFrameStart;
-	EventSignal<double> OnFrameEnd;
+    Renderer RendererContext;
+    GLFWwindow* Window = nullptr;
 
-	Scene CurrentScene;
+    EventSignal<double> OnFrameStart;
+    EventSignal<double> OnFrameEnd;
 
-	ThreadManager ThreadManagerInstance;
-	MaterialManager MaterialManagerInstance;
-	TextureManager TextureManagerInstance;
-	ShaderManager ShaderManagerInstance;
-	MeshProvider MeshProviderInstance;
-	Physics PhysicsInstance;
-	History HistoryInstance;
+    Scene CurrentScene;
 
-	ShaderProgram PostFxShader;
-	ShaderProgram SkyboxShader;
-	ShaderProgram SeparableBlurShader;
-	GpuFrameBuffer SunShadowMap;
+    ThreadManager ThreadManagerInstance;
+    MaterialManager MaterialManagerInstance;
+    TextureManager TextureManagerInstance;
+    ShaderManager ShaderManagerInstance;
+    MeshProvider MeshProviderInstance;
+    Physics PhysicsInstance;
+    History HistoryInstance;
 
-	ImVec2 OverrideViewportDockSpacePosition = { -1.f, -1.f };
-	ImVec2 OverrideViewportDockSpaceSize = { -1.f, -1.f };
-	ImVec2 OverrideViewportInputSize = { 1.f, 1.f };
-	ImVec2 ViewportInputPosition = { 0.f, 0.f };
-	bool OverrideDefaultGuiViewportDockSpace = false;
-	bool OverrideDefaultViewportInputRect = false;
+    ShaderProgram PostFxShader;
+    ShaderProgram SkyboxShader;
+    ShaderProgram SeparableBlurShader;
+    GpuFrameBuffer SunShadowMap;
 
-	bool IsHeadlessMode = false;
-	bool IsFullscreen = false;
-	bool VSync = false;
+    ImVec2 OverrideViewportDockSpacePosition = { -1.f, -1.f };
+    ImVec2 OverrideViewportDockSpaceSize = { -1.f, -1.f };
+    ImVec2 OverrideViewportInputSize = { 1.f, 1.f };
+    ImVec2 ViewportInputPosition = { 0.f, 0.f };
+    bool OverrideDefaultGuiViewportDockSpace = false;
+    bool OverrideDefaultViewportInputRect = false;
 
-	int WindowSizeX = 0;
-	int WindowSizeY = 0;
-	float ScaleFactor = 1.f;
-	
-	int FramesPerSecond = 0;
-	int FpsCap = 60;
+    bool IsHeadlessMode = false;
+    bool IsFullscreen = false;
+    bool VSync = false;
 
-	bool DebugWireframeRendering = false;
+    int WindowSizeX = 0;
+    int WindowSizeY = 0;
+    float ScaleFactor = 1.f;
 
-	bool IsWindowFocused = true;
+    int FramesPerSecond = 0;
+    int FpsCap = 60;
 
-	int SystemSignal = -1;
-	int ExitCode = 0;
+    bool DebugWireframeRendering = false;
 
-	int argc = 0;
-	char** argv = nullptr;
+    bool IsWindowFocused = true;
+
+    int SystemSignal = -1;
+    int ExitCode = 0;
+
+    int argc = 0;
+    char** argv = nullptr;
 
 private:
-	void m_InitializeVideo();
-	void m_Render(double DeltaTime, const std::vector<EcParticleEmitter*>&);
+    void m_InitializeVideo();
+    void m_Render(double DeltaTime, const std::vector<EcParticleEmitter*>&);
 
-	int m_DrawnFramesInSecond = -1;
-	bool m_IsRunning = false;
+    ObjectRef m_Workspace;
 
-	int m_WindowedWidth = 800;
-	int m_WindowedHeight = 800;
-	int m_WindowedPosX = 0;
-	int m_WindowedPosY = 0;
+    int m_DrawnFramesInSecond = -1;
+    bool m_IsRunning = false;
 
-	uint32_t m_FboResourceId = UINT32_MAX;
+    int m_WindowedWidth = 800;
+    int m_WindowedHeight = 800;
+    int m_WindowedPosX = 0;
+    int m_WindowedPosY = 0;
+
+    uint32_t m_FboResourceId = UINT32_MAX;
 };

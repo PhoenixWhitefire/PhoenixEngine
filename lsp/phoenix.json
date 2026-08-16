@@ -1754,10 +1754,7 @@
     "documentation": "Whether the Light can render shadows"
   },
   "@phoenix/globaltype/Engine.BindDataModel": {
-    "documentation": "Switches Data Models to the specified Object"
-  },
-  "@phoenix/globaltype/Engine.BoundDataModel": {
-    "documentation": "The DataModel object that is currently bound"
+    "documentation": "Binds the datamodel provided. Bound datamodels fire their `OnFrameBegin` events"
   },
   "@phoenix/globaltype/Engine.CommitHash": {
     "documentation": "The Git commit that was used to produce this Engine build"
@@ -1780,11 +1777,17 @@
   "@phoenix/globaltype/Engine.IsHeadless": {
     "documentation": "Whether the Engine is currently running in headless mode"
   },
+  "@phoenix/globaltype/Engine.SetForegroundDataModel": {
+    "documentation": "Switches the foreground datamodel to the one provided. Foreground datamodels are what are rendered on screen"
+  },
   "@phoenix/globaltype/Engine.ShowMessageBox": {
     "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
   },
   "@phoenix/globaltype/Engine.TargetPlatform": {
     "documentation": "The target platform the Engine was compiled for (Windows or Linux, usually)"
+  },
+  "@phoenix/globaltype/Engine.UnbindDataModel": {
+    "documentation": "Unbinds a previously bound datamodel"
   },
   "@phoenix/globaltype/Engine.Version": {
     "documentation": "The version of the Engine build"

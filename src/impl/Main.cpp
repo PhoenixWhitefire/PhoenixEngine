@@ -59,8 +59,12 @@ static int s_ExitCode = 0;
 static void handleInputs(double deltaTime)
 {
     Engine* engine = Engine::Get();
+    GameObject* workspace = engine->ForegroundDataModel->FindChildWithComponent(EntityComponent::Workspace);
 
-    EcCamera* camera = engine->WorkspaceRef->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
+    if (!workspace)
+        return;
+
+    EcCamera* camera = workspace->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
     GLFWwindow* window = engine->Window;
 
     double mouseX;
@@ -304,6 +308,7 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
     PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
     engine->BindDataModel(root);
+    engine->SetForegroundDataModel(root);
     engine->PrimaryDataModel = root;
 }
 

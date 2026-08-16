@@ -279,6 +279,7 @@ function SelectProject.Render(DeltaTime: number)
             if imgui.imagebutton("+", "@_etextures/editor-icons/new.png", vector.create(150, 150)) then
                 task.defer(State.CreateNewProject, State, nil)
             end
+
             imgui.setitemtooltip("Create new Project")
 
             cpos = imgui.cursorposition()
@@ -286,6 +287,7 @@ function SelectProject.Render(DeltaTime: number)
             for i, cat in ProjectCategories do
                 if SelectedProjectsCategory == i then
                     imgui.setcursorposition(cpos.x - 5, cpos.y - 2)
+                    imgui.dummy()
                     imgui.pushstylecolor(Enum.ImGuiColor.Border, Theme.TabButtonHoveringBorder)
 
                     imgui.beginchild("Selection", vector.create(160, 160), "b", "ni")
@@ -295,6 +297,7 @@ function SelectProject.Render(DeltaTime: number)
                 end
 
                 imgui.setcursorposition(cpos.x - 4, cpos.y)
+                imgui.dummy()
 
                 if imgui.imagebutton(cat.Name, cat.Icon, vector.create(150, 150)) then
                     SelectedProjectsCategory = i
@@ -316,13 +319,12 @@ function SelectProject.Render(DeltaTime: number)
         imgui.endchild()
 
         imgui.setcursorposition(startPos.x + 170, startPos.y)
-
         imgui.beginchild("MainSection", vector.create(0, 0), "b")
 
         ProjectCategories[SelectedProjectsCategory].Render(startPos.x)
 
-        imgui.dummy()
         imgui.endchild()
+        imgui.dummy()
     end
     if not CommonUI.EnableBottomBarInStartPage then
         imgui.endw()

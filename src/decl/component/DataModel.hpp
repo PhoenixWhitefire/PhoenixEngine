@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "component/Workspace.hpp"
 #include "script/ScriptEngine.hpp"
 
 struct lua_State;

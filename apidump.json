@@ -164,10 +164,11 @@
           "BindDataModel": "(GameObject) -> ()",
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
-          "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)"
+          "SetForegroundDataModel": "(GameObject) -> ()",
+          "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)",
+          "UnbindDataModel": "(GameObject) -> ()"
         },
         "Properties": {
-          "BoundDataModel": "GameObject READONLY",
           "CommitHash": "String READONLY",
           "CommitTag": "String READONLY",
           "Framerate": "Integer READONLY",

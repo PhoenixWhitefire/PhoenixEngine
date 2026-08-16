@@ -61,12 +61,15 @@ function ProjectPlaying.Enter(_prev)
 
     DeveloperTools:SetExplorerRoot(State.Project.DataModel)
     DeveloperTools:SetExplorerSelections({})
-    Physics.Simulating = true
 
     State.Project.DataModel.VM = Configuration.PlaytestVMName
-    Engine:BindDataModel(State.Project.DataModel) -- Set the `game` global to the correct value in game scripts
+    Engine:BindDataModel(State.Project.DataModel)
+    Engine:SetForegroundDataModel(State.Project.DataModel)
+
     ScriptEngine:CreateVM(Configuration.PlaytestVMName)
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
+
+    Physics:SetSimulationForcePaused(false)
 
     if Preferences.DebuggerEnabled then
         for scriptPath, breakpointsForScript in ProjectEditing.Breakpoints do
@@ -111,8 +114,6 @@ function ProjectPlaying.Enter(_prev)
         State.ChangeStageTo("ProjectEditing")
     end)
 
-    Physics:SetSimulationForcePaused(false)
-
     PlayerInput.Cursor = Enum.Cursor.Arrow
     return State.Project.DataModel -- Connect to the Project's datamodel `.OnFrameBegin`
 end
@@ -121,7 +122,8 @@ function ProjectPlaying.Leave(_new)
     assert(State.PlaytestRestoreState)
     assert(State.Project.DataModel)
 
-    Engine:BindDataModel(game)
+    Engine:SetForegroundDataModel(game)
+    Engine:UnbindDataModel(State.Project.DataModel)
 
     State.Project.DataModel.Enabled = false -- trigger TreeEnabled changes -> stop playing sounds :)
     State.Project.DataModel:Destroy()

@@ -390,9 +390,12 @@ local function openProject_(State: StateType, ManualPath: string?)
     State.Project.DataModel.LiveScripts = ""
 
     Engine:BindDataModel(State.Project.DataModel)
+    Engine:SetForegroundDataModel(State.Project.DataModel)
+
     ScriptEngine:CreateVM(Configuration.GameEditingVMName)
     ScriptEngine:DetachDebuggerFromVM(Configuration.GameEditingVMName)
-    Engine:BindDataModel(game)
+
+    Engine:SetForegroundDataModel(game)
 
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.GameEditingVMName, Preferences.ScriptAllowedExecutionTime)
 
