@@ -47,7 +47,7 @@
       },
       "Animator": {
         "Methods": {
-          "LoadAnimation": "(GameObject) -> (GameObject)"
+          "LoadAnimation": "(GameObject) -> ()"
         },
         "Properties": {
           "Animating": "Boolean"

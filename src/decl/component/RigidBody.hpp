@@ -16,9 +16,9 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
     void RecomputeAabb();
     void SetHullsFile(const std::string&);
 
-    glm::vec3 LinearVelocity;
-    glm::vec3 AngularVelocity;
-    glm::vec3 NetForce;
+    glm::vec3 LinearVelocity = {};
+    glm::vec3 AngularVelocity = {};
+    glm::vec3 NetForce = {};
 
     float Mass = 1.f;
 	float Density = 1.f;
@@ -28,7 +28,7 @@ struct EcRigidBody : public Component<EntityComponent::RigidBody>
 
     struct
 	{
-		glm::vec3 Position;
+		glm::vec3 Position = {};
 		glm::vec3 Size = { 1.f, 1.f, 1.f };
 	} CollisionAabb;
 

@@ -60,6 +60,18 @@ function EditorCameraTransform.Load(EditorCam: EcCamera & EcTransform)
     if fs.isfile("@project/phoenix.editor") then
         local editordata = json.parse(assert(fs.read("@project/phoenix.editor"))) :: any
         savedCamTrans = (editordata.SavedEditorCamera :: SavedEditorCamera) or savedCamTrans
+
+        savedCamTrans.FieldOfView = savedCamTrans.FieldOfView or 90
+
+        savedCamTrans.Position = savedCamTrans.Position or { X = 0, Y = 0, Z = 0 }
+        savedCamTrans.Position.X = savedCamTrans.Position.X or 0
+        savedCamTrans.Position.Y = savedCamTrans.Position.Y or 0
+        savedCamTrans.Position.Z = savedCamTrans.Position.Z or 0
+
+        savedCamTrans.Rotation = savedCamTrans.Rotation or { X = 0, Y = 0, Z = 0 }
+        savedCamTrans.Rotation.X = savedCamTrans.Rotation.X or 0
+        savedCamTrans.Rotation.Y = savedCamTrans.Rotation.Y or 0
+        savedCamTrans.Rotation.Z = savedCamTrans.Rotation.Z or 0
     end
 
     EditorCam.FieldOfView = savedCamTrans.FieldOfView

@@ -47,7 +47,7 @@ public:
 
 struct EcAnimator : public Component<EntityComponent::Animator>
 {
-    ObjectHandle LoadAnimation(uint32_t Id);
+    void LoadAnimation(ObjectHandle stateObj, uint32_t Id);
     void Step(double DeltaTime);
 
     // `AnimationState`s

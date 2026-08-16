@@ -240,12 +240,12 @@ static int obj_newindex(lua_State* L)
 	lua_getinfo(L, 1, "sl", &ar);
 
 	GameObject* obj = luhx_checkgameobject(L, 1);
-	const char* key = luaL_checkstring(L, 2);
 
-	ZoneText(key, strlen(key));
+	size_t len = 0;
+	const char* keyCstr = luaL_checklstring(L, 2, &len);
+	const std::string_view key = std::string_view(keyCstr, len);
 
-    if (!obj)
-	    luaL_error(L, "Cannot assign to property '%s' of a deleted GameObject (bug!)", key);
+	ZoneText(key.data(), key.size());
 
 	if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key))
 	{
@@ -256,7 +256,7 @@ static int obj_newindex(lua_State* L)
 
 			luaL_error(L,
 				"Cannot set '%s' to '%s' (%s) because it is read-only",
-				key, argAsString, argTypeName
+				key.data(), argAsString, argTypeName
 			);
 		}
 
@@ -264,7 +264,7 @@ static int obj_newindex(lua_State* L)
         if (ScriptEngine::ParallelVM* P = ud->PVM)
         {
             if (P->Desynchronized && !prop->ParallelWriteSafe)
-                luaL_error(L, "`%s` is not safe to set while desynchronized", key);
+                luaL_error(L, "`%s` is not safe to set while desynchronized", key.data());
         }
 
 		ScriptEngine::L::CheckType(L, prop->Type, 3);
@@ -276,7 +276,7 @@ static int obj_newindex(lua_State* L)
 		}
 		catch (const std::runtime_error& err)
 		{
-			luaL_error(L, "Error while setting property '%s' of %s: %s", key, obj->GetFullName().c_str(), err.what());
+			luaL_error(L, "Error while setting property '%s' of %s: %s", key.data(), obj->GetFullName().c_str(), err.what());
 		}
 	}
 	else
@@ -286,12 +286,12 @@ static int obj_newindex(lua_State* L)
 		if (obj->FindChild(key))
 			luaL_error(L,
 				"Attempt to set invalid Member '%s' of '%s', although it has a child object with that name",
-				key, fullname.c_str()
+				key.data(), fullname.c_str()
 			);
 		else
 			luaL_error(L,
 				"Attempt to set invalid Member '%s' of %s",
-				key, fullname.c_str()
+				key.data(), fullname.c_str()
 			);
 	}
 

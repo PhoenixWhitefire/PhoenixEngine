@@ -112,9 +112,8 @@
         ],
         "Methods": {
           "LoadAnimation": {
-            "Description": "Load an animation asset into the `Animator` to prepare it for playback",
-            "In": "EcAnimation",
-            "Out": "EcAnimation"
+            "Description": "Loads an animation asset into the `Animator` to prepare it for playback",
+            "In": "EcAnimation"
           }
         },
         "Properties": {
@@ -122,9 +121,10 @@
         }
       },
       "Animation": {
-        "Description": "An animation, loaded in an `Animator`",
+        "Description": "An animation",
         "Properties": {
           "Animation": "The animation file",
+          "Loaded": "Whether the animation has been loaded into an `Animator` and can be played",
           "Looped": "Whether the track should loop when it reaches the end",
           "Playing": "Whether the track is playing",
           "Time": "The current time position of the track",

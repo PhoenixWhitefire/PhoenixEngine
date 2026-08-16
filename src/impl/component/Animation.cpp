@@ -43,7 +43,7 @@ void EcAnimation::SetAnimation(const std::string& Asset)
         return;
     }
 
-    std::string path = FileRW::ResolvePathNormalized(Asset);
+    const std::string path = FileRW::ResolvePathNormalized(Asset);
 
     AnimatorComponentManager* acm = (AnimatorComponentManager*)AnimatorComponentManager::Get();
     if (const auto& it = acm->RegisteredAnimations.find(path); it != acm->RegisteredAnimations.end())
@@ -175,7 +175,7 @@ const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
     static const Reflection::StaticMethodMap methods = {
         { "LoadAnimation", Reflection::MethodDescriptor{
             REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `Animation`
-            REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `Animation`
+            {},
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 EcAnimator* ea = static_cast<EcAnimator*>(p);
@@ -185,7 +185,9 @@ const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
                 {
                     if (animation->AnimationId == UINT32_MAX)
                         animation->SetAnimation(animation->Animation);
-                    return { ea->LoadAnimation(animation->AnimationId)->ToGenericValue() };
+
+                    ea->LoadAnimation(anim, animation->AnimationId);
+                    return {};
                 }
                 else
                     RAISE_RT("GameObject must have an `AnimationAsset` component");
@@ -196,7 +198,7 @@ const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
     return methods;
 }
 
-ObjectHandle EcAnimator::LoadAnimation(uint32_t Id)
+void EcAnimator::LoadAnimation(ObjectHandle stateObj, uint32_t Id)
 {
     if (Id == UINT32_MAX)
         RAISE_RT("Animation is not valid, failed to load or path is blank");
@@ -204,17 +206,14 @@ ObjectHandle EcAnimator::LoadAnimation(uint32_t Id)
     for (const ObjectHandle& loaded : Animations)
     {
         if (EcAnimation* eas = loaded->FindComponent<EcAnimation>(); eas && eas->AnimationId == Id)
-            return loaded;
+        {
+            Log.WarningF("Animation {} was already loaded into {}", eas->Animation, Object->GetFullName());
+            return;
+        }
     }
 
-    ObjectHandle stateObj = GameObjectManager::s_Create(EntityComponent::Animation);
-    EcAnimation* eas = stateObj->FindComponent<EcAnimation>();
-    assert(eas);
-
-    eas->AnimationId = Id;
+    stateObj->FindComponent<EcAnimation>()->AnimationId = Id;
     Animations.push_back(stateObj);
-
-    return stateObj;
 }
 
 void EcAnimator::Step(double DeltaTime)
