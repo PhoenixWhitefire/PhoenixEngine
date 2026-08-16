@@ -1,4 +1,5 @@
 local PlayerInput = game:GetService("PlayerInput")
+local Workspace = game:GetService("Workspace")
 
 local M1WasDown = false
 local M2WasDown = false
@@ -6,9 +7,9 @@ local Parts = {}
 
 local function debugVector(v: vector, col: Color?)
     local mesh = GameObject.fromTemplate("Mesh")
-    mesh.Parent = workspace
-    mesh.Transform = Matrix.lookAt(workspace.SceneCamera.Transform.Position, workspace.SceneCamera.Transform.Position + v) * Matrix.fromTranslation(0, 0, -vector.magnitude(v) / 2)
-    mesh.Size = vector.create(1, 1, vector.magnitude(v))
+    mesh.Parent = Workspace
+    mesh.Transform = Matrix.lookAt(Workspace.SceneCamera.Transform.Translation, Workspace.SceneCamera.Transform.Translation + v) * Matrix.translated(0, 0, -vector.magnitude(v) / 2)
+    mesh.Transform = mesh.Transform:WithScale(vector.create(1, 1, vector.magnitude(v)))
     mesh.FaceCulling = Enum.FaceCulling.None
     mesh.Material = "boxframe"
 
@@ -20,12 +21,12 @@ local function debugVector(v: vector, col: Color?)
 end
 
 local function debugMouseVector()
-    local mouseVec = workspace:ScreenPointToVector((), 100)
+    local mouseVec = Workspace:ScreenPointToVector((), 100)
     debugVector(mouseVec, nil)
 end
 
 local function debugCameraVector()
-    local camVec = workspace.SceneCamera.Transform.Forward * 100
+    local camVec = Workspace.SceneCamera.Transform.Forward * 100
     debugVector(camVec, Color.new(1, 0, 0))
 end
 

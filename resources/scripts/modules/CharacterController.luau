@@ -1,5 +1,6 @@
 -- modules/character-controller.luau, 23/09/2024
 local PlayerInput = game:GetService("PlayerInput")
+local Workspace = game:GetService("Workspace")
 
 local Controller = {}
 Controller.__index = Controller
@@ -65,7 +66,7 @@ function Controller.InitDefault(self: Controller, CharacterHeight)
 	character.PhysicsRotations = false
 	character.Restitution = 0
 	character.Friction = 250
-	character.Parent = workspace
+	character.Parent = Workspace
 
 	self.Character = character
 	self.Camera.UseSimpleController = false
@@ -83,7 +84,7 @@ function Controller.Update(self: Controller, DeltaTime: number)
 
 	local charSize = self.Character.Transform.Scale
 
-	local floorRayHit = #workspace:GetObjectsInAabb(
+	local floorRayHit = #Workspace:GetObjectsInAabb(
 		self.Character.Transform.Translation - vector.create(0, charSize.y / 4, 0),
 		vector.create(charSize.x * 1.2, charSize.y / 1.8, charSize.z * 1.2),
 		{ self.Character }

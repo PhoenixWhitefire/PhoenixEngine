@@ -1507,22 +1507,19 @@
   "@phoenix/global/warn": {
     "documentation": "* Same as `print`, except generates a Warning message"
   },
-  "@phoenix/global/workspace": {
-    "documentation": "* Shorthand for `game.Workspace`"
-  },
-  "@phoenix/globaltype/AnimationAsset.Animation": {
+  "@phoenix/globaltype/Animation.Animation": {
     "documentation": "The animation file"
   },
-  "@phoenix/globaltype/AnimationState.Looped": {
+  "@phoenix/globaltype/Animation.Looped": {
     "documentation": "Whether the track should loop when it reaches the end"
   },
-  "@phoenix/globaltype/AnimationState.Playing": {
+  "@phoenix/globaltype/Animation.Playing": {
     "documentation": "Whether the track is playing"
   },
-  "@phoenix/globaltype/AnimationState.Time": {
+  "@phoenix/globaltype/Animation.Time": {
     "documentation": "The current time position of the track"
   },
-  "@phoenix/globaltype/AnimationState.Weight": {
+  "@phoenix/globaltype/Animation.Weight": {
     "documentation": "The influence the track has over the rig. Not implemented yet"
   },
   "@phoenix/globaltype/Animator.Animating": {

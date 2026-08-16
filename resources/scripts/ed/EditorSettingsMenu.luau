@@ -169,7 +169,7 @@ local function renderAppearanceSection()
     imgui.separatortext("Edit theme")
 
     if DefaultThemes[Preferences.Theme] then
-        imgui.text("You must create a copy of the default theme in order to make edits")
+        imgui.text("You must create a copy of the default theme you have selected to make edits")
     else
         local currentInheritsIndex = if Theme.Inherit then table.find(AvailableThemes, Theme.Inherit) else 0
         currentInheritsIndex = if currentInheritsIndex then currentInheritsIndex + 1 else 1

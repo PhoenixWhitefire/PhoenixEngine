@@ -36,13 +36,9 @@
       }
     },
     "Components": {
-      "AnimationAsset": {
+      "Animation": {
         "Properties": {
-          "Animation": "String"
-        }
-      },
-      "AnimationState": {
-        "Properties": {
+          "Animation": "String",
           "Looped": "Boolean",
           "Playing": "Boolean",
           "Time": "Double",
@@ -486,8 +482,7 @@
       "_VMNAME": "string",
       "appendlog": "function",
       "game": "GameObject & EcDataModel",
-      "warn": "function",
-      "workspace": "GameObject & EcWorkspace"
+      "warn": "function"
     },
     "Libraries": {
       "Enum": {

@@ -272,7 +272,8 @@ type LoggingLogValue = { String: string, Value: unknown }
 
 definitionsFile ..= "\ntype Services = {\n"
 
-for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging", "Interface", "Environment", "DeveloperTools", "ScriptEngine" } do
+for _, s in { "Engine", "PlayerInput", "AssetManager", "History", "Physics", "Renderer", "Collections", "Network", "Logging", "Interface", "Environment", "DeveloperTools", "ScriptEngine",
+                "Workspace", } do
     definitionsFile ..= `  {s}: Ec{s},\n`
 end
 

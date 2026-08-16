@@ -2,6 +2,7 @@
 local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
+local Workspace = game:GetService("Workspace")
 local Interface = game:GetService("Interface")
 local History = game:GetService("History")
 local Physics = game:GetService("Physics")
@@ -38,7 +39,7 @@ type StateType = {
     ChangeStageTo: (Types.Stage) -> (),
 }
 
-local EditorCam = assert(workspace.SceneCamera)
+local EditorCam = assert(Workspace.SceneCamera)
 local WorkspaceLink = GameObject.fromTemplate("TreeLink")
 local InterfaceLink = GameObject.fromTemplate("TreeLink")
 local ServicesLink = GameObject.fromTemplate("TreeLink")
@@ -47,7 +48,7 @@ InterfaceLink.Name = "InterfaceLink"
 ServicesLink.Name = "ServicesLink"
 
 EditorCam.UseSimpleController = true
-WorkspaceLink.Parent = workspace
+WorkspaceLink.Parent = Workspace
 InterfaceLink.Parent = Interface
 Physics.Simulating = false
 Physics:SetSimulationForcePaused(true)
@@ -442,7 +443,7 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
             }
             fs.write("@project/phoenix.editor", json.encode(edconf :: JsonEncodable))
 
-            EditorCameraTransform.Save(workspace.SceneCamera)
+            EditorCameraTransform.Save(Workspace.SceneCamera)
         end)
 
         if not modifiedDate then

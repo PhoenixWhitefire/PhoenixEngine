@@ -64,7 +64,7 @@ function ProjectPlaying.Enter(_prev)
     Physics.Simulating = true
 
     State.Project.DataModel.VM = Configuration.PlaytestVMName
-    Engine:BindDataModel(State.Project.DataModel) -- Set the `game` and `workspace` variables to the correct values in game scripts
+    Engine:BindDataModel(State.Project.DataModel) -- Set the `game` global to the correct value in game scripts
     ScriptEngine:CreateVM(Configuration.PlaytestVMName)
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
 

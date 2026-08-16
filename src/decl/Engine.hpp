@@ -1,6 +1,5 @@
 #pragma once
 
-#include <filesystem>
 #include <nljson.hpp>
 #include <imgui/imgui.h>
 

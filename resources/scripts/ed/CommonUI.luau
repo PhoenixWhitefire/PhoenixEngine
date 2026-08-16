@@ -5,6 +5,7 @@ local DeveloperTools = game:GetService("DeveloperTools")
 local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
+local Workspace = game:GetService("Workspace")
 local Renderer = game:GetService("Renderer")
 local Network = game:GetService("Network")
 local History = game:GetService("History")
@@ -195,9 +196,9 @@ PlayerInput.ScrollEvent:Connect(function(scroll)
     end
 
     if not PlayerInput.IsKeyboardSunk and PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then
-        workspace.SceneCamera.FieldOfView -= scroll.Delta.y * 5
+        Workspace.SceneCamera.FieldOfView -= scroll.Delta.y * 5
     else
-        workspace.SceneCamera.Transform += workspace:ScreenPointToVector(PlayerInput:GetCursorPosition()) * scroll.Delta.y * 5
+        Workspace.SceneCamera.Transform += Workspace:ScreenPointToVector(PlayerInput:GetCursorPosition()) * scroll.Delta.y * 5
     end
 end)
 
@@ -359,7 +360,7 @@ local function homeTab(_: number)
                 importedOrError.Parent = State.Project.Workspace
                 DeveloperTools:SetExplorerSelections({ importedOrError })
 
-                local hit = State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Translation, workspace.SceneCamera.Transform.Forward * 50)
+                local hit = State.Project.Workspace:Raycast(Workspace.SceneCamera.Transform.Translation, Workspace.SceneCamera.Transform.Forward * 50)
 
                 if hit then
                     importedOrError.Transform = Matrix.translated(hit.Position)
@@ -1336,14 +1337,14 @@ end
 
 function CommonUI.RenderViewport(DeltaTime: number)
     if State.CurrentStage == "ProjectEditing" and State.Project.Workspace then
-        local mouseVec = workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
+        local mouseVec = Workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
         local rayresult = if not PlayerInput.IsMouseSunk
-                            then State.Project.Workspace:Raycast(workspace.SceneCamera.Transform.Translation, mouseVec, { SelectionPart })
+                            then State.Project.Workspace:Raycast(Workspace.SceneCamera.Transform.Translation, mouseVec, { SelectionPart })
                             else nil
 
         if rayresult then
             SelectionPart.Transform = rayresult.Object.Transform:WithScale(rayresult.Object.Transform.Scale + vector.one * 0.05)
-            SelectionPart.Parent = workspace
+            SelectionPart.Parent = Workspace
 
             if PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left) and isMouseWithinViewport() then
                 if PlayerInput:IsKeyPressed(Enum.Key.LeftControl) then -- left control
@@ -1384,7 +1385,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
             new = (new :: any)
             new.Transform = sel.Transform:WithScale(sel.Transform.Scale + vector.one * 0.1)
             new.Tint = Color.new(84/255, 150/255, 1)
-            new.Parent = workspace
+            new.Parent = Workspace
             PrevSelections[sel.ObjectId] = new
         else
             local box = PrevSelections[sel.ObjectId]

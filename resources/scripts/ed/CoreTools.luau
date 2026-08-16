@@ -1,12 +1,13 @@
 local DeveloperTools = game:GetService("DeveloperTools")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
+local Workspace = game:GetService("Workspace")
 local History = game:GetService("History")
 
 local CoreTools = {}
 CoreTools.HoveringOverCamera = nil :: (GameObject & EcTransform)?
 CoreTools.VisualizationsContainer = GameObject.fromTemplate("Model")
-CoreTools.VisualizationsContainer.Parent = workspace
+CoreTools.VisualizationsContainer.Parent = Workspace
 CoreTools.VisualizationTargets = {} :: { [GameObject & EcTransform]: GameObject }
 
 local cam = assert(AssetManager:LoadScene("./resources/scenes/camera.hxscene"))[1] :: (GameObject & EcTransform)?
@@ -129,7 +130,7 @@ local GizmoDragStartSize = vector.one
 local GizmoDragPlaneNormal = nil
 local BeganSurfaceDragAction: number? = nil
 local BeganGizmoDragAction: number? = nil
-local PrevCamPos = workspace.SceneCamera.Transform.Translation
+local PrevCamPos = Workspace.SceneCamera.Transform.Translation
 
 local function roundTo(n: number, x: number): number
     return math.round(n / x) * x
@@ -161,7 +162,7 @@ function rayPlaneIntersect(rayOrigin: vector, rayDir: vector, planePoint: vector
 end
 
 local function findDxDyToKeepOnScreen(Point: vector, ViewportRenderPosition: vector, ViewportRenderSize: vector): (number, number)
-    local screenPos = workspace:WorldToScreenPoint(Point) - ViewportRenderPosition
+    local screenPos = Workspace:WorldToScreenPoint(Point) - ViewportRenderPosition
 
     local margin = 120
     local width = ViewportRenderSize.x
@@ -188,7 +189,7 @@ end
 local function keepGizmoInView(target: GameObject & EcTransform, ViewportRenderPosition: vector, ViewportRenderSize: vector, DeltaTime: number)
     assert(GizmoDragHandle)
 
-    local cam = workspace.SceneCamera
+    local cam = Workspace.SceneCamera
 
     local orbitSpeed = math.rad(15) -- degrees/sec
     local dx, dy = 0, 0
@@ -234,14 +235,14 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
 
     local tryingToInteract = not PlayerInput.IsMouseSunk and PlayerInput:IsMouseButtonPressed(Enum.MouseButton.Left)
 
-    local cam = workspace.SceneCamera
+    local cam = Workspace.SceneCamera
     local camPos = cam.Transform.Translation
     local cpos = PlayerInput:GetCursorPosition()
 
-    local mouseVector = workspace:ScreenPointToVector(cpos, 1000)
+    local mouseVector = Workspace:ScreenPointToVector(cpos, 1000)
 
     local cameraHit = if not IsSurfaceDragging and not IsGizmoDragging
-                        then workspace:Raycast(camPos, mouseVector, { CoreTools.VisualizationsContainer }, false)
+                        then Workspace:Raycast(camPos, mouseVector, { CoreTools.VisualizationsContainer }, false)
                         else nil
     local camObj = if cameraHit then assert(cameraHit.Object.Parent) :: GameObject & EcTransform else nil
     local camHitDistance = if cameraHit then vector.magnitude(cameraHit.Position - cam.Transform.Translation) else math.huge
@@ -261,7 +262,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     if cameraHit and CoreTools.HoveringOverCamera ~= camObj and camObj then
-        local hidden = vector.magnitude(workspace.SceneCamera.Transform.Translation - camObj.Transform.Translation) < 0.5
+        local hidden = vector.magnitude(Workspace.SceneCamera.Transform.Translation - camObj.Transform.Translation) < 0.5
 
         for _, g in camObj:GetChildren() do
             if g:HasComponent("Mesh") then
@@ -302,7 +303,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
 
     CoreTools.HoveringOverCamera = camObj
 
-    if not target or not workspace.SceneCamera or target == workspace.SceneCamera then
+    if not target or not Workspace.SceneCamera or target == Workspace.SceneCamera then
         resetGizmo()
         return
     end
@@ -315,7 +316,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     local gizmoHit = if tryingToInteract
-                        then workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false)
+                        then Workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false)
                         else nil
 
     if tryingToInteract and not IsGizmoDragging and not gizmoHit then
@@ -350,7 +351,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     if IsSurfaceDragging then
         GizmoContainer.Parent = nil
     else
-        GizmoContainer.Parent = workspace
+        GizmoContainer.Parent = Workspace
     end
 
     if not GizmoActive then

@@ -5,25 +5,12 @@
 
 #include "datatype/ComponentBase.hpp"
 
-struct EcAnimationAsset : public Component<EntityComponent::AnimationAsset>
+struct EcAnimation : public Component<EntityComponent::Animation>
 {
     void SetAnimation(const std::string&);
 
     std::string Animation;
-    uint32_t AssetId = UINT32_MAX;
-
-    bool Valid = true;
-};
-
-class AnimationAssetComponentManager : public ComponentManager<EcAnimationAsset>
-{
-public:
-    const Reflection::StaticPropertyMap& GetProperties() override;
-};
-
-struct EcAnimationState : public Component<EntityComponent::AnimationState>
-{
-    uint32_t AnimationAssetId = UINT32_MAX;
+    uint32_t AnimationId = UINT32_MAX;
     float Time = 0.f;
     float Weight = 1.f;
     bool Playing = false;
@@ -52,7 +39,7 @@ struct AnimationData
     float Length = 0.f;
 };
 
-class AnimationStateComponentManager : public ComponentManager<EcAnimationState>
+class AnimationComponentManager : public ComponentManager<EcAnimation>
 {
 public:
     const Reflection::StaticPropertyMap& GetProperties() override;

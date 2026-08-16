@@ -8,6 +8,7 @@
 #include "component/DataModel.hpp"
 #include "component/TreeLink.hpp"
 #include "script/ScriptEngine.hpp"
+#include "datatype/Services.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -239,12 +240,6 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
 
         ScriptEngine::L::PushGenericValue(L, Dm->Object->ToGenericValue());
         lua_setglobal(L, "game");
-
-        if (GameObject* wp = Dm->Object->FindChildWithComponent(EntityComponent::Workspace))
-        {
-            ScriptEngine::L::PushGenericValue(L, wp->ToGenericValue());
-            lua_setglobal(L, "workspace");
-        }
 
         int resumeResult = ScriptEngine::L::Resume(L, nullptr, 0);
 

@@ -14,6 +14,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "datatype/EntityComponent.hpp"
+#include "datatype/Ref.hpp"
 #include "script/InputEvent.hpp"
 
 #define REFLECTION_PROPERTY_GET_SIMPLE(c, n) [](void* p)->Reflection::GenericValue { return static_cast<c*>(p)->n; }

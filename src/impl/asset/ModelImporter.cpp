@@ -1,6 +1,4 @@
-#include <filesystem>
 #include <cfloat>
-#include <set>
 #include <glm/gtc/type_ptr.hpp>
 #include <stb/stb_image.h>
 #include <tracy/Tracy.hpp>
@@ -14,7 +12,6 @@
 #include "component/Animation.hpp"
 #include "component/Model.hpp"
 #include "component/Mesh.hpp"
-#include "component/Bone.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
@@ -24,1412 +21,1412 @@
 #include <glm/gtx/euler_angles.hpp>
 
 static std::string getTexturePath(
-	const std::string& ModelPath,
-	const std::string& ModelName,
-	const nlohmann::json& JsonData,
-	const nlohmann::json& ImageJson,
-	const std::string_view& BufferData
+    const std::string& ModelPath,
+    const std::string& ModelName,
+    const nlohmann::json& JsonData,
+    const nlohmann::json& ImageJson,
+    const std::string_view& BufferData
 )
 {
-	if (ImageJson.find("uri") == ImageJson.end())
-	{
-		ZoneScopedN("ExtractImageData");
+    if (ImageJson.find("uri") == ImageJson.end())
+    {
+        ZoneScopedN("ExtractImageData");
 
-		std::string mimeType = ImageJson["mimeType"];
-		int32_t bufferViewIndex = ImageJson["bufferView"];
+        std::string mimeType = ImageJson["mimeType"];
+        int32_t bufferViewIndex = ImageJson["bufferView"];
 
-		const nlohmann::json& bufferView = JsonData["bufferViews"][bufferViewIndex];
+        const nlohmann::json& bufferView = JsonData["bufferViews"][bufferViewIndex];
 
-		uint32_t bufferIndex = bufferView["buffer"];
-		uint32_t byteOffset = bufferView.value("byteOffset", 0);
-		uint32_t byteLength = bufferView["byteLength"];
+        uint32_t bufferIndex = bufferView["buffer"];
+        uint32_t byteOffset = bufferView.value("byteOffset", 0);
+        uint32_t byteLength = bufferView["byteLength"];
 
-		if (bufferIndex != 0)
-			RAISE_RT("ModelImporter::getTexturePath got non-zero buffer index {}", std::to_string(bufferIndex));
+        if (bufferIndex != 0)
+            RAISE_RT("ModelImporter::getTexturePath got non-zero buffer index {}", std::to_string(bufferIndex));
 
-		std::string_view imageData{ BufferData.begin() + byteOffset, BufferData.begin() + byteOffset + byteLength };
+        std::string_view imageData{ BufferData.begin() + byteOffset, BufferData.begin() + byteOffset + byteLength };
 
-		std::string fileExtension;
+        std::string fileExtension;
 
-		if (mimeType == "image/jpeg")
-			fileExtension = ".jpeg";
+        if (mimeType == "image/jpeg")
+            fileExtension = ".jpeg";
 
-		else if (mimeType == "image/png")
-			fileExtension = ".png";
+        else if (mimeType == "image/png")
+            fileExtension = ".png";
 
-		else
-		{
-			Log.WarningF("Unrecognized MIME '{}'", mimeType);
-			fileExtension = std::string(mimeType.begin() + 6, mimeType.end());
-		}
+        else
+        {
+            Log.WarningF("Unrecognized MIME '{}'", mimeType);
+            fileExtension = std::string(mimeType.begin() + 6, mimeType.end());
+        }
 
-		std::string filePath = "textures/"
-								+ ModelName
-								+ "/"
-								+ ImageJson.value("name", "UNNAMED")
-								+ fileExtension;
-		
-		bool writeSucceeded = FileRW::WriteFileCreateDirectories(
-			filePath,
-			imageData
-		);
+        std::string filePath = "textures/"
+                                + ModelName
+                                + "/"
+                                + ImageJson.value("name", "UNNAMED")
+                                + fileExtension;
 
-		if (!writeSucceeded)
-			Log.WarningF(
-				"Failed to extract image from Model '{}' (taking name as '{}') to path: {}",
-				ModelPath, ModelName, filePath
-			);
+        bool writeSucceeded = FileRW::WriteFileCreateDirectories(
+            filePath,
+            imageData
+        );
 
-		return filePath;
-	}
-	else
-	{
-		std::string fileDirectory = ModelPath.substr(0, ModelPath.find_last_of('/') + 1);
-		return fileDirectory + (std::string)ImageJson["uri"];
-	}
+        if (!writeSucceeded)
+            Log.WarningF(
+                "Failed to extract image from Model '{}' (taking name as '{}') to path: {}",
+                ModelPath, ModelName, filePath
+            );
+
+        return filePath;
+    }
+    else
+    {
+        std::string fileDirectory = ModelPath.substr(0, ModelPath.find_last_of('/') + 1);
+        return fileDirectory + (std::string)ImageJson["uri"];
+    }
 }
 
 ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
 {
-	ZoneScoped;
-
-	std::string gltfFilePath = FileRW::ResolvePathNormalized(AssetPath);
-	m_File = gltfFilePath;
-	m_ModelName = m_File;
-
-	if (m_File.find("scene.gltf") != std::string::npos)
-	{
-		if (m_File.find_last_of('/') != std::string::npos)
-			m_ModelName = m_File.substr(0, m_File.find_last_of('/'));
-
-		if (m_ModelName.find_last_of('/') != std::string::npos)
-			m_ModelName = m_ModelName.substr(m_ModelName.find_last_of('/') + 1);
-	}
-	else
-	{
-		m_ModelName = m_File.substr(m_File.find_last_of('/') + 1);
-
-		if (m_ModelName.find(".glb") != std::string::npos)
-			m_ModelName = m_ModelName.substr(0, m_ModelName.size() - 4);
-	}
-
-	bool fileExists = true;
-	std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists);
-
-	if (!fileExists)
-		RAISE_RT("Failed to load Model, file '{}' not found", AssetPath);
-
-	// Binary files start with magic number that corresponds to "glTF"
-	// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
-	if (std::string_view(textData.begin(), textData.begin() + 4) == "glTF")
-	{
-		bool reachedEof = false;
-
-		uint32_t glbVersion = ReadU32(textData, 4, &reachedEof);
-		if (reachedEof)
-			RAISE_RT("Reached end of file when reading glTF version");
-
-		if (glbVersion != 2)
-			Log.WarningF(
-				"GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
-				glbVersion
-			);
-
-		// header is 12 bytes
-		// chunks begin past it
-		uint32_t jsonChLength = ReadU32(textData, 12, &reachedEof);
-		uint32_t jsonChType = ReadU32(textData, 16, &reachedEof);
-
-		if (reachedEof)
-			RAISE_RT("Reached end of file when reading JSON chunk header");
-
-		if (jsonChType != 0x4E4F534A)
-			RAISE_RT(
-				"Failed to load Model '{}', first Chunk in binary file was not of type JSON",
-				AssetPath
-			);
-
-		ZoneScopedN("ParseGLBStructure");
-
-		std::string_view jsonString{ textData.begin() + 20, textData.begin() + 20 + jsonChLength };
-		m_JsonData = nlohmann::json::parse(jsonString);
-
-		// 20ull because
-		// 12 byte header + 4 byte chunk length + 4 byte chunk type
-		std::string_view binaryChunk{ textData.begin() + 20ull + jsonChLength, textData.end() };
-
-		uint32_t binaryChLength = ReadU32(binaryChunk, (size_t)0, &reachedEof);
-		uint32_t binaryChType = ReadU32(binaryChunk, 4, &reachedEof);
-
-		if (reachedEof)
-			RAISE_RT("Reached end of file when reading BIN chunk header");
-
-		if (binaryChType != 0x004E4942)
-			RAISE_RT(
-				"Failed to load Model '{}', second Chunk in binary file was not of type BIN",
-				AssetPath
-			);
-
-		// + 8 because 8 byte header
-		m_Data = std::string(binaryChunk.begin() + 8, binaryChunk.begin() + 8 + binaryChLength);
-	}
-	else
-	{
-		try
-		{
-			ZoneScopedN("ParseGLTF");
-			m_JsonData = nlohmann::json::parse(textData);
-		}
-		catch (const nlohmann::json::parse_error& Error)
-		{
-			RAISE_RT("Failed to import model due to parse error: {}", Error.what());
-		}
-
-		m_Data = m_GetData();
-	}
-
-	try
-	{
-		const nlohmann::json& assetInfoJson = m_JsonData["asset"];
-
-		if (assetInfoJson.find("minVersion") != assetInfoJson.end())
-		{
-			Log.WarningF(
-				"glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
-				std::stof(assetInfoJson.value("minVersion", "2.0"))
-			);
-		}
-		else
-		{
-			float gltfVersion = std::stof(assetInfoJson.value("version", "2.0"));
-
-			if (gltfVersion < 2.f || gltfVersion >= 3.f)
-				Log.WarningF(
-					"Expected glTF version >= 2.0 and < 3.0, got {}. Unexpected behavior may occur.",
-					gltfVersion
-				);
-		}
-
-		const nlohmann::json& requiredExtensionsJson = m_JsonData["extensionsRequired"];
-		const nlohmann::json& usedExtensionsJson = m_JsonData["extensionsUsed"];
-
-		for (std::string v : requiredExtensionsJson)
-			Log.WarningF(
-				"glTF file specifies 'required' extension '{}'. That's too bad, because no extensions are supported.",
-				v
-			);
-
-		for (std::string v : usedExtensionsJson)
-			Log.WarningF(
-				"glTF file specifies extension '{}' is used. That's too bad, because no extensions are supported.",
-				v
-			);
-
-		// actually load the model
-		m_Nodes.emplace_back(
-			m_ModelName,
-			UINT32_MAX,
-			UINT32_MAX,
-			ModelNode::NodeType::Container
-		);
-
-		ZoneScopedN("ParseNodes");
-
-		int mainSceneId = m_JsonData["scene"];
-		// root nodes
-		for (uint32_t node : m_JsonData["scenes"][mainSceneId]["nodes"])
-			m_TraverseNode(node, 0);
-
-		m_BuildRig();
-	}
-	catch (const nlohmann::json::type_error& Error)
-	{
-		RAISE_RT("Failed to import model due to type error: {}", Error.what());
-	}
-
-	ZoneName("ImportNodes", 11);
-
-	MaterialManager* mtlManager = MaterialManager::Get();
-	MeshProvider* meshProvider = MeshProvider::Get();
-
-	std::vector<ObjectHandle> loadedObjects;
-	loadedObjects.reserve(m_Nodes.size() + 1);
-
-	for (ModelLoader::ModelNode& node : m_Nodes)
-	{
-		ObjectHandle object;
-
-		switch (node.Type)
-		{
-
-		case ModelNode::NodeType::Container:
-		{
-			object = GameObjectManager::s_Create(EntityComponent::Model);
-			object->AddComponent(EntityComponent::Transform);
-
-			if (node.Parent == UINT32_MAX) // root node
-				object->FindComponent<EcModel>()->ImportPath = AssetPath;
-
-			break;
-		}
-
-		case ModelNode::NodeType::Primitive:
-		{
-			// TODO: cleanup code
-			object = GameObjectManager::s_Create(EntityComponent::Mesh);
-			object->AddComponent(EntityComponent::RigidBody);
-			object->AddComponent(EntityComponent::Transform);
-			EcMesh* meshObject = object->FindComponent<EcMesh>();
-
-			/*
-				When;
-					AssetPath = "models/crow/scene.gltf"
-					MeshName = "main.001"
-
-				Then:
-					meshPath = "meshes/models/crow/scene.gltf/main.001.hxmesh"
-
-				Could be cleaner, but it doesn't matter
-				22/12/2024
-			*/
-			std::string meshPath = "meshes/"
-									+ m_ModelName
-									+ "/"
-									+ node.Name
-									+ ".hxmesh";
-
-			meshProvider->UnloadMesh(meshPath);
-			meshProvider->Save(node.Data, meshPath);
-			meshObject->SetRenderMesh(meshPath);
-
-			TextureManager* texManager = TextureManager::Get();
-
-			nlohmann::json materialJson;
-
-			if (m_HasSkinning)
-				materialJson["Shader"] = "@base/shaders/worldUberSkinned.shp";
-			else
-				materialJson["Shader"] = "@base/shaders/worldUber.shp";
-
-			const ModelLoader::MeshMaterial& material = node.Material;
-
-			meshObject->Tint = Color(
-				material.BaseColorFactor.r,
-				material.BaseColorFactor.g,
-				material.BaseColorFactor.b
-			);
-			meshObject->Transparency = 1.f - material.BaseColorFactor.a;
-			meshObject->FaceCulling = material.DoubleSided ? FaceCullingMode::None : FaceCullingMode::BackFace;
-
-			Texture& colorTex = texManager->GetTextureResource(material.BaseColorTexture);
-			Texture& metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
-			Texture& normalTex = texManager->GetTextureResource(material.NormalTexture);
-			Texture& emissiveTex = texManager->GetTextureResource(material.EmissiveTexture);
-
-			materialJson["ColorMap"] = colorTex.ImagePath;
-
-			// TODO: glTF assumes proper PBR, with factors from 0 - 1 instead
-			// of specular exponents and multipliers etc
-			// update this when PBR is added
-			// 26/10/2024
-			materialJson["specExponent"] = 16.f;
-
-			if (material.MetallicRoughnessTexture != 0)
-				materialJson["MetallicRoughnessMap"] = metallicRoughnessTex.ImagePath;
-
-			if (material.NormalTexture != 0)
-				materialJson["NormalMap"] = normalTex.ImagePath;
-
-			if (material.EmissiveTexture != 0)
-				materialJson["EmissionMap"] = emissiveTex.ImagePath;
-
-			materialJson["HasTranslucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
-
-			materialJson["Uniforms"] = nlohmann::json::object();
-
-			if (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Mask)
-				materialJson["Uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
-
-			materialJson["BilinearFiltering"] = material.LinearlySmoothened;
-
-			// `models/EmbeddedTexture.glb/Material.001`
-			std::string materialName = "models/"
-				+ m_ModelName
-				+ "/"
-				+ material.Name;
-
-			PHX_CHECK(FileRW::WriteFileCreateDirectories(
-				"materials/" + materialName + ".mtl",
-				materialJson.dump(2)
-			));
-
-			mtlManager->UnloadMaterial(materialName);
-			meshObject->MaterialId = mtlManager->LoadFromPath(materialName);
-			mtlManager->SaveToPath(mtlManager->GetMaterialResource(meshObject->MaterialId), materialName);
-
-			meshObject->MetalnessFactor = material.MetallicFactor;
-			meshObject->RoughnessFactor = material.RoughnessFactor;
-
-			break;
-		}
-
-		case ModelNode::NodeType::Bone:
-			break;
-
-		default:
-		{
-			object = GameObjectManager::s_Create(EntityComponent::Mesh);
-		}
-
-		}
-
-		if (!object)
-			continue;
-
-		if (node.LocalTransform != glm::mat4(1.f))
-		{
-			EcTransform* ct = object->FindComponent<EcTransform>();
-			if (!ct)
-			{
-				object->AddComponent(EntityComponent::Transform);
-				ct = object->FindComponent<EcTransform>();
-			}
-
-			ct->LocalTransform = node.LocalTransform;
-		}
-
-		object->Name = node.Name;
-		loadedObjects.push_back(object);
-
-		uint32_t parentIndex = node.Parent;
-		if (parentIndex == UINT32_MAX) // root node
-		{
-			assert(loadedObjects.size() == 1);
-			Model = object;
-		}
-		else
-			object->SetParent(
-				loadedObjects.at(parentIndex) != object
-				? loadedObjects[parentIndex].Dereference()
-				: GameObjectManager::Get()->FindById(Parent)
-			);
-	}
-
-	for (const ObjectHandle& obj : loadedObjects)
-	{
-		if (EcTransform* et = obj->FindComponent<EcTransform>())
-			et->RecomputeTransformTree();
-
-		assert(obj->HardRefCount > 0);
-	}
-
-	if (m_Animations.size() > 0)
-	{
-		Model->AddComponent(EntityComponent::Animator);
-
-		for (const ObjectHandle& anim : m_Animations)
-			anim->SetParent(loadedObjects.at(0));
-	}
+    ZoneScoped;
+
+    std::string gltfFilePath = FileRW::ResolvePathNormalized(AssetPath);
+    m_File = gltfFilePath;
+    m_ModelName = m_File;
+
+    if (m_File.find("scene.gltf") != std::string::npos)
+    {
+        if (m_File.find_last_of('/') != std::string::npos)
+            m_ModelName = m_File.substr(0, m_File.find_last_of('/'));
+
+        if (m_ModelName.find_last_of('/') != std::string::npos)
+            m_ModelName = m_ModelName.substr(m_ModelName.find_last_of('/') + 1);
+    }
+    else
+    {
+        m_ModelName = m_File.substr(m_File.find_last_of('/') + 1);
+
+        if (m_ModelName.find(".glb") != std::string::npos)
+            m_ModelName = m_ModelName.substr(0, m_ModelName.size() - 4);
+    }
+
+    bool fileExists = true;
+    std::string textData = FileRW::ReadFile(gltfFilePath, &fileExists);
+
+    if (!fileExists)
+        RAISE_RT("Failed to load Model, file '{}' not found", AssetPath);
+
+    // Binary files start with magic number that corresponds to "glTF"
+    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-header
+    if (std::string_view(textData.begin(), textData.begin() + 4) == "glTF")
+    {
+        bool reachedEof = false;
+
+        uint32_t glbVersion = ReadU32(textData, 4, &reachedEof);
+        if (reachedEof)
+            RAISE_RT("Reached end of file when reading glTF version");
+
+        if (glbVersion != 2)
+            Log.WarningF(
+                "GLB header declares version as '{}', when only `2` is supported. Unexpected behavior may occur.",
+                glbVersion
+            );
+
+        // header is 12 bytes
+        // chunks begin past it
+        uint32_t jsonChLength = ReadU32(textData, 12, &reachedEof);
+        uint32_t jsonChType = ReadU32(textData, 16, &reachedEof);
+
+        if (reachedEof)
+            RAISE_RT("Reached end of file when reading JSON chunk header");
+
+        if (jsonChType != 0x4E4F534A)
+            RAISE_RT(
+                "Failed to load Model '{}', first Chunk in binary file was not of type JSON",
+                AssetPath
+            );
+
+        ZoneScopedN("ParseGLBStructure");
+
+        std::string_view jsonString{ textData.begin() + 20, textData.begin() + 20 + jsonChLength };
+        m_JsonData = nlohmann::json::parse(jsonString);
+
+        // 20ull because
+        // 12 byte header + 4 byte chunk length + 4 byte chunk type
+        std::string_view binaryChunk{ textData.begin() + 20ull + jsonChLength, textData.end() };
+
+        uint32_t binaryChLength = ReadU32(binaryChunk, (size_t)0, &reachedEof);
+        uint32_t binaryChType = ReadU32(binaryChunk, 4, &reachedEof);
+
+        if (reachedEof)
+            RAISE_RT("Reached end of file when reading BIN chunk header");
+
+        if (binaryChType != 0x004E4942)
+            RAISE_RT(
+                "Failed to load Model '{}', second Chunk in binary file was not of type BIN",
+                AssetPath
+            );
+
+        // + 8 because 8 byte header
+        m_Data = std::string(binaryChunk.begin() + 8, binaryChunk.begin() + 8 + binaryChLength);
+    }
+    else
+    {
+        try
+        {
+            ZoneScopedN("ParseGLTF");
+            m_JsonData = nlohmann::json::parse(textData);
+        }
+        catch (const nlohmann::json::parse_error& Error)
+        {
+            RAISE_RT("Failed to import model due to parse error: {}", Error.what());
+        }
+
+        m_Data = m_GetData();
+    }
+
+    try
+    {
+        const nlohmann::json& assetInfoJson = m_JsonData["asset"];
+
+        if (assetInfoJson.find("minVersion") != assetInfoJson.end())
+        {
+            Log.WarningF(
+                "glTF file specifies `asset.minVersion` as '{}'. Unexpected behavior may occur.",
+                std::stof(assetInfoJson.value("minVersion", "2.0"))
+            );
+        }
+        else
+        {
+            float gltfVersion = std::stof(assetInfoJson.value("version", "2.0"));
+
+            if (gltfVersion < 2.f || gltfVersion >= 3.f)
+                Log.WarningF(
+                    "Expected glTF version >= 2.0 and < 3.0, got {}. Unexpected behavior may occur.",
+                    gltfVersion
+                );
+        }
+
+        const nlohmann::json& requiredExtensionsJson = m_JsonData["extensionsRequired"];
+        const nlohmann::json& usedExtensionsJson = m_JsonData["extensionsUsed"];
+
+        for (std::string v : requiredExtensionsJson)
+            Log.WarningF(
+                "glTF file specifies 'required' extension '{}'. That's too bad, because no extensions are supported.",
+                v
+            );
+
+        for (std::string v : usedExtensionsJson)
+            Log.WarningF(
+                "glTF file specifies extension '{}' is used. That's too bad, because no extensions are supported.",
+                v
+            );
+
+        // actually load the model
+        m_Nodes.emplace_back(
+            m_ModelName,
+            UINT32_MAX,
+            UINT32_MAX,
+            ModelNode::NodeType::Container
+        );
+
+        ZoneScopedN("ParseNodes");
+
+        int mainSceneId = m_JsonData["scene"];
+        // root nodes
+        for (uint32_t node : m_JsonData["scenes"][mainSceneId]["nodes"])
+            m_TraverseNode(node, 0);
+
+        m_BuildRig();
+    }
+    catch (const nlohmann::json::type_error& Error)
+    {
+        RAISE_RT("Failed to import model due to type error: {}", Error.what());
+    }
+
+    ZoneName("ImportNodes", 11);
+
+    MaterialManager* mtlManager = MaterialManager::Get();
+    MeshProvider* meshProvider = MeshProvider::Get();
+
+    std::vector<ObjectHandle> loadedObjects;
+    loadedObjects.reserve(m_Nodes.size() + 1);
+
+    for (ModelLoader::ModelNode& node : m_Nodes)
+    {
+        ObjectHandle object;
+
+        switch (node.Type)
+        {
+
+        case ModelNode::NodeType::Container:
+        {
+            object = GameObjectManager::s_Create(EntityComponent::Model);
+            object->AddComponent(EntityComponent::Transform);
+
+            if (node.Parent == UINT32_MAX) // root node
+                object->FindComponent<EcModel>()->ImportPath = AssetPath;
+
+            break;
+        }
+
+        case ModelNode::NodeType::Primitive:
+        {
+            // TODO: cleanup code
+            object = GameObjectManager::s_Create(EntityComponent::Mesh);
+            object->AddComponent(EntityComponent::RigidBody);
+            object->AddComponent(EntityComponent::Transform);
+            EcMesh* meshObject = object->FindComponent<EcMesh>();
+
+            /*
+                When;
+                    AssetPath = "models/crow/scene.gltf"
+                    MeshName = "main.001"
+
+                Then:
+                    meshPath = "meshes/models/crow/scene.gltf/main.001.hxmesh"
+
+                Could be cleaner, but it doesn't matter
+                22/12/2024
+            */
+            std::string meshPath = "meshes/"
+                                    + m_ModelName
+                                    + "/"
+                                    + node.Name
+                                    + ".hxmesh";
+
+            meshProvider->UnloadMesh(meshPath);
+            meshProvider->Save(node.Data, meshPath);
+            meshObject->SetRenderMesh(meshPath);
+
+            TextureManager* texManager = TextureManager::Get();
+
+            nlohmann::json materialJson;
+
+            if (m_HasSkinning)
+                materialJson["Shader"] = "@base/shaders/worldUberSkinned.shp";
+            else
+                materialJson["Shader"] = "@base/shaders/worldUber.shp";
+
+            const ModelLoader::MeshMaterial& material = node.Material;
+
+            meshObject->Tint = Color(
+                material.BaseColorFactor.r,
+                material.BaseColorFactor.g,
+                material.BaseColorFactor.b
+            );
+            meshObject->Transparency = 1.f - material.BaseColorFactor.a;
+            meshObject->FaceCulling = material.DoubleSided ? FaceCullingMode::None : FaceCullingMode::BackFace;
+
+            Texture& colorTex = texManager->GetTextureResource(material.BaseColorTexture);
+            Texture& metallicRoughnessTex = texManager->GetTextureResource(material.MetallicRoughnessTexture);
+            Texture& normalTex = texManager->GetTextureResource(material.NormalTexture);
+            Texture& emissiveTex = texManager->GetTextureResource(material.EmissiveTexture);
+
+            materialJson["ColorMap"] = colorTex.ImagePath;
+
+            // TODO: glTF assumes proper PBR, with factors from 0 - 1 instead
+            // of specular exponents and multipliers etc
+            // update this when PBR is added
+            // 26/10/2024
+            materialJson["specExponent"] = 16.f;
+
+            if (material.MetallicRoughnessTexture != 0)
+                materialJson["MetallicRoughnessMap"] = metallicRoughnessTex.ImagePath;
+
+            if (material.NormalTexture != 0)
+                materialJson["NormalMap"] = normalTex.ImagePath;
+
+            if (material.EmissiveTexture != 0)
+                materialJson["EmissionMap"] = emissiveTex.ImagePath;
+
+            materialJson["HasTranslucency"] = (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Blend);
+
+            materialJson["Uniforms"] = nlohmann::json::object();
+
+            if (material.AlphaMode == MeshMaterial::MaterialAlphaMode::Mask)
+                materialJson["Uniforms"]["AlphaCutoff"] = material.AlphaCutoff;
+
+            materialJson["BilinearFiltering"] = material.LinearlySmoothened;
+
+            // `models/EmbeddedTexture.glb/Material.001`
+            std::string materialName = "models/"
+                + m_ModelName
+                + "/"
+                + material.Name;
+
+            PHX_CHECK(FileRW::WriteFileCreateDirectories(
+                "materials/" + materialName + ".mtl",
+                materialJson.dump(2)
+            ));
+
+            mtlManager->UnloadMaterial(materialName);
+            meshObject->MaterialId = mtlManager->LoadFromPath(materialName);
+            mtlManager->SaveToPath(mtlManager->GetMaterialResource(meshObject->MaterialId), materialName);
+
+            meshObject->MetalnessFactor = material.MetallicFactor;
+            meshObject->RoughnessFactor = material.RoughnessFactor;
+
+            break;
+        }
+
+        case ModelNode::NodeType::Bone:
+            break;
+
+        default:
+        {
+            object = GameObjectManager::s_Create(EntityComponent::Mesh);
+        }
+
+        }
+
+        if (!object)
+            continue;
+
+        if (node.LocalTransform != glm::mat4(1.f))
+        {
+            EcTransform* ct = object->FindComponent<EcTransform>();
+            if (!ct)
+            {
+                object->AddComponent(EntityComponent::Transform);
+                ct = object->FindComponent<EcTransform>();
+            }
+
+            ct->LocalTransform = node.LocalTransform;
+        }
+
+        object->Name = node.Name;
+        loadedObjects.push_back(object);
+
+        uint32_t parentIndex = node.Parent;
+        if (parentIndex == UINT32_MAX) // root node
+        {
+            assert(loadedObjects.size() == 1);
+            Model = object;
+        }
+        else
+            object->SetParent(
+                loadedObjects.at(parentIndex) != object
+                ? loadedObjects[parentIndex].Dereference()
+                : GameObjectManager::Get()->FindById(Parent)
+            );
+    }
+
+    for (const ObjectHandle& obj : loadedObjects)
+    {
+        if (EcTransform* et = obj->FindComponent<EcTransform>())
+            et->RecomputeTransformTree();
+
+        assert(obj->HardRefCount > 0);
+    }
+
+    if (m_Animations.size() > 0)
+    {
+        Model->AddComponent(EntityComponent::Animator);
+
+        for (const ObjectHandle& anim : m_Animations)
+            anim->SetParent(loadedObjects.at(0));
+    }
 }
 
 ModelLoader::ModelNode ModelLoader::m_LoadPrimitive(
-	const nlohmann::json& MeshData,
-	uint32_t PrimitiveIndex,
-	const glm::mat4& Transform
+    const nlohmann::json& MeshData,
+    uint32_t PrimitiveIndex,
+    const glm::mat4& Transform
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	const nlohmann::json& primitive = MeshData["primitives"][PrimitiveIndex];
-	const nlohmann::json& attributes = primitive["attributes"];
-	const nlohmann::json& accessors = m_JsonData["accessors"];
+    const nlohmann::json& primitive = MeshData["primitives"][PrimitiveIndex];
+    const nlohmann::json& attributes = primitive["attributes"];
+    const nlohmann::json& accessors = m_JsonData["accessors"];
 
-	// Get all accessor indices
-	uint32_t posAccInd = attributes["POSITION"];
-	uint32_t normalAccInd = attributes["NORMAL"];
-	uint32_t indAccInd = primitive["indices"];
+    // Get all accessor indices
+    uint32_t posAccInd = attributes["POSITION"];
+    uint32_t normalAccInd = attributes["NORMAL"];
+    uint32_t indAccInd = primitive["indices"];
 
-	const auto& texAccIt = attributes.find("TEXCOORD_0");
-	const auto& colAccIt = attributes.find("COLOR_0");
-	const auto& jointsAccIt = attributes.find("JOINTS_0");
-	const auto& weightsAccIt = attributes.find("WEIGHTS_0");
+    const auto& texAccIt = attributes.find("TEXCOORD_0");
+    const auto& colAccIt = attributes.find("COLOR_0");
+    const auto& jointsAccIt = attributes.find("JOINTS_0");
+    const auto& weightsAccIt = attributes.find("WEIGHTS_0");
 
-	// Use accessor indices to get all vertices components
-	std::vector<glm::vec3> positions = m_GetAndGroupFloatsVec3(accessors[posAccInd]);
-	std::vector<glm::vec3> normals = m_GetAndGroupFloatsVec3(accessors[normalAccInd]);
-	std::vector<glm::vec2> texUVs;
+    // Use accessor indices to get all vertices components
+    std::vector<glm::vec3> positions = m_GetAndGroupFloatsVec3(accessors[posAccInd]);
+    std::vector<glm::vec3> normals = m_GetAndGroupFloatsVec3(accessors[normalAccInd]);
+    std::vector<glm::vec2> texUVs;
 
-	if (texAccIt != attributes.end())
-		texUVs = m_GetAndGroupFloatsVec2(accessors[(uint32_t)texAccIt.value()]);
+    if (texAccIt != attributes.end())
+        texUVs = m_GetAndGroupFloatsVec2(accessors[(uint32_t)texAccIt.value()]);
 
-	std::vector<glm::vec4> cols;
-	std::vector<glm::tvec4<uint8_t>> joints;
-	std::vector<glm::vec4> weights;
+    std::vector<glm::vec4> cols;
+    std::vector<glm::tvec4<uint8_t>> joints;
+    std::vector<glm::vec4> weights;
 
-	if (colAccIt != attributes.end())
-		cols = m_GetAndGroupFloatsVec4(accessors[(uint32_t)colAccIt.value()]);
-	else
-		for (size_t i = 0; i < positions.size(); i++)
-			cols.emplace_back(1.f, 1.f, 1.f, 1.f);
+    if (colAccIt != attributes.end())
+        cols = m_GetAndGroupFloatsVec4(accessors[(uint32_t)colAccIt.value()]);
+    else
+        for (size_t i = 0; i < positions.size(); i++)
+            cols.emplace_back(1.f, 1.f, 1.f, 1.f);
 
-	if (jointsAccIt != attributes.end() && weightsAccIt != attributes.end())
-	{
-		uint32_t jointsAcc = jointsAccIt.value();
-		uint32_t weightsAcc = weightsAccIt.value();
+    if (jointsAccIt != attributes.end() && weightsAccIt != attributes.end())
+    {
+        uint32_t jointsAcc = jointsAccIt.value();
+        uint32_t weightsAcc = weightsAccIt.value();
 
-		joints = m_GetAndGroupUBytesVec4(accessors[jointsAcc]);
-		weights = m_GetAndGroupFloatsVec4(accessors[weightsAcc]);
-	}
+        joints = m_GetAndGroupUBytesVec4(accessors[jointsAcc]);
+        weights = m_GetAndGroupFloatsVec4(accessors[weightsAcc]);
+    }
 
-	glm::vec3 extMax = glm::vec3(-FLT_MAX);
-	glm::vec3 extMin = glm::vec3( FLT_MAX);
+    glm::vec3 extMax = glm::vec3(-FLT_MAX);
+    glm::vec3 extMin = glm::vec3( FLT_MAX);
 
-	for (const glm::vec3& position : positions)
-	{
-		extMax.x = std::max(extMax.x, position.x);
-		extMax.y = std::max(extMax.y, position.y);
-		extMax.z = std::max(extMax.z, position.z);
+    for (const glm::vec3& position : positions)
+    {
+        extMax.x = std::max(extMax.x, position.x);
+        extMax.y = std::max(extMax.y, position.y);
+        extMax.z = std::max(extMax.z, position.z);
 
-		extMin.x = std::min(extMin.x, position.x);
-		extMin.y = std::min(extMin.y, position.y);
-		extMin.z = std::min(extMin.z, position.z);
-	}
+        extMin.x = std::min(extMin.x, position.x);
+        extMin.y = std::min(extMin.y, position.y);
+        extMin.z = std::min(extMin.z, position.z);
+    }
 
-	glm::vec3 center = (extMin + extMax) * .5f;
-	glm::vec3 size = (extMax - extMin);
+    glm::vec3 center = (extMin + extMax) * .5f;
+    glm::vec3 size = (extMax - extMin);
 
-	// Combine all the vertex components and also get the indices and textures
-	std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
-	std::vector<uint32_t> indices = m_GetUnsigned32s(accessors[indAccInd]);
+    // Combine all the vertex components and also get the indices and textures
+    std::vector<Vertex> vertices = m_AssembleVertices(positions, normals, texUVs, cols, joints, weights);
+    std::vector<uint32_t> indices = m_GetUnsigned32s(accessors[indAccInd]);
 
-	return ModelNode{
-		// e.g. "Cube", "Cube2" on 2nd prim, "_UNNAMED-0_" w/o name and 1st prim
-		.Name = MeshData.value(
-			"name",
-			"_UNNAMED-" + std::to_string(PrimitiveIndex) + "_"
-		) + (PrimitiveIndex > 0 ? std::to_string(PrimitiveIndex + 1) : ""),
-		.NodeId = UINT32_MAX,
-		.Parent = 0u,
-		.Type= ModelNode::NodeType::Primitive,
+    return ModelNode{
+        // e.g. "Cube", "Cube2" on 2nd prim, "_UNNAMED-0_" w/o name and 1st prim
+        .Name = MeshData.value(
+            "name",
+            "_UNNAMED-" + std::to_string(PrimitiveIndex) + "_"
+        ) + (PrimitiveIndex > 0 ? std::to_string(PrimitiveIndex + 1) : ""),
+        .NodeId = UINT32_MAX,
+        .Parent = 0u,
+        .Type= ModelNode::NodeType::Primitive,
 
-		.Data = Mesh{ .Vertices = vertices, .Indices = indices, .AssetOrigin = center, .AssetSize = size },
-		.Material = m_GetMaterial(primitive),
-		.LocalTransform = Transform,
-	};
+        .Data = Mesh{ .Vertices = vertices, .Indices = indices, .AssetOrigin = center, .AssetSize = size },
+        .Material = m_GetMaterial(primitive),
+        .LocalTransform = Transform,
+    };
 }
 
 void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	// Current node
-	const nlohmann::json& nodeJson = m_JsonData["nodes"][NodeIndex];
+    // Current node
+    const nlohmann::json& nodeJson = m_JsonData["nodes"][NodeIndex];
 
-	// Get translation if it exists
-	glm::vec3 translation;
-	if (const auto transIt = nodeJson.find("translation"); transIt != nodeJson.end())
-	{
-		const nlohmann::json& trans = transIt.value();
+    // Get translation if it exists
+    glm::vec3 translation;
+    if (const auto transIt = nodeJson.find("translation"); transIt != nodeJson.end())
+    {
+        const nlohmann::json& trans = transIt.value();
 
-		float transValues[3] = {
-			trans[0],
-			trans[1],
-			trans[2]
-		};
+        float transValues[3] = {
+            trans[0],
+            trans[1],
+            trans[2]
+        };
 
-		translation = glm::make_vec3(transValues);
-	}
-	// Get quaternion if it exists
-	glm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
-	if (const auto rotIt = nodeJson.find("rotation"); rotIt != nodeJson.end())
-	{
-		const nlohmann::json& rot = rotIt.value();
+        translation = glm::make_vec3(transValues);
+    }
+    // Get quaternion if it exists
+    glm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
+    if (const auto rotIt = nodeJson.find("rotation"); rotIt != nodeJson.end())
+    {
+        const nlohmann::json& rot = rotIt.value();
 
-		float rotValues[4] = {
-			rot[3],
-			rot[0],
-			rot[1],
-			rot[2]
-		};
-		rotation = glm::make_quat(rotValues);
-	}
-	// Get scale if it exists
-	glm::vec3 scale = { 1.f, 1.f, 1.f };
-	if (const auto scaleIt = nodeJson.find("scale"); scaleIt != nodeJson.end())
-	{
-		const nlohmann::json& sca = scaleIt.value();
+        float rotValues[4] = {
+            rot[3],
+            rot[0],
+            rot[1],
+            rot[2]
+        };
+        rotation = glm::make_quat(rotValues);
+    }
+    // Get scale if it exists
+    glm::vec3 scale = { 1.f, 1.f, 1.f };
+    if (const auto scaleIt = nodeJson.find("scale"); scaleIt != nodeJson.end())
+    {
+        const nlohmann::json& sca = scaleIt.value();
 
-		float scaleValues[3] = {
-			sca[0],
-			sca[1],
-			sca[2]
-		};
+        float scaleValues[3] = {
+            sca[0],
+            sca[1],
+            sca[2]
+        };
 
-		scale = glm::make_vec3(scaleValues);
-	}
-	// Get matrix if it exists
-	glm::mat4 matLocal = glm::mat4(1.f);
-	if (const auto matIt = nodeJson.find("matrix"); matIt != nodeJson.end())
-	{
-		assert(nodeJson.find("translation") == nodeJson.end());
-		assert(nodeJson.find("rotation") == nodeJson.end());
+        scale = glm::make_vec3(scaleValues);
+    }
+    // Get matrix if it exists
+    glm::mat4 matLocal = glm::mat4(1.f);
+    if (const auto matIt = nodeJson.find("matrix"); matIt != nodeJson.end())
+    {
+        assert(nodeJson.find("translation") == nodeJson.end());
+        assert(nodeJson.find("rotation") == nodeJson.end());
 
-		const nlohmann::json& mat = matIt.value();
+        const nlohmann::json& mat = matIt.value();
 
-		float matValues[16] = {};
-		for (uint32_t i = 0; i < std::min(mat.size(), (size_t)16); i++)
-			matValues[i] = mat[i];
+        float matValues[16] = {};
+        for (uint32_t i = 0; i < std::min(mat.size(), (size_t)16); i++)
+            matValues[i] = mat[i];
 
-		matLocal = glm::make_mat4(matValues);
-	}
-	else
-	{
-		glm::mat4 trans = glm::translate(glm::mat4(1.f), translation); // 14/09/2024 har har har
-		glm::mat4 rot = glm::mat4_cast(rotation);
-		glm::mat4 sca = glm::scale(glm::mat4(1.f), scale);
-		matLocal = trans * rot * sca;
-	}
+        matLocal = glm::make_mat4(matValues);
+    }
+    else
+    {
+        glm::mat4 trans = glm::translate(glm::mat4(1.f), translation); // 14/09/2024 har har har
+        glm::mat4 rot = glm::mat4_cast(rotation);
+        glm::mat4 sca = glm::scale(glm::mat4(1.f), scale);
+        matLocal = trans * rot * sca;
+    }
 
-	uint32_t myIndex = static_cast<uint32_t>(m_Nodes.size());
-	m_NodeIdToIndex[NodeIndex] = myIndex;
+    uint32_t myIndex = static_cast<uint32_t>(m_Nodes.size());
+    m_NodeIdToIndex[NodeIndex] = myIndex;
 
-	// Check if the node contains a mesh and if it does load it
-	if (const auto meshDataIt = nodeJson.find("mesh"); meshDataIt != nodeJson.end())
-	{
-		uint32_t meshId = meshDataIt.value();
+    // Check if the node contains a mesh and if it does load it
+    if (const auto meshDataIt = nodeJson.find("mesh"); meshDataIt != nodeJson.end())
+    {
+        uint32_t meshId = meshDataIt.value();
 
-		const nlohmann::json& meshData = m_JsonData["meshes"][meshId];
+        const nlohmann::json& meshData = m_JsonData["meshes"][meshId];
 
-		nlohmann::json skinJson;
-		bool isSkinned = false;
+        nlohmann::json skinJson;
+        bool isSkinned = false;
 
-		if (const auto skinIt = nodeJson.find("skin"); skinIt != nodeJson.end())
-		{
-			skinJson = m_JsonData["skins"][(int32_t)skinIt.value()];
-			isSkinned = true;
-			m_HasSkinning = true;
-		}
+        if (const auto skinIt = nodeJson.find("skin"); skinIt != nodeJson.end())
+        {
+            skinJson = m_JsonData["skins"][(int32_t)skinIt.value()];
+            isSkinned = true;
+            m_HasSkinning = true;
+        }
 
-		for (uint32_t i = 0; i < meshData["primitives"].size(); i++)
-		{
-			ModelNode node = m_LoadPrimitive(meshData, i, matLocal);
-			node.NodeId = NodeIndex;
-			node.Parent = From;
+        for (uint32_t i = 0; i < meshData["primitives"].size(); i++)
+        {
+            ModelNode node = m_LoadPrimitive(meshData, i, matLocal);
+            node.NodeId = NodeIndex;
+            node.Parent = From;
 
-			if (isSkinned)
-			{
-				const nlohmann::json& jointsJson = skinJson["joints"];
-				std::vector<glm::mat4> invBindMatrices;
-				node.Bones.reserve(jointsJson.size());
+            if (isSkinned)
+            {
+                const nlohmann::json& jointsJson = skinJson["joints"];
+                std::vector<glm::mat4> invBindMatrices;
+                node.Bones.reserve(jointsJson.size());
 
-				if (const auto invBindMtx = skinJson.find("inverseBindMatrices"); invBindMtx != skinJson.end())
-				{
-					const nlohmann::json& accessor = m_JsonData["accessors"][(int32_t)invBindMtx.value()];
-					invBindMatrices = m_GetAndGroupFloatsMat4(accessor);
-				}
+                if (const auto invBindMtx = skinJson.find("inverseBindMatrices"); invBindMtx != skinJson.end())
+                {
+                    const nlohmann::json& accessor = m_JsonData["accessors"][(int32_t)invBindMtx.value()];
+                    invBindMatrices = m_GetAndGroupFloatsMat4(accessor);
+                }
 
-				for (size_t jointNodeIdx = 0; jointNodeIdx < jointsJson.size(); jointNodeIdx++)
-					node.Bones.emplace_back((int32_t)skinJson["joints"][jointNodeIdx], invBindMatrices[jointNodeIdx]);
-			}
+                for (size_t jointNodeIdx = 0; jointNodeIdx < jointsJson.size(); jointNodeIdx++)
+                    node.Bones.emplace_back((int32_t)skinJson["joints"][jointNodeIdx], invBindMatrices[jointNodeIdx]);
+            }
 
-			m_Nodes.push_back(node);
-		}
-	}
-	else
-	{
-		m_Nodes.emplace_back(
-			nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
-			NodeIndex,
-			From,
-			ModelNode::NodeType::Container
-		);
+            m_Nodes.push_back(node);
+        }
+    }
+    else
+    {
+        m_Nodes.emplace_back(
+            nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
+            NodeIndex,
+            From,
+            ModelNode::NodeType::Container
+        );
 
-		m_Nodes.back().LocalTransform = matLocal;
-	}
+        m_Nodes.back().LocalTransform = matLocal;
+    }
 
-	// traverse the node's children
-	if (const auto chIt = nodeJson.find("children"); chIt != nodeJson.end())
-	{
-		const nlohmann::json& children = chIt.value();
+    // traverse the node's children
+    if (const auto chIt = nodeJson.find("children"); chIt != nodeJson.end())
+    {
+        const nlohmann::json& children = chIt.value();
 
-		for (const nlohmann::json& subnode : children)
-			m_TraverseNode(subnode, myIndex);
-	}
+        for (const nlohmann::json& subnode : children)
+            m_TraverseNode(subnode, myIndex);
+    }
 }
 
 void ModelLoader::m_BuildRig()
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	for (ModelNode& node : m_Nodes)
-	{
-		if (node.Type != ModelNode::NodeType::Primitive)
-			continue;
+    for (ModelNode& node : m_Nodes)
+    {
+        if (node.Type != ModelNode::NodeType::Primitive)
+            continue;
 
-		for (const ModelNode::BoneInfo& jointDesc : node.Bones)
-		{
-			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
-			ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
-			jointNode.Type = ModelNode::NodeType::Bone;
-		}
+        for (const ModelNode::BoneInfo& jointDesc : node.Bones)
+        {
+            uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
+            ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
+            jointNode.Type = ModelNode::NodeType::Bone;
+        }
 
-		for (uint8_t ji = 0; ji < node.Bones.size(); ji++)
-		{
-			const ModelNode::BoneInfo& jointDesc = node.Bones[ji];
-			uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
-			ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
-			const ModelNode& parent = m_Nodes.at(jointNode.Parent);
+        for (uint8_t ji = 0; ji < node.Bones.size(); ji++)
+        {
+            const ModelNode::BoneInfo& jointDesc = node.Bones[ji];
+            uint32_t jointNodeIndex = m_NodeIdToIndex.at(jointDesc.NodeId);
+            ModelNode& jointNode = m_Nodes.at(jointNodeIndex);
+            const ModelNode& parent = m_Nodes.at(jointNode.Parent);
 
-			uint8_t parentId = UINT8_MAX;
+            uint8_t parentId = UINT8_MAX;
 
-			for (uint8_t pi = 0; pi < node.Bones.size(); pi++)
-				if (&m_Nodes[m_NodeIdToIndex[node.Bones[pi].NodeId]] == &parent)
-					parentId = pi;
+            for (uint8_t pi = 0; pi < node.Bones.size(); pi++)
+                if (&m_Nodes[m_NodeIdToIndex[node.Bones[pi].NodeId]] == &parent)
+                    parentId = pi;
 
-			node.Data.Bones.emplace_back(
-				jointNode.Name,
-				parentId,
-				jointNode.LocalTransform,
-				jointDesc.InvBindMatrix
-			);
+            node.Data.Bones.emplace_back(
+                jointNode.Name,
+                parentId,
+                jointNode.LocalTransform,
+                jointDesc.InvBindMatrix
+            );
 
-			jointNode.Type = ModelNode::NodeType::Bone;
-		}
-	}
+            jointNode.Type = ModelNode::NodeType::Bone;
+        }
+    }
 
-	for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
-	{
-		std::string name = animationJson.value("name", "UnnamedAnimation" + std::to_string(m_Animations.size()));;
-		std::string path = "animations/" + m_ModelName + "/" + name + ".hxanimation";
+    for (const nlohmann::json& animationJson : m_JsonData.value("animations", nlohmann::json::array()))
+    {
+        std::string name = animationJson.value("name", "UnnamedAnimation" + std::to_string(m_Animations.size()));;
+        std::string path = "animations/" + m_ModelName + "/" + name + ".hxanimation";
 
-		ObjectHandle anim = GameObjectManager::s_Create(EntityComponent::AnimationAsset);
-		EcAnimationAsset* eaa = anim->FindComponent<EcAnimationAsset>();
-		assert(eaa);
+        ObjectHandle anim = GameObjectManager::s_Create(EntityComponent::Animation);
+        EcAnimation* eaa = anim->FindComponent<EcAnimation>();
+        assert(eaa);
 
-		anim->Name = name;
-		eaa->Animation = path;
-		m_Animations.push_back(anim);
+        anim->Name = name;
+        eaa->Animation = path;
+        m_Animations.push_back(anim);
 
-		std::string animData = m_SerializeAnimation(animationJson);
-		PHX_CHECK(FileRW::WriteFileCreateDirectories(path, animData));
-	}
+        std::string animData = m_SerializeAnimation(animationJson);
+        PHX_CHECK(FileRW::WriteFileCreateDirectories(path, animData));
+    }
 }
 
 std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 {
-	const nlohmann::json& channels = Animation.at("channels");
-	const nlohmann::json& samplers = Animation.at("samplers");
-	std::string data = "PHOENIXF/ANIM\n\0";
+    const nlohmann::json& channels = Animation.at("channels");
+    const nlohmann::json& samplers = Animation.at("samplers");
+    std::string data = "PHOENIXF/ANIM\n\0";
 
-	struct SeparablePose
-	{
-		glm::mat4 Transform = glm::mat4(1.f);
-		glm::vec3 Translation;
-		glm::vec3 Scale = { 1.f, 1.f, 1.f };
-		glm::vec4 Rotation = { 0.f, 0.f, 0.f, 1.f };
-		uint16_t BoneId = UINT16_MAX;
-	};
+    struct SeparablePose
+    {
+        glm::mat4 Transform = glm::mat4(1.f);
+        glm::vec3 Translation;
+        glm::vec3 Scale = { 1.f, 1.f, 1.f };
+        glm::vec4 Rotation = { 0.f, 0.f, 0.f, 1.f };
+        uint16_t BoneId = UINT16_MAX;
+    };
 
-	struct SeparableKeyframe
-	{
-		std::vector<SeparablePose> Poses;
-	};
+    struct SeparableKeyframe
+    {
+        std::vector<SeparablePose> Poses;
+    };
 
-	// use `std::map` to order keyframes
-	std::map<float, SeparableKeyframe> keyframes;
-	std::vector<std::string> boneNames;
-	float animLength = 0.f;
+    // use `std::map` to order keyframes
+    std::map<float, SeparableKeyframe> keyframes;
+    std::vector<std::string> boneNames;
+    float animLength = 0.f;
 
-	for (const nlohmann::json& chan : channels)
-	{
-		const nlohmann::json& sampler = samplers[(uint32_t)chan.at("sampler")];
-		const nlohmann::json& target = chan.at("target");
-		const std::string& path = target.at("path");
-		int32_t nodeId = target.at("node");
+    for (const nlohmann::json& chan : channels)
+    {
+        const nlohmann::json& sampler = samplers[(uint32_t)chan.at("sampler")];
+        const nlohmann::json& target = chan.at("target");
+        const std::string& path = target.at("path");
+        int32_t nodeId = target.at("node");
 
-		const ModelNode& boneNode = m_Nodes[m_NodeIdToIndex.at(nodeId)];
+        const ModelNode& boneNode = m_Nodes[m_NodeIdToIndex.at(nodeId)];
 
-		const auto& boneIdIt = std::find(boneNames.begin(), boneNames.end(), boneNode.Name);
-		uint16_t boneId = UINT16_MAX;
+        const auto& boneIdIt = std::find(boneNames.begin(), boneNames.end(), boneNode.Name);
+        uint16_t boneId = UINT16_MAX;
 
-		if (boneIdIt != boneNames.end())
-			boneId = boneIdIt - boneNames.begin();
-		else
-		{
-			if (boneNames.size() >= UINT16_MAX)
-				RAISE_RT("Animation affects too many bones to be serialized (>{})", UINT16_MAX);
+        if (boneIdIt != boneNames.end())
+            boneId = boneIdIt - boneNames.begin();
+        else
+        {
+            if (boneNames.size() >= UINT16_MAX)
+                RAISE_RT("Animation affects too many bones to be serialized (>{})", UINT16_MAX);
 
-			boneId = (uint16_t)boneNames.size();
-			boneNames.push_back(boneNode.Name);
-		}
+            boneId = (uint16_t)boneNames.size();
+            boneNames.push_back(boneNode.Name);
+        }
 
-		std::vector<float> times = m_GetFloats(m_JsonData["accessors"][(int32_t)sampler.at("input")]);
-		std::vector<glm::vec4> vectors = m_GetAndGroupFloatsVec4(m_JsonData["accessors"][(int32_t)sampler.at("output")]);
+        std::vector<float> times = m_GetFloats(m_JsonData["accessors"][(int32_t)sampler.at("input")]);
+        std::vector<glm::vec4> vectors = m_GetAndGroupFloatsVec4(m_JsonData["accessors"][(int32_t)sampler.at("output")]);
 
-		for (size_t i = 0; i < times.size(); i++)
-		{
-			float t = times[i];
-			const glm::vec4& v = vectors[i];
+        for (size_t i = 0; i < times.size(); i++)
+        {
+            float t = times[i];
+            const glm::vec4& v = vectors[i];
 
-			SeparableKeyframe& keyframe = keyframes[t];
-			SeparablePose* pose = nullptr;
+            SeparableKeyframe& keyframe = keyframes[t];
+            SeparablePose* pose = nullptr;
 
-			for (SeparablePose& p : keyframe.Poses)
-			{
-				if (p.BoneId == boneId)
-				{
-					pose = &p;
-					break;
-				}
-			}
+            for (SeparablePose& p : keyframe.Poses)
+            {
+                if (p.BoneId == boneId)
+                {
+                    pose = &p;
+                    break;
+                }
+            }
 
-			if (!pose)
-			{
-				pose = &keyframe.Poses.emplace_back();
-				pose->BoneId = boneId;
+            if (!pose)
+            {
+                pose = &keyframe.Poses.emplace_back();
+                pose->BoneId = boneId;
 
-				glm::vec3 skew;
-				glm::vec4 perspective;
-				glm::quat restingRotation;
-				glm::decompose(boneNode.LocalTransform, pose->Scale, restingRotation, pose->Translation, skew, perspective);
+                glm::vec3 skew;
+                glm::vec4 perspective;
+                glm::quat restingRotation;
+                glm::decompose(boneNode.LocalTransform, pose->Scale, restingRotation, pose->Translation, skew, perspective);
 
-				pose->Rotation = glm::vec4(restingRotation.x, restingRotation.y, restingRotation.z, restingRotation.w);
-			}
+                pose->Rotation = glm::vec4(restingRotation.x, restingRotation.y, restingRotation.z, restingRotation.w);
+            }
 
-			if (path == "translation")
-				pose->Translation = glm::vec3(v);
-			else if (path == "scale")
-				pose->Scale = glm::vec3(v);
-			else if (path == "rotation")
-				pose->Rotation = v;
-			else
-				RAISE_RT("Invalid animation channel path '{}'", path);
+            if (path == "translation")
+                pose->Translation = glm::vec3(v);
+            else if (path == "scale")
+                pose->Scale = glm::vec3(v);
+            else if (path == "rotation")
+                pose->Rotation = v;
+            else
+                RAISE_RT("Invalid animation channel path '{}'", path);
 
             pose->Transform = glm::translate(glm::mat4(1.f), pose->Translation)
                                 * glm::mat4_cast(glm::quat(pose->Rotation.w, pose->Rotation.x, pose->Rotation.y, pose->Rotation.z))
                                 * glm::scale(glm::mat4(1.f), pose->Scale);
 
-			animLength = std::max(animLength, t);
-		}
-	}
+            animLength = std::max(animLength, t);
+        }
+    }
 
-	if (keyframes.size() > (size_t)UINT32_MAX)
-		RAISE_RT("Too many keyframes!");
+    if (keyframes.size() > (size_t)UINT32_MAX)
+        RAISE_RT("Too many keyframes!");
 
-	WriteU32(data, 0); // flags
-	WriteF32(data, animLength);
-	WriteU32(data, (int)keyframes.size());
-	WriteU16(data, (uint16_t)boneNames.size());
+    WriteU32(data, 0); // flags
+    WriteF32(data, animLength);
+    WriteU32(data, (int)keyframes.size());
+    WriteU16(data, (uint16_t)boneNames.size());
 
-	for (const std::string& name : boneNames)
-	{
-		if (name.size() > UINT8_MAX)
-			RAISE_RT("Bone names cannot exceed 255 characters");
-		data.push_back((uint8_t)name.size());
-		data.append(name);
-	}
+    for (const std::string& name : boneNames)
+    {
+        if (name.size() > UINT8_MAX)
+            RAISE_RT("Bone names cannot exceed 255 characters");
+        data.push_back((uint8_t)name.size());
+        data.append(name);
+    }
 
-	for (const auto& [ t, kf ] : keyframes)
-	{
-		if (kf.Poses.size() > UINT8_MAX)
-			RAISE_RT("Keyframe at {} seconds affects too many bones (>255)", t);
+    for (const auto& [ t, kf ] : keyframes)
+    {
+        if (kf.Poses.size() > UINT8_MAX)
+            RAISE_RT("Keyframe at {} seconds affects too many bones (>255)", t);
 
-		WriteF32(data, t);
-		WriteU8(data, (uint8_t)kf.Poses.size());
+        WriteF32(data, t);
+        WriteU8(data, (uint8_t)kf.Poses.size());
 
-		for (const SeparablePose& pose : kf.Poses)
-		{
-			WriteU16(data, pose.BoneId);
+        for (const SeparablePose& pose : kf.Poses)
+        {
+            WriteU16(data, pose.BoneId);
 
-			WriteF32(data, pose.Transform[0][0]);
-			WriteF32(data, pose.Transform[0][1]);
-			WriteF32(data, pose.Transform[0][2]);
-			WriteF32(data, pose.Transform[0][3]);
+            WriteF32(data, pose.Transform[0][0]);
+            WriteF32(data, pose.Transform[0][1]);
+            WriteF32(data, pose.Transform[0][2]);
+            WriteF32(data, pose.Transform[0][3]);
 
-			WriteF32(data, pose.Transform[1][0]);
-			WriteF32(data, pose.Transform[1][1]);
-			WriteF32(data, pose.Transform[1][2]);
-			WriteF32(data, pose.Transform[1][3]);
+            WriteF32(data, pose.Transform[1][0]);
+            WriteF32(data, pose.Transform[1][1]);
+            WriteF32(data, pose.Transform[1][2]);
+            WriteF32(data, pose.Transform[1][3]);
 
-			WriteF32(data, pose.Transform[2][0]);
-			WriteF32(data, pose.Transform[2][1]);
-			WriteF32(data, pose.Transform[2][2]);
-			WriteF32(data, pose.Transform[2][3]);
+            WriteF32(data, pose.Transform[2][0]);
+            WriteF32(data, pose.Transform[2][1]);
+            WriteF32(data, pose.Transform[2][2]);
+            WriteF32(data, pose.Transform[2][3]);
 
-			WriteF32(data, pose.Transform[3][0]);
-			WriteF32(data, pose.Transform[3][1]);
-			WriteF32(data, pose.Transform[3][2]);
-			WriteF32(data, pose.Transform[3][3]);
-		}
-	}
+            WriteF32(data, pose.Transform[3][0]);
+            WriteF32(data, pose.Transform[3][1]);
+            WriteF32(data, pose.Transform[3][2]);
+            WriteF32(data, pose.Transform[3][3]);
+        }
+    }
 
-	return data;
+    return data;
 }
 
 std::string ModelLoader::m_GetData()
 {
-	// Create a place to store the raw text, and get the uri of the .bin file
-	std::string bytesText;
-	std::string uri = m_JsonData["buffers"][0]["uri"];
+    // Create a place to store the raw text, and get the uri of the .bin file
+    std::string bytesText;
+    std::string uri = m_JsonData["buffers"][0]["uri"];
 
-	// Store raw text data into bytesText
-	std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
+    // Store raw text data into bytesText
+    std::string fileDirectory = m_File.substr(0, m_File.find_last_of('/') + 1);
 
-	return FileRW::ReadFile(fileDirectory + uri);
+    return FileRW::ReadFile(fileDirectory + uri);
 }
 
 std::vector<float> ModelLoader::m_GetFloats(const nlohmann::json& accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::vector<float> floatVec;
+    std::vector<float> floatVec;
 
-	// Get properties from the accessor
-	uint32_t buffViewInd = accessor.value("bufferView", 1);
-	uint32_t count = accessor["count"];
-	uint32_t accByteOffset = accessor.value("byteOffset", 0);
-	std::string type = accessor["type"];
-	uint32_t componentType = accessor["componentType"];
+    // Get properties from the accessor
+    uint32_t buffViewInd = accessor.value("bufferView", 1);
+    uint32_t count = accessor["count"];
+    uint32_t accByteOffset = accessor.value("byteOffset", 0);
+    std::string type = accessor["type"];
+    uint32_t componentType = accessor["componentType"];
 
-	// Get properties from the bufferView
-	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
-	const auto& byteStrideIt = bufferView.find("byteStride");
+    // Get properties from the bufferView
+    const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
+    const auto& byteStrideIt = bufferView.find("byteStride");
 
-	uint32_t byteStride = byteStrideIt != bufferView.end() ? (uint32_t)byteStrideIt.value() : 0;
-	uint32_t byteOffset = bufferView["byteOffset"];
+    uint32_t byteStride = byteStrideIt != bufferView.end() ? (uint32_t)byteStrideIt.value() : 0;
+    uint32_t byteOffset = bufferView["byteOffset"];
 
-	// Interpret the type and store it into numPerVert
-	uint32_t numPerVert = 0;
-	if (type == "SCALAR")
-		numPerVert = 1;
+    // Interpret the type and store it into numPerVert
+    uint32_t numPerVert = 0;
+    if (type == "SCALAR")
+        numPerVert = 1;
 
-	else if (type == "VEC2")
-		numPerVert = 2;
+    else if (type == "VEC2")
+        numPerVert = 2;
 
-	else if (type == "VEC3")
-		numPerVert = 3;
+    else if (type == "VEC3")
+        numPerVert = 3;
 
-	else if (type == "VEC4")
-		numPerVert = 4;
+    else if (type == "VEC4")
+        numPerVert = 4;
 
-	else if (type == "MAT4")
-		numPerVert = 16;
+    else if (type == "MAT4")
+        numPerVert = 16;
 
-	else
-		RAISE_RT("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
+    else
+        RAISE_RT("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
 
-	uint32_t componentSize = 0;
-	switch (componentType)
-	{
-	case 5123:
-	{
-		componentSize = 2;
-		break;
-	}
-	case 5126:
-	{
-		componentSize = 4;
-		break;
-	}
-	default:
-		RAISE_RT("Unsupported `componentType` of {}", componentType);
-	}
+    uint32_t componentSize = 0;
+    switch (componentType)
+    {
+    case 5123:
+    {
+        componentSize = 2;
+        break;
+    }
+    case 5126:
+    {
+        componentSize = 4;
+        break;
+    }
+    default:
+        RAISE_RT("Unsupported `componentType` of {}", componentType);
+    }
 
-	// Go over all the bytes in the data at the correct place using the properties from above
-	uint32_t beginningOfData = byteOffset + accByteOffset;
-	uint32_t lengthOfData = count * (byteStride > 0 ? byteStride : componentSize * numPerVert);
-	uint32_t componentCounter = 0;
-	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
-	{
-		if (componentType == 5126)
-		{
-			float value = 0.f;
-			memcpy(&value, &m_Data[i++], sizeof(value));
-			floatVec.push_back(value);
+    // Go over all the bytes in the data at the correct place using the properties from above
+    uint32_t beginningOfData = byteOffset + accByteOffset;
+    uint32_t lengthOfData = count * (byteStride > 0 ? byteStride : componentSize * numPerVert);
+    uint32_t componentCounter = 0;
+    for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
+    {
+        if (componentType == 5126)
+        {
+            float value = 0.f;
+            memcpy(&value, &m_Data[i++], sizeof(value));
+            floatVec.push_back(value);
 
-			i += 3;
-		}
-		else if (componentType == 5123)
-		{
-			uint16_t us = 0;
-			memcpy(&us, &m_Data[i++], sizeof(us));
-			floatVec.push_back(us / 65535.f);
+            i += 3;
+        }
+        else if (componentType == 5123)
+        {
+            uint16_t us = 0;
+            memcpy(&us, &m_Data[i++], sizeof(us));
+            floatVec.push_back(us / 65535.f);
 
-			i += 1;
-		}
-		else
-			RAISE_RT("huh??");
+            i += 1;
+        }
+        else
+            RAISE_RT("huh??");
 
-		if (byteStride > 0)
-		{
-			componentCounter++;
-			if (componentCounter % numPerVert == 0)
-				i += byteStride - componentSize * numPerVert;
-		}
-	}
+        if (byteStride > 0)
+        {
+            componentCounter++;
+            if (componentCounter % numPerVert == 0)
+                i += byteStride - componentSize * numPerVert;
+        }
+    }
 
-	return floatVec;
+    return floatVec;
 }
 
 std::vector<uint32_t> ModelLoader::m_GetUnsigned32s(const nlohmann::json& accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::vector<uint32_t> indices;
+    std::vector<uint32_t> indices;
 
-	// Get properties from the accessor
-	uint32_t buffViewInd = accessor.value("bufferView", 0);
-	uint32_t count = accessor["count"];
-	uint32_t accByteOffset = accessor.value("byteOffset", 0);
-	uint32_t componentType = accessor["componentType"];
+    // Get properties from the accessor
+    uint32_t buffViewInd = accessor.value("bufferView", 0);
+    uint32_t count = accessor["count"];
+    uint32_t accByteOffset = accessor.value("byteOffset", 0);
+    uint32_t componentType = accessor["componentType"];
 
-	// Get properties from the bufferView
-	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
-	if (bufferView.find("byteStride") != bufferView.end())
-		RAISE_RT("m_GetUnsigned32s: byteStrides are not supported!");
+    // Get properties from the bufferView
+    const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
+    if (bufferView.find("byteStride") != bufferView.end())
+        RAISE_RT("m_GetUnsigned32s: byteStrides are not supported!");
 
-	uint32_t byteOffset = bufferView.value("byteOffset", 0);
+    uint32_t byteOffset = bufferView.value("byteOffset", 0);
 
-	// Get indices with regards to their type: uint32_t, uint16_t, or short
-	uint32_t beginningOfData = byteOffset + accByteOffset;
-	if (componentType == 5125)
-	{
-		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4;)
-		{
-			uint32_t value = 0;
-			memcpy(&value, &m_Data[i++], sizeof(value));
-			indices.push_back(value);
+    // Get indices with regards to their type: uint32_t, uint16_t, or short
+    uint32_t beginningOfData = byteOffset + accByteOffset;
+    if (componentType == 5125)
+    {
+        for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 4;)
+        {
+            uint32_t value = 0;
+            memcpy(&value, &m_Data[i++], sizeof(value));
+            indices.push_back(value);
 
-			i += 3;
-		}
-	}
-	else if (componentType == 5123)
-	{
-		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
-		{
-			uint16_t value = 0;
-			memcpy(&value, &m_Data[i++], sizeof(value));
-			indices.push_back(value);
+            i += 3;
+        }
+    }
+    else if (componentType == 5123)
+    {
+        for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
+        {
+            uint16_t value = 0;
+            memcpy(&value, &m_Data[i++], sizeof(value));
+            indices.push_back(value);
 
-			i += 1;
-		}
-	}
-	else if (componentType == 5122)
-	{
-		for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
-		{
-			short value = 0;
-			memcpy(&value, &m_Data[i++], sizeof(value));
-			indices.push_back(value);
+            i += 1;
+        }
+    }
+    else if (componentType == 5122)
+    {
+        for (uint32_t i = beginningOfData; i < byteOffset + accByteOffset + count * 2;)
+        {
+            short value = 0;
+            memcpy(&value, &m_Data[i++], sizeof(value));
+            indices.push_back(value);
 
-			i += 1;
-		}
-	}
-	else
-		Log.Warning("Unrecognized mesh index type: " + std::to_string(componentType));
+            i += 1;
+        }
+    }
+    else
+        Log.Warning("Unrecognized mesh index type: " + std::to_string(componentType));
 
-	return indices;
+    return indices;
 }
 
 std::vector<uint8_t> ModelLoader::m_GetUBytes(const nlohmann::json& accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::vector<uint8_t> ubytesVec;
+    std::vector<uint8_t> ubytesVec;
 
-	// Get properties from the accessor
-	uint32_t buffViewInd = accessor.value("bufferView", 1);
-	uint32_t count = accessor["count"];
-	uint32_t accByteOffset = accessor.value("byteOffset", 0);
-	std::string type = accessor["type"];
+    // Get properties from the accessor
+    uint32_t buffViewInd = accessor.value("bufferView", 1);
+    uint32_t count = accessor["count"];
+    uint32_t accByteOffset = accessor.value("byteOffset", 0);
+    std::string type = accessor["type"];
 
-	// Get properties from the bufferView
-	const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
-	const auto& byteStrideIt = bufferView.find("byteStride");
+    // Get properties from the bufferView
+    const nlohmann::json& bufferView = m_JsonData["bufferViews"][buffViewInd];
+    const auto& byteStrideIt = bufferView.find("byteStride");
 
-	uint32_t byteStride = byteStrideIt != bufferView.end() ? (uint32_t)byteStrideIt.value() : 0;
-	uint32_t byteOffset = bufferView["byteOffset"];
+    uint32_t byteStride = byteStrideIt != bufferView.end() ? (uint32_t)byteStrideIt.value() : 0;
+    uint32_t byteOffset = bufferView["byteOffset"];
 
-	// Interpret the type and store it into numPerVert
-	uint32_t numPerVert = 0;
-	if (type == "SCALAR")
-		numPerVert = 1;
+    // Interpret the type and store it into numPerVert
+    uint32_t numPerVert = 0;
+    if (type == "SCALAR")
+        numPerVert = 1;
 
-	else if (type == "VEC2")
-		numPerVert = 2;
+    else if (type == "VEC2")
+        numPerVert = 2;
 
-	else if (type == "VEC3")
-		numPerVert = 3;
+    else if (type == "VEC3")
+        numPerVert = 3;
 
-	else if (type == "VEC4")
-		numPerVert = 4;
+    else if (type == "VEC4")
+        numPerVert = 4;
 
-	else
-		RAISE_RT("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
+    else
+        RAISE_RT("Could not decode GLTF model: Invalid type '{}' (not SCALAR, VEC2, VEC3, or VEC4)", type);
 
-	uint32_t componentType = 5121;
-	uint32_t componentSize = 1;
+    uint32_t componentType = 5121;
+    uint32_t componentSize = 1;
 
-	if (const auto& it = accessor.find("componentType"); it != accessor.end())
-	{
-		componentType = it.value();
-		if (componentType != 5121 && componentType != 5123)
-			RAISE_RT("Unsupported componentType '{}' in m_GetUBytes, expected 5121 or 5123", (int)it.value());
-	}
+    if (const auto& it = accessor.find("componentType"); it != accessor.end())
+    {
+        componentType = it.value();
+        if (componentType != 5121 && componentType != 5123)
+            RAISE_RT("Unsupported componentType '{}' in m_GetUBytes, expected 5121 or 5123", (int)it.value());
+    }
 
-	if (componentType == 5123)
-		componentSize = 2;
+    if (componentType == 5123)
+        componentSize = 2;
 
-	// Go over all the bytes in the data at the correct place using the properties from above
-	uint32_t beginningOfData = byteOffset + accByteOffset;
-	uint32_t lengthOfData = count * (byteStride > 0 ? byteStride : componentSize * numPerVert);
-	uint32_t componentCounter = 0;
-	for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
-	{
-		if (componentSize == 1)
-		{
-			uint8_t v = 0;
-			memcpy(&v, &m_Data[i++], sizeof(v));
+    // Go over all the bytes in the data at the correct place using the properties from above
+    uint32_t beginningOfData = byteOffset + accByteOffset;
+    uint32_t lengthOfData = count * (byteStride > 0 ? byteStride : componentSize * numPerVert);
+    uint32_t componentCounter = 0;
+    for (uint32_t i = beginningOfData; i < beginningOfData + lengthOfData;)
+    {
+        if (componentSize == 1)
+        {
+            uint8_t v = 0;
+            memcpy(&v, &m_Data[i++], sizeof(v));
 
-			ubytesVec.push_back(v);
-		}
-		else
-		{
-			uint16_t v = 0;
-			memcpy(&v, &m_Data[i++], sizeof(v));
+            ubytesVec.push_back(v);
+        }
+        else
+        {
+            uint16_t v = 0;
+            memcpy(&v, &m_Data[i++], sizeof(v));
 
-			ubytesVec.push_back(v);
-			i+=1;
-		}
+            ubytesVec.push_back(v);
+            i+=1;
+        }
 
-		if (byteStride > 0)
-		{
-			componentCounter++;
-			if (componentCounter % numPerVert == 0)
-				i += byteStride - numPerVert * componentSize;
-		}
-	}
+        if (byteStride > 0)
+        {
+            componentCounter++;
+            if (componentCounter % numPerVert == 0)
+                i += byteStride - numPerVert * componentSize;
+        }
+    }
 
-	return ubytesVec;
+    return ubytesVec;
 }
 
 ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primitive)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	TextureManager* texManager = TextureManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
-	ModelLoader::MeshMaterial material;
-	material.BaseColorTexture = texManager->LoadFromPath("!White");
+    ModelLoader::MeshMaterial material;
+    material.BaseColorTexture = texManager->LoadFromPath("!White");
 
-	auto materialIdIt = Primitive.find("material");
+    auto materialIdIt = Primitive.find("material");
 
-	if (materialIdIt == Primitive.end())
-		return material;
+    if (materialIdIt == Primitive.end())
+        return material;
 
-	int materialId = materialIdIt.value();
+    int materialId = materialIdIt.value();
 
-	const nlohmann::json& materialDescription = m_JsonData["materials"][materialId];
+    const nlohmann::json& materialDescription = m_JsonData["materials"][materialId];
 
-	static std::unordered_map<std::string_view, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
-	{
-		{ "OPAQUE", MeshMaterial::MaterialAlphaMode::Opaque },
-		{ "MASK",   MeshMaterial::MaterialAlphaMode::Mask   },
-		{ "BLEND",  MeshMaterial::MaterialAlphaMode::Blend  }
-	};
+    static std::unordered_map<std::string_view, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
+    {
+        { "OPAQUE", MeshMaterial::MaterialAlphaMode::Opaque },
+        { "MASK",   MeshMaterial::MaterialAlphaMode::Mask   },
+        { "BLEND",  MeshMaterial::MaterialAlphaMode::Blend  }
+    };
 
-	material.Name = materialDescription.value("name", "PHX_UNNAMED_MATERIAL");
-	material.AlphaCutoff = materialDescription.value("alphaCutoff", .5f);
-	material.AlphaMode = NameToAlphaMode.find(materialDescription.value("alphaMode", "OPAQUE"))->second;
-	material.DoubleSided = materialDescription.value("doubleSided", false);
+    material.Name = materialDescription.value("name", "PHX_UNNAMED_MATERIAL");
+    material.AlphaCutoff = materialDescription.value("alphaCutoff", .5f);
+    material.AlphaMode = NameToAlphaMode.find(materialDescription.value("alphaMode", "OPAQUE"))->second;
+    material.DoubleSided = materialDescription.value("doubleSided", false);
 
-	const nlohmann::json& pbrDescription = materialDescription["pbrMetallicRoughness"];
+    const nlohmann::json& pbrDescription = materialDescription["pbrMetallicRoughness"];
 
-	const nlohmann::json& baseColorFactor = pbrDescription.value(
-		"baseColorFactor",
-		nlohmann::json{ 1.f, 1.f, 1.f, 1.f }
-	);
+    const nlohmann::json& baseColorFactor = pbrDescription.value(
+        "baseColorFactor",
+        nlohmann::json{ 1.f, 1.f, 1.f, 1.f }
+    );
 
-	material.BaseColorFactor = glm::vec4
-	{
-		baseColorFactor[0],
-		baseColorFactor[1],
-		baseColorFactor[2],
-		baseColorFactor[3]
-	};
+    material.BaseColorFactor = glm::vec4
+    {
+        baseColorFactor[0],
+        baseColorFactor[1],
+        baseColorFactor[2],
+        baseColorFactor[3]
+    };
 
-	material.MetallicFactor = pbrDescription.value("metallicFactor", 1.f);
-	material.RoughnessFactor = pbrDescription.value("roughnessFactor", 1.f);
+    material.MetallicFactor = pbrDescription.value("metallicFactor", 1.f);
+    material.RoughnessFactor = pbrDescription.value("roughnessFactor", 1.f);
 
-	const nlohmann::json& baseColDesc = pbrDescription.value(
-		"baseColorTexture",
-		nlohmann::json{ { "index", 0 } }
-	);
-	const nlohmann::json& metallicRoughnessDesc = pbrDescription.value(
-		"metallicRoughnessTexture",
-		nlohmann::json{ { "index", 0 } }
-	);
-	const nlohmann::json& normalDesc = materialDescription.value(
-		"normalTexture",
-		nlohmann::json{ { "index", 0 } }
-	);
-	const nlohmann::json& emissiveDesc = materialDescription.value(
-		"emissiveTexture",
-		nlohmann::json{ { "index", 0 } }
-	);
+    const nlohmann::json& baseColDesc = pbrDescription.value(
+        "baseColorTexture",
+        nlohmann::json{ { "index", 0 } }
+    );
+    const nlohmann::json& metallicRoughnessDesc = pbrDescription.value(
+        "metallicRoughnessTexture",
+        nlohmann::json{ { "index", 0 } }
+    );
+    const nlohmann::json& normalDesc = materialDescription.value(
+        "normalTexture",
+        nlohmann::json{ { "index", 0 } }
+    );
+    const nlohmann::json& emissiveDesc = materialDescription.value(
+        "emissiveTexture",
+        nlohmann::json{ { "index", 0 } }
+    );
 
-	nlohmann::json& baseColTex = m_JsonData["textures"][(int)baseColDesc["index"]];
-	nlohmann::json& metallicRoughnessTex = m_JsonData["textures"][(int)metallicRoughnessDesc["index"]];
-	nlohmann::json& normalTex = m_JsonData["textures"][(int)normalDesc["index"]];
-	nlohmann::json& emissiveTex = m_JsonData["textures"][(int)emissiveDesc["index"]];
+    nlohmann::json& baseColTex = m_JsonData["textures"][(int)baseColDesc["index"]];
+    nlohmann::json& metallicRoughnessTex = m_JsonData["textures"][(int)metallicRoughnessDesc["index"]];
+    nlohmann::json& normalTex = m_JsonData["textures"][(int)normalDesc["index"]];
+    nlohmann::json& emissiveTex = m_JsonData["textures"][(int)emissiveDesc["index"]];
 
-	nlohmann::json& baseColSource = baseColTex["source"];
-	int baseColSourceIndex = baseColSource.type() == nlohmann::json::value_t::number_unsigned ?
-									(int)baseColSource : -1;
+    nlohmann::json& baseColSource = baseColTex["source"];
+    int baseColSourceIndex = baseColSource.type() == nlohmann::json::value_t::number_unsigned ?
+                                    (int)baseColSource : -1;
 
-	if (baseColSourceIndex < 0)
-		return material;
+    if (baseColSourceIndex < 0)
+        return material;
 
-	if (baseColTex.find("sampler") != baseColTex.end())
-		// 9729 == LINEAR 
-		// https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#schema-reference-sampler
-		material.LinearlySmoothened = m_JsonData["samplers"][(int)baseColTex["sampler"]]["magFilter"] == 9729;
+    if (baseColTex.find("sampler") != baseColTex.end())
+        // 9729 == LINEAR
+        // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#schema-reference-sampler
+        material.LinearlySmoothened = m_JsonData["samplers"][(int)baseColTex["sampler"]]["magFilter"] == 9729;
 
-	std::string baseColPath = getTexturePath(
-		// cut off `resources/`
-		m_File,
-		m_ModelName,
-		m_JsonData,
-		m_JsonData["images"][baseColSourceIndex],
-		m_Data
-	);
+    std::string baseColPath = getTexturePath(
+        // cut off `resources/`
+        m_File,
+        m_ModelName,
+        m_JsonData,
+        m_JsonData["images"][baseColSourceIndex],
+        m_Data
+    );
 
-	material.BaseColorTexture = texManager->LoadFromPath(
-		baseColPath,
-		true
-	);
+    material.BaseColorTexture = texManager->LoadFromPath(
+        baseColPath,
+        true
+    );
 
-	if (pbrDescription.find("metallicRoughnessTexture") != pbrDescription.end())
-	{
-		std::string metallicRoughnessPath = getTexturePath(
-			m_File,
-			m_ModelName,
-			m_JsonData,
-			m_JsonData["images"][(int)metallicRoughnessTex["source"]],
-			m_Data
-		);
+    if (pbrDescription.find("metallicRoughnessTexture") != pbrDescription.end())
+    {
+        std::string metallicRoughnessPath = getTexturePath(
+            m_File,
+            m_ModelName,
+            m_JsonData,
+            m_JsonData["images"][(int)metallicRoughnessTex["source"]],
+            m_Data
+        );
 
-		material.MetallicRoughnessTexture = texManager->LoadFromPath(
-			metallicRoughnessPath,
-			true
-		);
-	}
+        material.MetallicRoughnessTexture = texManager->LoadFromPath(
+            metallicRoughnessPath,
+            true
+        );
+    }
 
-	if (materialDescription.find("normalTexture") != materialDescription.end())
-	{
-		std::string normalPath = getTexturePath(
-			m_File,
-			m_ModelName,
-			m_JsonData,
-			m_JsonData["images"][(int)normalTex["source"]],
-			m_Data
-		);
+    if (materialDescription.find("normalTexture") != materialDescription.end())
+    {
+        std::string normalPath = getTexturePath(
+            m_File,
+            m_ModelName,
+            m_JsonData,
+            m_JsonData["images"][(int)normalTex["source"]],
+            m_Data
+        );
 
-		material.NormalTexture = texManager->LoadFromPath(
-			normalPath,
-			true
-		);
-	}
+        material.NormalTexture = texManager->LoadFromPath(
+            normalPath,
+            true
+        );
+    }
 
-	if (materialDescription.find("emissiveTexture") != materialDescription.end())
-	{
-		std::string emissivePath = getTexturePath(
-			m_File,
-			m_ModelName,
-			m_JsonData,
-			m_JsonData["images"][(int)emissiveTex["source"]],
-			m_Data
-		);
+    if (materialDescription.find("emissiveTexture") != materialDescription.end())
+    {
+        std::string emissivePath = getTexturePath(
+            m_File,
+            m_ModelName,
+            m_JsonData,
+            m_JsonData["images"][(int)emissiveTex["source"]],
+            m_Data
+        );
 
-		material.EmissiveTexture = texManager->LoadFromPath(
-			emissivePath,
-			true
-		);
-	}
+        material.EmissiveTexture = texManager->LoadFromPath(
+            emissivePath,
+            true
+        );
+    }
 
-	return material;
+    return material;
 }
 
 std::vector<Vertex> ModelLoader::m_AssembleVertices
 (
-	const std::vector<glm::vec3>& Positions,
-	const std::vector<glm::vec3>& Normals,
-	const std::vector<glm::vec2>& TexUVs,
-	const std::vector<glm::vec4>& Colors,
-	const std::vector<glm::tvec4<uint8_t>>& Joints,
-	const std::vector<glm::vec4>& Weights
+    const std::vector<glm::vec3>& Positions,
+    const std::vector<glm::vec3>& Normals,
+    const std::vector<glm::vec2>& TexUVs,
+    const std::vector<glm::vec4>& Colors,
+    const std::vector<glm::tvec4<uint8_t>>& Joints,
+    const std::vector<glm::vec4>& Weights
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::vector<Vertex> vertices;
-	vertices.reserve(Positions.size());
+    std::vector<Vertex> vertices;
+    vertices.reserve(Positions.size());
 
-	if (Joints.size() == Positions.size())
-		for (size_t i = 0; i < Positions.size(); i++)
-			vertices.emplace_back(
-				Positions.at(i),
-				Normals.at(i),
-				Colors.at(i),
-				TexUVs.size() > 0 ? TexUVs.at(i) : glm::vec2(),
-				std::array<uint8_t, 4>{ Joints.at(i).x, Joints.at(i).y, Joints.at(i).z, Joints.at(i).w },
-				std::array<float, 4>{ Weights.at(i).x, Weights.at(i).y, Weights.at(i).z, Weights.at(i).w }
-			);
+    if (Joints.size() == Positions.size())
+        for (size_t i = 0; i < Positions.size(); i++)
+            vertices.emplace_back(
+                Positions.at(i),
+                Normals.at(i),
+                Colors.at(i),
+                TexUVs.size() > 0 ? TexUVs.at(i) : glm::vec2(),
+                std::array<uint8_t, 4>{ Joints.at(i).x, Joints.at(i).y, Joints.at(i).z, Joints.at(i).w },
+                std::array<float, 4>{ Weights.at(i).x, Weights.at(i).y, Weights.at(i).z, Weights.at(i).w }
+            );
 
-	else
-		for (size_t i = 0; i < Positions.size(); i++)
-			vertices.emplace_back(
-				Positions.at(i),
-				Normals.at(i),
-				Colors.at(i),
-				TexUVs.size() > 0 ? TexUVs.at(i) : glm::vec2(),
-				std::array<uint8_t, 4>{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX },
-				std::array<float, 4>{ FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX }
-			);
+    else
+        for (size_t i = 0; i < Positions.size(); i++)
+            vertices.emplace_back(
+                Positions.at(i),
+                Normals.at(i),
+                Colors.at(i),
+                TexUVs.size() > 0 ? TexUVs.at(i) : glm::vec2(),
+                std::array<uint8_t, 4>{ UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX },
+                std::array<float, 4>{ FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX }
+            );
 
-	return vertices;
+    return vertices;
 }
 
 std::vector<glm::vec2> ModelLoader::m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	if (Accessor["type"] != "VEC2")
-		RAISE_RT("Expected accessor to be VEC2, but is {}", (std::string)Accessor["type"]);
+    if (Accessor["type"] != "VEC2")
+        RAISE_RT("Expected accessor to be VEC2, but is {}", (std::string)Accessor["type"]);
 
-	std::vector<float> floats = m_GetFloats(Accessor);
+    std::vector<float> floats = m_GetFloats(Accessor);
 
-	std::vector<glm::vec2> vectors;
-	vectors.reserve(static_cast<size_t>(floats.size() / 2));
+    std::vector<glm::vec2> vectors;
+    vectors.reserve(static_cast<size_t>(floats.size() / 2));
 
-	for (size_t i = 0; i < floats.size(); i += 2)
-		vectors.emplace_back(
-			floats[i+0ull],
-			floats[i+1ull]
-		);
+    for (size_t i = 0; i < floats.size(); i += 2)
+        vectors.emplace_back(
+            floats[i+0ull],
+            floats[i+1ull]
+        );
 
-	return vectors;
+    return vectors;
 }
 
 std::vector<glm::vec3> ModelLoader::m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	if (Accessor["type"] != "VEC3")
-		RAISE_RT("Expected accessor to be VEC3, but is {}", (std::string)Accessor["type"]);
+    if (Accessor["type"] != "VEC3")
+        RAISE_RT("Expected accessor to be VEC3, but is {}", (std::string)Accessor["type"]);
 
-	std::vector<float> floats = m_GetFloats(Accessor);
+    std::vector<float> floats = m_GetFloats(Accessor);
 
-	std::vector<glm::vec3> vectors;
-	vectors.reserve(static_cast<size_t>(floats.size() / 3));
+    std::vector<glm::vec3> vectors;
+    vectors.reserve(static_cast<size_t>(floats.size() / 3));
 
-	for (size_t i = 0; i < floats.size(); i += 3)
-		vectors.emplace_back(
-			floats[i+0ull],
-			floats[i+1ull],
-			floats[i+2ull]
-		);
+    for (size_t i = 0; i < floats.size(); i += 3)
+        vectors.emplace_back(
+            floats[i+0ull],
+            floats[i+1ull],
+            floats[i+2ull]
+        );
 
-	return vectors;
+    return vectors;
 }
 
 std::vector<glm::vec4> ModelLoader::m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::vector<float> floats = m_GetFloats(Accessor);
+    std::vector<float> floats = m_GetFloats(Accessor);
 
-	std::vector<glm::vec4> vectors;
-	vectors.reserve(static_cast<size_t>(floats.size() / 4));
+    std::vector<glm::vec4> vectors;
+    vectors.reserve(static_cast<size_t>(floats.size() / 4));
 
-	if (Accessor["type"] == "VEC4")
-		for (size_t i = 0; i < floats.size(); i += 4)
-			vectors.emplace_back(
-				floats[i + 0ull],
-				floats[i + 1ull],
-				floats[i + 2ull],
-				floats[i + 3ull]
-			);
+    if (Accessor["type"] == "VEC4")
+        for (size_t i = 0; i < floats.size(); i += 4)
+            vectors.emplace_back(
+                floats[i + 0ull],
+                floats[i + 1ull],
+                floats[i + 2ull],
+                floats[i + 3ull]
+            );
 
-	else if (Accessor["type"] == "VEC3")
-		for (size_t i = 0; i < floats.size(); i += 3)
-			vectors.emplace_back(
-				floats[i + 0ull],
-				floats[i + 1ull],
-				floats[i + 2ull],
-				1.f
-			);
+    else if (Accessor["type"] == "VEC3")
+        for (size_t i = 0; i < floats.size(); i += 3)
+            vectors.emplace_back(
+                floats[i + 0ull],
+                floats[i + 1ull],
+                floats[i + 2ull],
+                1.f
+            );
 
-	else
-		RAISE_RT("Expected accessor to be either VEC3 or VEC4, but is {}", (std::string)Accessor["type"]);
+    else
+        RAISE_RT("Expected accessor to be either VEC3 or VEC4, but is {}", (std::string)Accessor["type"]);
 
-	return vectors;
+    return vectors;
 }
 
 std::vector<glm::mat4> ModelLoader::m_GetAndGroupFloatsMat4(const nlohmann::json& Accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	if (Accessor["type"] != "MAT4")
-		RAISE_RT("Expected accessor to be MAT4, but is '{}'", (std::string)Accessor["type"]);
+    if (Accessor["type"] != "MAT4")
+        RAISE_RT("Expected accessor to be MAT4, but is '{}'", (std::string)Accessor["type"]);
 
-	std::vector<float> floats = m_GetFloats(Accessor);
+    std::vector<float> floats = m_GetFloats(Accessor);
 
-	std::vector<glm::mat4> mats;
-	mats.reserve(static_cast<size_t>(mats.size() / 16));
+    std::vector<glm::mat4> mats;
+    mats.reserve(static_cast<size_t>(mats.size() / 16));
 
-	for (size_t i = 0; i < floats.size(); i+=16)
-		mats.emplace_back(
-			floats[i + 0ull],
-			floats[i + 1ull],
-			floats[i + 2ull],
-			floats[i + 3ull],
+    for (size_t i = 0; i < floats.size(); i+=16)
+        mats.emplace_back(
+            floats[i + 0ull],
+            floats[i + 1ull],
+            floats[i + 2ull],
+            floats[i + 3ull],
 
-			floats[i + 4ull],
-			floats[i + 5ull],
-			floats[i + 6ull],
-			floats[i + 7ull],
+            floats[i + 4ull],
+            floats[i + 5ull],
+            floats[i + 6ull],
+            floats[i + 7ull],
 
-			floats[i + 8ull],
-			floats[i + 9ull],
-			floats[i + 10ull],
-			floats[i + 11ull],
-			floats[i + 12ull],
+            floats[i + 8ull],
+            floats[i + 9ull],
+            floats[i + 10ull],
+            floats[i + 11ull],
+            floats[i + 12ull],
 
-			floats[i + 13ull],
-			floats[i + 14ull],
-			floats[i + 15ull]
-		);
+            floats[i + 13ull],
+            floats[i + 14ull],
+            floats[i + 15ull]
+        );
 
-	return mats;
+    return mats;
 }
 
 std::vector<glm::tvec4<uint8_t>> ModelLoader::m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	std::vector<uint8_t> ubytes = m_GetUBytes(Accessor);
+    std::vector<uint8_t> ubytes = m_GetUBytes(Accessor);
 
-	std::vector<glm::tvec4<uint8_t>> vectors;
-	vectors.reserve(static_cast<size_t>(ubytes.size() / 4));
+    std::vector<glm::tvec4<uint8_t>> vectors;
+    vectors.reserve(static_cast<size_t>(ubytes.size() / 4));
 
-	for (size_t i = 0; i < ubytes.size(); i += 4)
-		vectors.emplace_back(
-			ubytes[i + 0ull],
-			ubytes[i + 1ull],
-			ubytes[i + 2ull],
-			ubytes[i + 3ull]
-		);
+    for (size_t i = 0; i < ubytes.size(); i += 4)
+        vectors.emplace_back(
+            ubytes[i + 0ull],
+            ubytes[i + 1ull],
+            ubytes[i + 2ull],
+            ubytes[i + 3ull]
+        );
 
-	return vectors;
+    return vectors;
 }

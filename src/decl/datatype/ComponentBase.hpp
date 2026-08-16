@@ -2,6 +2,7 @@
 #pragma once
 
 #include "datatype/EntityComponent.hpp"
+#include "datatype/Ref.hpp"
 #include "Reflection.hpp"
 
 class GameObject;

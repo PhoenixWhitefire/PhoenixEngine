@@ -4,8 +4,6 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "datatype/Ref.hpp"
-
 struct EntityComponent_
 {
 enum EC : uint8_t
@@ -22,7 +20,6 @@ enum EC : uint8_t
 	DirectionalLight,
 	SpotLight,
 	Camera,
-	AnimationAsset,
 	Model,
 	Bone,
 	TreeLink,
@@ -45,7 +42,7 @@ enum EC : uint8_t
 	Environment,
 	DeveloperTools,
 	Animator,
-	AnimationState,
+	Animation,
 	ScriptEngine,
 
 	count
@@ -66,7 +63,6 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"DirectionalLight",
 	"SpotLight",
 	"Camera",
-	"AnimationAsset",
 	"Model",
 	"Bone",
 	"TreeLink",
@@ -89,27 +85,11 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"Environment",
 	"DeveloperTools",
 	"Animator",
-	"AnimationState",
+	"Animation",
 	"ScriptEngine",
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::count);
-
-const std::string_view s_DataModelServices[] = {
-	"AssetManager",
-	"Collections",
-    "Engine",
-	"Environment",
-	"History",
-	"Interface",
-	"Logging",
-	"Network",
-	"Physics",
-    "PlayerInput",
-	"Renderer",
-	"DeveloperTools",
-	"ScriptEngine",
-};
 
 // component type and ID
 // if type is "None", the ID is a Game Object ID

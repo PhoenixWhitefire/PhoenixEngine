@@ -46,6 +46,8 @@
 
 #include "DeveloperTools.hpp"
 
+#include "datatype/Services.hpp"
+
 #include "asset/MaterialManager.hpp"
 #include "asset/TextureManager.hpp"
 #include "asset/SceneFormat.hpp"
@@ -53,14 +55,12 @@
 
 #include "datatype/ComponentDependencies.hpp"
 #include "component/Camera.hpp"
-#include "component/Model.hpp"
 
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
 #include "geometry/DecomposeTRS.hpp"
 
 #include "Utilities.hpp"
-#include "UserInput.hpp"
 #include "History.hpp"
 #include "Timing.hpp"
 #include "Engine.hpp"

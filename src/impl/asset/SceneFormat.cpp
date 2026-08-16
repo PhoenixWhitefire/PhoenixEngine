@@ -18,407 +18,410 @@
 #include "Log.hpp"
 
 #define SF_WARN(err, ...) Log.WarningF( \
-	"Deserialization warning: " err,    \
-	__VA_ARGS__                         \
+    "Deserialization warning: " err,    \
+    __VA_ARGS__                         \
 )                                       \
 
 static thread_local std::string errorString = "No error";
 
 static glm::vec2 getVector2FromJson(const nlohmann::json& Json)
 {
-	glm::vec2 Vec2;
+    glm::vec2 Vec2;
 
-	try
-	{
-		Vec2 = glm::vec2(
-			Json[0],
-			Json[1]
-		);
-	}
-	catch (const nlohmann::json::type_error& TErr)
-	{
-		Log.WarningF(
-			"Could not read Vector2: {}",
-			TErr.what()
-		);
-	}
-	
+    try
+    {
+        Vec2 = glm::vec2(
+            Json[0],
+            Json[1]
+        );
+    }
+    catch (const nlohmann::json::type_error& TErr)
+    {
+        Log.WarningF(
+            "Could not read Vector2: {}",
+            TErr.what()
+        );
+    }
 
-	return Vec2;
+    return Vec2;
 }
 
 static glm::vec3 getVector3FromJson(const nlohmann::json& Json)
 {
-	glm::vec3 Vec3;
+    glm::vec3 Vec3;
 
-	try
-	{
-		Vec3 = glm::vec3(
-			Json[0],
-			Json[1],
-			Json[2]
-		);
-	}
-	catch (const nlohmann::json::type_error& TErr)
-	{
-		Log.WarningF(
-			"Could not read Vector3: {}",
-			TErr.what()
-		);
-	}
+    try
+    {
+        Vec3 = glm::vec3(
+            Json[0],
+            Json[1],
+            Json[2]
+        );
+    }
+    catch (const nlohmann::json::type_error& TErr)
+    {
+        Log.WarningF(
+            "Could not read Vector3: {}",
+            TErr.what()
+        );
+    }
 
-	return Vec3;
+    return Vec3;
 }
 
 static Color getColorFromJson(const nlohmann::json& Json)
 {
-	Color col;
+    Color col;
 
-	try
-	{
-		col = Color(
-			Json[0],
-			Json[1],
-			Json[2]
-		);
-	}
-	catch (const nlohmann::json::type_error& TErr)
-	{
-		Log.WarningF(
-			"Could not read Color: {}",
-			TErr.what()
-		);
-	}
+    try
+    {
+        col = Color(
+            Json[0],
+            Json[1],
+            Json[2]
+        );
+    }
+    catch (const nlohmann::json::type_error& TErr)
+    {
+        Log.WarningF(
+            "Could not read Color: {}",
+            TErr.what()
+        );
+    }
 
-	return col;
+    return col;
 }
 
 static glm::mat4 getMatrixFromJson(const nlohmann::json& Json)
 {
-	glm::mat4 mat;
+    glm::mat4 mat;
 
-	try
-	{
-		// 01/09/2024:
-		// not even explicitly saying they're `float`s with
-		// "<4, 4, float>" will get GLM to cast them :pensive:
-		// like bro they'll listen to you if you tell them
-		// don't be angry at them they don't even know what you want them to do
-		// :,(
+    try
+    {
+        // 01/09/2024:
+        // not even explicitly saying they're `float`s with
+        // "<4, 4, float>" will get GLM to cast them :pensive:
+        // like bro they'll listen to you if you tell them
+        // don't be angry at them they don't even know what you want them to do
+        // :,(
 
-		for (int col = 0; col < 4; col++)
-			for (int row = 0; row < 4; row++)
-				mat[col][row] = float(Json[col][row]);
-	}
-	catch (const nlohmann::json::type_error& TErr)
-	{
-		Log.WarningF(
-			"Could not read Matrix: {}",
-			TErr.what()
-		);
-	}
+        for (int col = 0; col < 4; col++)
+            for (int row = 0; row < 4; row++)
+                mat[col][row] = float(Json[col][row]);
+    }
+    catch (const nlohmann::json::type_error& TErr)
+    {
+        Log.WarningF(
+            "Could not read Matrix: {}",
+            TErr.what()
+        );
+    }
 
-	return mat;
+    return mat;
 }
 
 static float getVersion(const std::string& MapFileContents)
 {
-	size_t matchLocation = MapFileContents.find("#Version");
+    size_t matchLocation = MapFileContents.find("#Version");
 
-	float version = 1.f;
+    float version = 1.f;
 
-	if (matchLocation != std::string::npos)
-	{
-		std::string subStr = MapFileContents.substr(matchLocation + 9, 4);
-		version = std::stof(subStr);
-	}
-	
-	return version;
+    if (matchLocation != std::string::npos)
+    {
+        std::string subStr = MapFileContents.substr(matchLocation + 9, 4);
+        version = std::stof(subStr);
+    }
+
+    return version;
 }
 
 static std::vector<ObjectHandle> loadSceneVersion1(
-	const std::string& Contents,
-	bool* SuccessPtr
+    const std::string& Contents,
+    bool* SuccessPtr
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	nlohmann::json JsonData;
+    nlohmann::json JsonData;
 
-	try
-	{
-		ZoneScopedN("ParseJson");
-		JsonData = nlohmann::json::parse(Contents);
-	}
-	catch (const nlohmann::json::parse_error& e)
-	{
-		errorString = std::format(
-			"JSON Parsing error: {}",
-			e.what()
-		);
+    try
+    {
+        ZoneScopedN("ParseJson");
+        JsonData = nlohmann::json::parse(Contents);
+    }
+    catch (const nlohmann::json::parse_error& e)
+    {
+        errorString = std::format(
+            "JSON Parsing error: {}",
+            e.what()
+        );
 
-		*SuccessPtr = false;
+        *SuccessPtr = false;
 
-		return {};
-	}
+        return {};
+    }
 
-	std::string sceneName = JsonData.value("SceneName", "<UNNAMED SCENE>");
+    std::string sceneName = JsonData.value("SceneName", "<UNNAMED SCENE>");
 
-	const nlohmann::json& PartsNode = JsonData["parts"];
-	const nlohmann::json& ModelsNode = JsonData.value("props", nlohmann::json{});
-	const nlohmann::json& LightsNode = JsonData["lights"];
+    const nlohmann::json& PartsNode = JsonData["parts"];
+    const nlohmann::json& ModelsNode = JsonData.value("props", nlohmann::json{});
+    const nlohmann::json& LightsNode = JsonData["lights"];
 
-	std::vector<ObjectHandle> Objects;
-	Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
+    std::vector<ObjectHandle> Objects;
+    Objects.reserve(PartsNode.size() + ModelsNode.size() + LightsNode.size());
 
-	for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
-	{
-		nlohmann::json PropObject;
+    for (uint32_t Index = 0; Index < ModelsNode.size(); Index++)
+    {
+        nlohmann::json PropObject;
 
-		try
-		{
-			PropObject = ModelsNode[Index];
-		}
-		catch (const nlohmann::json::type_error& e)
-		{
-			RAISE_RT("Failed to decode map data: {}", e.what());
-		}
+        try
+        {
+            PropObject = ModelsNode[Index];
+        }
+        catch (const nlohmann::json::type_error& e)
+        {
+            RAISE_RT("Failed to decode map data: {}", e.what());
+        }
 
-		std::string ModelPath = PropObject["path"];
+        std::string ModelPath = PropObject["path"];
 
-		glm::vec3 Position = getVector3FromJson(PropObject["position"]);
-		//Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
-		glm::vec3 Size = getVector3FromJson(PropObject["size"]);
+        glm::vec3 Position = getVector3FromJson(PropObject["position"]);
+        //Vector3 Orientation = GetVector3FromJson(PropObject["orient"]);
+        glm::vec3 Size = getVector3FromJson(PropObject["size"]);
 
-		ModelLoader Loader = ModelLoader(ModelPath.c_str(), PHX_GAMEOBJECT_NULL_ID);
-		if (EcTransform* trans = Loader.Model->FindComponent<EcTransform>())
-		{
-			trans->Transform = glm::translate(glm::mat4(1.f), Position);
-			trans->SetWorldSize(Size);
-		}
+        ModelLoader Loader = ModelLoader(ModelPath.c_str(), PHX_GAMEOBJECT_NULL_ID);
+        if (EcTransform* trans = Loader.Model->FindComponent<EcTransform>())
+        {
+            trans->Transform = glm::translate(glm::mat4(1.f), Position);
+            trans->SetWorldSize(Size);
+        }
 
-		std::string modelName = PropObject.value("name", "<UN-NAMED>");
-		Loader.Model->Name = modelName;
-		Objects.push_back(Loader.Model);
+        std::string modelName = PropObject.value("name", "<UN-NAMED>");
+        Loader.Model->Name = modelName;
+        Objects.push_back(Loader.Model);
 
-		for (const ObjectHandle& obj : Loader.Model->GetDescendants())
-		{
-			auto prop_3d = obj->FindComponent<EcMesh>();
+        for (const ObjectHandle& obj : Loader.Model->GetDescendants())
+        {
+            auto prop_3d = obj->FindComponent<EcMesh>();
 
-			if (!prop_3d)
-				continue;
+            if (!prop_3d)
+                continue;
 
-			if (PropObject.find("facecull") != PropObject.end())
-			{
-				std::string facecullNameStr = std::string(PropObject["facecull"]);
-				const char* facecullName = facecullNameStr.c_str();
+            if (PropObject.find("facecull") != PropObject.end())
+            {
+                std::string facecullNameStr = std::string(PropObject["facecull"]);
+                const char* facecullName = facecullNameStr.c_str();
 
-				if (strcmp(facecullName, "none") == 0)
-					prop_3d->FaceCulling = FaceCullingMode::None;
+                if (strcmp(facecullName, "none") == 0)
+                    prop_3d->FaceCulling = FaceCullingMode::None;
 
-				else if (strcmp(facecullName, "front") == 0)
-					prop_3d->FaceCulling = FaceCullingMode::FrontFace;
+                else if (strcmp(facecullName, "front") == 0)
+                    prop_3d->FaceCulling = FaceCullingMode::FrontFace;
 
-				else if (strcmp(facecullName, "back") == 0)
-					prop_3d->FaceCulling = FaceCullingMode::BackFace;
+                else if (strcmp(facecullName, "back") == 0)
+                    prop_3d->FaceCulling = FaceCullingMode::BackFace;
 
-				else
-					prop_3d->FaceCulling = FaceCullingMode::BackFace;
-			}
+                else
+                    prop_3d->FaceCulling = FaceCullingMode::BackFace;
+            }
 
-			if (EcRigidBody* crb = obj->FindComponent<EcRigidBody>())
-				crb->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
-		}
-	}
+            if (EcRigidBody* crb = obj->FindComponent<EcRigidBody>())
+                crb->PhysicsDynamics = PropObject.value("computePhysics", 0) == 1 ? true : false;
+        }
+    }
 
-	MaterialManager* mtlManager = MaterialManager::Get();
+    MaterialManager* mtlManager = MaterialManager::Get();
 
-	for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
-	{
-		const nlohmann::json& Object = PartsNode[Index];
+    for (uint32_t Index = 0; Index < PartsNode.size(); Index++)
+    {
+        const nlohmann::json& Object = PartsNode[Index];
 
-		ObjectHandle NewObject = GameObjectManager::s_Create("Mesh");
-		Objects.push_back(NewObject);
+        ObjectHandle NewObject = GameObjectManager::s_Create("Mesh");
+        Objects.push_back(NewObject);
 
-		EcTransform* ct = NewObject->FindComponent<EcTransform>();
-		EcMesh* cm = NewObject->FindComponent<EcMesh>();
+        EcTransform* ct = NewObject->FindComponent<EcTransform>();
+        EcMesh* cm = NewObject->FindComponent<EcMesh>();
 
-		NewObject->Name = Object.value("name", NewObject->Name);
+        NewObject->Name = Object.value("name", NewObject->Name);
 
-		glm::vec3 Position = getVector3FromJson(Object["position"]);
-		glm::vec3 Orientation{};
+        glm::vec3 Position = getVector3FromJson(Object["position"]);
+        glm::vec3 Orientation{};
 
-		if (Object.find("orient") != Object.end())
-		{
-			Orientation = getVector3FromJson(Object["orient"]);
-			/*
-			Orientation = Vector3(
-				Orientation.Y,
-				Orientation.Z,
-				Orientation.X
-			);
-			*/
-		}
+        if (Object.find("orient") != Object.end())
+        {
+            Orientation = getVector3FromJson(Object["orient"]);
+            /*
+            Orientation = Vector3(
+                Orientation.Y,
+                Orientation.Z,
+                Orientation.X
+            );
+            */
+        }
 
-		ct->Transform = glm::translate(ct->Transform, (glm::vec3)Position);
+        ct->Transform = glm::translate(ct->Transform, (glm::vec3)Position);
 
-		// YXZ Rotation order
-		ct->Transform = glm::rotate(
-			ct->Transform,
-			glm::radians(Orientation.y),
-			glm::vec3(0.f, 1.f, 0.f)
-		);
-		ct->Transform = glm::rotate(
-			ct->Transform,
-			glm::radians(Orientation.x),
-			glm::vec3(1.f, 0.f, 0.f)
-		);
-		ct->Transform = glm::rotate(
-			ct->Transform,
-			glm::radians(Orientation.z),
-			glm::vec3(0.f, 0.f, 1.f)
-		);
+        // YXZ Rotation order
+        ct->Transform = glm::rotate(
+            ct->Transform,
+            glm::radians(Orientation.y),
+            glm::vec3(0.f, 1.f, 0.f)
+        );
+        ct->Transform = glm::rotate(
+            ct->Transform,
+            glm::radians(Orientation.x),
+            glm::vec3(1.f, 0.f, 0.f)
+        );
+        ct->Transform = glm::rotate(
+            ct->Transform,
+            glm::radians(Orientation.z),
+            glm::vec3(0.f, 0.f, 1.f)
+        );
 
-		if (Object.find("color") != Object.end())
-			cm->Tint = getColorFromJson(Object["color"]);
+        if (Object.find("color") != Object.end())
+            cm->Tint = getColorFromJson(Object["color"]);
 
-		ct->SetWorldSize(getVector3FromJson(Object["size"]));
+        ct->SetWorldSize(getVector3FromJson(Object["size"]));
 
-		if (Object.find("material") != Object.end())
-		{
-			uint32_t MeshMaterial = mtlManager->LoadFromPath(std::string(Object["material"]));
+        if (Object.find("material") != Object.end())
+        {
+            uint32_t MeshMaterial = mtlManager->LoadFromPath(std::string(Object["material"]));
 
-			cm->MaterialId = MeshMaterial;
+            cm->MaterialId = MeshMaterial;
 
-		}
-		else if (Object.find("textures") != Object.end())
-		{
+        }
+        else if (Object.find("textures") != Object.end())
+        {
 
-		}
+        }
 
-		if (!NewObject->FindComponent<EcRigidBody>())
-			NewObject->AddComponent(EntityComponent::RigidBody);
+        if (!NewObject->FindComponent<EcRigidBody>())
+            NewObject->AddComponent(EntityComponent::RigidBody);
 
-		EcRigidBody* crb = NewObject->FindComponent<EcRigidBody>();
-		crb->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
-	}
+        EcRigidBody* crb = NewObject->FindComponent<EcRigidBody>();
+        crb->PhysicsDynamics = Object.value("computePhysics", 0) == 1 ? true : false;
+    }
 
-	for (uint32_t LightIndex = 0; LightIndex < LightsNode.size(); LightIndex++)
-	{
-		const nlohmann::json& LightObject = LightsNode[LightIndex];
+    for (uint32_t LightIndex = 0; LightIndex < LightsNode.size(); LightIndex++)
+    {
+        const nlohmann::json& LightObject = LightsNode[LightIndex];
 
-		std::string LightType = LightObject["type"];
+        std::string LightType = LightObject["type"];
 
-		ObjectHandle Object = GameObjectManager::s_Create(LightType);
-		Objects.push_back(Object);
+        ObjectHandle Object = GameObjectManager::s_Create(LightType);
+        Objects.push_back(Object);
 
-		if (LightType != "DirectionalLight")
-		{
-			EcTransform* ct = Object->FindComponent<EcTransform>();
+        if (LightType != "DirectionalLight")
+        {
+            EcTransform* ct = Object->FindComponent<EcTransform>();
 
-			ct->Transform = glm::translate(
-				glm::mat4(1.f),
-				(glm::vec3)getVector3FromJson(LightObject["position"])
-			);
-		}
-		else
-		{
-			Object->FindComponent<EcDirectionalLight>()->Direction = getVector3FromJson(LightObject["position"]);
-		}
+            ct->Transform = glm::translate(
+                glm::mat4(1.f),
+                (glm::vec3)getVector3FromJson(LightObject["position"])
+            );
+        }
+        else
+        {
+            Object->FindComponent<EcDirectionalLight>()->Direction = getVector3FromJson(LightObject["position"]);
+        }
 
-		//Light->LightColor = GetColorFromJson(LightObject["color"]);
+        //Light->LightColor = GetColorFromJson(LightObject["color"]);
 
-		if (LightType == "PointLight")
-		{
-			EcPointLight* Pointlight = Object->FindComponent<EcPointLight>();
-			Pointlight->Range = LightObject["range"];
-		}
-	}
+        if (LightType == "PointLight")
+        {
+            EcPointLight* Pointlight = Object->FindComponent<EcPointLight>();
+            Pointlight->Range = LightObject["range"];
+        }
+    }
 
-	return Objects;
+    return Objects;
 }
 
 // For Versions < 2.12, certain components would automatically add other components
 // Such as `Mesh` adding `Transform`. Replicate this behaviour for older scenes
 static void addLegacyComponentDependencies(const ObjectHandle& object)
 {
-	for (const ReflectorRef& r : object->Components)
-	{
-		for (EntityComponent ecx : GetCommonDependenciesForComponent(r.Type))
-		{
-			if (!object->FindComponentByType(ecx))
-				object->AddComponent(ecx);
-		}
-	}
+    for (const ReflectorRef& r : object->Components)
+    {
+        for (EntityComponent ecx : GetCommonDependenciesForComponent(r.Type))
+        {
+            if (!object->FindComponentByType(ecx))
+                object->AddComponent(ecx);
+        }
+    }
 }
 
 static ObjectHandle createObjectFromJsonItem(const nlohmann::json& Item, uint32_t ItemIndex, float Version)
 {
-	if (Version == 2.f)
-	{
-		const auto& classNameJson = Item.find("$_class");
+    if (Version == 2.f)
+    {
+        const auto& classNameJson = Item.find("$_class");
 
-		if (classNameJson == Item.end())
-		{
-			SF_WARN("Object #{} was missing its '$_class' key, skipping", ItemIndex);
+        if (classNameJson == Item.end())
+        {
+            SF_WARN("Object #{} was missing its '$_class' key, skipping", ItemIndex);
 
-			return nullptr;
-		}
+            return nullptr;
+        }
 
-		std::string className = classNameJson.value();
-		if (className == "Primitive")
-			className = "Mesh";
+        std::string className = classNameJson.value();
+        if (className == "Primitive")
+            className = "Mesh";
 
-		ObjectHandle object = GameObjectManager::s_Create(className);
-		addLegacyComponentDependencies(object);
+        ObjectHandle object = GameObjectManager::s_Create(className);
+        addLegacyComponentDependencies(object);
 
-		return object;
-	}
-	else
-	{
-		const auto& components = Item.find("$_components");
+        return object;
+    }
+    else
+    {
+        const auto& components = Item.find("$_components");
 
-		if (components == Item.end())
-		{
-			SF_WARN("Object #{} was missing its '$_components' key, skipping", ItemIndex);
+        if (components == Item.end())
+        {
+            SF_WARN("Object #{} was missing its '$_components' key, skipping", ItemIndex);
 
-			return nullptr;
-		}
+            return nullptr;
+        }
 
-		ObjectHandle object = GameObjectManager::Get()->Create();
+        ObjectHandle object = GameObjectManager::Get()->Create();
 
-		for (auto it = components.value().begin(); it != components.value().end(); it++)
-		{
-			std::string name = it.value();
-			EntityComponent ec = FindComponentTypeByName(name);
+        for (auto it = components.value().begin(); it != components.value().end(); it++)
+        {
+            std::string name = it.value();
 
-			if (ec == EntityComponent::None)
-			{
-				SF_WARN("Object #{} with name '{}' had invalid component '{}'", ItemIndex, Item.value("Name", "<UNNAMED>"), name);
-				continue;
-			}
+            if (Version < 2.15f && name == "AnimationAsset")
+                name = "Animation";
 
-			if (!object->FindComponentByType(ec))
-				object->AddComponent(ec);
-		}
+            EntityComponent ec = FindComponentTypeByName(name);
 
-		if (Version < 2.11f)
-		{
-			if (object->FindComponent<EcMesh>() && !object->FindComponent<EcRigidBody>())
-				object->AddComponent(EntityComponent::RigidBody);
-		}
+            if (ec == EntityComponent::None)
+            {
+                SF_WARN("Object #{} with name '{}' had invalid component '{}'", ItemIndex, Item.value("Name", "<UNNAMED>"), name);
+                continue;
+            }
 
-		if (Version < 2.12f)
-			addLegacyComponentDependencies(object);
+            if (!object->FindComponentByType(ec))
+                object->AddComponent(ec);
+        }
 
-		if (const auto& tagIt = Item.find("$_tags"); tagIt != Item.end())
-		{
-			for (size_t i = 0; i < tagIt.value().size(); i++)
-				object->AddTag(tagIt.value()[i]);
-		}
+        if (Version < 2.11f)
+        {
+            if (object->FindComponent<EcMesh>() && !object->FindComponent<EcRigidBody>())
+                object->AddComponent(EntityComponent::RigidBody);
+        }
 
-		return object;
-	}
+        if (Version < 2.12f)
+            addLegacyComponentDependencies(object);
+
+        if (const auto& tagIt = Item.find("$_tags"); tagIt != Item.end())
+        {
+            for (size_t i = 0; i < tagIt.value().size(); i++)
+                object->AddTag(tagIt.value()[i]);
+        }
+
+        return object;
+    }
 }
 
 static Reflection::GenericValue castJsonToGeneric(const std::string_view& propName, Reflection::ValueType propType, const nlohmann::json& memberValue)
@@ -479,131 +482,131 @@ static Reflection::GenericValue castJsonToGeneric(const std::string_view& propNa
 
 static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, float Version, bool* Success)
 {
-	ZoneScoped;
-	nlohmann::json jsonData;
+    ZoneScoped;
+    nlohmann::json jsonData;
 
-	try
-	{
-		ZoneScopedN("ParseJson");
-		jsonData = nlohmann::json::parse(Contents);
-	}
-	catch (const nlohmann::json::parse_error& e)
-	{
-		errorString = std::format(
-			"V2 - JSON Parsing error: {}",
-			e.what()
-		);
+    try
+    {
+        ZoneScopedN("ParseJson");
+        jsonData = nlohmann::json::parse(Contents);
+    }
+    catch (const nlohmann::json::parse_error& e)
+    {
+        errorString = std::format(
+            "V2 - JSON Parsing error: {}",
+            e.what()
+        );
 
-		*Success = false;
+        *Success = false;
 
-		return {};
-	}
+        return {};
+    }
 
-	std::string sceneName = jsonData.value("SceneName", "<UNNAMED SCENE>");
+    std::string sceneName = jsonData.value("SceneName", "<UNNAMED SCENE>");
 
-	if (jsonData.find("GameObjects") == jsonData.end())
-	{
-		errorString = std::format(
-			"The `GameObjects` key is not present in scene '{}'",
-			sceneName
-		);
+    if (jsonData.find("GameObjects") == jsonData.end())
+    {
+        errorString = std::format(
+            "The `GameObjects` key is not present in scene '{}'",
+            sceneName
+        );
 
-		*Success = false;
+        *Success = false;
 
-		return {};
-	}
+        return {};
+    }
 
-	const nlohmann::json& gameObjectsNode = jsonData["GameObjects"];
+    const nlohmann::json& gameObjectsNode = jsonData["GameObjects"];
 
-	std::vector<std::pair<int64_t,  ObjectHandle>> objects;
-	std::unordered_map<int64_t, ObjectHandle> objectsMap;
-	std::unordered_map<int64_t, int64_t> realIdToSceneId;
-	std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> objectProps;
+    std::vector<std::pair<int64_t,  ObjectHandle>> objects;
+    std::unordered_map<int64_t, ObjectHandle> objectsMap;
+    std::unordered_map<int64_t, int64_t> realIdToSceneId;
+    std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> objectProps;
 
-	objects.reserve(gameObjectsNode.size());
-	realIdToSceneId.reserve(gameObjectsNode.size());
+    objects.reserve(gameObjectsNode.size());
+    realIdToSceneId.reserve(gameObjectsNode.size());
 
-	for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
-	{
-		const nlohmann::json& item = gameObjectsNode[itemIndex];
-		ObjectHandle newObject = createObjectFromJsonItem(item, itemIndex, Version);
+    for (uint32_t itemIndex = 0; itemIndex < gameObjectsNode.size(); itemIndex++)
+    {
+        const nlohmann::json& item = gameObjectsNode[itemIndex];
+        ObjectHandle newObject = createObjectFromJsonItem(item, itemIndex, Version);
 
-		std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
+        std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 
-		if (item.find("$_objectId") == item.end())
-			SF_WARN("Object #{} was missing its '$_objectId' key", itemIndex);
-		else
-		{
-			uint32_t itemObjectId = item["$_objectId"];
+        if (item.find("$_objectId") == item.end())
+            SF_WARN("Object #{} was missing its '$_objectId' key", itemIndex);
+        else
+        {
+            uint32_t itemObjectId = item["$_objectId"];
 
-			if (const auto& prev = objectsMap.find(itemObjectId); prev != objectsMap.end())
-			{
-				SF_WARN(
-					"Object #{} ('{}') shares an `$_objectId` ({}) with ID:{} ('{}'), it will be skipped",
-					itemIndex, item.value("Name", "<UNNAMED>"), itemObjectId, prev->second->ObjectId, prev->second->Name
-				);
-				continue;
-			}
+            if (const auto& prev = objectsMap.find(itemObjectId); prev != objectsMap.end())
+            {
+                SF_WARN(
+                    "Object #{} ('{}') shares an `$_objectId` ({}) with ID:{} ('{}'), it will be skipped",
+                    itemIndex, item.value("Name", "<UNNAMED>"), itemObjectId, prev->second->ObjectId, prev->second->Name
+                );
+                continue;
+            }
 
-			objectsMap.insert(std::pair(itemObjectId, newObject));
-			objects.push_back(std::pair(itemObjectId, newObject));
-			realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
-		}
+            objectsMap.insert(std::pair(itemObjectId, newObject));
+            objects.push_back(std::pair(itemObjectId, newObject));
+            realIdToSceneId.insert(std::pair(newObject->ObjectId, itemObjectId));
+        }
 
-		objectProps[newObject->ObjectId] = {};
+        objectProps[newObject->ObjectId] = {};
 
-		// https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
-		for (auto propIt = item.begin(); propIt != item.end(); propIt++)
-		{
-			std::string_view propName = propIt.key();
+        // https://json.nlohmann.me/features/iterators/#access-object-key-during-iteration
+        for (auto propIt = item.begin(); propIt != item.end(); propIt++)
+        {
+            std::string_view propName = propIt.key();
 
-			// reserved prefix for data which needs to be saved but isn't a property
-			if (propName[0] == '$' && propName[1] == '_')
-				continue;
+            // reserved prefix for data which needs to be saved but isn't a property
+            if (propName[0] == '$' && propName[1] == '_')
+                continue;
 
-			if (Version < 2.11f && propName == "Asset")
-				propName = "MeshAsset";
+            if (Version < 2.11f && propName == "Asset")
+                propName = "MeshAsset";
 
-			if (Version < 2.13f && propName == "MetallnessFactor")
-				propName = "MetalnessFactor";
+            if (Version < 2.13f && propName == "MetallnessFactor")
+                propName = "MetalnessFactor";
 
-			if (Version < 2.14f && propName == "LocalSize" && item.find("LocalTransform") != item.end())
-				continue; // handle in `LocalTransform` branch
+            if (Version < 2.14f && propName == "LocalSize" && item.find("LocalTransform") != item.end())
+                continue; // handle in `LocalTransform` branch
 
-			if (propName == "LocalSize")
-			{
-				EcTransform* ct = newObject->FindComponent<EcTransform>();
-				assert(ct);
+            if (propName == "LocalSize")
+            {
+                EcTransform* ct = newObject->FindComponent<EcTransform>();
+                assert(ct);
 
-				ct->SetLocalSize(getVector3FromJson(propIt.value()));
-				continue;
-			}
+                ct->SetLocalSize(getVector3FromJson(propIt.value()));
+                continue;
+            }
 
-			const nlohmann::json& memberValue = propIt.value();
-			const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
+            const nlohmann::json& memberValue = propIt.value();
+            const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
 
-			if (!prop)
-			{
-				SF_WARN(
-					"Member '{}' is not defined in the API (Name: '{}')!",
-					propName,
-					name
-				);
-				continue;
-			}
+            if (!prop)
+            {
+                SF_WARN(
+                    "Member '{}' is not defined in the API (Name: '{}')!",
+                    propName,
+                    name
+                );
+                continue;
+            }
 
-			if (!prop->Set)
-			{
-				SF_WARN(
-					"Member '{}' of '{}' is read-only!",
-					propName,
-					name
-				);
-				continue;
-			}
+            if (!prop->Set)
+            {
+                SF_WARN(
+                    "Member '{}' of '{}' is read-only!",
+                    propName,
+                    name
+                );
+                continue;
+            }
 
-			Reflection::ValueType propType = prop->Type;
-			propType = Reflection::ValueType(propType & ~Reflection::ValueType::Null);
+            Reflection::ValueType propType = prop->Type;
+            propType = Reflection::ValueType(propType & ~Reflection::ValueType::Null);
 
             if (propType == Reflection::ValueType::GameObject)
             {
@@ -615,17 +618,17 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
             else
             {
                 Reflection::GenericValue assignment = castJsonToGeneric(propName, propType, memberValue);
-				glm::vec3 size = { 1.f, 1.f, 1.f };
-				// older files might use the world-space ones
-				bool isLocal = propName == "LocalTransform";
+                glm::vec3 size = { 1.f, 1.f, 1.f };
+                // older files might use the world-space ones
+                bool isLocal = propName == "LocalTransform";
 
-				if (Version < 2.14f && (propName == "LocalTransform" || propName == "Transform"))
-				{
-					const auto& sizeItem = item.find(isLocal ? "LocalSize" : "Size");
+                if (Version < 2.14f && (propName == "LocalTransform" || propName == "Transform"))
+                {
+                    const auto& sizeItem = item.find(isLocal ? "LocalSize" : "Size");
 
-					if (sizeItem != item.end()) // if not found, default size
-						size = getVector3FromJson(sizeItem.value());
-				}
+                    if (sizeItem != item.end()) // if not found, default size
+                        size = getVector3FromJson(sizeItem.value());
+                }
 
                 try
                 {
@@ -639,130 +642,130 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
                     );
                 }
 
-				if (size != glm::vec3(1.f, 1.f, 1.f))
-				{
-					EcTransform* ct = newObject->FindComponent<EcTransform>();
-					assert(ct);
+                if (size != glm::vec3(1.f, 1.f, 1.f))
+                {
+                    EcTransform* ct = newObject->FindComponent<EcTransform>();
+                    assert(ct);
 
-					if (isLocal)
-						ct->SetLocalSize(size);
-					else
-						ct->SetWorldSize(size);
-				}
+                    if (isLocal)
+                        ct->SetLocalSize(size);
+                    else
+                        ct->SetWorldSize(size);
+                }
             }
-		}
-	}
+        }
+    }
 
-	ZoneNamedN(fixupzone, "FixupObjectReferentProperties", true);
+    ZoneNamedN(fixupzone, "FixupObjectReferentProperties", true);
 
-	std::vector<ObjectHandle> rootObjects;
+    std::vector<ObjectHandle> rootObjects;
 
-	for (auto& it : objects)
-	{
-		ObjectHandle& object = it.second;
+    for (auto& it : objects)
+    {
+        ObjectHandle& object = it.second;
 
-		// !! IMPORTANT !!
-		// The `Parent` key *should not* be set for Root Nodes as their parent
-		// *is not part of the scene!*
-		// 04/09/2024
-		if (objectProps[object->ObjectId].find("Parent") == objectProps[object->ObjectId].end())
-			rootObjects.push_back(object);
+        // !! IMPORTANT !!
+        // The `Parent` key *should not* be set for Root Nodes as their parent
+        // *is not part of the scene!*
+        // 04/09/2024
+        if (objectProps[object->ObjectId].find("Parent") == objectProps[object->ObjectId].end())
+            rootObjects.push_back(object);
 
-		for (auto& objectProp : objectProps[object->ObjectId])
-		{
-			const std::string_view& propName = objectProp.first;
-			const uint32_t sceneRelativeId = objectProp.second;
+        for (auto& objectProp : objectProps[object->ObjectId])
+        {
+            const std::string_view& propName = objectProp.first;
+            const uint32_t sceneRelativeId = objectProp.second;
 
-			auto target = objectsMap.find(sceneRelativeId);
+            auto target = objectsMap.find(sceneRelativeId);
 
-			if (target != objectsMap.end())
-			{
-				try
-				{
-					object->SetPropertyValue(propName, target->second->ToGenericValue());
-				}
-				catch (const std::runtime_error& err)
-				{
-					std::string valueStr = target->second->GetFullName();
+            if (target != objectsMap.end())
+            {
+                try
+                {
+                    object->SetPropertyValue(propName, target->second->ToGenericValue());
+                }
+                catch (const std::runtime_error& err)
+                {
+                    std::string valueStr = target->second->GetFullName();
 
-					SF_WARN(
-						"Failed to set GameObject property {}.{} to '{}': {}",
-						object->Name, propName, valueStr, err.what()
-					);
-				}
-			}
-			else
-			{
-				SF_WARN(
-					"'{}' refers to invalid scene-relative Object ID {} for property {}",
-					object->Name,
-					sceneRelativeId,
-					propName
-				);
+                    SF_WARN(
+                        "Failed to set GameObject property {}.{} to '{}': {}",
+                        object->Name, propName, valueStr, err.what()
+                    );
+                }
+            }
+            else
+            {
+                SF_WARN(
+                    "'{}' refers to invalid scene-relative Object ID {} for property {}",
+                    object->Name,
+                    sceneRelativeId,
+                    propName
+                );
 
-				object->SetPropertyValue(propName, GameObject::s_ToGenericValue(nullptr));
-			}
-		}
-	}
+                object->SetPropertyValue(propName, GameObject::s_ToGenericValue(nullptr));
+            }
+        }
+    }
 
-	return rootObjects;
+    return rootObjects;
 }
 
 std::vector<ObjectHandle> SceneFormat::Deserialize(
-	const std::string& Contents,
-	bool* SuccessPtr
+    const std::string& Contents,
+    bool* SuccessPtr
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	float version = getVersion(Contents);
-	size_t jsonStartLoc = Contents.find_first_of("{");
+    float version = getVersion(Contents);
+    size_t jsonStartLoc = Contents.find_first_of("{");
 
-	if (jsonStartLoc == std::string::npos)
-	{
-		errorString = std::format(
-			"Unable to find JSON section of file. Format version retrieved was {}",
-			version
-		);
-		*SuccessPtr = false;
+    if (jsonStartLoc == std::string::npos)
+    {
+        errorString = std::format(
+            "Unable to find JSON section of file. Format version retrieved was {}",
+            version
+        );
+        *SuccessPtr = false;
 
-		return {};
-	}
+        return {};
+    }
 
-	std::string jsonFileContents = Contents.substr(jsonStartLoc);
-	std::vector<ObjectHandle> objects;
+    std::string jsonFileContents = Contents.substr(jsonStartLoc);
+    std::vector<ObjectHandle> objects;
 
-	if (version >= 1.f && version < 2.f)
-		objects = loadSceneVersion1(jsonFileContents, SuccessPtr);
-	else if (version >= 2.f && version < 3.f)
-		objects = loadSceneVersion2(jsonFileContents, version, SuccessPtr);
-	else
-	{
-		errorString = std::format(
-			"Format version '{}' not recognized",
-			version
-		);
-		*SuccessPtr = false;
+    if (version >= 1.f && version < 2.f)
+        objects = loadSceneVersion1(jsonFileContents, SuccessPtr);
+    else if (version >= 2.f && version < 3.f)
+        objects = loadSceneVersion2(jsonFileContents, version, SuccessPtr);
+    else
+    {
+        errorString = std::format(
+            "Format version '{}' not recognized",
+            version
+        );
+        *SuccessPtr = false;
 
-		return {};
-	}
+        return {};
+    }
 
-	for (ObjectHandle& object : objects)
-	{
-		if (EcTransform* ct = object->FindComponent<EcTransform>())
-			ct->RecomputeTransformTree();
-		else
-		{
-			object->ForEachDescendant([](const ObjectHandle& d)
-			{
-				if (EcTransform* dt = d->FindComponent<EcTransform>())
-					dt->RecomputeTransformTree();
-				return true;
-			});
-		}
-	}
+    for (ObjectHandle& object : objects)
+    {
+        if (EcTransform* ct = object->FindComponent<EcTransform>())
+            ct->RecomputeTransformTree();
+        else
+        {
+            object->ForEachDescendant([](const ObjectHandle& d)
+            {
+                if (EcTransform* dt = d->FindComponent<EcTransform>())
+                    dt->RecomputeTransformTree();
+                return true;
+            });
+        }
+    }
 
-	return objects;
+    return objects;
 }
 
 static nlohmann::json castGenericToJson(const ObjectRef& Object, const std::string_view& propName, const Reflection::GenericValue& value)
@@ -813,7 +816,7 @@ static nlohmann::json castGenericToJson(const ObjectRef& Object, const std::stri
         }
 
         return matJ;
-	}
+    }
 
     case Reflection::ValueType::Array:
     {
@@ -849,11 +852,11 @@ static nlohmann::json castGenericToJson(const ObjectRef& Object, const std::stri
 
 struct Serializer
 {
-	void SerializeObject(GameObject* Object, bool IsRootNode = false);
-	uint32_t IdCounter = 0;
-	std::unordered_map<uint32_t, uint32_t> RealIdToSceneId;
-	std::unordered_map<uint32_t, std::vector<std::pair<uint32_t, std::string_view>>> PendingIdReplacement;
-	nlohmann::json Items;
+    void SerializeObject(GameObject* Object, bool IsRootNode = false);
+    uint32_t IdCounter = 0;
+    std::unordered_map<uint32_t, uint32_t> RealIdToSceneId;
+    std::unordered_map<uint32_t, std::vector<std::pair<uint32_t, std::string_view>>> PendingIdReplacement;
+    nlohmann::json Items;
 };
 
 void Serializer::SerializeObject(GameObject* Object, bool IsRootNode)
@@ -940,47 +943,47 @@ void Serializer::SerializeObject(GameObject* Object, bool IsRootNode)
 
 std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::string& SceneName)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	nlohmann::json json;
-	json["SceneName"] = SceneName;
+    nlohmann::json json;
+    json["SceneName"] = SceneName;
 
-	Serializer serializer;
+    Serializer serializer;
 
-	for (GameObject* rootObject : Objects)
-	{
-		serializer.SerializeObject(rootObject, /* IsRootNode = */ true);
+    for (GameObject* rootObject : Objects)
+    {
+        serializer.SerializeObject(rootObject, /* IsRootNode = */ true);
 
-		rootObject->ForEachDescendant([&serializer](const ObjectHandle& desc)
-		{
-			if (desc->Serializes)
-				serializer.SerializeObject(desc.Dereference());
-			return true;
-		});
-	}
+        rootObject->ForEachDescendant([&serializer](const ObjectHandle& desc)
+        {
+            if (desc->Serializes)
+                serializer.SerializeObject(desc.Dereference());
+            return true;
+        });
+    }
 
-	json["GameObjects"] = serializer.Items;
+    json["GameObjects"] = serializer.Items;
 
-	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
 
 
-	std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
-							+ std::to_string((uint32_t)ymd.month()) + "-"
-							+ std::to_string((int32_t)ymd.year());
-	
-	std::string contents = std::string("PHOENIXF\n")
-							+ "#Version 2.14\n"
-							+ "#Asset Scene\n"
-							+ "#Date " + dateStr + "\n"
-							+ "#SceneName " + SceneName + "\n"
-							+ "\n"
-							+ json.dump(2);
+    std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
+                            + std::to_string((uint32_t)ymd.month()) + "-"
+                            + std::to_string((int32_t)ymd.year());
 
-	return contents;
+    std::string contents = std::string("PHOENIXF\n")
+                            + "#Version 2.15\n"
+                            + "#Asset Scene\n"
+                            + "#Date " + dateStr + "\n"
+                            + "#SceneName " + SceneName + "\n"
+                            + "\n"
+                            + json.dump(2);
+
+    return contents;
 }
 
 std::string SceneFormat::GetLastErrorString()
 {
-	return errorString;
+    return errorString;
 }

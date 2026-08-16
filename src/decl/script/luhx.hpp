@@ -7,6 +7,7 @@
 #include <cstdint>
 
 #include "datatype/EntityComponent.hpp"
+#include "datatype/Ref.hpp"
 
 struct InputEvent;
 class Color;

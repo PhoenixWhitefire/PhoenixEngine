@@ -10,31 +10,36 @@
 #include "asset/Binary.hpp"
 #include "FileRW.hpp"
 
-const Reflection::StaticPropertyMap& AnimationAssetComponentManager::GetProperties()
+const Reflection::StaticPropertyMap& AnimationComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
         REFLECTION_PROPERTY(
             "Animation",
             String,
-            REFLECTION_PROPERTY_GET_SIMPLE(EcAnimationAsset, Animation),
+            REFLECTION_PROPERTY_GET_SIMPLE(EcAnimation, Animation),
             [](void* p, const Reflection::GenericValue& gv)
             {
 
-                static_cast<EcAnimationAsset*>(p)->SetAnimation(gv.AsString());
+                static_cast<EcAnimation*>(p)->SetAnimation(gv.AsString());
             }
         ),
+
+        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Time, Double),
+        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Weight, Double),
+        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Playing, Boolean),
+        REFLECTION_PROPERTY_SIMPLE(EcAnimation, Looped, Boolean),
     };
 
     return props;
 }
 
-void EcAnimationAsset::SetAnimation(const std::string& Asset)
+void EcAnimation::SetAnimation(const std::string& Asset)
 {
     Animation = Asset;
 
     if (Asset.size() == 0)
     {
-        AssetId = UINT32_MAX;
+        AnimationId = UINT32_MAX;
         return;
     }
 
@@ -43,7 +48,7 @@ void EcAnimationAsset::SetAnimation(const std::string& Asset)
     AnimatorComponentManager* acm = (AnimatorComponentManager*)AnimatorComponentManager::Get();
     if (const auto& it = acm->RegisteredAnimations.find(path); it != acm->RegisteredAnimations.end())
     {
-        AssetId = it->second;
+        AnimationId = it->second;
         return;
     }
 
@@ -145,19 +150,7 @@ void EcAnimationAsset::SetAnimation(const std::string& Asset)
             RAISE_RT("Reached end of animation file reading keyframe {} of {}", keyframeIndex, keyframeCount);
     }
 
-    AssetId = id;
-}
-
-const Reflection::StaticPropertyMap& AnimationStateComponentManager::GetProperties()
-{
-    static const Reflection::StaticPropertyMap props = {
-        REFLECTION_PROPERTY_SIMPLE(EcAnimationState, Time, Double),
-        REFLECTION_PROPERTY_SIMPLE(EcAnimationState, Weight, Double),
-        REFLECTION_PROPERTY_SIMPLE(EcAnimationState, Playing, Boolean),
-        REFLECTION_PROPERTY_SIMPLE(EcAnimationState, Looped, Boolean),
-    };
-
-    return props;
+    AnimationId = id;
 }
 
 uint32_t AnimatorComponentManager::CreateComponent(GameObject* Object)
@@ -181,18 +174,18 @@ const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
         { "LoadAnimation", Reflection::MethodDescriptor{
-            REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `AnimationAsset`
-            REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `AnimationState`
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `Animation`
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `Animation`
             [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 EcAnimator* ea = static_cast<EcAnimator*>(p);
-                GameObject* animAsset = GameObjectManager::Get()->FromGenericValue(inputs[0]);
+                GameObject* anim = GameObjectManager::Get()->FromGenericValue(inputs[0]);
 
-                if (EcAnimationAsset* eaa = animAsset->FindComponent<EcAnimationAsset>())
+                if (EcAnimation* animation = anim->FindComponent<EcAnimation>())
                 {
-                    if (eaa->AssetId == UINT32_MAX)
-                        eaa->SetAnimation(eaa->Animation);
-                    return { ea->LoadAnimation(eaa->AssetId)->ToGenericValue() };
+                    if (animation->AnimationId == UINT32_MAX)
+                        animation->SetAnimation(animation->Animation);
+                    return { ea->LoadAnimation(animation->AnimationId)->ToGenericValue() };
                 }
                 else
                     RAISE_RT("GameObject must have an `AnimationAsset` component");
@@ -210,16 +203,15 @@ ObjectHandle EcAnimator::LoadAnimation(uint32_t Id)
 
     for (const ObjectHandle& loaded : Animations)
     {
-        if (EcAnimationState* eas = loaded->FindComponent<EcAnimationState>(); eas && eas->AnimationAssetId == Id)
+        if (EcAnimation* eas = loaded->FindComponent<EcAnimation>(); eas && eas->AnimationId == Id)
             return loaded;
     }
 
-    ObjectHandle stateObj = GameObjectManager::s_Create(EntityComponent::AnimationState);
-    EcAnimationState* eas = stateObj->FindComponent<EcAnimationState>();
+    ObjectHandle stateObj = GameObjectManager::s_Create(EntityComponent::Animation);
+    EcAnimation* eas = stateObj->FindComponent<EcAnimation>();
     assert(eas);
 
-    eas->AnimationAssetId = Id;
-    stateObj->Serializes = false;
+    eas->AnimationId = Id;
     Animations.push_back(stateObj);
 
     return stateObj;
@@ -228,16 +220,15 @@ ObjectHandle EcAnimator::LoadAnimation(uint32_t Id)
 void EcAnimator::Step(double DeltaTime)
 {
     ZoneScoped;
-
     AnimatorComponentManager* acm = (AnimatorComponentManager*)AnimatorComponentManager::Get();
 
     for (const ObjectHandle& animObj : Animations)
     {
-        EcAnimationState* animationState = animObj->FindComponent<EcAnimationState>();
+        EcAnimation* animationState = animObj->FindComponent<EcAnimation>();
         if (!animationState || !animationState->Playing)
             continue;
 
-        const AnimationData& animation = acm->Animations.at(animationState->AnimationAssetId);
+        const AnimationData& animation = acm->Animations.at(animationState->AnimationId);
 
         animationState->Time += (float)DeltaTime;
         if (animationState->Time > animation.Length)

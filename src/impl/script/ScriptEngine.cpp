@@ -728,7 +728,7 @@ std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode, in
     // will cause them to be treated as constants and only invoke their `__index` functions
     // once and cache the result
     const char* mutableGlobals[] = {
-        "game", "workspace",
+        "game",
         NULL
     };
 
@@ -1839,9 +1839,6 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
 
     luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel));
     lua_setglobal(state, "game");
-
-    luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel)->FindChild("Workspace"));
-    lua_setglobal(state, "workspace");
 
     lua_pushlstring(state, VmName.data(), VmName.size());
     lua_setglobal(state, "_VMNAME");

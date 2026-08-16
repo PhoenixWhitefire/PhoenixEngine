@@ -219,6 +219,7 @@ type Services = {
   Environment: EcEnvironment,
   DeveloperTools: EcDeveloperTools,
   ScriptEngine: EcScriptEngine,
+  Workspace: EcWorkspace,
 }
 
 declare extern type AtomicInteger with
@@ -348,11 +349,8 @@ export type GameObject = {
   OnWorkspaceChanged: EventSignal<(GameObject, GameObject)>,
 }
 
-export type EcAnimationAsset = {
+export type EcAnimation = {
   Animation: string,
-}
-
-export type EcAnimationState = {
   Looped: boolean,
   Playing: boolean,
   Time: number,
@@ -362,7 +360,7 @@ export type EcAnimationState = {
 export type EcAnimator = {
   Animating: boolean,
 
-  LoadAnimation: (self: EcAnimator, EcAnimationAsset) -> EcAnimationState,
+  LoadAnimation: (self: EcAnimator, EcAnimation) -> EcAnimation,
 }
 
 export type EcAssetManager = {
@@ -704,7 +702,6 @@ type Components = {
   DirectionalLight: EcDirectionalLight,
   SpotLight: EcSpotLight,
   Camera: EcCamera,
-  AnimationAsset: EcAnimationAsset,
   Model: EcModel,
   Bone: EcBone,
   TreeLink: EcTreeLink,
@@ -727,7 +724,7 @@ type Components = {
   Environment: EcEnvironment,
   DeveloperTools: EcDeveloperTools,
   Animator: EcAnimator,
-  AnimationState: EcAnimationState,
+  Animation: EcAnimation,
   ScriptEngine: EcScriptEngine,
 }
 type Creatables = {
@@ -741,7 +738,6 @@ type Creatables = {
   DirectionalLight: EcDirectionalLight,
   SpotLight: EcSpotLight & EcTransform,
   Camera: EcCamera & EcTransform,
-  AnimationAsset: EcAnimationAsset,
   Model: EcModel & EcTransform,
   Bone: EcBone,
   TreeLink: EcTreeLink,
@@ -764,7 +760,7 @@ type Creatables = {
   Environment: EcEnvironment,
   DeveloperTools: EcDeveloperTools,
   Animator: EcAnimator,
-  AnimationState: EcAnimationState,
+  Animation: EcAnimation,
   ScriptEngine: EcScriptEngine,
 }
 
@@ -1222,6 +1218,5 @@ declare _VMNAME: string
 declare function appendlog<T...>( ...: T... ): ()
 declare game: GameObject & EcDataModel
 declare function warn<T...>( ...: T... ): ()
-declare workspace: GameObject & EcWorkspace
 
 

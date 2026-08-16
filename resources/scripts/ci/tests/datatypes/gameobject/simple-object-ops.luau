@@ -1,34 +1,36 @@
+local Workspace = game:GetService("Workspace")
+
 local Types = require("@ci/test-types.luau")
 
 return function(test: Types.Test, expect: Types.Expect)
     test("Read property", function()
-        expect(workspace.Name):toBe("Workspace")
+        expect(Workspace.Name):toBe("Workspace")
     end)
     test("Set property", function()
-        workspace.SceneCamera.FieldOfView = 999
-        expect(workspace.SceneCamera.FieldOfView):toBe(999)
-        workspace.SceneCamera.FieldOfView = 90
+        Workspace.SceneCamera.FieldOfView = 999
+        expect(Workspace.SceneCamera.FieldOfView):toBe(999)
+        Workspace.SceneCamera.FieldOfView = 90
     end)
     test("Parenting", function()
         local new = GameObject.fromTemplate("Bone")
         new.Name = "NewObject"
-        new.Parent = workspace
-        expect(workspace:FindChild("NewObject") ~= nil):toBe(true)
+        new.Parent = Workspace
+        expect(Workspace:FindChild("NewObject") ~= nil):toBe(true)
         new:Destroy()
     end)
     test("Un-Parent", function()
         local new = GameObject.fromTemplate("Transform")
         new.Name = "NewObject"
-        new.Parent = workspace
+        new.Parent = Workspace
         new.Parent = nil
-        expect(workspace:FindChild("NewObject")):toBeNil()
+        expect(Workspace:FindChild("NewObject")):toBeNil()
     end)
     test("Un-Parent via :Destroy", function()
         local new = GameObject.fromTemplate("DataModel")
         new.Name = "NewObject"
-        new.Parent = workspace
+        new.Parent = Workspace
         new:Destroy()
-        expect(workspace:FindChild("NewObject")):toBeNil()
+        expect(Workspace:FindChild("NewObject")):toBeNil()
     end)
     test("Type validation - Properties", function()
         expect(function()
@@ -41,7 +43,7 @@ return function(test: Types.Test, expect: Types.Expect)
         end):toThrow("invalid argument")
     end)
     test("__eq", function()
-        expect(game.Workspace == workspace and game.Workspace ~= game):toBe(true)
+        expect(game.Workspace == Workspace and game.Workspace ~= game):toBe(true)
     end)
     test("rawequal true", function()
         expect((function()
@@ -57,7 +59,7 @@ return function(test: Types.Test, expect: Types.Expect)
             local t = {
                 [game.Workspace] = false
             }
-            t[workspace.SceneCamera] = true
+            t[Workspace.SceneCamera] = true
             return t[game.Workspace]
         end)()):toBe(false)
     end)
@@ -76,7 +78,7 @@ return function(test: Types.Test, expect: Types.Expect)
 
     test("Errorneous non-namecall method call", function()
         expect(function()
-            game.Close(workspace)
+            game.Close(Workspace)
         end):toThrow("Close not available on DataModel.Workspace")
     end)
 end

@@ -5,6 +5,7 @@ local DeveloperTools = game:GetService("DeveloperTools")
 local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local Collections = game:GetService("Collections")
+local Workspace = game:GetService("Workspace")
 local Physics = game:GetService("Physics")
 local History = game:GetService("History")
 local Engine = game:GetService("Engine")
@@ -22,7 +23,7 @@ local Types = require("@ed/Types")
 
 local ProjectClosedByDataModelConnection = nil
 local LastSelectedInEditMode = {}
-local EditorCam = workspace.SceneCamera
+local EditorCam = Workspace.SceneCamera
 
 local VisualizationsChangedConnections: { [GameObject]: {
     read Moved: EventConnection?,
@@ -221,7 +222,7 @@ function ProjectEditing.Render(DeltaTime: number)
             continue
         end
 
-        local transparency = math.clamp(0.5 / vector.magnitude(vis.Transform.Translation - workspace.SceneCamera.Transform.Translation)^4, 0, 1)
+        local transparency = math.clamp(0.5 / vector.magnitude(vis.Transform.Translation - Workspace.SceneCamera.Transform.Translation)^4, 0, 1)
 
         for _, g in vis:GetChildren() do
             if g:HasComponent("Mesh") then
