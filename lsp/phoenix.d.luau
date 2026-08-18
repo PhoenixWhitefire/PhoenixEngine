@@ -359,8 +359,6 @@ export type EcAnimation = {
 
 export type EcAnimator = {
   Animating: boolean,
-
-  LoadAnimation: (self: EcAnimator, EcAnimation) -> (),
 }
 
 export type EcAssetManager = {

@@ -968,6 +968,9 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
         gv.Val.Func.Func = new std::function([CL, fndbinfo](const std::vector<Reflection::GenericValue>& Inputs)
             -> std::vector<Reflection::GenericValue>
             {
+                ZoneScoped;
+                ZoneText(fndbinfo.data(), fndbinfo.size());
+
                 lua_pushvalue(CL, -1); // keep the function value
 
                 for (const Reflection::GenericValue& i : Inputs)

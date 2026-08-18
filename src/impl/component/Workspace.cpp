@@ -165,24 +165,13 @@ const Reflection::StaticMethodMap& WorkspaceComponentManager::GetMethods()
                     return { Reflection::GenericValue::Null()};
                 else
                 {
-                    // TODO make datatypes easier to create
-                    // this should definitely be a `SpatialCastResult` datatype
-                    std::vector<Reflection::GenericValue> vals;
-                    vals.reserve(6);
+                    Reflection::GenericValue returned = Reflection::GenericValue::MapPairs({
+                        { "Object", result.Object->ToGenericValue() },
+                        { "Position", result.Position },
+                        { "Normal", result.Normal },
+                    });
 
-                    vals.emplace_back("Object");
-                    vals.emplace_back(result.Object->ToGenericValue());
-
-                    vals.emplace_back("Position");
-                    vals.emplace_back(result.Position);
-
-                    vals.emplace_back("Normal");
-                    vals.emplace_back(result.Normal);
-
-                    Reflection::GenericValue gv(vals);
-                    gv.Type = Reflection::ValueType::Map;
-
-                    return { gv };
+                    return { returned };
                 }
             }
         } },

@@ -82,9 +82,8 @@ public:
         if (id == UINT32_MAX)
         {
             id = static_cast<uint32_t>(Components.size());
-            Components.emplace_back();
 
-            T& component = Components.back();
+            T& component = Components.emplace_back();
             component.Object = ref;
             component.Valid = true;
             assert(component.Valid);

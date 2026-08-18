@@ -204,9 +204,8 @@ uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 		{
 			uint32_t resourceId = static_cast<uint32_t>(m_Materials.size());
 			m_StringToMaterialId.emplace(Name, resourceId);
-			m_Materials.emplace_back(std::string(Name));
 
-			RenderMaterial& material = m_Materials.back();
+			RenderMaterial& material = m_Materials.emplace_back(std::string(Name));
 			material.Name = Name;
 			material.Reload();
 

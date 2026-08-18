@@ -323,6 +323,9 @@ void EcDataModel::Bind()
 
 void EcDataModel::Close()
 {
+    ZoneScoped;
+    ZoneText(Object->Name.data(), Object->Name.size());
+
     if (CloseCallback.Func)
     {
         Reflection::SignalEvent(ClosingCallbacks, {}, "DataModel.Closing");
@@ -340,6 +343,8 @@ void EcDataModel::Close()
 
 void DataModelComponentManager::NotifyAllOfShutdown()
 {
+    ZoneScoped;
+
     for (EcDataModel& dm : Components)
     {
         if (dm.Valid)

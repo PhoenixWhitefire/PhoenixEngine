@@ -1525,9 +1525,6 @@
   "@phoenix/globaltype/Animator.Animating": {
     "documentation": "Whether the `Animator` will step its animations"
   },
-  "@phoenix/globaltype/Animator.LoadAnimation": {
-    "documentation": "Loads an animation asset into the `Animator` to prepare it for playback"
-  },
   "@phoenix/globaltype/AssetManager.GetMeshData": {
     "documentation": "Returns the provided mesh data associated with the provided path"
   },

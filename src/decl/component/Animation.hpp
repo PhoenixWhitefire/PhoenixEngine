@@ -21,9 +21,18 @@ struct EcAnimation : public Component<EntityComponent::Animation>
 
 struct AnimationData
 {
+    enum class ChannelType : uint8_t
+    {
+        Translation,
+        Rotation,
+        Scale,
+    };
+
     struct Pose
     {
-        glm::mat4 Transform = glm::mat4(1.f);
+        glm::vec3 Translation = {};
+        glm::quat Rotation = {};
+        glm::vec3 Scale = {};
         uint16_t BoneId = 0;
     };
 
@@ -33,7 +42,7 @@ struct AnimationData
         float Time = 0.f;
     };
 
-    std::string Path;
+    std::string File;
     std::vector<Keyframe> Keyframes;
     std::vector<std::string> Bones;
     float Length = 0.f;
@@ -52,7 +61,10 @@ struct EcAnimator : public Component<EntityComponent::Animator>
 
     // `AnimationState`s
     std::vector<ObjectHandle> Animations;
+    std::vector<ObjectHandle> Meshes;
+    std::vector<ObjectHandle> Bones;
 
+    bool SkeletonStale = false;
     bool Animating = true;
     bool Valid = true;
 };

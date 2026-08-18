@@ -303,8 +303,7 @@ static Mesh loadMeshVersion2(const std::string_view& FileContents, std::string* 
 
 			for (uint8_t boneIdx = 0; boneIdx < numBones; boneIdx++)
 			{
-				mesh.Bones.emplace_back();
-				Bone& bone = mesh.Bones.back();
+				Bone& bone = mesh.Bones.emplace_back();
 
 				uint8_t nameLen = ReadU8(contents, &cursor, &fileTooSmallError);
 				bone.Name = std::string(contents, cursor, nameLen);
@@ -1083,9 +1082,7 @@ void MeshProvider::m_CreateAndUploadGpuMesh(Mesh& mesh)
 {
 	ZoneScoped;
 
-	m_GpuMeshes.emplace_back();
-
-	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes.back();
+	MeshProvider::GpuMesh& gpuMesh = m_GpuMeshes.emplace_back();
 
 	if (!IsHeadless)
 	{

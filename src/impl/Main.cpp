@@ -658,7 +658,7 @@ static void launcher(int argc, char** argv)
             return;
         }
 
-        std::string exceptionMessage = "Unknown error.\n";
+        std::string exceptionMessage = strsignal(signal);
 
         bool logReadSuccess = true;
         std::string logFileContents = FileRW::ReadFile("./" APP_LOG, &logReadSuccess);
@@ -671,7 +671,7 @@ static void launcher(int argc, char** argv)
         tinyfd_messageBox(
             "Oops",
             std::format(
-                "The game has crashed. Consider sending the core dump and logs :3\n\n{}\n"
+                "The game has crashed. Consider sending the core dump and logs :3\n\n{}\n\n"
                     "Log files will be recorded to the " CRASHED_DIR " directory. If it already exists, it will be overwritten.",
                 exceptionMessage
             ).c_str(),
@@ -679,7 +679,7 @@ static void launcher(int argc, char** argv)
             "error",
             1
         );
-        Log.ErrorF("Application crashed: {}", strsignal(signal));
+        Log.ErrorF("Application crashed: {}", exceptionMessage);
         Logging::Save();
 
         if (std::filesystem::is_directory(CRASHED_DIR))

@@ -574,7 +574,7 @@ static void traverseHierarchy(
 				});
 		}
 
-		if (EcAnimator* animator = object->FindComponent<EcAnimator>())
+		if (EcAnimator* animator = object->FindComponent<EcAnimator>(); animator && animator->Animating)
 			animator->Step(DeltaTime);
 
 		if (!object->Children.empty())

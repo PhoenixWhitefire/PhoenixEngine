@@ -671,11 +671,8 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
         if (objectProps[object->ObjectId].find("Parent") == objectProps[object->ObjectId].end())
             rootObjects.push_back(object);
 
-        for (auto& objectProp : objectProps[object->ObjectId])
+        for (const auto& [ propName, sceneRelativeId ] : objectProps[object->ObjectId])
         {
-            const std::string_view& propName = objectProp.first;
-            const uint32_t sceneRelativeId = objectProp.second;
-
             auto target = objectsMap.find(sceneRelativeId);
 
             if (target != objectsMap.end())
@@ -870,8 +867,8 @@ void Serializer::SerializeObject(GameObject* Object, bool IsRootNode)
 
     if (const auto& it = PendingIdReplacement.find(Object->ObjectId); it != PendingIdReplacement.end())
     {
-        for (const std::pair<uint32_t, std::string_view>& replacement : it->second)
-            Items[replacement.first][replacement.second] = IdCounter;
+        for (const auto& [ index, prop ] : it->second)
+            Items[index][prop] = IdCounter;
     }
 
     IdCounter++;
@@ -879,15 +876,12 @@ void Serializer::SerializeObject(GameObject* Object, bool IsRootNode)
     for (const ReflectorRef& handle : Object->Components)
         item["$_components"].push_back(s_EntityComponentNames[(size_t)handle.Type]);
 
-    for (const auto& prop : Object->GetProperties())
+    for (const auto& [ propName, prop ] : Object->GetProperties())
     {
-        const std::string_view& propName = prop.first;
-        const Reflection::PropertyDescriptor* propInfo = prop.second;
-
-        if (!propInfo->Serializes)
+        if (!prop->Serializes)
             continue;
 
-        if (!propInfo->Set)
+        if (!prop->Set)
             continue;
 
         // !! IMPORTANT !!

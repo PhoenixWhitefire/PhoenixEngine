@@ -5,12 +5,6 @@
 
 static Reflection::GenericValue dumpActionData(const History::Action& action)
 {
-    std::vector<Reflection::GenericValue> actionValueVec;
-    actionValueVec.reserve(4);
-
-    actionValueVec.emplace_back("Name");
-    actionValueVec.emplace_back(action.Name);
-
     std::vector<Reflection::GenericValue> eventsVec;
     eventsVec.reserve(action.Events.size());
 
@@ -19,67 +13,47 @@ static Reflection::GenericValue dumpActionData(const History::Action& action)
         std::vector<Reflection::GenericValue> eventData;
         eventData.reserve(4);
 
-        eventData.emplace_back("Target");
-        eventData.emplace_back(event.TargetObject->ToGenericValue());
-
-        eventData.emplace_back("Type");
-
         if (event.Property.has_value())
         {
-            eventData.emplace_back("PropertyChanged");
-
-            eventData.emplace_back("Property");
-            eventData.emplace_back(event.Property.value()->Name);
-
-            eventData.emplace_back("NewValue");
-            eventData.push_back(event.NewValue);
-
-            eventData.emplace_back("PreviousValue");
-            eventData.push_back(event.PreviousValue);
+            eventsVec.push_back(Reflection::GenericValue::MapPairs({
+                { "Target", event.TargetObject->ToGenericValue() },
+                { "Type", "PropertyChanged" },
+                { "Property", event.Property.value()->Name },
+                { "NewValue", event.NewValue },
+                { "PreviousValue", event.PreviousValue },
+            }));
         }
         else
         {
             if (event.PreviousValue.IsNull())
             {
                 assert(event.PreviousValue.IsNull());
-                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
 
-                eventData.emplace_back("Action");
-                eventData.emplace_back("Add");
-
-                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
-                if (event.IsTag)
-                    eventData.push_back(event.NewValue.AsString());
-                else
-                    eventData.push_back(s_EntityComponentNames[event.NewValue.AsInteger()]);
+                eventsVec.push_back(Reflection::GenericValue::MapPairs({
+                    { "Target", event.TargetObject->ToGenericValue() },
+                    { "Type", event.IsTag ? "Tag" : "Component" },
+                    { "Action", "Add" },
+                    { event.IsTag ? "Tag" : "Component", event.IsTag ? event.NewValue.AsString() : s_EntityComponentNames[event.NewValue.AsInteger()] },
+                }));
             }
             else
             {
                 assert(event.NewValue.IsNull());
-                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
 
-                eventData.emplace_back("Action");
-                eventData.emplace_back("Remove");
-
-                eventData.emplace_back(event.IsTag ? "Tag" : "Component");
-                if (event.IsTag)
-                    eventData.push_back(event.PreviousValue.AsString());
-                else
-                    eventData.push_back(s_EntityComponentNames[event.PreviousValue.AsInteger()]);
+                eventsVec.push_back(Reflection::GenericValue::MapPairs({
+                    { "Target", event.TargetObject->ToGenericValue() },
+                    { "Type", event.IsTag ? "Tag" : "Component" },
+                    { "Action", "Remove" },
+                    { event.IsTag ? "Tag" : "Component", event.IsTag ? event.PreviousValue.AsString() : s_EntityComponentNames[event.PreviousValue.AsInteger()] },
+                }));
             }
         }
-
-        Reflection::GenericValue eventValue = { eventData };
-        eventValue.Type = Reflection::ValueType::Map;
-
-        eventsVec.emplace_back(eventValue);
     }
 
-    actionValueVec.emplace_back("Events");
-    actionValueVec.emplace_back(eventsVec);
-
-    Reflection::GenericValue actionValue = { actionValueVec };
-    actionValue.Type = Reflection::ValueType::Map;
+    Reflection::GenericValue actionValue = Reflection::GenericValue::MapPairs({
+        { "Name", action.Name },
+        { "Events", eventsVec },
+    });
     return { actionValue };
 }
 

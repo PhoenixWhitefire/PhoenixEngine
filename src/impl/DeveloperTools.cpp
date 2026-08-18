@@ -670,9 +670,7 @@ static TextEditorTab& invokeTextEditor(const std::string& File)
         }
     }
 
-    s_TextEditors.emplace_back();
-
-    TextEditorTab& tab = s_TextEditors.back();
+    TextEditorTab& tab = s_TextEditors.emplace_back();
     tab.SetUIFocus = true;
 
     if (File.find(".luau") != std::string::npos)
@@ -2959,7 +2957,7 @@ static void renderExplorer()
         }
     }
 
-    if (!ImGui::Begin("Explorer", &DeveloperTools::ExplorerShown))
+    if (!ImGui::Begin("Explorer", &DeveloperTools::ExplorerShown, ImGuiWindowFlags_HorizontalScrollbar))
     {
         ImGui::End();
         return;

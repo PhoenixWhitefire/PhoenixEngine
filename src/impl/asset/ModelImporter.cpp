@@ -635,14 +635,13 @@ void ModelLoader::m_TraverseNode(uint32_t NodeIndex, uint32_t From)
     }
     else
     {
-        m_Nodes.emplace_back(
-            nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
-            NodeIndex,
-            From,
-            ModelNode::NodeType::Container
-        );
-
-        m_Nodes.back().LocalTransform = matLocal;
+        m_Nodes.push_back(ModelNode{
+            .Name = nodeJson.value("name", "_UNNAMED_CONTAINER-" + std::to_string(NodeIndex) + "_"),
+            .NodeId = NodeIndex,
+            .Parent = From,
+            .Type = ModelNode::NodeType::Container,
+            .LocalTransform = matLocal
+        });
     }
 
     // traverse the node's children
@@ -715,32 +714,22 @@ void ModelLoader::m_BuildRig()
 
 std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
 {
+    using Keyframe = AnimationData::Keyframe;
+    using Pose = AnimationData::Pose;
+
     const nlohmann::json& channels = Animation.at("channels");
     const nlohmann::json& samplers = Animation.at("samplers");
     std::string data = "PHOENIXF/ANIM\n\0";
 
-    struct SeparablePose
-    {
-        glm::mat4 Transform = glm::mat4(1.f);
-        glm::vec3 Translation;
-        glm::vec3 Scale = { 1.f, 1.f, 1.f };
-        glm::vec4 Rotation = { 0.f, 0.f, 0.f, 1.f };
-        uint16_t BoneId = UINT16_MAX;
-    };
-
-    struct SeparableKeyframe
-    {
-        std::vector<SeparablePose> Poses;
-    };
-
     // use `std::map` to order keyframes
-    std::map<float, SeparableKeyframe> keyframes;
+    std::map<float, Keyframe> keyframes;
     std::vector<std::string> boneNames;
     float animLength = 0.f;
 
     for (const nlohmann::json& chan : channels)
     {
         const nlohmann::json& sampler = samplers[(uint32_t)chan.at("sampler")];
+        const std::string& interpolation = sampler.at("interpolation");
         const nlohmann::json& target = chan.at("target");
         const std::string& path = target.at("path");
         int32_t nodeId = target.at("node");
@@ -769,10 +758,10 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
             float t = times[i];
             const glm::vec4& v = vectors[i];
 
-            SeparableKeyframe& keyframe = keyframes[t];
-            SeparablePose* pose = nullptr;
+            Keyframe& keyframe = keyframes[t];
+            Pose* pose = nullptr;
 
-            for (SeparablePose& p : keyframe.Poses)
+            for (Pose& p : keyframe.Poses)
             {
                 if (p.BoneId == boneId)
                 {
@@ -786,12 +775,9 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
                 pose = &keyframe.Poses.emplace_back();
                 pose->BoneId = boneId;
 
-                glm::vec3 skew;
-                glm::vec4 perspective;
-                glm::quat restingRotation;
-                glm::decompose(boneNode.LocalTransform, pose->Scale, restingRotation, pose->Translation, skew, perspective);
-
-                pose->Rotation = glm::vec4(restingRotation.x, restingRotation.y, restingRotation.z, restingRotation.w);
+                glm::vec3 skew = {};
+                glm::vec4 perspective = { 0.f, 0.f, 0.f, 1.f };
+                glm::decompose(boneNode.LocalTransform, pose->Scale, pose->Rotation, pose->Translation, skew, perspective);
             }
 
             if (path == "translation")
@@ -799,13 +785,9 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
             else if (path == "scale")
                 pose->Scale = glm::vec3(v);
             else if (path == "rotation")
-                pose->Rotation = v;
+                pose->Rotation = glm::quat(v.w, v.x, v.y, v.z);
             else
                 RAISE_RT("Invalid animation channel path '{}'", path);
-
-            pose->Transform = glm::translate(glm::mat4(1.f), pose->Translation)
-                                * glm::mat4_cast(glm::quat(pose->Rotation.w, pose->Rotation.x, pose->Rotation.y, pose->Rotation.z))
-                                * glm::scale(glm::mat4(1.f), pose->Scale);
 
             animLength = std::max(animLength, t);
         }
@@ -814,7 +796,10 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
     if (keyframes.size() > (size_t)UINT32_MAX)
         RAISE_RT("Too many keyframes!");
 
-    WriteU32(data, 0); // flags
+    // flags
+    // 1 = channel separation
+    WriteU32(data, 1);
+
     WriteF32(data, animLength);
     WriteU32(data, (int)keyframes.size());
     WriteU16(data, (uint16_t)boneNames.size());
@@ -835,29 +820,22 @@ std::string ModelLoader::m_SerializeAnimation(const nlohmann::json& Animation)
         WriteF32(data, t);
         WriteU8(data, (uint8_t)kf.Poses.size());
 
-        for (const SeparablePose& pose : kf.Poses)
+        for (const Pose& pose : kf.Poses)
         {
             WriteU16(data, pose.BoneId);
 
-            WriteF32(data, pose.Transform[0][0]);
-            WriteF32(data, pose.Transform[0][1]);
-            WriteF32(data, pose.Transform[0][2]);
-            WriteF32(data, pose.Transform[0][3]);
+            WriteF32(data, pose.Translation[0]);
+            WriteF32(data, pose.Translation[1]);
+            WriteF32(data, pose.Translation[2]);
 
-            WriteF32(data, pose.Transform[1][0]);
-            WriteF32(data, pose.Transform[1][1]);
-            WriteF32(data, pose.Transform[1][2]);
-            WriteF32(data, pose.Transform[1][3]);
+            WriteF32(data, pose.Rotation[0]);
+            WriteF32(data, pose.Rotation[1]);
+            WriteF32(data, pose.Rotation[2]);
+            WriteF32(data, pose.Rotation[3]);
 
-            WriteF32(data, pose.Transform[2][0]);
-            WriteF32(data, pose.Transform[2][1]);
-            WriteF32(data, pose.Transform[2][2]);
-            WriteF32(data, pose.Transform[2][3]);
-
-            WriteF32(data, pose.Transform[3][0]);
-            WriteF32(data, pose.Transform[3][1]);
-            WriteF32(data, pose.Transform[3][2]);
-            WriteF32(data, pose.Transform[3][3]);
+            WriteF32(data, pose.Scale[0]);
+            WriteF32(data, pose.Scale[1]);
+            WriteF32(data, pose.Scale[2]);
         }
     }
 

@@ -59,6 +59,7 @@ const Reflection::StaticPropertyMap& AnimationComponentManager::GetProperties()
                     ea->Playing = false;
             },
             .Type = Reflection::ValueType::Boolean,
+            .Serializes = false,
         } },
     };
 
@@ -88,7 +89,7 @@ void EcAnimation::SetAnimation(const std::string& Asset)
     uint32_t id = (uint32_t)acm->Animations.size();
     AnimationData& data = acm->Animations.emplace_back();
     acm->RegisteredAnimations[path] = id;
-    data.Path = path;
+    data.File = path;
 
     bool found = false;
     std::string animFileContents = FileRW::ReadFile(path, &found);
@@ -110,7 +111,13 @@ void EcAnimation::SetAnimation(const std::string& Asset)
     std::string_view animationData = std::string_view(animFileContents.begin() + Magic.size(), animFileContents.end());
     size_t cursor = 0;
     bool eof = false;
-    cursor += 4; // flags
+
+    uint32_t flags = ReadU32(animationData, &cursor, &eof);
+    if (eof)
+        RAISE_RT("Reached end of animation file trying to read flags");
+
+    if (flags < 1)
+        RAISE_RT("Animation {} is too old, please re-import it", path);
 
     data.Length = ReadF32(animationData, &cursor, &eof);
     if (eof)
@@ -150,36 +157,29 @@ void EcAnimation::SetAnimation(const std::string& Asset)
             AnimationData::Pose& pose = kf.Poses.emplace_back();
             pose.BoneId = ReadU16(animationData, &cursor, &eof);
 
-            float a1b1 = ReadF32(animationData, &cursor, &eof);
-			float a1b2 = ReadF32(animationData, &cursor, &eof);
-			float a1b3 = ReadF32(animationData, &cursor, &eof);
-			float a1b4 = ReadF32(animationData, &cursor, &eof);
+            float tx = ReadF32(animationData, &cursor, &eof);
+            float ty = ReadF32(animationData, &cursor, &eof);
+            float tz = ReadF32(animationData, &cursor, &eof);
 
-			float a2b1 = ReadF32(animationData, &cursor, &eof);
-			float a2b2 = ReadF32(animationData, &cursor, &eof);
-			float a2b3 = ReadF32(animationData, &cursor, &eof);
-			float a2b4 = ReadF32(animationData, &cursor, &eof);
+            float rx = ReadF32(animationData, &cursor, &eof);
+            float ry = ReadF32(animationData, &cursor, &eof);
+            float rz = ReadF32(animationData, &cursor, &eof);
+            float rw = ReadF32(animationData, &cursor, &eof);
 
-		    float a3b1 = ReadF32(animationData, &cursor, &eof);
-		    float a3b2 = ReadF32(animationData, &cursor, &eof);
-		    float a3b3 = ReadF32(animationData, &cursor, &eof);
-		    float a3b4 = ReadF32(animationData, &cursor, &eof);
+            float sx = ReadF32(animationData, &cursor, &eof);
+            float sy = ReadF32(animationData, &cursor, &eof);
+            float sz = ReadF32(animationData, &cursor, &eof);
 
-			float a4b1 = ReadF32(animationData, &cursor, &eof);
-			float a4b2 = ReadF32(animationData, &cursor, &eof);
-			float a4b3 = ReadF32(animationData, &cursor, &eof);
-			float a4b4 = ReadF32(animationData, &cursor, &eof);
+            pose.Translation = { tx, ty, tz };
+            pose.Rotation = { rw, rx, ry, rz };
+            pose.Scale = { sx, sy, sz };
 
-			pose.Transform = {
-				a1b1, a1b2, a1b3, a1b4,
-				a2b1, a2b2, a2b3, a2b4,
-				a3b1, a3b2, a3b3, a3b4,
-				a4b1, a4b2, a4b3, a4b4,
-			};
+            if (eof)
+                RAISE_RT("Reached end of animation file reading pose {} of {} in {}", poseIndex + 1, poseCount, path);
         }
 
         if (eof)
-            RAISE_RT("Reached end of animation file reading keyframe {} of {}", keyframeIndex, keyframeCount);
+            RAISE_RT("Reached end of animation file reading keyframe {} of {} in {}", keyframeIndex + 1, keyframeCount, path);
     }
 
     AnimationId = id;
@@ -205,6 +205,7 @@ const Reflection::StaticPropertyMap& AnimatorComponentManager::GetProperties()
 const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
 {
     static const Reflection::StaticMethodMap methods = {
+        /*
         { "LoadAnimation", Reflection::MethodDescriptor{
             REFLECTION_SPAN({ Reflection::ValueType::GameObject }), // `Animation`
             {},
@@ -225,6 +226,7 @@ const Reflection::StaticMethodMap& AnimatorComponentManager::GetMethods()
                     RAISE_RT("GameObject must have an `AnimationAsset` component");
             }
         } },
+        */
     };
 
     return methods;
@@ -267,22 +269,51 @@ void EcAnimator::Step(double DeltaTime)
                 animationState->Playing = false;
         }
 
-        const AnimationData::Keyframe* nearestKeyframe = nullptr;
+        const AnimationData::Keyframe* prevKeyframe = nullptr;
+        const AnimationData::Keyframe* nextKeyframe = nullptr;
 
         for (const AnimationData::Keyframe& kf : animation.Keyframes)
         {
-            // no interpolation for now
-            if (!nearestKeyframe || std::abs(kf.Time - animationState->Time) < std::abs(nearestKeyframe->Time - animationState->Time))
-                nearestKeyframe = &kf;
+            if (kf.Time <= animationState->Time)
+            {
+                if (!prevKeyframe || kf.Time > prevKeyframe->Time)
+                    prevKeyframe = &kf;
+            }
+
+            if (kf.Time > animationState->Time)
+            {
+                if (!nextKeyframe || kf.Time < nextKeyframe->Time)
+                    nextKeyframe = &kf;
+            }
         }
 
-        if (!nearestKeyframe)
+        if (!prevKeyframe || !nextKeyframe)
             continue;
 
+        float alpha = (animationState->Time - prevKeyframe->Time) / (nextKeyframe->Time - prevKeyframe->Time);
+
         std::unordered_set<EcMesh*> meshes;
-        for (const AnimationData::Pose& pose : nearestKeyframe->Poses)
+        for (const AnimationData::Pose& pose : prevKeyframe->Poses)
         {
             const std::string& name = animation.Bones[pose.BoneId];
+            const AnimationData::Pose* next = nullptr;
+
+            for (const AnimationData::Pose& maybe : nextKeyframe->Poses)
+            {
+                if (maybe.BoneId == pose.BoneId)
+                {
+                    next = &maybe;
+                    break;
+                }
+            }
+
+            if (!next)
+                continue;
+
+            glm::vec3 trans = glm::mix(pose.Translation, next->Translation, alpha);
+            glm::quat rot = glm::slerp(pose.Rotation, next->Rotation, alpha);
+            glm::vec3 scale = glm::mix(pose.Scale, next->Scale, alpha);
+            glm::mat4 transs = glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rot) * glm::scale(glm::mat4(1.f), scale);
 
             Object->ForEachDescendant([&](const ObjectHandle& desc)
             {
@@ -293,11 +324,11 @@ void EcAnimator::Step(double DeltaTime)
                 {
                     if (EcBone* cb = desc->FindComponent<EcBone>())
                     {
-                        cb->SetTransform(pose.Transform);
+                        cb->SetTransform(transs);
                     }
                     else if (EcTransform* ct = desc->FindComponent<EcTransform>())
                     {
-                        ct->LocalTransform = pose.Transform;
+                        ct->LocalTransform = transs;
                         ct->RecomputeTransformTree();
                     }
                     else

@@ -40,15 +40,12 @@
         "Properties": {
           "Animation": "String",
           "Looped": "Boolean",
-          "Playing": "Boolean",
+          "Playing": "Boolean RUNTIMEONLY",
           "Time": "Double",
           "Weight": "Double"
         }
       },
       "Animator": {
-        "Methods": {
-          "LoadAnimation": "(GameObject) -> ()"
-        },
         "Properties": {
           "Animating": "Boolean"
         }
