@@ -1107,8 +1107,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
 
     const nlohmann::json& materialDescription = m_JsonData["materials"][materialId];
 
-    static std::unordered_map<std::string_view, MeshMaterial::MaterialAlphaMode> NameToAlphaMode =
-    {
+    static std::unordered_map<std::string_view, MeshMaterial::MaterialAlphaMode> NameToAlphaMode = {
         { "OPAQUE", MeshMaterial::MaterialAlphaMode::Opaque },
         { "MASK",   MeshMaterial::MaterialAlphaMode::Mask   },
         { "BLEND",  MeshMaterial::MaterialAlphaMode::Blend  }
@@ -1126,13 +1125,12 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
         nlohmann::json{ 1.f, 1.f, 1.f, 1.f }
     );
 
-    material.BaseColorFactor = glm::vec4
-    {
+    material.BaseColorFactor = glm::vec4(
         baseColorFactor[0],
         baseColorFactor[1],
         baseColorFactor[2],
         baseColorFactor[3]
-    };
+    );
 
     material.MetallicFactor = pbrDescription.value("metallicFactor", 1.f);
     material.RoughnessFactor = pbrDescription.value("roughnessFactor", 1.f);

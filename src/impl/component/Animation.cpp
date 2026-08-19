@@ -193,6 +193,12 @@ uint32_t AnimatorComponentManager::CreateComponent(GameObject* Object)
     return id;
 }
 
+void AnimatorComponentManager::DeleteComponent(uint32_t Id)
+{
+    Components[Id].Joints.clear();
+    ComponentManager<EcAnimator>::DeleteComponent(Id);
+}
+
 const Reflection::StaticPropertyMap& AnimatorComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
@@ -245,6 +251,21 @@ void EcAnimator::LoadAnimation(ObjectHandle stateObj, uint32_t Id)
 
     stateObj->FindComponent<EcAnimation>()->AnimationId = Id;
     Animations.push_back(stateObj);
+    BuildRig();
+}
+
+void EcAnimator::BuildRig()
+{
+    ZoneScoped;
+    Joints.clear();
+
+    Object->ForEachDescendant([this](const ObjectHandle& desc)
+    {
+        if (desc->FindComponent<EcTransform>() || desc->FindComponent<EcBone>())
+            Joints[desc->Name].push_back(desc);
+
+        return true;
+    });
 }
 
 void EcAnimator::Step(double DeltaTime)
@@ -295,7 +316,7 @@ void EcAnimator::Step(double DeltaTime)
         std::unordered_set<EcMesh*> meshes;
         for (const AnimationData::Pose& pose : prevKeyframe->Poses)
         {
-            const std::string& name = animation.Bones[pose.BoneId];
+            const std::string& targetName = animation.Bones[pose.BoneId];
             const AnimationData::Pose* next = nullptr;
 
             for (const AnimationData::Pose& maybe : nextKeyframe->Poses)
@@ -315,30 +336,27 @@ void EcAnimator::Step(double DeltaTime)
             glm::vec3 scale = glm::mix(pose.Scale, next->Scale, alpha);
             glm::mat4 transs = glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rot) * glm::scale(glm::mat4(1.f), scale);
 
-            Object->ForEachDescendant([&](const ObjectHandle& desc)
+            for (auto& [ jointName, affected ] : Joints)
             {
-                if (EcMesh* mesh = desc->FindComponent<EcMesh>())
-                    meshes.insert(mesh);
-
-                if (desc->Name == name)
+                if (jointName == targetName)
                 {
-                    if (EcBone* cb = desc->FindComponent<EcBone>())
+                    for (ObjectHandle& joint : affected)
                     {
-                        cb->SetTransform(transs);
-                    }
-                    else if (EcTransform* ct = desc->FindComponent<EcTransform>())
-                    {
-                        ct->LocalTransform = transs;
-                        ct->RecomputeTransformTree();
-                    }
-                    else
-                        return true;
+                        if (EcBone* cb = joint->FindComponent<EcBone>())
+                        {
+                            cb->SetTransform(transs);
 
-                    //return false;
+                            EcMesh* mesh = (EcMesh*)GetComponentManagerByComponentType(EntityComponent::Mesh)->GetComponent(cb->TargetMesh);
+                            meshes.insert(mesh);
+                        }
+                        else if (EcTransform* ct = joint->FindComponent<EcTransform>())
+                        {
+                            ct->LocalTransform = transs;
+                            ct->RecomputeTransformTree();
+                        }
+                    }
                 }
-
-                return true;
-            });
+            }
         }
 
         for (const auto& it : meshes)

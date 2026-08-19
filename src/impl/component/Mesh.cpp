@@ -1,12 +1,12 @@
 #include <tracy/Tracy.hpp>
 
 #include "component/Mesh.hpp"
-#include "component/Transform.hpp"
 
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
 #include "component/Workspace.hpp"
 #include "component/RigidBody.hpp"
+#include "component/Animation.hpp"
 #include "component/Bone.hpp"
 
 static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
@@ -228,6 +228,9 @@ void EcMesh::SetRenderMesh(const std::string_view& MeshPath)
 			}
 
             cm->RecomputeBoneMatrices();
+
+			if (EcAnimator* animator = obj->FindComponent<EcAnimator>())
+				animator->BuildRig();
 		}
 	);
 	this->Asset = MeshPath;

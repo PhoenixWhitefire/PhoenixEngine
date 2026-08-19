@@ -56,13 +56,13 @@ public:
 
 struct EcAnimator : public Component<EntityComponent::Animator>
 {
-    void LoadAnimation(ObjectHandle stateObj, uint32_t Id);
     void Step(double DeltaTime);
 
-    // `AnimationState`s
+    void LoadAnimation(ObjectHandle stateObj, uint32_t Id);
+    void BuildRig();
+
     std::vector<ObjectHandle> Animations;
-    std::vector<ObjectHandle> Meshes;
-    std::vector<ObjectHandle> Bones;
+    std::unordered_map<std::string, std::vector<ObjectHandle>> Joints;
 
     bool SkeletonStale = false;
     bool Animating = true;
@@ -73,6 +73,7 @@ class AnimatorComponentManager : public ComponentManager<EcAnimator>
 {
 public:
     uint32_t CreateComponent(GameObject*) override;
+    void DeleteComponent(uint32_t) override;
 
     const Reflection::StaticPropertyMap& GetProperties() override;
     const Reflection::StaticMethodMap& GetMethods() override;
