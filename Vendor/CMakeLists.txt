@@ -43,6 +43,7 @@ target_include_directories(Vendor PUBLIC
 	"ImGuiColorTextEdit"
 	"glfw/include"
 	"tinyfd"
+	"glad/include"
 )
 
 add_subdirectory(glad)

@@ -1,4 +1,4 @@
-#include <glad/include/glad/gl.h>
+#include <glad/gl.h>
 
 #define GLT_IMPLEMENTATION
 #define GLT_IMPORTS
