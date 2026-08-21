@@ -21,7 +21,7 @@ class GameObject
 {
 public:
 	template <class T>
-	T* FindComponent()
+	T* FindComponent() const
 	{
 		EntityComponent type = T::Type;
 		for (const ReflectorRef& ref : Components)
@@ -32,19 +32,19 @@ public:
 	}
 	uint32_t AddComponent(EntityComponent Type);
 	void RemoveComponent(EntityComponent Type);
-	void* FindComponentByType(EntityComponent);
+	void* FindComponentByType(EntityComponent) const;
 
 	void AddTag(const std::string&);
 	void RemoveTag(const std::string&);
-	bool HasTag(const std::string&);
+	bool HasTag(const std::string&) const;
 
-	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorRef* Reflector = nullptr);
-	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorRef* Reflector = nullptr);
-	const Reflection::EventDescriptor* FindEvent(const std::string_view&, ReflectorRef* Reflector = nullptr);
+	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
+	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
+	const Reflection::EventDescriptor* FindEvent(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
 
-	Reflection::GenericValue GetPropertyValue(const std::string_view&);
+	Reflection::GenericValue GetPropertyValue(const std::string_view&) const;
 	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
-	Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&);
+	Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) const;
 
 	std::vector<Reflection::GenericValue> CallMethod(const std::string_view&, const std::vector<Reflection::GenericValue>&);
 
@@ -65,12 +65,12 @@ public:
 	// because it does not require any memory allocations
 	void ForEachChild(const std::function<bool(const ObjectHandle&)>&);
 	bool ForEachDescendant(const std::function<bool(const ObjectHandle&)>&);
-	std::vector<ObjectHandle> GetChildren();
-	std::vector<ObjectHandle> GetDescendants();
+	std::vector<ObjectHandle> GetChildren() const;
+	std::vector<ObjectHandle> GetDescendants() const;
 
 	GameObject* GetParent() const;
-	GameObject* FindChild(const std::string_view&);
-	GameObject* FindChildWithComponent(EntityComponent);
+	GameObject* FindChild(const std::string_view&) const;
+	GameObject* FindChildWithComponent(EntityComponent) const;
 
 	bool IsDescendantOf(const GameObject*) const;
 

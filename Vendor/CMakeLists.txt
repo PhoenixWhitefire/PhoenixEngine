@@ -29,6 +29,8 @@ set(VEND_SRCS
 	"ImGuiColorTextEdit/TextEditor.cpp"
 
 	"tinyfd/tinyfiledialogs.c"
+
+	"glText.cpp"
 )
 
 add_library(Vendor STATIC ${VEND_SRCS})

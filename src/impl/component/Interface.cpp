@@ -1,5 +1,11 @@
 // UI, 12/03/2026
+#include <glad/gl.h>
+
+#define GLT_IMPORTS
+#include <glText/gltext.h>
+
 #include "component/Interface.hpp"
+#include "Engine.hpp"
 
 const Reflection::StaticPropertyMap& InterfaceComponentManager::GetProperties()
 {
@@ -24,7 +30,7 @@ const Reflection::StaticPropertyMap& UIFrameComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
         REFLECTION_PROPERTY_SIMPLE_NGV(EcUIFrame, BackgroundColor, Color),
-        REFLECTION_PROPERTY_SIMPLE(EcUIFrame, BackgroundTransparency, Double)
+        REFLECTION_PROPERTY_SIMPLE(EcUIFrame, BackgroundTransparency, Double),
     };
 
     return props;
@@ -44,16 +50,61 @@ const Reflection::StaticPropertyMap& UIImageComponentManager::GetProperties()
 const Reflection::StaticPropertyMap& UITextComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
-        REFLECTION_PROPERTY_SIMPLE(EcUIText, Text, String),
+        REFLECTION_PROPERTY(
+            "Text",
+            String,
+            [](void* p) -> Reflection::GenericValue
+            {
+                return static_cast<EcUIText*>(p)->Text;
+            },
+            [](void* p, const Reflection::GenericValue& gv)
+            {
+                EcUIText* ui = static_cast<EcUIText*>(p);
+                ui->Text = gv.AsString();
+
+                if (!ui->Data)
+                    return;
+
+                gltSetText(ui->Data, ui->Text.c_str());
+            }
+        ),
+
+        REFLECTION_PROPERTY_SIMPLE_NGV(EcUIText, TextColor, Color),
+        REFLECTION_PROPERTY_SIMPLE(EcUIText, TextTransparency, Double),
     };
 
     return props;
 }
 
+uint32_t UITextComponentManager::CreateComponent(GameObject* Object)
+{
+    uint32_t id = ComponentManager<EcUIText>::CreateComponent(Object);
+
+    if (!Engine::Get()->IsHeadlessMode)
+    {
+        EcUIText& uti = Components[id];
+        uti.Data = gltCreateText();
+        gltSetText(uti.Data, uti.Text.c_str());
+    }
+
+    return id;
+}
+
+void UITextComponentManager::DeleteComponent(uint32_t Id)
+{
+    if (EcUIText& uti = Components[Id]; uti.Data)
+    {
+        gltDeleteText(uti.Data);
+        uti.Data = nullptr;
+    }
+
+    ComponentManager<EcUIText>::DeleteComponent(Id);
+}
+
 const Reflection::StaticEventMap& UIButtonComponentManager::GetEvents()
 {
     static const Reflection::StaticEventMap events = {
-        REFLECTION_EVENT(EcUIButton, OnClicked)
+        REFLECTION_EVENT(EcUIButton, OnClicked),
     };
 
     return events;

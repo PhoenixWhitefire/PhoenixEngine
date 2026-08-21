@@ -14,6 +14,10 @@
 
 #include <tracy/Tracy.hpp>
 
+#define GLT_IMPORTS
+#define GLT_MANUAL_VIEWPORT
+#include <glText/gltext.h>
+
 #include "Engine.hpp"
 
 #include "component/ParticleEmitter.hpp"
@@ -331,6 +335,8 @@ void Engine::m_InitializeVideo()
 	this->RendererContext.Initialize((uint32_t)this->WindowSizeX, (uint32_t)this->WindowSizeY, this->Window);
 	RendererContext.OpenGLErrorsAreFatal = readFromConfiguration(Config, "GLErrorsAreFatal", true);
 
+	gltInit();
+
 	Log.Info("Registering callbacks...");
 
 	glfwSetWindowSizeCallback(Window, windowResizeCallback);
@@ -602,10 +608,11 @@ static void traverseHierarchy(
 static void traverseAndRenderUIHierarchy(
 	GameObject* Root,
 	Renderer& renderer,
+	ImVec2 ViewportSize,
 	ShaderProgram& shader,
 	const MeshProvider::GpuMesh& gpuMesh,
-	const glm::vec2 Position = glm::vec3(0.f, 0.f, 0.f),
-	const glm::vec2 Size = glm::vec3(1.f, 1.f, 1.f),
+	const glm::vec2 Position = glm::vec2(0.f, 0.f),
+	const glm::vec2 Size = glm::vec2(1.f, 1.f),
 	const float Rotation = 0.f
 )
 {
@@ -619,7 +626,7 @@ static void traverseAndRenderUIHierarchy(
 		EcTreeLink* et = child->FindComponent<EcTreeLink>();
 		if (GameObject* targetInterface = (et ? et->Target.Referred() : nullptr); targetInterface && targetInterface->OwningDataModel != PHX_GAMEOBJECT_NULL_ID)
 		{
-			traverseAndRenderUIHierarchy(targetInterface, renderer, shader, gpuMesh, Position, Size, Rotation);
+			traverseAndRenderUIHierarchy(targetInterface, renderer, ViewportSize, shader, gpuMesh, Position, Size, Rotation);
 
 			return true; // continue
 		}
@@ -668,12 +675,38 @@ static void traverseAndRenderUIHierarchy(
 			renderer.AccumulatedDrawCallCount++;
 		}
 
-		traverseAndRenderUIHierarchy(child.Dereference(), renderer, shader, gpuMesh, currentPosition, currentSize, currentRotation);
+		if (EcUIText* uti = child->FindComponent<EcUIText>(); uti && uti->Data)
+		{
+			gltBeginDraw();
+
+			float scale = std::min(currentSize.x, currentSize.y) * std::min(ViewportSize.x, ViewportSize.y) * 0.05f; // ???
+
+			gltColor(uti->TextColor.R, uti->TextColor.G, uti->TextColor.B, 1.f - uti->TextTransparency);
+			gltDrawText2D(
+				uti->Data,
+				((currentPosition.x + 1.f) / 2.f) * ViewportSize.x - gltGetTextWidth(uti->Data, scale) / 2.f,
+				((currentPosition.y + 1.f) / 2.f) * ViewportSize.y - gltGetTextHeight(uti->Data, scale) / 2.f,
+				scale
+			);
+
+			gltEndDraw();
+
+			static MeshProvider* MeshProvider = MeshProvider::Get();
+			static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
+
+			const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
+			const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
+			gpuMesh.VertexArray.Bind();
+			gpuMesh.VertexBuffer.Bind();
+			gpuMesh.ElementBuffer.Bind();
+		}
+
+		traverseAndRenderUIHierarchy(child.Dereference(), renderer, ViewportSize, shader, gpuMesh, currentPosition, currentSize, currentRotation);
 		return true; // continue
 	});
 }
 
-static void renderUIElements(GameObject* Root, Renderer& renderer)
+static void renderUIElements(Engine* EngineObject, GameObject* Root, Renderer& renderer)
 {
 	ZoneScoped;
 	glDisable(GL_CULL_FACE);
@@ -692,7 +725,12 @@ static void renderUIElements(GameObject* Root, Renderer& renderer)
 	static const uint32_t shaderId = shdManager->LoadFromPath("@base/shaders/ui.shp");
 	ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
 
-	traverseAndRenderUIHierarchy(Root, renderer, shader, gpuMesh);
+	ImVec2 viewportSize = EngineObject->GetViewportInputRectSize();
+	gltViewport((int)viewportSize.x, (int)viewportSize.y);
+
+	glEnable(GL_BLEND);
+	traverseAndRenderUIHierarchy(Root, renderer, viewportSize, shader, gpuMesh);
+	glDisable(GL_BLEND);
 }
 
 ImVec2 Engine::GetViewportInputRectSize() const
@@ -785,7 +823,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 	glDisable(GL_DEPTH_TEST);
 
 	if (GameObject* interface = ForegroundDataModel->FindChildWithComponent(EntityComponent::Interface))
-		renderUIElements(interface, RendererContext);
+		renderUIElements(this, interface, RendererContext);
 
 	//Do framebuffer stuff after everything is drawn
 
@@ -1391,7 +1429,10 @@ void Engine::Shutdown()
 	Log.Info("Shutting down GLFW...");
 
 	if (Window)
+	{
+		gltTerminate();
 		glfwDestroyWindow(Window);
+	}
 	glfwTerminate();
 
 	for (const GameObject& obj : ObjectManager.WorldArray)

@@ -669,6 +669,8 @@ export type EcUIImage = {
 
 export type EcUIText = {
   Text: string,
+  TextColor: Color,
+  TextTransparency: number,
 }
 
 export type EcUITransform = {

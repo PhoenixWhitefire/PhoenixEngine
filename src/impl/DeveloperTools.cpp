@@ -88,7 +88,7 @@ static std::vector<TextEditorTab> s_TextEditors;
 static std::unordered_map<std::string, std::vector<DebugBreakpoint>> s_QueuedBreakpoints;
 static auto s_EditorLuauLang = TextEditor::LanguageDefinition::Lua();
 
-static const std::string_view AddableComponents[] = {
+static const std::array AddableComponents = {
     "Camera",
     "DirectionalLight",
     "PointLight",
@@ -99,7 +99,11 @@ static const std::string_view AddableComponents[] = {
     "RigidBody",
     "Sound",
     "Transform",
+};
+
+static const std::array AddableInterfaceComponents = {
     "UIFrame",
+    "UIText",
     "UIImage",
     "UITransform",
 };
@@ -2921,6 +2925,21 @@ static void renderDocumentationViewer()
     DocumentationViewerJumpingToPage = false;
 }
 
+static bool isInInterface(const ObjectHandle& Object)
+{
+    if (Object->FindComponent<EcInterfaceService>())
+        return true;
+
+    while (const GameObject* parent = Object->GetParent())
+    {
+        if (parent->FindComponent<EcInterfaceService>())
+            return true;
+        parent = parent->GetParent();
+    }
+
+    return false;
+}
+
 static void renderExplorer()
 {
     ZoneScoped;
@@ -3055,9 +3074,12 @@ static void renderExplorer()
             ExplorerShouldSeekToCurrentSelection = true;
         }
 
-        for (size_t i = 0; i < std::size(AddableComponents); i++)
+        bool inInterface = isInInterface(ObjectInsertionTarget);
+        size_t listSize = inInterface ? AddableInterfaceComponents.size() : AddableComponents.size();
+
+        for (size_t i = 0; i < listSize; i++)
         {
-            std::string_view name = AddableComponents[i];
+            std::string_view name = inInterface ? AddableInterfaceComponents[i] : AddableComponents[i];
 
             if (ImGui::MenuItem(name.data()))
             {
@@ -4088,8 +4110,21 @@ static void renderProperties()
 
         if (ImGui::BeginPopup("AddComponent"))
         {
-            for (const std::string_view& comp : AddableComponents)
+            bool inInterface = false;
+
+            for (const ObjectHandle& obj : Selections)
             {
+                if (isInInterface(obj))
+                {
+                    inInterface = true;
+                    break;
+                }
+            }
+
+            for (size_t i = 0; i < inInterface ? AddableInterfaceComponents.size() : AddableComponents.size(); i++)
+            {
+                const std::string_view comp = inInterface ? AddableInterfaceComponents[i] : AddableComponents[i];
+
                 if (ImGui::MenuItem(comp.data()))
                 {
                     History::ScopedAction action = { "AddComponent" };

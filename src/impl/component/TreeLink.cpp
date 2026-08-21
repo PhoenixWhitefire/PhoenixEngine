@@ -18,7 +18,7 @@ const Reflection::StaticPropertyMap& TreeLinkComponentManager::GetProperties()
             .Get = [](void* p)
             {
                 EcTreeLink* tl = static_cast<EcTreeLink*>(p);
-                return GameObject::s_ToGenericValue(tl->Target.Referred());
+                return tl->Target->ToGenericValue();
             },
             .Set = [](void* p, const Reflection::GenericValue& gv)
             {

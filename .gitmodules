@@ -36,3 +36,6 @@
 [submodule "Vendor/filewatch"]
 	path = Vendor/filewatch
 	url = https://github.com/ThomasMonkman/filewatch.git
+[submodule "Vendor/glText"]
+	path = Vendor/glText
+	url = https://github.com/vallentin/glText.git

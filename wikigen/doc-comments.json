@@ -824,9 +824,14 @@
         }
       },
       "UIText": {
-        "Description": "Text (not functional)",
+        "Description": [
+          "Text",
+          "The scale depends on the minimum of the two axes of Size"
+        ],
         "Properties": {
-          "Text": "The text string to be displayed"
+          "Text": "The text string to be displayed",
+          "TextColor": "The color of the text",
+          "TextTransparency": "The transparency of the text"
         }
       },
       "UITransform": {

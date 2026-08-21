@@ -2341,6 +2341,12 @@
   "@phoenix/globaltype/UIText.Text": {
     "documentation": "The text string to be displayed"
   },
+  "@phoenix/globaltype/UIText.TextColor": {
+    "documentation": "The color of the text"
+  },
+  "@phoenix/globaltype/UIText.TextTransparency": {
+    "documentation": "The transparency of the text"
+  },
   "@phoenix/globaltype/UITransform.Position": {
     "documentation": "The 2D position, from `0`-`1`"
   },

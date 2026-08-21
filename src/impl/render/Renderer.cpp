@@ -135,12 +135,12 @@ Renderer::Renderer(uint32_t Width, uint32_t Height, GLFWwindow* MainWindow)
 	this->Initialize(Width, Height, MainWindow);
 }
 
-void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindow)
+void Renderer::Initialize(uint32_t OurWidth, uint32_t OurHeight, GLFWwindow* MainWindow)
 {
 	Window = MainWindow;
 
-	m_Width = Width;
-	m_Height = Height;
+	Width = OurWidth;
+	Height = OurHeight;
 
 	glfwMakeContextCurrent(Window);
 
@@ -169,7 +169,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glEnable(GL_FRAMEBUFFER_SRGB);
 	
-	glViewport(0, 0, m_Width, m_Height);
+	glViewport(0, 0, Width, Height);
 
 	int glVersionMajor, glVersionMinor = 0;
 	int maxVertexAttribs = 0;
@@ -198,7 +198,7 @@ void Renderer::Initialize(uint32_t Width, uint32_t Height, GLFWwindow* MainWindo
 	m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Paint));
 	m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, TextureUV));
 
-	this->FrameBuffer.Initialize(m_Width, m_Height, m_MsaaSamples);
+	this->FrameBuffer.Initialize(Width, Height, m_MsaaSamples);
 
 	glGenBuffers(1, &InstancingBuffer);
 
@@ -269,25 +269,17 @@ Renderer::~Renderer()
 	assert(!Window);
 }
 
-void Renderer::ChangeResolution(uint32_t Width, uint32_t Height)
+void Renderer::ChangeResolution(uint32_t NewWidth, uint32_t NewHeight)
 {
-	if (Width == 0 || Height == 0)
+	if (NewWidth == 0 || NewHeight == 0)
 		return;
 
-	Log.InfoF(
-		"Changing window resolution: ({}, {}) -> ({}, {})",
-		m_Width,
-		m_Height,
-		Width,
-		Height
-	);
+	Width = NewWidth;
+	Height = NewHeight;
 
-	m_Width = Width;
-	m_Height = Height;
+	glViewport(0, 0, Width, Height);
 
-	glViewport(0, 0, m_Width, m_Height);
-
-	this->FrameBuffer.ChangeResolution(m_Width, m_Height);
+	this->FrameBuffer.ChangeResolution(Width, Height);
 }
 
 void Renderer::DrawScene(

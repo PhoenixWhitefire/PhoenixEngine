@@ -393,7 +393,9 @@
       },
       "UIText": {
         "Properties": {
-          "Text": "String"
+          "Text": "String",
+          "TextColor": "Color",
+          "TextTransparency": "Double"
         }
       },
       "UITransform": {

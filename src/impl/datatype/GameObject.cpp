@@ -819,7 +819,7 @@ bool GameObject::ForEachDescendant(const std::function<bool(const ObjectHandle&)
 	return false;
 }
 
-std::vector<ObjectHandle> GameObject::GetChildren()
+std::vector<ObjectHandle> GameObject::GetChildren() const
 {
 	std::vector<ObjectHandle> children;
 	children.reserve(Children.size());
@@ -834,7 +834,7 @@ std::vector<ObjectHandle> GameObject::GetChildren()
 	return children;
 }
 
-std::vector<ObjectHandle> GameObject::GetDescendants()
+std::vector<ObjectHandle> GameObject::GetDescendants() const
 {
 	ZoneScoped;
 
@@ -854,7 +854,7 @@ std::vector<ObjectHandle> GameObject::GetDescendants()
 	return descendants;
 }
 
-GameObject* GameObject::FindChild(const std::string_view& TargetName)
+GameObject* GameObject::FindChild(const std::string_view& TargetName) const
 {
 	for (uint32_t id : Children)
 	{
@@ -869,7 +869,7 @@ GameObject* GameObject::FindChild(const std::string_view& TargetName)
 }
 
 
-GameObject* GameObject::FindChildWithComponent(EntityComponent Component)
+GameObject* GameObject::FindChildWithComponent(EntityComponent Component) const
 {
 	for (uint32_t id : Children)
 	{
@@ -993,73 +993,79 @@ void GameObject::RemoveComponent(EntityComponent Type)
 	RAISE_RT("Tried to remove {} component from {}, but it doesn't have that!", s_EntityComponentNames[(uint8_t)Type], GetFullName());
 }
 
-const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string_view& PropName, ReflectorRef* FromComponent)
+const Reflection::PropertyDescriptor* GameObject::FindProperty(const std::string_view& PropName, ReflectorRef* Reflector) const
 {
-	ReflectorRef dummyFc;
-	FromComponent = FromComponent ? FromComponent : &dummyFc;
+	ReflectorRef dummyRef = {};
+	Reflector = Reflector ? Reflector : &dummyRef;
 
 	if (auto it = s_Api.Properties.find(PropName); it != s_Api.Properties.end())
 	{
-		FromComponent->Id = ObjectId;
+		Reflector->Id = ObjectId;
 		return &it->second;
 	}
 
 	if (auto it = ComponentApis.Properties.find(PropName); it != ComponentApis.Properties.end())
 	{
-		*FromComponent = MemberToComponentMap[PropName];
-		assert(FromComponent->Referred());
+		const auto& fcit = MemberToComponentMap.find(PropName);
+		assert(fcit != MemberToComponentMap.end());
+		*Reflector = fcit->second;
 
+		assert(Reflector->Referred());
 		return it->second;
 	}
 
 	return nullptr;
 }
 
-const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_view& FuncName, ReflectorRef* FromComponent)
+const Reflection::MethodDescriptor* GameObject::FindMethod(const std::string_view& FuncName, ReflectorRef* Reflector) const
 {
-	ReflectorRef dummyFc;
-	FromComponent = FromComponent ? FromComponent : &dummyFc;
+	ReflectorRef dummyRef = {};
+	Reflector = Reflector ? Reflector : &dummyRef;
 
 	if (auto it = s_Api.Methods.find(FuncName); it != s_Api.Methods.end())
 	{
-		FromComponent->Id = ObjectId;
+		Reflector->Id = ObjectId;
 		return &it->second;
 	}
 
 	if (auto it = ComponentApis.Methods.find(FuncName); it != ComponentApis.Methods.end())
 	{
-		*FromComponent = MemberToComponentMap[FuncName];
-		assert(FromComponent->Referred());
+		const auto& fcit = MemberToComponentMap.find(FuncName);
+		assert(fcit != MemberToComponentMap.end());
+		*Reflector = fcit->second;
 
+		assert(Reflector->Referred());
 		return it->second;
 	}
 
 	return nullptr;
 }
 
-const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view& EventName, ReflectorRef* Handle)
+const Reflection::EventDescriptor* GameObject::FindEvent(const std::string_view& EventName, ReflectorRef* Reflector) const
 {
-	ReflectorRef dummyHandle;
-	Handle = Handle ? Handle : &dummyHandle;
+	ReflectorRef dummyRef = {};
+	Reflector = Reflector ? Reflector : &dummyRef;
 
 	if (auto it = s_Api.Events.find(EventName); it != s_Api.Events.end())
 	{
-		Handle->Id = ObjectId;
+		Reflector->Id = ObjectId;
 		return &it->second;
 	}
 
 	if (auto it = ComponentApis.Events.find(EventName); it != ComponentApis.Events.end())
 	{
-		*Handle = MemberToComponentMap[EventName];
-		assert(Handle->Referred());
+		const auto& fcit = MemberToComponentMap.find(EventName);
+		assert(fcit != MemberToComponentMap.end());
+		*Reflector = fcit->second;
 
+		assert(Reflector->Referred());
 		return it->second;
 	}
 
 	return nullptr;
 }
 
-Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& PropName)
+Reflection::GenericValue GameObject::GetPropertyValue(const std::string_view& PropName) const
 {
 	ReflectorRef ref;
 
@@ -1115,7 +1121,7 @@ void GameObject::SetPropertyValue(const std::string_view& PropName, const Reflec
 	RAISE_RT("Invalid property '{}' in SetPropertyValue", PropName);
 }
 
-Reflection::GenericValue GameObject::GetDefaultPropertyValue(const std::string_view& PropName)
+Reflection::GenericValue GameObject::GetDefaultPropertyValue(const std::string_view& PropName) const
 {
 	ZoneScoped;
 	ZoneText(PropName.data(), PropName.size());
@@ -1178,7 +1184,7 @@ Reflection::EventMap GameObject::GetEvents() const
 	return cumulativeEvents;
 }
 
-void* GameObject::FindComponentByType(EntityComponent Type)
+void* GameObject::FindComponentByType(EntityComponent Type) const
 {
 	assert(Type != EntityComponent::None);
 
@@ -1383,7 +1389,7 @@ GameObjectManager* GameObjectManager::Get()
 	return ObjectManagerInstance;
 }
 
-bool GameObject::HasTag(const std::string& Tag)
+bool GameObject::HasTag(const std::string& Tag) const
 {
 	GameObjectManager* ObjectManager = GameObjectManager::Get();
 	const auto& it = ObjectManager->CollectionNameToId.find(Tag);

@@ -39,7 +39,10 @@ struct EcUIImage : public Component<EntityComponent::UIImage>
 
 struct EcUIText : public Component<EntityComponent::UIText>
 {
-    std::string Text;
+    std::string Text = "Text";
+    Color TextColor = { 1.f, 1.f, 1.f };
+    float TextTransparency = 0.f;
+    struct GLTtext* Data = nullptr;
 
     bool Valid = true;
 };
@@ -78,6 +81,9 @@ class UITextComponentManager : public ComponentManager<EcUIText>
 {
 public:
     const Reflection::StaticPropertyMap& GetProperties() override;
+
+    uint32_t CreateComponent(GameObject*) override;
+    void DeleteComponent(uint32_t) override;
 };
 
 class UIButtonComponentManager : public ComponentManager<EcUIButton>
