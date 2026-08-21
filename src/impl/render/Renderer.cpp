@@ -10,15 +10,15 @@
 
 extern "C"
 {
-	// 25/12/2024
-	// request discrete GPU for NVIDIA and AMD respectively
-	// (i'm so inclusive, even though i have an NV card i added the flag for AMD)
+    // 25/12/2024
+    // request discrete GPU for NVIDIA and AMD respectively
+    // (i'm so inclusive, even though i have an NV card i added the flag for AMD)
 
-	EXPORT_SYMBOL extern unsigned long NvOptimusEnablement;
-	EXPORT_SYMBOL extern int AmdPowerXpressRequestHighPerformance;
+    EXPORT_SYMBOL extern unsigned long NvOptimusEnablement;
+    EXPORT_SYMBOL extern int AmdPowerXpressRequestHighPerformance;
 
-	unsigned long NvOptimusEnablement = 0x00000001;
-	int AmdPowerXpressRequestHighPerformance = 1;
+    unsigned long NvOptimusEnablement = 0x00000001;
+    int AmdPowerXpressRequestHighPerformance = 1;
 }
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -47,27 +47,27 @@ extern "C"
 #define SHADER_MAX_BONES 128
 
 static std::unordered_map<GLenum, std::string> GLEnumToStringMap = {
-	{ GL_DEBUG_SOURCE_API, "OpenGL"},
-	{ GL_DEBUG_SOURCE_WINDOW_SYSTEM, "Window system" },
-	{ GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader compiler" },
-	{ GL_DEBUG_SOURCE_THIRD_PARTY, "Third-party" },
-	{ GL_DEBUG_SOURCE_APPLICATION, "User-generated :3" },
-	{ GL_DEBUG_SOURCE_OTHER, "Other" },
+    { GL_DEBUG_SOURCE_API, "OpenGL"},
+    { GL_DEBUG_SOURCE_WINDOW_SYSTEM, "Window system" },
+    { GL_DEBUG_SOURCE_SHADER_COMPILER, "Shader compiler" },
+    { GL_DEBUG_SOURCE_THIRD_PARTY, "Third-party" },
+    { GL_DEBUG_SOURCE_APPLICATION, "User-generated :3" },
+    { GL_DEBUG_SOURCE_OTHER, "Other" },
 
-	{ GL_DEBUG_SEVERITY_HIGH, "High" },
-	{ GL_DEBUG_SEVERITY_MEDIUM, "Medium" },
-	{ GL_DEBUG_SEVERITY_LOW, "Low" },
-	{ GL_DEBUG_SEVERITY_NOTIFICATION, "Notification" },
+    { GL_DEBUG_SEVERITY_HIGH, "High" },
+    { GL_DEBUG_SEVERITY_MEDIUM, "Medium" },
+    { GL_DEBUG_SEVERITY_LOW, "Low" },
+    { GL_DEBUG_SEVERITY_NOTIFICATION, "Notification" },
 
-	{ GL_DEBUG_TYPE_ERROR, "Error" },
-	{ GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "Deprecated behavior" },
-	{ GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR, "Undefined behavior" },
-	{ GL_DEBUG_TYPE_PORTABILITY, "Portability" },
-	{ GL_DEBUG_TYPE_PERFORMANCE, "Performance" },
-	{ GL_DEBUG_TYPE_MARKER, "Marker" },
-	{ GL_DEBUG_TYPE_PUSH_GROUP, "Push group" },
-	{ GL_DEBUG_TYPE_POP_GROUP, "Pop group" },
-	{ GL_DEBUG_TYPE_OTHER, "Other" }
+    { GL_DEBUG_TYPE_ERROR, "Error" },
+    { GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR, "Deprecated behavior" },
+    { GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR, "Undefined behavior" },
+    { GL_DEBUG_TYPE_PORTABILITY, "Portability" },
+    { GL_DEBUG_TYPE_PERFORMANCE, "Performance" },
+    { GL_DEBUG_TYPE_MARKER, "Marker" },
+    { GL_DEBUG_TYPE_PUSH_GROUP, "Push group" },
+    { GL_DEBUG_TYPE_POP_GROUP, "Pop group" },
+    { GL_DEBUG_TYPE_OTHER, "Other" }
 };
 
 static std::array<const char*, SHADER_MAX_LIGHTS> LightLocs = {};
@@ -82,125 +82,125 @@ static std::array<std::string, SHADER_MAX_BONES> BoneLocs = {};
 
 static std::string glEnumToString(GLenum Id)
 {
-	auto it = GLEnumToStringMap.find(Id);
-	if (it != GLEnumToStringMap.end())
-		return it->second;
-	else
-		return std::format("ID:{}", Id);
+    auto it = GLEnumToStringMap.find(Id);
+    if (it != GLEnumToStringMap.end())
+        return it->second;
+    else
+        return std::format("ID:{}", Id);
 }
 
 static void GLDebugCallback(
-	GLenum SourceId,
-	GLenum TypeId,
-	GLuint Id,
-	GLenum SeverityId,
-	GLsizei MessageLength,
-	const GLchar* Message,
-	const void* /*Userparam*/
+    GLenum SourceId,
+    GLenum TypeId,
+    GLuint Id,
+    GLenum SeverityId,
+    GLsizei MessageLength,
+    const GLchar* Message,
+    const void* /*Userparam*/
 )
 {
-	// not very important
-	//if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
-		//return;
+    // not very important
+    //if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
+        //return;
 
-	// ID for:
-	// "Buffer object X will use VIDEO memory as the source for buffer object operations"
-	if (Id == 131185)
-		return;
+    // ID for:
+    // "Buffer object X will use VIDEO memory as the source for buffer object operations"
+    if (Id == 131185)
+        return;
 
-	std::string debugString = std::format(
-		"GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n",
-		glEnumToString(TypeId),
-		glEnumToString(SeverityId),
-		std::string_view(Message, MessageLength),
-		glEnumToString(SourceId),
-		Id
-	);
+    std::string debugString = std::format(
+        "GL Debug callback:\n\tType: {}\n\tSeverity: {}\n\tMessage: {}\n\tSource: {}\n\tError ID: {}\n",
+        glEnumToString(TypeId),
+        glEnumToString(SeverityId),
+        std::string_view(Message, MessageLength),
+        glEnumToString(SourceId),
+        Id
+    );
 
-	Log.Warning(debugString);
+    Log.Warning(debugString);
 
-	// ID 131218:
-	// "Vertex shader in program is being recompiled based on GL state"
-	if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
-	{
-		if (Renderer::Get()->OpenGLErrorsAreFatal)
-			RAISE_RT_NF(debugString);
-	}
+    // ID 131218:
+    // "Vertex shader in program is being recompiled based on GL state"
+    if (Id != 131218 && SeverityId > GL_DEBUG_SEVERITY_NOTIFICATION)
+    {
+        if (Renderer::Get()->OpenGLErrorsAreFatal)
+            RAISE_RT_NF(debugString);
+    }
 }
 
 static Renderer* s_Instance = nullptr;
 
 Renderer::Renderer(uint32_t Width, uint32_t Height, GLFWwindow* MainWindow)
 {
-	this->Initialize(Width, Height, MainWindow);
+    this->Initialize(Width, Height, MainWindow);
 }
 
 void Renderer::Initialize(uint32_t OurWidth, uint32_t OurHeight, GLFWwindow* MainWindow)
 {
-	Window = MainWindow;
+    Window = MainWindow;
 
-	Width = OurWidth;
-	Height = OurHeight;
+    Width = OurWidth;
+    Height = OurHeight;
 
-	glfwMakeContextCurrent(Window);
+    glfwMakeContextCurrent(Window);
 
-	bool gladStatus = gladLoadGL((GLADloadfunc)glfwGetProcAddress);
+    bool gladStatus = gladLoadGL((GLADloadfunc)glfwGetProcAddress);
 
-	if (!gladStatus)
-		RAISE_RT("GLAD could not load OpenGL. Please update your drivers.");
+    if (!gladStatus)
+        RAISE_RT("GLAD could not load OpenGL. Please update your drivers.");
 
-	// `glDebugMessageCallback` will be NULL if the user
-	// does not have the `GL_ARB_debug_output`/`GL_KHR_debug` OpenGL extensions
-	// I just want this to work on a specific machine
-	// 13/09/2024
-	if (glDebugMessageCallback)
-	{
-		glEnable(GL_DEBUG_OUTPUT);
-		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    // `glDebugMessageCallback` will be NULL if the user
+    // does not have the `GL_ARB_debug_output`/`GL_KHR_debug` OpenGL extensions
+    // I just want this to work on a specific machine
+    // 13/09/2024
+    if (glDebugMessageCallback)
+    {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
-		glDebugMessageCallback(GLDebugCallback, nullptr);
-	}
-	else
-		Log.Warning("No `glDebugMessageCallback`");
+        glDebugMessageCallback(GLDebugCallback, nullptr);
+    }
+    else
+        Log.Warning("No `glDebugMessageCallback`");
 
-	glEnable(GL_MULTISAMPLE);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	glEnable(GL_FRAMEBUFFER_SRGB);
-	
-	glViewport(0, 0, Width, Height);
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    
+    glViewport(0, 0, Width, Height);
 
-	int glVersionMajor, glVersionMinor = 0;
-	int maxVertexAttribs = 0;
-	int textureSlots = 0;
+    int glVersionMajor, glVersionMinor = 0;
+    int maxVertexAttribs = 0;
+    int textureSlots = 0;
 
-	glGetIntegerv(GL_MAJOR_VERSION, &glVersionMajor);
-	glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
-	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
-	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &textureSlots);
+    glGetIntegerv(GL_MAJOR_VERSION, &glVersionMajor);
+    glGetIntegerv(GL_MINOR_VERSION, &glVersionMinor);
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &textureSlots);
 
-	Log.InfoF(
-		"Running OpenGL version {}.{}",
-		glVersionMajor, glVersionMinor
-	);
-	Log.InfoF("Max vertex attribs: {}", maxVertexAttribs);
-	Log.InfoF("Texture slots: {}", textureSlots);
+    Log.InfoF(
+        "Running OpenGL version {}.{}",
+        glVersionMajor, glVersionMinor
+    );
+    Log.InfoF("Max vertex attribs: {}", maxVertexAttribs);
+    Log.InfoF("Texture slots: {}", textureSlots);
 
-	m_VertexArray.Initialize();
-	m_VertexBuffer.Initialize();
-	m_ElementBuffer.Initialize();
+    m_VertexArray.Initialize();
+    m_VertexBuffer.Initialize();
+    m_ElementBuffer.Initialize();
 
-	m_VertexArray.Bind();
+    m_VertexArray.Bind();
 
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Position));
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Paint));
-	m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, TextureUV));
+    m_VertexArray.LinkAttrib(m_VertexBuffer, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Position));
+    m_VertexArray.LinkAttrib(m_VertexBuffer, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+    m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Paint));
+    m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, TextureUV));
 
-	this->FrameBuffer.Initialize(Width, Height, m_MsaaSamples);
+    this->FrameBuffer.Initialize(Width, Height, m_MsaaSamples);
 
-	glGenBuffers(1, &InstancingBuffer);
+    glGenBuffers(1, &InstancingBuffer);
 
 #define SETLIGHTLOCS(i) {                                          \
 LightLocs[i] = "Phoenix_Lights[" #i "]";                           \
@@ -212,442 +212,442 @@ LightAngLocs[i]     = "Phoenix_Lights[" #i "].Angle";              \
 LightDirLocs[i]     = "Phoenix_Lights[" #i "].SpotLightDirection"; \
 LightShadowsLocs[i] = "Phoenix_Lights[" #i "].Shadows";       }
 
-	SETLIGHTLOCS(0);
-	SETLIGHTLOCS(1);
-	SETLIGHTLOCS(2);
-	SETLIGHTLOCS(3);
-	SETLIGHTLOCS(4);
-	SETLIGHTLOCS(5);
-	SETLIGHTLOCS(6);
-	SETLIGHTLOCS(7);
-	SETLIGHTLOCS(8);
-	SETLIGHTLOCS(9);
-	SETLIGHTLOCS(10);
-	SETLIGHTLOCS(11);
-	SETLIGHTLOCS(12);
-	SETLIGHTLOCS(13);
-	SETLIGHTLOCS(14);
-	SETLIGHTLOCS(15);
+    SETLIGHTLOCS(0);
+    SETLIGHTLOCS(1);
+    SETLIGHTLOCS(2);
+    SETLIGHTLOCS(3);
+    SETLIGHTLOCS(4);
+    SETLIGHTLOCS(5);
+    SETLIGHTLOCS(6);
+    SETLIGHTLOCS(7);
+    SETLIGHTLOCS(8);
+    SETLIGHTLOCS(9);
+    SETLIGHTLOCS(10);
+    SETLIGHTLOCS(11);
+    SETLIGHTLOCS(12);
+    SETLIGHTLOCS(13);
+    SETLIGHTLOCS(14);
+    SETLIGHTLOCS(15);
 
 #undef SETLIGHTLOCS
 
-	for (size_t i = 0; i < SHADER_MAX_BONES; i++)
-		BoneLocs[i] = std::format("Phoenix_BoneMatrices[{}]", i);
+    for (size_t i = 0; i < SHADER_MAX_BONES; i++)
+        BoneLocs[i] = std::format("Phoenix_BoneMatrices[{}]", i);
 
-	assert(!s_Instance);
-	s_Instance = this;
+    assert(!s_Instance);
+    s_Instance = this;
 
-	Log.Info("Renderer initialized");
+    Log.Info("Renderer initialized");
 }
 
 Renderer* Renderer::Get()
 {
-	assert(s_Instance);
-	return s_Instance;
+    assert(s_Instance);
+    return s_Instance;
 }
 
 void Renderer::Shutdown()
 {
-	if (!s_Instance)
-		return; // never initialized
+    if (!s_Instance)
+        return; // never initialized
 
-	s_Instance = nullptr;
+    s_Instance = nullptr;
 
-	glDeleteBuffers(1, &InstancingBuffer);
+    glDeleteBuffers(1, &InstancingBuffer);
 
-	m_VertexArray.Delete();
-	m_ElementBuffer.Delete();
-	m_VertexBuffer.Delete();
-	FrameBuffer.Delete();
+    m_VertexArray.Delete();
+    m_ElementBuffer.Delete();
+    m_VertexBuffer.Delete();
+    FrameBuffer.Delete();
 
-	Window = nullptr;
+    Window = nullptr;
 }
 
 Renderer::~Renderer()
 {
-	assert(!s_Instance);
-	assert(!Window);
+    assert(!s_Instance);
+    assert(!Window);
 }
 
 void Renderer::ChangeResolution(uint32_t NewWidth, uint32_t NewHeight)
 {
-	if (NewWidth == 0 || NewHeight == 0)
-		return;
+    if (NewWidth == 0 || NewHeight == 0)
+        return;
 
-	Width = NewWidth;
-	Height = NewHeight;
+    Width = NewWidth;
+    Height = NewHeight;
 
-	glViewport(0, 0, Width, Height);
+    glViewport(0, 0, Width, Height);
 
-	this->FrameBuffer.ChangeResolution(Width, Height);
+    this->FrameBuffer.ChangeResolution(Width, Height);
 }
 
 void Renderer::DrawScene(
-	const Scene& Scene,
-	const glm::mat4& RenderMatrix,
-	const glm::mat4& CameraTransform,
-	double RunningTime,
-	bool DebugWireframeRendering
+    const Scene& Scene,
+    const glm::mat4& RenderMatrix,
+    const glm::mat4& CameraTransform,
+    double RunningTime,
+    bool DebugWireframeRendering
 )
 {
-	TIME_SCOPE_AS("DrawScene");
-	ZoneScopedC(tracy::Color::HotPink);
+    TIME_SCOPE_AS("DrawScene");
+    ZoneScopedC(tracy::Color::HotPink);
 
-	MeshProvider* meshProvider = MeshProvider::Get();
-	MaterialManager* mtlManager = MaterialManager::Get();
+    MeshProvider* meshProvider = MeshProvider::Get();
+    MaterialManager* mtlManager = MaterialManager::Get();
 
-	// map< clump hash, pair< base RenderItem, vector< array buffer data >>>
-	std::map<uint64_t, std::pair<size_t, std::vector<InstanceDrawInfo>>> instancingList;
-	{
-		ZoneScopedNC("Prepare", tracy::Color::AliceBlue);
+    // map< clump hash, pair< base RenderItem, vector< array buffer data >>>
+    std::map<uint64_t, std::pair<size_t, std::vector<InstanceDrawInfo>>> instancingList;
+    {
+        ZoneScopedNC("Prepare", tracy::Color::AliceBlue);
 
-		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Framebuffer);
-		this->FrameBuffer.BindTexture();
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Framebuffer);
+        this->FrameBuffer.BindTexture();
 
-		ShaderManager* shdManager = ShaderManager::Get();
+        ShaderManager* shdManager = ShaderManager::Get();
 
-		{
-			ZoneScopedN("SetUpInitialUniforms");
+        {
+            ZoneScopedN("SetUpInitialUniforms");
 
-			for (uint32_t shaderId : Scene.UsedShaders)
-			{
-				ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
-				if (shader.GpuId == UINT32_MAX)
-					continue;
+            for (uint32_t shaderId : Scene.UsedShaders)
+            {
+                ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+                if (shader.GpuId == UINT32_MAX)
+                    continue;
 
-				shader.SetUniform("Phoenix_RenderMatrix", RenderMatrix);
-				shader.SetUniform("Phoenix_CameraPosition", glm::vec3(CameraTransform[3]));
-				shader.SetUniform("Phoenix_Time", RunningTime);
-				shader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
-				shader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
+                shader.SetUniform("Phoenix_RenderMatrix", RenderMatrix);
+                shader.SetUniform("Phoenix_CameraPosition", glm::vec3(CameraTransform[3]));
+                shader.SetUniform("Phoenix_Time", RunningTime);
+                shader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
+                shader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
 
-				shader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::Framebuffer);
+                shader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::Framebuffer);
 
-				// TODO 05/09/2024
-				// Branching in shader VS separate array uniforms?
-				// Oh and uniform locations should probably be cached
-				for (int lightIndex = 0; lightIndex < std::min(SHADER_MAX_LIGHTS, (int)Scene.LightingList.size()); lightIndex++)
-				{
-					const LightItem& lightData = Scene.LightingList.at(lightIndex);
+                // TODO 05/09/2024
+                // Branching in shader VS separate array uniforms?
+                // Oh and uniform locations should probably be cached
+                for (int lightIndex = 0; lightIndex < std::min(SHADER_MAX_LIGHTS, (int)Scene.LightingList.size()); lightIndex++)
+                {
+                    const LightItem& lightData = Scene.LightingList.at(lightIndex);
 
-					shader.SetUniform(LightPosLocs[lightIndex], lightData.Position);
-					shader.SetUniform(LightColLocs[lightIndex], lightData.LightColor);
-					shader.SetUniform(LightTypeLocs[lightIndex], (int)lightData.Type);
+                    shader.SetUniform(LightPosLocs[lightIndex], lightData.Position);
+                    shader.SetUniform(LightColLocs[lightIndex], lightData.LightColor);
+                    shader.SetUniform(LightTypeLocs[lightIndex], (int)lightData.Type);
 
-					if (lightData.Type == LightType::Directional)
-						shader.SetUniform(LightShadowsLocs[lightIndex], lightData.Shadows);
-					else
-					{
-						if (lightData.Type == LightType::Spot)
-						{
-							shader.SetUniform(LightAngLocs[lightIndex], lightData.Angle);
-							shader.SetUniform(LightDirLocs[lightIndex], lightData.SpotLightDirection);
-						}
+                    if (lightData.Type == LightType::Directional)
+                        shader.SetUniform(LightShadowsLocs[lightIndex], lightData.Shadows);
+                    else
+                    {
+                        if (lightData.Type == LightType::Spot)
+                        {
+                            shader.SetUniform(LightAngLocs[lightIndex], lightData.Angle);
+                            shader.SetUniform(LightDirLocs[lightIndex], lightData.SpotLightDirection);
+                        }
 
-						shader.SetUniform(LightRangeLocs[lightIndex], lightData.Range);
-					}
-				}
+                        shader.SetUniform(LightRangeLocs[lightIndex], lightData.Range);
+                    }
+                }
 
-				shader.SetUniform(
-					"Phoenix_NumLights",
-					std::min(
-						static_cast<int>(Scene.LightingList.size()),
-						SHADER_MAX_LIGHTS
-					)
-				);
-			}
-		}
+                shader.SetUniform(
+                    "Phoenix_NumLights",
+                    std::min(
+                        static_cast<int>(Scene.LightingList.size()),
+                        SHADER_MAX_LIGHTS
+                    )
+                );
+            }
+        }
 
-		ZoneNamedN(bubzone, "BuildInstancingBuffer", true);
+        ZoneNamedN(bubzone, "BuildInstancingBuffer", true);
 
-		for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
-		{
-			const RenderItem& renderData = Scene.RenderList[renderItemIndex];
-			const ShaderProgram& shader = mtlManager->GetMaterialResource(renderData.MaterialId).GetShader();
-			if (shader.GpuId == UINT32_MAX)
-				continue;
+        for (size_t renderItemIndex = 0; renderItemIndex < Scene.RenderList.size(); renderItemIndex++)
+        {
+            const RenderItem& renderData = Scene.RenderList[renderItemIndex];
+            const ShaderProgram& shader = mtlManager->GetMaterialResource(renderData.MaterialId).GetShader();
+            if (shader.GpuId == UINT32_MAX)
+                continue;
 
-			// the MESH, MATERIAL, TRANSPARENCY and REFLECTIVITY must be the same
-				// for a set of objects to be instanced together
-				// And it needs to be on the GPU
-			Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
+            // the MESH, MATERIAL, TRANSPARENCY and REFLECTIVITY must be the same
+                // for a set of objects to be instanced together
+                // And it needs to be on the GPU
+            Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
 
-			uint64_t hash = 0;
+            uint64_t hash = 0;
 
-			// make sure meshes that aren't on the gpu don't get
-			// instanced
-			// 21/01/2025 skinned meshes also can't rn
-			if (mesh.GpuId == UINT32_MAX || !mesh.Bones.empty())
-			{
-				hash = instancingList.size();
+            // make sure meshes that aren't on the gpu don't get
+            // instanced
+            // 21/01/2025 skinned meshes also can't rn
+            if (mesh.GpuId == UINT32_MAX || !mesh.Bones.empty())
+            {
+                hash = instancingList.size();
 
-				while (instancingList.find(hash) != instancingList.end())
-					hash += 1;
+                while (instancingList.find(hash) != instancingList.end())
+                    hash += 1;
 
-				if (mesh.GpuId != UINT32_MAX && !mesh.Bones.empty())
-				{
-					const MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(renderData.RenderMeshId);
-					// 21/01/2025 dynamic bone transforms
-					gpuMesh.VertexBuffer.SetBufferData(mesh.Vertices);
-				}
-			}
-			else
-				// yum
-				hash = renderData.RenderMeshId
-						+ static_cast<uint64_t>(renderData.MaterialId * 500u)
-						+ (renderData.Transparency > 0.f ? 5000000ull : 0ull)
-						+ static_cast<uint64_t>(renderData.MetalnessFactor * 115)
-						+ static_cast<uint64_t>(renderData.RoughnessFactor * 115);
+                if (mesh.GpuId != UINT32_MAX && !mesh.Bones.empty())
+                {
+                    const MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(renderData.RenderMeshId);
+                    // 21/01/2025 dynamic bone transforms
+                    gpuMesh.VertexBuffer.SetBufferData(mesh.Vertices);
+                }
+            }
+            else
+                // yum
+                hash = renderData.RenderMeshId
+                        + static_cast<uint64_t>(renderData.MaterialId * 500u)
+                        + (renderData.Transparency > 0.f ? 5000000ull : 0ull)
+                        + static_cast<uint64_t>(renderData.MetalnessFactor * 115)
+                        + static_cast<uint64_t>(renderData.RoughnessFactor * 115);
 
-			auto it = instancingList.find(hash);
-			if (it == instancingList.end())
-			{
-				instancingList[hash] = std::pair(renderItemIndex, std::vector<InstanceDrawInfo>());
-				instancingList[hash].second.reserve(8);
-			}
+            auto it = instancingList.find(hash);
+            if (it == instancingList.end())
+            {
+                instancingList[hash] = std::pair(renderItemIndex, std::vector<InstanceDrawInfo>());
+                instancingList[hash].second.reserve(8);
+            }
 
-			std::vector<InstanceDrawInfo>& drawInfos = instancingList[hash].second;
+            std::vector<InstanceDrawInfo>& drawInfos = instancingList[hash].second;
 
-			// Set buffer data
-			drawInfos.emplace_back(
-				renderData.Transform[0],
-				renderData.Transform[1],
-				renderData.Transform[2],
-				renderData.Transform[3],
-				renderData.TintColor,
-				renderData.Transparency
-			);
-		}
-	}
+            // Set buffer data
+            drawInfos.emplace_back(
+                renderData.Transform[0],
+                renderData.Transform[1],
+                renderData.Transform[2],
+                renderData.Transform[3],
+                renderData.TintColor,
+                renderData.Transparency
+            );
+        }
+    }
 
-	// 13/01/2025 `tracy::Color::Indigo`?? Indigo?? Park??
-	ZoneNamedNC(perfzone, "Perform", tracy::Color::Indigo, true);
+    // 13/01/2025 `tracy::Color::Indigo`?? Indigo?? Park??
+    ZoneNamedNC(perfzone, "Perform", tracy::Color::Indigo, true);
 
-	for (auto& iter : instancingList)
-	{
-		ZoneNamedN(drawzone, "Draw", true);
+    for (auto& iter : instancingList)
+    {
+        ZoneNamedN(drawzone, "Draw", true);
 
-		const RenderItem& renderData = Scene.RenderList[iter.second.first];
-		const Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
+        const RenderItem& renderData = Scene.RenderList[iter.second.first];
+        const Mesh& mesh = meshProvider->GetMeshResource(renderData.RenderMeshId);
 
-		const std::vector<InstanceDrawInfo>& drawInfos = iter.second.second;
-		MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
+        const std::vector<InstanceDrawInfo>& drawInfos = iter.second.second;
+        MeshProvider::GpuMesh& gpuMesh = meshProvider->GetGpuMesh(mesh.GpuId);
 
-		{
-			ZoneNamedNC(uploadzone, "UploadInstancingData", tracy::Color::Khaki, true);
+        {
+            ZoneNamedNC(uploadzone, "UploadInstancingData", tracy::Color::Khaki, true);
 
-			gpuMesh.VertexArray.Bind();
+            gpuMesh.VertexArray.Bind();
 
-			glBindBuffer(GL_ARRAY_BUFFER, InstancingBuffer);
-			glBufferData(
-				GL_ARRAY_BUFFER,
-				drawInfos.size() * sizeof(InstanceDrawInfo),
-				drawInfos.data(),
-				GL_STREAM_DRAW
-			);
-		}
+            glBindBuffer(GL_ARRAY_BUFFER, InstancingBuffer);
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                drawInfos.size() * sizeof(InstanceDrawInfo),
+                drawInfos.data(),
+                GL_STREAM_DRAW
+            );
+        }
 
-		const RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
-		ShaderProgram& shader = material.GetShader();
-		shader.Activate();
+        const RenderMaterial& material = mtlManager->GetMaterialResource(renderData.MaterialId);
+        ShaderProgram& shader = material.GetShader();
+        shader.Activate();
 
-		if (mesh.Bones.size() > 0)
-		{
-			ZoneNamedNC(uploadZoneSkinned, "UploadSkinningTransforms", tracy::Color::Khaki2, true);
+        if (mesh.Bones.size() > 0)
+        {
+            ZoneNamedNC(uploadZoneSkinned, "UploadSkinningTransforms", tracy::Color::Khaki2, true);
 
-			for (uint32_t bi = 0; bi < mesh.Bones.size() && bi < BoneLocs.size(); bi++)
-				glUniformMatrix4fv(glGetUniformLocation(shader.GpuId, BoneLocs[bi].c_str()), 1, GL_FALSE, glm::value_ptr(gpuMesh.BoneMatrices[bi]));
-		}
+            for (uint32_t bi = 0; bi < mesh.Bones.size() && bi < BoneLocs.size(); bi++)
+                glUniformMatrix4fv(glGetUniformLocation(shader.GpuId, BoneLocs[bi].c_str()), 1, GL_FALSE, glm::value_ptr(gpuMesh.BoneMatrices[bi]));
+        }
 
-		m_SetMaterialData(renderData, DebugWireframeRendering);
-		this->DrawMesh(
-			mesh,
-			shader,
-			renderData.Transform,
-			renderData.FaceCulling,
-			static_cast<int32_t>(drawInfos.size())
-		);
-	}
+        m_SetMaterialData(renderData, DebugWireframeRendering);
+        this->DrawMesh(
+            mesh,
+            shader,
+            renderData.Transform,
+            renderData.FaceCulling,
+            static_cast<int32_t>(drawInfos.size())
+        );
+    }
 }
 
 void Renderer::DrawMesh(
-	const Mesh& Object,
-	ShaderProgram& Shader,
-	const glm::mat4& Transform,
-	FaceCullingMode FaceCulling,
-	int32_t NumInstances
+    const Mesh& Object,
+    ShaderProgram& Shader,
+    const glm::mat4& Transform,
+    FaceCullingMode FaceCulling,
+    int32_t NumInstances
 )
 {
-	ZoneScopedC(tracy::Color::HotPink);
-	AccumulatedDrawCallCount++;
+    ZoneScopedC(tracy::Color::HotPink);
+    AccumulatedDrawCallCount++;
 
-	switch (FaceCulling)
-	{
+    switch (FaceCulling)
+    {
 
-	case FaceCullingMode::None:
-	{
-		glDisable(GL_CULL_FACE);
-		break;
-	}
+    case FaceCullingMode::None:
+    {
+        glDisable(GL_CULL_FACE);
+        break;
+    }
 
-	case FaceCullingMode::BackFace:
-	{
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT);
-		break;
-	}
+    case FaceCullingMode::BackFace:
+    {
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
+        break;
+    }
 
-	case FaceCullingMode::FrontFace:
-	{
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		break;
-	}
+    case FaceCullingMode::FrontFace:
+    {
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        break;
+    }
 
-	[[unlikely]] default: assert(false);
+    [[unlikely]] default: assert(false);
 
-	}
+    }
 
-	uint32_t gpuMeshId = Object.GpuId;
-	MeshProvider::GpuMesh* gpuMesh = nullptr;
+    uint32_t gpuMeshId = Object.GpuId;
+    MeshProvider::GpuMesh* gpuMesh = nullptr;
 
-	// mesh not uploaded to the GPU by MeshProvider
-	if (gpuMeshId == UINT32_MAX)
-	{
-		assert(false); // genuinely what the fuck is wrong with you
+    // mesh not uploaded to the GPU by MeshProvider
+    if (gpuMeshId == UINT32_MAX)
+    {
+        assert(false); // genuinely what the fuck is wrong with you
 
-		m_VertexArray.Bind();
+        m_VertexArray.Bind();
 
-		m_VertexBuffer.SetBufferData(Object.Vertices);
-		m_ElementBuffer.SetBufferData(Object.Indices);
+        m_VertexBuffer.SetBufferData(Object.Vertices);
+        m_ElementBuffer.SetBufferData(Object.Indices);
 
-		m_VertexBuffer.Bind();
-		m_ElementBuffer.Bind();
-	}
-	else
-	{
-		gpuMesh = &MeshProvider::Get()->GetGpuMesh(gpuMeshId);
-		gpuMesh->VertexArray.Bind();
-		gpuMesh->VertexBuffer.Bind();
-		gpuMesh->ElementBuffer.Bind();
-	}
+        m_VertexBuffer.Bind();
+        m_ElementBuffer.Bind();
+    }
+    else
+    {
+        gpuMesh = &MeshProvider::Get()->GetGpuMesh(gpuMeshId);
+        gpuMesh->VertexArray.Bind();
+        gpuMesh->VertexBuffer.Bind();
+        gpuMesh->ElementBuffer.Bind();
+    }
 
-	uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object.Indices.size());
+    uint32_t numIndices = gpuMesh ? gpuMesh->NumIndices : static_cast<uint32_t>(Object.Indices.size());
 
-	if (NumInstances > 0)
-	{
-		Shader.SetUniform("Phoenix_IsInstanced", true);
-		Shader.Activate();
+    if (NumInstances > 0)
+    {
+        Shader.SetUniform("Phoenix_IsInstanced", true);
+        Shader.Activate();
 
-		glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, nullptr, NumInstances);
-	}
-	else
-	{
-		Shader.SetUniform("Phoenix_IsInstanced", false);
-		Shader.SetUniform("Phoenix_Transform", Transform);
-		Shader.Activate();
+        glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, nullptr, NumInstances);
+    }
+    else
+    {
+        Shader.SetUniform("Phoenix_IsInstanced", false);
+        Shader.SetUniform("Phoenix_Transform", Transform);
+        Shader.Activate();
 
-		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, nullptr);
-	}
+        glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, nullptr);
+    }
 }
 
 void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWireframeRendering)
 {
-	ZoneScopedC(tracy::Color::HotPink);
+    ZoneScopedC(tracy::Color::HotPink);
 
-	MaterialManager* mtlManager = MaterialManager::Get();
+    MaterialManager* mtlManager = MaterialManager::Get();
 
-	RenderMaterial& material = mtlManager->GetMaterialResource(RenderData.MaterialId);
-	ShaderProgram& shader = material.GetShader();
+    RenderMaterial& material = mtlManager->GetMaterialResource(RenderData.MaterialId);
+    ShaderProgram& shader = material.GetShader();
 
-	if (!DebugWireframeRendering)
-		switch (material.PolygonMode)
-		{
+    if (!DebugWireframeRendering)
+        switch (material.PolygonMode)
+        {
 
-		case RenderMaterial::MaterialPolygonMode::Fill:
-		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			break;
-		}
+        case RenderMaterial::MaterialPolygonMode::Fill:
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            break;
+        }
 
-		case RenderMaterial::MaterialPolygonMode::Lines:
-		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			break;
-		}
+        case RenderMaterial::MaterialPolygonMode::Lines:
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            break;
+        }
 
-		case RenderMaterial::MaterialPolygonMode::Points:
-		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-			break;
-		}
+        case RenderMaterial::MaterialPolygonMode::Points:
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+            break;
+        }
 
-		[[unlikely]] default: {}
+        [[unlikely]] default: {}
 
-		}
-	else
-		if (material.PolygonMode == RenderMaterial::MaterialPolygonMode::Points)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-		else
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+    else
+        if (material.PolygonMode == RenderMaterial::MaterialPolygonMode::Points)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (RenderData.Transparency > 0.f || material.HasTranslucency)
-		glEnable(GL_BLEND);
-	else // the gosh darn grass model is practically 50% transparent
-		glDisable(GL_BLEND);
+    if (RenderData.Transparency > 0.f || material.HasTranslucency)
+        glEnable(GL_BLEND);
+    else // the gosh darn grass model is practically 50% transparent
+        glDisable(GL_BLEND);
 
-	// apply the uniforms for the shader program...
-	shader.ApplyDefaultUniforms();
-	// ... then the material uniforms...
-	material.ApplyUniforms();
-	// ... so that the material can override uniforms in the SP
+    // apply the uniforms for the shader program...
+    shader.ApplyDefaultUniforms();
+    // ... then the material uniforms...
+    material.ApplyUniforms();
+    // ... so that the material can override uniforms in the SP
 
-	shader.SetUniform("Phoenix_Material.SpecularMultiplier", material.SpecMultiply);
-	shader.SetUniform("Phoenix_Material.SpecularPower", material.SpecExponent);
+    shader.SetUniform("Phoenix_Material.SpecularMultiplier", material.SpecMultiply);
+    shader.SetUniform("Phoenix_Material.SpecularPower", material.SpecExponent);
 
-	shader.SetUniform("Phoenix_Material.MetalnessFactor", RenderData.MetalnessFactor);
-	shader.SetUniform("Phoenix_Material.RoughnessFactor", RenderData.RoughnessFactor);
+    shader.SetUniform("Phoenix_Material.MetalnessFactor", RenderData.MetalnessFactor);
+    shader.SetUniform("Phoenix_Material.RoughnessFactor", RenderData.RoughnessFactor);
 
-	shader.SetUniform(
-		"Phoenix_ColorTint",
-		RenderData.TintColor
-	);
+    shader.SetUniform(
+        "Phoenix_ColorTint",
+        RenderData.TintColor
+    );
 
-	//shader.SetTextureUniform("ColorMap", material.ColorMap);
-	//shader.SetTextureUniform("MetallicRoughnessMap", material.MetallicRoughnessMap);
+    //shader.SetTextureUniform("ColorMap", material.ColorMap);
+    //shader.SetTextureUniform("MetallicRoughnessMap", material.MetallicRoughnessMap);
 
-	TextureManager* texManager = TextureManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
-	glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialColorMap);
-	glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.ColorMap).GpuId);
+    glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialColorMap);
+    glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.ColorMap).GpuId);
 
-	glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialMetallicRoughnessMap);
-	glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.MetallicRoughnessMap).GpuId);
+    glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialMetallicRoughnessMap);
+    glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.MetallicRoughnessMap).GpuId);
 
-	if (material.NormalMap != 0)
-	{
-		shader.SetUniform("Phoenix_Material.HasNormalMap", true);
-		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialNormalMap);
-		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.NormalMap).GpuId);
-	}
-	else
-		shader.SetUniform("Phoenix_Material.HasNormalMap", false);
+    if (material.NormalMap != 0)
+    {
+        shader.SetUniform("Phoenix_Material.HasNormalMap", true);
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialNormalMap);
+        glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.NormalMap).GpuId);
+    }
+    else
+        shader.SetUniform("Phoenix_Material.HasNormalMap", false);
 
-	if (material.EmissionMap != 0)
-	{
-		shader.SetUniform("Phoenix_Material.HasEmissionMap", true);
-		glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialEmissionMap);
-		glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.EmissionMap).GpuId);
-	}
-	else
-		shader.SetUniform("Phoenix_Material.HasEmissionMap", false);
+    if (material.EmissionMap != 0)
+    {
+        shader.SetUniform("Phoenix_Material.HasEmissionMap", true);
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialEmissionMap);
+        glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.EmissionMap).GpuId);
+    }
+    else
+        shader.SetUniform("Phoenix_Material.HasEmissionMap", false);
 }
 
 void Renderer::SwapBuffers()
 {
-	ZoneScopedC(tracy::Color::HotPink);
+    ZoneScopedC(tracy::Color::HotPink);
 
-	glfwSwapBuffers(Window);
+    glfwSwapBuffers(Window);
 }

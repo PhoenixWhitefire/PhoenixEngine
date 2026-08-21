@@ -10,105 +10,105 @@
 class ModelLoader
 {
 public:
-	ModelLoader(const std::string& AssetPath, uint32_t Parent);
-	ObjectHandle Model;
+    ModelLoader(const std::string& AssetPath, uint32_t Parent);
+    ObjectHandle Model;
 
 private:
-	struct MeshMaterial
-	{
-		enum class MaterialAlphaMode : uint8_t { Opaque, Mask, Blend };
+    struct MeshMaterial
+    {
+        enum class MaterialAlphaMode : uint8_t { Opaque, Mask, Blend };
 
-		std::string Name;
+        std::string Name;
 
-		glm::vec4 BaseColorFactor = { 1.f, 1.f, 1.f, 1.f };
-		uint32_t BaseColorTexture = UINT32_MAX;
+        glm::vec4 BaseColorFactor = { 1.f, 1.f, 1.f, 1.f };
+        uint32_t BaseColorTexture = UINT32_MAX;
 
-		float MetallicFactor = 1.f;
-		float RoughnessFactor = 1.f;
+        float MetallicFactor = 1.f;
+        float RoughnessFactor = 1.f;
 
-		uint32_t MetallicRoughnessTexture = UINT32_MAX;
-		uint32_t NormalTexture = UINT32_MAX;
-		uint32_t EmissiveTexture = UINT32_MAX;
+        uint32_t MetallicRoughnessTexture = UINT32_MAX;
+        uint32_t NormalTexture = UINT32_MAX;
+        uint32_t EmissiveTexture = UINT32_MAX;
 
-		glm::vec3 EmissiveFactor = { 0.f, 0.f, 0.f };
+        glm::vec3 EmissiveFactor = { 0.f, 0.f, 0.f };
 
-		float AlphaCutoff = .5f;
-		MaterialAlphaMode AlphaMode = MaterialAlphaMode::Opaque;
+        float AlphaCutoff = .5f;
+        MaterialAlphaMode AlphaMode = MaterialAlphaMode::Opaque;
 
-		bool DoubleSided = false;
-		bool LinearlySmoothened = true;
-	};
+        bool DoubleSided = false;
+        bool LinearlySmoothened = true;
+    };
 
-	struct ModelNode
-	{
-		struct BoneInfo
-		{
-			int32_t NodeId = UINT32_MAX;
-			glm::mat4 InvBindMatrix = { 1.f };
-		};
+    struct ModelNode
+    {
+        struct BoneInfo
+        {
+            int32_t NodeId = UINT32_MAX;
+            glm::mat4 InvBindMatrix = { 1.f };
+        };
 
-		enum class NodeType : uint8_t
-		{
-			Primitive,
-			Container,
-			Bone
-		};
+        enum class NodeType : uint8_t
+        {
+            Primitive,
+            Container,
+            Bone
+        };
 
-		std::string Name;
-		uint32_t NodeId = UINT32_MAX;
-		uint32_t Parent = UINT32_MAX;
+        std::string Name;
+        uint32_t NodeId = UINT32_MAX;
+        uint32_t Parent = UINT32_MAX;
 
-		NodeType Type = NodeType::Primitive;
+        NodeType Type = NodeType::Primitive;
 
-		Mesh Data = {};
-		MeshMaterial Material = {};
-		glm::mat4 LocalTransform = { 1.f };
-		std::vector<BoneInfo> Bones = {};
-	};
+        Mesh Data = {};
+        MeshMaterial Material = {};
+        glm::mat4 LocalTransform = { 1.f };
+        std::vector<BoneInfo> Bones = {};
+    };
 
-	ModelLoader() = delete;
+    ModelLoader() = delete;
 
-	ModelNode m_LoadPrimitive(
-		const nlohmann::json& MeshData,
-		uint32_t PrimitiveIndex,
-		const glm::mat4& Transform
-	);
+    ModelNode m_LoadPrimitive(
+        const nlohmann::json& MeshData,
+        uint32_t PrimitiveIndex,
+        const glm::mat4& Transform
+    );
 
-	void m_TraverseNode(uint32_t NextNode, uint32_t From);
+    void m_TraverseNode(uint32_t NextNode, uint32_t From);
 
-	void m_BuildRig();
-	std::string m_SerializeAnimation(const nlohmann::json&);
+    void m_BuildRig();
+    std::string m_SerializeAnimation(const nlohmann::json&);
 
-	std::string m_GetData();
+    std::string m_GetData();
 
-	std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
-	std::vector<uint32_t> m_GetUnsigned32s(const nlohmann::json& Accessor);
-	std::vector<uint8_t> m_GetUBytes(const nlohmann::json& Accessor);
-	MeshMaterial m_GetMaterial(const nlohmann::json&);
+    std::vector<float> m_GetFloats(const nlohmann::json& Accessor);
+    std::vector<uint32_t> m_GetUnsigned32s(const nlohmann::json& Accessor);
+    std::vector<uint8_t> m_GetUBytes(const nlohmann::json& Accessor);
+    MeshMaterial m_GetMaterial(const nlohmann::json&);
 
-	std::vector<Vertex> m_AssembleVertices(
-		const std::vector<glm::vec3>& Positions,
-		const std::vector<glm::vec3>& Normals,
-		const std::vector<glm::vec2>& TextureUVs,
-		const std::vector<glm::vec4>& Colors,
-		const std::vector<glm::tvec4<uint8_t>>& Joints,
-		const std::vector<glm::vec4>& Weights
-	);
+    std::vector<Vertex> m_AssembleVertices(
+        const std::vector<glm::vec3>& Positions,
+        const std::vector<glm::vec3>& Normals,
+        const std::vector<glm::vec2>& TextureUVs,
+        const std::vector<glm::vec4>& Colors,
+        const std::vector<glm::tvec4<uint8_t>>& Joints,
+        const std::vector<glm::vec4>& Weights
+    );
 
-	std::vector<glm::vec2> m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor);
-	std::vector<glm::vec3> m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor);
-	std::vector<glm::vec4> m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor);
-	std::vector<glm::mat4> m_GetAndGroupFloatsMat4(const nlohmann::json& Accessor);
-	std::vector<glm::tvec4<uint8_t>> m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor);
+    std::vector<glm::vec2> m_GetAndGroupFloatsVec2(const nlohmann::json& Accessor);
+    std::vector<glm::vec3> m_GetAndGroupFloatsVec3(const nlohmann::json& Accessor);
+    std::vector<glm::vec4> m_GetAndGroupFloatsVec4(const nlohmann::json& Accessor);
+    std::vector<glm::mat4> m_GetAndGroupFloatsMat4(const nlohmann::json& Accessor);
+    std::vector<glm::tvec4<uint8_t>> m_GetAndGroupUBytesVec4(const nlohmann::json& Accessor);
 
-	std::string m_File;
-	std::string m_ModelName;
-	nlohmann::json m_JsonData;
+    std::string m_File;
+    std::string m_ModelName;
+    nlohmann::json m_JsonData;
 
-	std::vector<ModelNode> m_Nodes;
-	std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
-	std::vector<ObjectHandle> m_Animations;
-	bool m_HasSkinning = false;
+    std::vector<ModelNode> m_Nodes;
+    std::unordered_map<int32_t, uint32_t> m_NodeIdToIndex;
+    std::vector<ObjectHandle> m_Animations;
+    bool m_HasSkinning = false;
 
-	std::string m_Data;
+    std::string m_Data;
 };

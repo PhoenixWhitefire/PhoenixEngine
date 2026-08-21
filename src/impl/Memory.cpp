@@ -19,10 +19,10 @@
 
 struct alignas(std::max_align_t) AllocHeader
 {
-	uint32_t Size = UINT32_MAX;
-	uint8_t Category = UINT8_MAX;
-	uint8_t Check = MEMORY_CHECK_MAGIC;
-	uint8_t Padding[sizeof(std::max_align_t) - 6] = {};
+    uint32_t Size = UINT32_MAX;
+    uint8_t Category = UINT8_MAX;
+    uint8_t Check = MEMORY_CHECK_MAGIC;
+    uint8_t Padding[sizeof(std::max_align_t) - 6] = {};
 };
 
 static_assert(sizeof(AllocHeader) % alignof(std::max_align_t) == 0);
@@ -31,22 +31,22 @@ static_assert(sizeof(AllocHeader) % alignof(std::max_align_t) == 0);
 
 void* Memory::GetPointerInfo(void* Ptr, uint32_t*, uint8_t*)
 {
-	return Ptr;
+    return Ptr;
 }
 
 void* Memory::Alloc(uint32_t n, Memory::Category)
 {
-	return malloc(n);
+    return malloc(n);
 }
 
 void Memory::Free(void* Ptr)
 {
-	free(Ptr);
+    free(Ptr);
 }
 
 void* Memory::ReAlloc(void* Ptr, uint32_t N, Memory::Category)
 {
-	return realloc(Ptr, N);
+    return realloc(Ptr, N);
 }
 
 void Memory::FrameFinish()
@@ -59,168 +59,168 @@ static std::array<std::atomic_size_t, static_cast<size_t>(Memory::Category::coun
 
 void* Memory::GetPointerInfo(void* Pointer, uint32_t* Size, uint8_t* Category)
 {
-	AllocHeader* header = (AllocHeader*)((uintptr_t)Pointer - sizeof(AllocHeader));
-	void* realPointer = (void*)((uintptr_t)header);
+    AllocHeader* header = (AllocHeader*)((uintptr_t)Pointer - sizeof(AllocHeader));
+    void* realPointer = (void*)((uintptr_t)header);
 
-	// in case someone passes in a pointer that wasn't alloc'd by `::Alloc` and doesn't immediately segfault,
-	// hold their hand and tell them they're
-	if (header->Check != MEMORY_CHECK_MAGIC)
-		throw std::runtime_error(std::format("Tried `::GetPointerInfo` on unmanaged address '{}'", Pointer));
+    // in case someone passes in a pointer that wasn't alloc'd by `::Alloc` and doesn't immediately segfault,
+    // hold their hand and tell them they're
+    if (header->Check != MEMORY_CHECK_MAGIC)
+        throw std::runtime_error(std::format("Tried `::GetPointerInfo` on unmanaged address '{}'", Pointer));
 
-	if (Size)
-		*Size = header->Size;
-	if (Category)
-		*Category = header->Category;
+    if (Size)
+        *Size = header->Size;
+    if (Category)
+        *Category = header->Category;
 
-	return realPointer;
+    return realPointer;
 }
 
 void* Memory::Alloc(uint32_t Size, Memory::Category MemCat)
 {
-	if (Size == 0)
-		Size = 1;
+    if (Size == 0)
+        Size = 1;
 
-	Size += sizeof(AllocHeader);
-	void* ptr = malloc(Size);
+    Size += sizeof(AllocHeader);
+    void* ptr = malloc(Size);
 
-	if (ptr)
-	{
-		uint8_t memIndex = static_cast<uint8_t>(MemCat);
+    if (ptr)
+    {
+        uint8_t memIndex = static_cast<uint8_t>(MemCat);
 
 #ifdef TRACY_ENABLE
-		if (MemCat != Memory::Category::Default)
-			TracyAllocN(ptr, Size, CategoryNames[memIndex]);
-		else
-			TracyAlloc(ptr, Size);
+        if (MemCat != Memory::Category::Default)
+            TracyAllocN(ptr, Size, CategoryNames[memIndex]);
+        else
+            TracyAlloc(ptr, Size);
 #endif
 
-		Counters[memIndex].fetch_add(Size, std::memory_order_relaxed);
-		s_ActivityWip[memIndex].fetch_add(Size, std::memory_order_relaxed);
+        Counters[memIndex].fetch_add(Size, std::memory_order_relaxed);
+        s_ActivityWip[memIndex].fetch_add(Size, std::memory_order_relaxed);
 
-		*(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
+        *(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
 
-		return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
-	}
-	else
-	{
-		assert(false);
-		return nullptr;
-	}
+        return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
+    }
+    else
+    {
+        assert(false);
+        return nullptr;
+    }
 }
 
 void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
 {
-	if (Size == 0)
-		Size = 1;
+    if (Size == 0)
+        Size = 1;
 
-	if (Pointer == nullptr)
-		return Alloc(Size, MemCat);
+    if (Pointer == nullptr)
+        return Alloc(Size, MemCat);
 
-	Size += sizeof(AllocHeader);
+    Size += sizeof(AllocHeader);
 
-	uint8_t memIndex = static_cast<uint8_t>(MemCat);
+    uint8_t memIndex = static_cast<uint8_t>(MemCat);
 
-	uint32_t prevSize = UINT32_MAX;
-	uint8_t prevMemCat = 0;
-	Pointer = GetPointerInfo(Pointer, &prevSize, &prevMemCat);
+    uint32_t prevSize = UINT32_MAX;
+    uint8_t prevMemCat = 0;
+    Pointer = GetPointerInfo(Pointer, &prevSize, &prevMemCat);
 
-	if (prevMemCat != memIndex)
-		throw std::runtime_error("Tried to `::ReAlloc` into a different memory category");
+    if (prevMemCat != memIndex)
+        throw std::runtime_error("Tried to `::ReAlloc` into a different memory category");
 
-	// stupid g++ with stupid "may be used after `void* realloc"
-	// SHUT UP
-	// I KNOW WHAT I'M DOING
-	// TODO HOW TO FIX THAT
-	// 18/05/2025
-		
+    // stupid g++ with stupid "may be used after `void* realloc"
+    // SHUT UP
+    // I KNOW WHAT I'M DOING
+    // TODO HOW TO FIX THAT
+    // 18/05/2025
+        
 #ifdef TRACY_ENABLE
-	if (MemCat != Category::Default)
-		TracyFreeN(Pointer, CategoryNames[memIndex]);
-	else
-		TracyFree(Pointer);
+    if (MemCat != Category::Default)
+        TracyFreeN(Pointer, CategoryNames[memIndex]);
+    else
+        TracyFree(Pointer);
 #endif
 
-	void* ptr = realloc(Pointer, Size);
+    void* ptr = realloc(Pointer, Size);
 
-	if (ptr)
-	{
+    if (ptr)
+    {
 #ifdef TRACY_ENABLE
-		if (MemCat != Memory::Category::Default)
-			TracyAllocN(ptr, Size, CategoryNames[memIndex]);
-		else
-			TracyAlloc(ptr, Size);
+        if (MemCat != Memory::Category::Default)
+            TracyAllocN(ptr, Size, CategoryNames[memIndex]);
+        else
+            TracyAlloc(ptr, Size);
 #endif
 
-		Counters[memIndex].fetch_sub(prevSize, std::memory_order_relaxed);
-		Counters[memIndex].fetch_add(Size, std::memory_order_relaxed);
-		s_ActivityWip[memIndex].fetch_add(prevSize + Size, std::memory_order_relaxed);
+        Counters[memIndex].fetch_sub(prevSize, std::memory_order_relaxed);
+        Counters[memIndex].fetch_add(Size, std::memory_order_relaxed);
+        s_ActivityWip[memIndex].fetch_add(prevSize + Size, std::memory_order_relaxed);
 
-		*(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
+        *(AllocHeader*)ptr = { .Size = Size, .Category = memIndex };
 
-		return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
-	}
-	else
-		return nullptr;
+        return (void*)((uintptr_t)ptr + sizeof(AllocHeader));
+    }
+    else
+        return nullptr;
 }
 
 void Memory::Free(void* Pointer)
 {
-	// default `free` does nothing if passed `NULL`
-	if (!Pointer)
-		return;
+    // default `free` does nothing if passed `NULL`
+    if (!Pointer)
+        return;
 
-	uint32_t size = UINT32_MAX;
-	uint8_t memcat = UINT8_MAX;
+    uint32_t size = UINT32_MAX;
+    uint8_t memcat = UINT8_MAX;
 
-	Pointer = GetPointerInfo(Pointer, &size, &memcat);
+    Pointer = GetPointerInfo(Pointer, &size, &memcat);
 
-	assert(memcat < static_cast<uint8_t>(Memory::Category::count));
+    assert(memcat < static_cast<uint8_t>(Memory::Category::count));
 
 #ifdef TRACY_ENABLE
-	if (memcat != static_cast<uint8_t>(Memory::Category::Default))
-		TracyFreeN(Pointer, CategoryNames[memcat]);
-	else
-		TracyFree(Pointer);
+    if (memcat != static_cast<uint8_t>(Memory::Category::Default))
+        TracyFreeN(Pointer, CategoryNames[memcat]);
+    else
+        TracyFree(Pointer);
 #endif
 
-	assert(Counters[memcat] > 0);
-	Counters[memcat].fetch_sub(size, std::memory_order_relaxed);
-	Activity[memcat].fetch_add(size, std::memory_order_relaxed);
+    assert(Counters[memcat] > 0);
+    Counters[memcat].fetch_sub(size, std::memory_order_relaxed);
+    Activity[memcat].fetch_add(size, std::memory_order_relaxed);
 
-	free(Pointer);
+    free(Pointer);
 }
 
 void Memory::FrameFinish()
 {
-	for (size_t i = 0; i < Activity.size(); i++)
-	{
-		Activity[i] = s_ActivityWip[i].load();
-		s_ActivityWip[i] = 0;
-	}
+    for (size_t i = 0; i < Activity.size(); i++)
+    {
+        Activity[i] = s_ActivityWip[i].load();
+        s_ActivityWip[i] = 0;
+    }
 }
 
 void* operator new(size_t size)
 {
-	assert(size < (size_t)UINT32_MAX);
+    assert(size < (size_t)UINT32_MAX);
 
-	void* ptr = Memory::Alloc((uint32_t)size);
-	if (!ptr)
-		throw std::bad_alloc();
+    void* ptr = Memory::Alloc((uint32_t)size);
+    if (!ptr)
+        throw std::bad_alloc();
 
-	TracyAlloc(ptr, size);
-	return ptr;
+    TracyAlloc(ptr, size);
+    return ptr;
 }
 
 void operator delete(void* ptr) noexcept
 {
-	TracyFree(ptr);
-	Memory::Free(ptr);
+    TracyFree(ptr);
+    Memory::Free(ptr);
 }
 
 void operator delete(void* ptr, size_t) noexcept
 {
-	TracyFree(ptr);
-	Memory::Free(ptr);
+    TracyFree(ptr);
+    Memory::Free(ptr);
 }
 
 #endif

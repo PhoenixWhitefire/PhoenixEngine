@@ -44,16 +44,16 @@ static Engine* EngineInstance = nullptr;
 
 Engine* Engine::Get()
 {
-	assert(EngineInstance);
-	return EngineInstance;
+    assert(EngineInstance);
+    return EngineInstance;
 }
 
 void Engine::ResizeWindow(int NewSizeX, int NewSizeY)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	glfwSetWindowSize(Window, NewSizeX, NewSizeY);
-	this->OnWindowResized(NewSizeX, NewSizeY);
+    glfwSetWindowSize(Window, NewSizeX, NewSizeY);
+    this->OnWindowResized(NewSizeX, NewSizeY);
 }
 
 void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
@@ -65,7 +65,7 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
     this->WindowSizeX = NewSizeX;
     this->WindowSizeY = NewSizeY;
 
-	assert(WindowSizeX > 0 && WindowSizeY > 0);
+    assert(WindowSizeX > 0 && WindowSizeY > 0);
     RendererContext.ChangeResolution((uint32_t)WindowSizeX, (uint32_t)WindowSizeY);
     Texture& fboRes = TextureManagerInstance.GetTextureResource(m_FboResourceId);
     fboRes.Width = NewSizeX;
@@ -74,282 +74,282 @@ void Engine::OnWindowResized(int NewSizeX, int NewSizeY)
 
 void Engine::SetIsFullscreen(bool MakeFullscreen)
 {
-	if (IsFullscreen == MakeFullscreen)
-		return;
+    if (IsFullscreen == MakeFullscreen)
+        return;
 
-	if (MakeFullscreen)
-	{
-		glfwGetWindowSize(Window, &m_WindowedWidth, &m_WindowedHeight);
-		// Not supported on Linux with Wayland
+    if (MakeFullscreen)
+    {
+        glfwGetWindowSize(Window, &m_WindowedWidth, &m_WindowedHeight);
+        // Not supported on Linux with Wayland
 #ifdef _WIN32
-		glfwGetWindowPos(Window, &m_WindowedPosX, &m_WindowedPosY);
+        glfwGetWindowPos(Window, &m_WindowedPosX, &m_WindowedPosY);
 #endif
 
-		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 
-		glfwSetWindowMonitor(Window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
-	}
-	else
-	{
-		glfwSetWindowMonitor(Window, nullptr, m_WindowedPosX, m_WindowedPosY, m_WindowedWidth, m_WindowedHeight, GLFW_DONT_CARE);
-	}
+        glfwSetWindowMonitor(Window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+    }
+    else
+    {
+        glfwSetWindowMonitor(Window, nullptr, m_WindowedPosX, m_WindowedPosY, m_WindowedWidth, m_WindowedHeight, GLFW_DONT_CARE);
+    }
 
-	this->IsFullscreen = MakeFullscreen;
+    this->IsFullscreen = MakeFullscreen;
 }
 
 template <class T>
 static T readFromConfiguration(const nlohmann::json& Config, const std::string_view& Key, const T& DefaultValue)
 {
-	try
-	{
-		return Config.value(Key, DefaultValue);
-	}
-	catch (const nlohmann::json::type_error& Error)
-	{
-		Log.ErrorF(
-			"Error trying to read key '{}' of configuration: {}. Falling back to default value",
-			Key, Error.what()
-		);
+    try
+    {
+        return Config.value(Key, DefaultValue);
+    }
+    catch (const nlohmann::json::type_error& Error)
+    {
+        Log.ErrorF(
+            "Error trying to read key '{}' of configuration: {}. Falling back to default value",
+            Key, Error.what()
+        );
 
-		return DefaultValue;
-	}
+        return DefaultValue;
+    }
 }
 
 void Engine::LoadConfiguration()
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	bool ConfigLoadSucceeded = true;
-	std::string ConfigLoadErrorMessage = "Failed to load configuration file. Please ensure the Engine was launched from the correct directory.";
-	std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigLoadSucceeded);
+    bool ConfigLoadSucceeded = true;
+    std::string ConfigLoadErrorMessage = "Failed to load configuration file. Please ensure the Engine was launched from the correct directory.";
+    std::string ConfigAscii = FileRW::ReadFile("./phoenix.conf", &ConfigLoadSucceeded);
 
-	if (ConfigLoadSucceeded)
-		try
-		{
-			nlohmann::json config = nlohmann::json::parse(ConfigAscii);
-			
-			for (auto it = config.begin(); it != config.end(); it++)
-				if (Config.find(it.key()) == Config.end())
-					Config[it.key()] = it.value();
-		}
-		catch (const nlohmann::json::parse_error& err)
-		{
-			ConfigLoadSucceeded = false;
-			
-			ConfigLoadErrorMessage = std::format(
-				"Failed to load configuration file: {}\nA fallback will be used.",
-				err.what()
-			);
-		}
+    if (ConfigLoadSucceeded)
+        try
+        {
+            nlohmann::json config = nlohmann::json::parse(ConfigAscii);
+            
+            for (auto it = config.begin(); it != config.end(); it++)
+                if (Config.find(it.key()) == Config.end())
+                    Config[it.key()] = it.value();
+        }
+        catch (const nlohmann::json::parse_error& err)
+        {
+            ConfigLoadSucceeded = false;
+            
+            ConfigLoadErrorMessage = std::format(
+                "Failed to load configuration file: {}\nA fallback will be used.",
+                err.what()
+            );
+        }
 
-	if (!ConfigLoadSucceeded)
-	{
-		tinyfd_messageBox(
-			"Configuration Error",
-			ConfigLoadErrorMessage.c_str(),
-			"ok",
-			"warn",
-			1
-		);
-	}
+    if (!ConfigLoadSucceeded)
+    {
+        tinyfd_messageBox(
+            "Configuration Error",
+            ConfigLoadErrorMessage.c_str(),
+            "ok",
+            "warn",
+            1
+        );
+    }
 
-	ScriptEngine::DefaultVMAllowedExecutionTime = readFromConfiguration(Config, "DefaultVMAllowedExecutionTime", 10.0);
+    ScriptEngine::DefaultVMAllowedExecutionTime = readFromConfiguration(Config, "DefaultVMAllowedExecutionTime", 10.0);
 
-	if (ConfigLoadSucceeded)
-		Log.Info("Configuration loaded");
-	else
-		Log.Info(ConfigLoadErrorMessage);
+    if (ConfigLoadSucceeded)
+        Log.Info("Configuration loaded");
+    else
+        Log.Info(ConfigLoadErrorMessage);
 }
 
 void Engine::Close()
 {
-	m_IsRunning = false;
+    m_IsRunning = false;
 }
 
 static void windowResizeCallback(GLFWwindow*, int newWidth, int newHeight)
 {
-	Engine::Get()->OnWindowResized(newWidth, newHeight);
+    Engine::Get()->OnWindowResized(newWidth, newHeight);
 }
 
 static void windowFocusChangedCallback(GLFWwindow*, int focused)
 {
-	Engine::Get()->IsWindowFocused = (bool)focused;	
+    Engine::Get()->IsWindowFocused = (bool)focused;	
 }
 
 static void windowKeyCallback(GLFWwindow*, int key, int scancode, int action, int mods)
 {
-	EcPlayerInput::SignalKeyEvent({ InputEvent{
-		.Key = {
-			.Button = key,
-			.Scancode = scancode,
-			.Action = action,
-			.Modifiers = mods
-		},
-		.Type = InputEventType::Key
-	} });
+    EcPlayerInput::SignalKeyEvent({ InputEvent{
+        .Key = {
+            .Button = key,
+            .Scancode = scancode,
+            .Action = action,
+            .Modifiers = mods
+        },
+        .Type = InputEventType::Key
+    } });
 }
 
 static void windowMouseCallback(GLFWwindow*, int button, int action, int mods)
 {
-	EcPlayerInput::SignalMouseButtonEvent({ InputEvent{
-		.MouseButton = {
-			.Button = button,
-			.Action = action,
-			.Modifiers = mods
-		},
-		.Type = InputEventType::MouseButton
-	} });
+    EcPlayerInput::SignalMouseButtonEvent({ InputEvent{
+        .MouseButton = {
+            .Button = button,
+            .Action = action,
+            .Modifiers = mods
+        },
+        .Type = InputEventType::MouseButton
+    } });
 }
 
 static void windowScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-	EcPlayerInput::SignalScrollEvent({ InputEvent{
-		.Scroll = {
-			.XOffset = xoffset,
-			.YOffset = yoffset
-		},
-		.Type = InputEventType::Scroll
-	} });
+    EcPlayerInput::SignalScrollEvent({ InputEvent{
+        .Scroll = {
+            .XOffset = xoffset,
+            .YOffset = yoffset
+        },
+        .Type = InputEventType::Scroll
+    } });
 }
 
 static void errorCallback(int code, const char* message)
 {
-	Log.ErrorF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
+    Log.ErrorF("Error occurred in GLFW:\nCode: {}, Message: {}", code, message);
 }
 
 static void windowContentScaleCallback(GLFWwindow*, float x, float)
 {
-	static bool loadedVectorFont = false;
-	const ImGuiStyle& currentStyle = ImGui::GetStyle();
-	ImGuiIO& io = ImGui::GetIO();
+    static bool loadedVectorFont = false;
+    const ImGuiStyle& currentStyle = ImGui::GetStyle();
+    ImGuiIO& io = ImGui::GetIO();
 
-	ImGuiStyle newStyle;
-	memcpy(newStyle.Colors, currentStyle.Colors, sizeof(ImVec4) * ImGuiCol_COUNT);
-	newStyle.ScaleAllSizes(x);
+    ImGuiStyle newStyle;
+    memcpy(newStyle.Colors, currentStyle.Colors, sizeof(ImVec4) * ImGuiCol_COUNT);
+    newStyle.ScaleAllSizes(x);
 
-	if (x != 1.f)
-	{
-		if (!loadedVectorFont)
-			io.Fonts->AddFontDefaultVector();
-		loadedVectorFont = true;
-	}
-	else
-	{
-		if (loadedVectorFont)
-			io.Fonts->AddFontDefaultBitmap();
-		loadedVectorFont = false;
-	}
+    if (x != 1.f)
+    {
+        if (!loadedVectorFont)
+            io.Fonts->AddFontDefaultVector();
+        loadedVectorFont = true;
+    }
+    else
+    {
+        if (loadedVectorFont)
+            io.Fonts->AddFontDefaultBitmap();
+        loadedVectorFont = false;
+    }
 
-	ImGui::GetStyle() = newStyle;
+    ImGui::GetStyle() = newStyle;
 
-	Engine::Get()->ScaleFactor = x;
+    Engine::Get()->ScaleFactor = x;
 }
 
 static void updateImGuiForDisplayScaling()
 {
-	GLFWwindow* window = glfwGetCurrentContext();
+    GLFWwindow* window = glfwGetCurrentContext();
 
-	float xScale = 0.f;
-	float yScale = 0.f;
-	glfwGetWindowContentScale(window, &xScale, &yScale);
-	windowContentScaleCallback(window, xScale, yScale);
+    float xScale = 0.f;
+    float yScale = 0.f;
+    glfwGetWindowContentScale(window, &xScale, &yScale);
+    windowContentScaleCallback(window, xScale, yScale);
 }
 
 void Engine::m_InitializeVideo()
 {
 #if !PHX_HEADLESS_BUILD
 
-	ZoneScoped;
-	if (IsHeadlessMode)
-		return;
+    ZoneScoped;
+    if (IsHeadlessMode)
+        return;
 
-	glfwSetErrorCallback(errorCallback);
+    glfwSetErrorCallback(errorCallback);
 
-	GLFWallocator allocator = {
-		.allocate = [](size_t size, void*)
-			{
-				assert(size < UINT32_MAX);
-				return Memory::Alloc((uint32_t)size, MEMCAT(Glfw));
-			},
-		.reallocate = [](void* ptr, size_t size, void*)
-			{
-				assert(size < UINT32_MAX);
-				return Memory::ReAlloc(ptr, (uint32_t)size, MEMCAT(Glfw));
-			},
-		.deallocate = [](void* ptr, void*)
-			{
-				Memory::Free(ptr);
-			},
-		.user = nullptr,
-	};
-	glfwInitAllocator(&allocator);
+    GLFWallocator allocator = {
+        .allocate = [](size_t size, void*)
+            {
+                assert(size < UINT32_MAX);
+                return Memory::Alloc((uint32_t)size, MEMCAT(Glfw));
+            },
+        .reallocate = [](void* ptr, size_t size, void*)
+            {
+                assert(size < UINT32_MAX);
+                return Memory::ReAlloc(ptr, (uint32_t)size, MEMCAT(Glfw));
+            },
+        .deallocate = [](void* ptr, void*)
+            {
+                Memory::Free(ptr);
+            },
+        .user = nullptr,
+    };
+    glfwInitAllocator(&allocator);
 
-	if (!glfwInit())
-	{
-		const char* error = nullptr;
-		int ec = glfwGetError(&error);
-		RAISE_RT("Failed to initialize GLFW: Code: {}, Error: {}", ec, error);
-	}
+    if (!glfwInit())
+    {
+        const char* error = nullptr;
+        int ec = glfwGetError(&error);
+        RAISE_RT("Failed to initialize GLFW: Code: {}, Error: {}", ec, error);
+    }
 
-	Log.InfoF("GLFW platform: {}", glfwGetPlatform());
+    Log.InfoF("GLFW platform: {}", glfwGetPlatform());
 
-	GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
-	
-	glfwGetMonitorWorkarea(primaryDisplay, nullptr, nullptr, &WindowSizeX, &WindowSizeY);
+    GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
+    
+    glfwGetMonitorWorkarea(primaryDisplay, nullptr, nullptr, &WindowSizeX, &WindowSizeY);
 
-	constexpr int requestedGLVersionMajor = 4;
-	constexpr int requestedGLVersionMinor = 6;
+    constexpr int requestedGLVersionMajor = 4;
+    constexpr int requestedGLVersionMinor = 6;
 
-	Log.InfoF(
-		"Requesting a Core OpenGL context with version {}.{}",
-		requestedGLVersionMajor, requestedGLVersionMinor
-	);
+    Log.InfoF(
+        "Requesting a Core OpenGL context with version {}.{}",
+        requestedGLVersionMajor, requestedGLVersionMinor
+    );
 
-	// Must be set *before* window creation
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, requestedGLVersionMajor);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, requestedGLVersionMinor);
+    // Must be set *before* window creation
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, requestedGLVersionMajor);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, requestedGLVersionMinor);
 
-	glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
-	glfwWindowHint(GLFW_DEPTH_BITS, 24);
-	glfwWindowHint(GLFW_STENCIL_BITS, 8);
-	glfwWindowHint(GLFW_SRGB_CAPABLE, 1);
+    glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+    glfwWindowHint(GLFW_STENCIL_BITS, 8);
+    glfwWindowHint(GLFW_SRGB_CAPABLE, 1);
 
-	Window = glfwCreateWindow(
-		WindowSizeX, WindowSizeY,
-		readFromConfiguration<std::string_view>(Config, "GameTitle", "PhoenixEngine").data(),
-		nullptr, nullptr
-	);
+    Window = glfwCreateWindow(
+        WindowSizeX, WindowSizeY,
+        readFromConfiguration<std::string_view>(Config, "GameTitle", "PhoenixEngine").data(),
+        nullptr, nullptr
+    );
 
-	if (!Window)
-	{
-		const char* error = nullptr;
-		int ec = glfwGetError(&error);
-		RAISE_RT("GLFW could not create the window\nCode: {}, Error: {}", ec, error);
-	}
+    if (!Window)
+    {
+        const char* error = nullptr;
+        int ec = glfwGetError(&error);
+        RAISE_RT("GLFW could not create the window\nCode: {}, Error: {}", ec, error);
+    }
 
-	Log.Info("Window created, initializing renderer...");
+    Log.Info("Window created, initializing renderer...");
 
-	assert(WindowSizeX > 0 && WindowSizeY > 0);
-	this->RendererContext.Initialize((uint32_t)this->WindowSizeX, (uint32_t)this->WindowSizeY, this->Window);
-	RendererContext.OpenGLErrorsAreFatal = readFromConfiguration(Config, "GLErrorsAreFatal", true);
+    assert(WindowSizeX > 0 && WindowSizeY > 0);
+    this->RendererContext.Initialize((uint32_t)this->WindowSizeX, (uint32_t)this->WindowSizeY, this->Window);
+    RendererContext.OpenGLErrorsAreFatal = readFromConfiguration(Config, "GLErrorsAreFatal", true);
 
-	gltInit();
+    gltInit();
 
-	Log.Info("Registering callbacks...");
+    Log.Info("Registering callbacks...");
 
-	glfwSetWindowSizeCallback(Window, windowResizeCallback);
-	glfwSetWindowFocusCallback(Window, windowFocusChangedCallback);
-	glfwSetKeyCallback(Window, windowKeyCallback);
-	glfwSetMouseButtonCallback(Window, windowMouseCallback);
-	glfwSetScrollCallback(Window, windowScrollCallback);
-	glfwSetWindowContentScaleCallback(Window, windowContentScaleCallback);
+    glfwSetWindowSizeCallback(Window, windowResizeCallback);
+    glfwSetWindowFocusCallback(Window, windowFocusChangedCallback);
+    glfwSetKeyCallback(Window, windowKeyCallback);
+    glfwSetMouseButtonCallback(Window, windowMouseCallback);
+    glfwSetScrollCallback(Window, windowScrollCallback);
+    glfwSetWindowContentScaleCallback(Window, windowContentScaleCallback);
 
-	Log.Info("Finished initializing video");
+    Log.Info("Finished initializing video");
 
 #else
-	Log.Info("Skipping video initialization (headless build)");
+    Log.Info("Skipping video initialization (headless build)");
 #endif
 }
 
@@ -359,32 +359,32 @@ std::string GetUserHomeDirectoryPath();
 
 std::string GetUserHomeDirectoryPath()
 {
-	std::string home;
+    std::string home;
 
 #ifdef _WIN32
-	const char* homeCstr = std::getenv("USERPROFILE");
+    const char* homeCstr = std::getenv("USERPROFILE");
 
-	if (!homeCstr)
-	{
-		const char* drive = std::getenv("HOMEDRIVE");
-		const char* path = std::getenv("HOMEPATH");
-		if (drive && path)
-			home = std::string(drive) + "/" + std::string(path);
-		else
-			home = std::filesystem::current_path().string();
-	}
-	else
-	{
-		home = homeCstr;
-	}
+    if (!homeCstr)
+    {
+        const char* drive = std::getenv("HOMEDRIVE");
+        const char* path = std::getenv("HOMEPATH");
+        if (drive && path)
+            home = std::string(drive) + "/" + std::string(path);
+        else
+            home = std::filesystem::current_path().string();
+    }
+    else
+    {
+        home = homeCstr;
+    }
 #else
-	if (const char* homePath = std::getenv("HOME"))
-		home = homePath;
-	else
-		home = std::filesystem::current_path().string();
+    if (const char* homePath = std::getenv("HOME"))
+        home = homePath;
+    else
+        home = std::filesystem::current_path().string();
 #endif
 
-	return home;
+    return home;
 }
 
 void Engine::Initialize(int ThreadCount, bool Headless)
@@ -396,10 +396,10 @@ void Engine::Initialize(int ThreadCount, bool Headless)
 
     this->LoadConfiguration();
 
-	if (Headless)
-		this->IsHeadlessMode = true;
-	else if (PHX_HEADLESS_BUILD)
-		RAISE_RT("Headless build requested to start in non-headless mode");
+    if (Headless)
+        this->IsHeadlessMode = true;
+    else if (PHX_HEADLESS_BUILD)
+        RAISE_RT("Headless build requested to start in non-headless mode");
 
     m_InitializeVideo();
 
@@ -448,294 +448,294 @@ void Engine::Initialize(int ThreadCount, bool Headless)
             /* MSSamples = */ 0,
             /* DepthOnly = */ true
         );
-	}
+    }
 
-	Log.Info("Engine initialized");
+    Log.Info("Engine initialized");
 }
 
 static void traverseHierarchy(
-	Scene& RendererScene,
-	Physics::World& PhysicsWorld,
-	std::vector<EcParticleEmitter*>& ParticleEmitters,
-	GameObject* Root,
-	EcCamera* SceneCamera,
-	double DeltaTime,
-	EcDirectionalLight** Sun,
-	bool DebugCollisionAabbs
+    Scene& RendererScene,
+    Physics::World& PhysicsWorld,
+    std::vector<EcParticleEmitter*>& ParticleEmitters,
+    GameObject* Root,
+    EcCamera* SceneCamera,
+    double DeltaTime,
+    EcDirectionalLight** Sun,
+    bool DebugCollisionAabbs
 )
 {
-	ZoneScopedC(tracy::Color::LightGoldenrod);
+    ZoneScopedC(tracy::Color::LightGoldenrod);
 
-	static uint32_t boxframeMaterial = UINT32_MAX;
-	static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
+    static uint32_t boxframeMaterial = UINT32_MAX;
+    static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
 
-	Root->ForEachChild([&](const ObjectHandle& object) -> bool
-	{
-		if (EcSound* sound = object->FindComponent<EcSound>(); sound && !Engine::Get()->IsHeadlessMode)
-			sound->Update(DeltaTime);
+    Root->ForEachChild([&](const ObjectHandle& object) -> bool
+    {
+        if (EcSound* sound = object->FindComponent<EcSound>(); sound && !Engine::Get()->IsHeadlessMode)
+            sound->Update(DeltaTime);
 
-		if (!object->GetEnabled())
-			return true; // continue
+        if (!object->GetEnabled())
+            return true; // continue
 
-		EcTransform* ct = object->FindComponent<EcTransform>();
-		// both useless without a Transform
-		EcMesh* cm = ct ? object->FindComponent<EcMesh>() : nullptr;
-		EcRigidBody* rb = ct ? object->FindComponent<EcRigidBody>() : nullptr;
+        EcTransform* ct = object->FindComponent<EcTransform>();
+        // both useless without a Transform
+        EcMesh* cm = ct ? object->FindComponent<EcMesh>() : nullptr;
+        EcRigidBody* rb = ct ? object->FindComponent<EcRigidBody>() : nullptr;
 
-		if (rb)
-		{
-			if (rb->PhysicsDynamics)
-				PhysicsWorld.Dynamics.emplace_back(object);
-			else if (rb->PhysicsCollisions)
-				PhysicsWorld.Statics.emplace_back(object);
+        if (rb)
+        {
+            if (rb->PhysicsDynamics)
+                PhysicsWorld.Dynamics.emplace_back(object);
+            else if (rb->PhysicsCollisions)
+                PhysicsWorld.Statics.emplace_back(object);
 
-			if (DebugCollisionAabbs && rb->PhysicsCollisions)
-			{
-				if (boxframeMaterial == UINT32_MAX)
-					boxframeMaterial = MaterialManager::Get()->LoadFromPath("@base/materials/boxframe.mtl");
+            if (DebugCollisionAabbs && rb->PhysicsCollisions)
+            {
+                if (boxframeMaterial == UINT32_MAX)
+                    boxframeMaterial = MaterialManager::Get()->LoadFromPath("@base/materials/boxframe.mtl");
 
-				RendererScene.RenderList.push_back(RenderItem{
-					.RenderMeshId = cubeMesh,
-					.Transform = glm::translate(glm::mat4(1.f), rb->CollisionAabb.Position) * glm::scale(glm::mat4(1.f), rb->CollisionAabb.Size),
-					.MaterialId = boxframeMaterial,
-					.TintColor = glm::vec3(1.f, 1.f, 0.f),
-					.Transparency = 0.f,
-					.MetalnessFactor = 0.f,
-					.RoughnessFactor = 0.f,
-					.FaceCulling = FaceCullingMode::None,
-					.CastsShadows = false
-				});
-			}
-		}
+                RendererScene.RenderList.push_back(RenderItem{
+                    .RenderMeshId = cubeMesh,
+                    .Transform = glm::translate(glm::mat4(1.f), rb->CollisionAabb.Position) * glm::scale(glm::mat4(1.f), rb->CollisionAabb.Size),
+                    .MaterialId = boxframeMaterial,
+                    .TintColor = glm::vec3(1.f, 1.f, 0.f),
+                    .Transparency = 0.f,
+                    .MetalnessFactor = 0.f,
+                    .RoughnessFactor = 0.f,
+                    .FaceCulling = FaceCullingMode::None,
+                    .CastsShadows = false
+                });
+            }
+        }
 
-		if (cm)
-		{
-			if (cm->Transparency > .95f || Engine::Get()->IsHeadlessMode)
-				return true; // continue
+        if (cm)
+        {
+            if (cm->Transparency > .95f || Engine::Get()->IsHeadlessMode)
+                return true; // continue
 
-			// TODO: frustum culling
+            // TODO: frustum culling
 
-			RendererScene.RenderList.emplace_back(
-				cm->RenderMeshId,
-				ct->Transform,
-				cm->MaterialId,
-				cm->Tint,
-				cm->Transparency,
-				cm->MetalnessFactor,
-				cm->RoughnessFactor,
-				cm->FaceCulling,
-				cm->CastsShadows
-			);
-		}
+            RendererScene.RenderList.emplace_back(
+                cm->RenderMeshId,
+                ct->Transform,
+                cm->MaterialId,
+                cm->Tint,
+                cm->Transparency,
+                cm->MetalnessFactor,
+                cm->RoughnessFactor,
+                cm->FaceCulling,
+                cm->CastsShadows
+            );
+        }
 
-		if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
-			traverseHierarchy(
-				RendererScene,
-				PhysicsWorld,
-				ParticleEmitters,
-				link->Target,
-				SceneCamera,
-				DeltaTime,
-				Sun,
-				DebugCollisionAabbs
-			);
+        if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
+            traverseHierarchy(
+                RendererScene,
+                PhysicsWorld,
+                ParticleEmitters,
+                link->Target,
+                SceneCamera,
+                DeltaTime,
+                Sun,
+                DebugCollisionAabbs
+            );
 
-		EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
-		EcPointLight* point = object->FindComponent<EcPointLight>();
-		EcSpotLight* spot = object->FindComponent<EcSpotLight>();
-		
-		if (directional)
-		{
-			RendererScene.LightingList.push_back(LightItem{
-				.Position = directional->Direction,
-				.LightColor = directional->LightColor * directional->Brightness,
-				.Type = LightType::Directional,
-				.Shadows = directional->Shadows
-			});
+        EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
+        EcPointLight* point = object->FindComponent<EcPointLight>();
+        EcSpotLight* spot = object->FindComponent<EcSpotLight>();
+        
+        if (directional)
+        {
+            RendererScene.LightingList.push_back(LightItem{
+                .Position = directional->Direction,
+                .LightColor = directional->LightColor * directional->Brightness,
+                .Type = LightType::Directional,
+                .Shadows = directional->Shadows
+            });
 
-			if (!*Sun && directional->Shadows)
-				*Sun = directional;
-		}
+            if (!*Sun && directional->Shadows)
+                *Sun = directional;
+        }
 
-		if (ct)
-		{
-			if (point)
-				RendererScene.LightingList.push_back(LightItem{
-					.Position = (glm::vec3)ct->Transform[3],
-					.LightColor = point->LightColor * point->Brightness,
-					.Range = point->Range,
-					.Type = LightType::Point,
-					.Shadows = false, /* point->Shadows, */
-				});
+        if (ct)
+        {
+            if (point)
+                RendererScene.LightingList.push_back(LightItem{
+                    .Position = (glm::vec3)ct->Transform[3],
+                    .LightColor = point->LightColor * point->Brightness,
+                    .Range = point->Range,
+                    .Type = LightType::Point,
+                    .Shadows = false, /* point->Shadows, */
+                });
 
-			if (spot)
-				RendererScene.LightingList.push_back(LightItem{
-					.Position = (glm::vec3)ct->Transform[3],
-					.LightColor = spot->LightColor * spot->Brightness,
-					.Range = spot->Range,
-					.SpotLightDirection = (glm::vec3)ct->Transform[2],
-					.Angle = spot->Angle,
-					.Type = LightType::Spot,
-					.Shadows = false, /* spot->Shadows, */
-				});
-		}
+            if (spot)
+                RendererScene.LightingList.push_back(LightItem{
+                    .Position = (glm::vec3)ct->Transform[3],
+                    .LightColor = spot->LightColor * spot->Brightness,
+                    .Range = spot->Range,
+                    .SpotLightDirection = (glm::vec3)ct->Transform[2],
+                    .Angle = spot->Angle,
+                    .Type = LightType::Spot,
+                    .Shadows = false, /* spot->Shadows, */
+                });
+        }
 
-		if (EcAnimator* animator = object->FindComponent<EcAnimator>(); animator && animator->Animating)
-			animator->Step(DeltaTime);
+        if (EcAnimator* animator = object->FindComponent<EcAnimator>(); animator && animator->Animating)
+            animator->Step(DeltaTime);
 
-		if (!object->Children.empty())
-			traverseHierarchy(
-				RendererScene,
-				PhysicsWorld,
-				ParticleEmitters,
-				object.Dereference(),
-				SceneCamera,
-				DeltaTime,
-				Sun,
-				DebugCollisionAabbs
-			);
-		
-		if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())
-		{
-			emitter->Update(DeltaTime);
-			ParticleEmitters.push_back(emitter);
-		}
+        if (!object->Children.empty())
+            traverseHierarchy(
+                RendererScene,
+                PhysicsWorld,
+                ParticleEmitters,
+                object.Dereference(),
+                SceneCamera,
+                DeltaTime,
+                Sun,
+                DebugCollisionAabbs
+            );
+        
+        if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())
+        {
+            emitter->Update(DeltaTime);
+            ParticleEmitters.push_back(emitter);
+        }
 
-		return true; // continue
-	});
+        return true; // continue
+    });
 }
 
 static void traverseAndRenderUIHierarchy(
-	GameObject* Root,
-	Renderer& renderer,
-	ImVec2 ViewportSize,
-	ShaderProgram& shader,
-	const MeshProvider::GpuMesh& gpuMesh,
-	const glm::vec2 Position = glm::vec2(0.f, 0.f),
-	const glm::vec2 Size = glm::vec2(1.f, 1.f),
-	const float Rotation = 0.f
+    GameObject* Root,
+    Renderer& renderer,
+    ImVec2 ViewportSize,
+    ShaderProgram& shader,
+    const MeshProvider::GpuMesh& gpuMesh,
+    const glm::vec2 Position = glm::vec2(0.f, 0.f),
+    const glm::vec2 Size = glm::vec2(1.f, 1.f),
+    const float Rotation = 0.f
 )
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	Root->ForEachChild([&](const ObjectHandle& child) -> bool
-	{
-		if (!child->GetEnabled())
-			return true;
+    Root->ForEachChild([&](const ObjectHandle& child) -> bool
+    {
+        if (!child->GetEnabled())
+            return true;
 
-		EcTreeLink* et = child->FindComponent<EcTreeLink>();
-		if (GameObject* targetInterface = (et ? et->Target.Referred() : nullptr); targetInterface && targetInterface->OwningDataModel != PHX_GAMEOBJECT_NULL_ID)
-		{
-			traverseAndRenderUIHierarchy(targetInterface, renderer, ViewportSize, shader, gpuMesh, Position, Size, Rotation);
+        EcTreeLink* et = child->FindComponent<EcTreeLink>();
+        if (GameObject* targetInterface = (et ? et->Target.Referred() : nullptr); targetInterface && targetInterface->OwningDataModel != PHX_GAMEOBJECT_NULL_ID)
+        {
+            traverseAndRenderUIHierarchy(targetInterface, renderer, ViewportSize, shader, gpuMesh, Position, Size, Rotation);
 
-			return true; // continue
-		}
+            return true; // continue
+        }
 
-		glm::vec2 currentPosition = Position;
-		glm::vec2 currentSize = Size;
-		float currentRotation = Rotation;
+        glm::vec2 currentPosition = Position;
+        glm::vec2 currentSize = Size;
+        float currentRotation = Rotation;
 
-		EcUITransform* uit = child->FindComponent<EcUITransform>();
+        EcUITransform* uit = child->FindComponent<EcUITransform>();
 
-		if (uit)
-		{
-			currentPosition += uit->Position * currentSize;
-			currentSize *= uit->Size;
-			currentRotation += uit->Rotation;
-		}
+        if (uit)
+        {
+            currentPosition += uit->Position * currentSize;
+            currentSize *= uit->Size;
+            currentRotation += uit->Rotation;
+        }
 
-		shader.SetUniform("Phoenix_Position", currentPosition);
-		shader.SetUniform("Phoenix_Size", currentSize);
-		shader.SetUniform("Phoenix_Rotation", currentRotation);
+        shader.SetUniform("Phoenix_Position", currentPosition);
+        shader.SetUniform("Phoenix_Size", currentSize);
+        shader.SetUniform("Phoenix_Rotation", currentRotation);
 
-		if (EcUIFrame* uf = child->FindComponent<EcUIFrame>())
-		{
-			shader.SetUniform("Phoenix_BackgroundColor", uf->BackgroundColor.ToGenericValue());
-			shader.SetUniform("Phoenix_BackgroundTransparency", uf->BackgroundTransparency);
-			shader.SetUniform("Phoenix_IsImage", false);
-			shader.Activate();
+        if (EcUIFrame* uf = child->FindComponent<EcUIFrame>())
+        {
+            shader.SetUniform("Phoenix_BackgroundColor", uf->BackgroundColor.ToGenericValue());
+            shader.SetUniform("Phoenix_BackgroundTransparency", uf->BackgroundTransparency);
+            shader.SetUniform("Phoenix_IsImage", false);
+            shader.Activate();
 
-			assert(gpuMesh.NumIndices <= INT32_MAX);
-			glDrawElements(GL_TRIANGLES, (int32_t)gpuMesh.NumIndices, GL_UNSIGNED_INT, nullptr);
-			renderer.AccumulatedDrawCallCount++;
-		}
+            assert(gpuMesh.NumIndices <= INT32_MAX);
+            glDrawElements(GL_TRIANGLES, (int32_t)gpuMesh.NumIndices, GL_UNSIGNED_INT, nullptr);
+            renderer.AccumulatedDrawCallCount++;
+        }
 
-		if (EcUIImage* uimg = child->FindComponent<EcUIImage>())
-		{
-			TextureManager* TextureManager = TextureManager::Get();
+        if (EcUIImage* uimg = child->FindComponent<EcUIImage>())
+        {
+            TextureManager* TextureManager = TextureManager::Get();
 
-			shader.SetUniform("Phoenix_BackgroundColor", uimg->ImageTint.ToGenericValue());
-			shader.SetUniform("Phoenix_BackgroundTransparency", uimg->ImageTransparency);
-			shader.SetUniform("Phoenix_IsImage", true);
-			shader.SetTextureUniform("Phoenix_Image", TextureManager->LoadFromPath(uimg->Image));
-			shader.Activate();
+            shader.SetUniform("Phoenix_BackgroundColor", uimg->ImageTint.ToGenericValue());
+            shader.SetUniform("Phoenix_BackgroundTransparency", uimg->ImageTransparency);
+            shader.SetUniform("Phoenix_IsImage", true);
+            shader.SetTextureUniform("Phoenix_Image", TextureManager->LoadFromPath(uimg->Image));
+            shader.Activate();
 
-			assert(gpuMesh.NumIndices <= INT32_MAX);
-			glDrawElements(GL_TRIANGLES, (int32_t)gpuMesh.NumIndices, GL_UNSIGNED_INT, nullptr);
-			renderer.AccumulatedDrawCallCount++;
-		}
+            assert(gpuMesh.NumIndices <= INT32_MAX);
+            glDrawElements(GL_TRIANGLES, (int32_t)gpuMesh.NumIndices, GL_UNSIGNED_INT, nullptr);
+            renderer.AccumulatedDrawCallCount++;
+        }
 
-		if (EcUIText* uti = child->FindComponent<EcUIText>(); uti && uti->Data)
-		{
-			gltBeginDraw();
+        if (EcUIText* uti = child->FindComponent<EcUIText>(); uti && uti->Data)
+        {
+            gltBeginDraw();
 
-			float scale = std::min(currentSize.x, currentSize.y) * std::min(ViewportSize.x, ViewportSize.y) * 0.05f; // ???
+            float scale = std::min(currentSize.x, currentSize.y) * std::min(ViewportSize.x, ViewportSize.y) * 0.05f; // ???
 
-			gltColor(uti->TextColor.R, uti->TextColor.G, uti->TextColor.B, 1.f - uti->TextTransparency);
-			gltDrawText2D(
-				uti->Data,
-				((currentPosition.x + 1.f) / 2.f) * ViewportSize.x - gltGetTextWidth(uti->Data, scale) / 2.f,
-				((currentPosition.y + 1.f) / 2.f) * ViewportSize.y - gltGetTextHeight(uti->Data, scale) / 2.f,
-				scale
-			);
+            gltColor(uti->TextColor.R, uti->TextColor.G, uti->TextColor.B, 1.f - uti->TextTransparency);
+            gltDrawText2D(
+                uti->Data,
+                ((currentPosition.x + 1.f) / 2.f) * ViewportSize.x - gltGetTextWidth(uti->Data, scale) / 2.f,
+                ((currentPosition.y + 1.f) / 2.f) * ViewportSize.y - gltGetTextHeight(uti->Data, scale) / 2.f,
+                scale
+            );
 
-			gltEndDraw();
+            gltEndDraw();
 
-			static MeshProvider* MeshProvider = MeshProvider::Get();
-			static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
+            static MeshProvider* MeshProvider = MeshProvider::Get();
+            static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
 
-			const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
-			const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
-			gpuMesh.VertexArray.Bind();
-			gpuMesh.VertexBuffer.Bind();
-			gpuMesh.ElementBuffer.Bind();
-		}
+            const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
+            const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
+            gpuMesh.VertexArray.Bind();
+            gpuMesh.VertexBuffer.Bind();
+            gpuMesh.ElementBuffer.Bind();
+        }
 
-		traverseAndRenderUIHierarchy(child.Dereference(), renderer, ViewportSize, shader, gpuMesh, currentPosition, currentSize, currentRotation);
-		return true; // continue
-	});
+        traverseAndRenderUIHierarchy(child.Dereference(), renderer, ViewportSize, shader, gpuMesh, currentPosition, currentSize, currentRotation);
+        return true; // continue
+    });
 }
 
 static void renderUIElements(Engine* EngineObject, GameObject* Root, Renderer& renderer)
 {
-	ZoneScoped;
-	glDisable(GL_CULL_FACE);
-	glDepthFunc(GL_LEQUAL);
+    ZoneScoped;
+    glDisable(GL_CULL_FACE);
+    glDepthFunc(GL_LEQUAL);
 
-	static MeshProvider* MeshProvider = MeshProvider::Get();
-	static ShaderManager* shdManager = ShaderManager::Get();
-	static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
+    static MeshProvider* MeshProvider = MeshProvider::Get();
+    static ShaderManager* shdManager = ShaderManager::Get();
+    static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
 
-	const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
-	const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
-	gpuMesh.VertexArray.Bind();
-	gpuMesh.VertexBuffer.Bind();
-	gpuMesh.ElementBuffer.Bind();
+    const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
+    const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
+    gpuMesh.VertexArray.Bind();
+    gpuMesh.VertexBuffer.Bind();
+    gpuMesh.ElementBuffer.Bind();
 
-	static const uint32_t shaderId = shdManager->LoadFromPath("@base/shaders/ui.shp");
-	ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
+    static const uint32_t shaderId = shdManager->LoadFromPath("@base/shaders/ui.shp");
+    ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
 
-	ImVec2 viewportSize = EngineObject->GetViewportInputRectSize();
-	gltViewport((int)viewportSize.x, (int)viewportSize.y);
+    ImVec2 viewportSize = EngineObject->GetViewportInputRectSize();
+    gltViewport((int)viewportSize.x, (int)viewportSize.y);
 
-	glEnable(GL_BLEND);
-	traverseAndRenderUIHierarchy(Root, renderer, viewportSize, shader, gpuMesh);
-	glDisable(GL_BLEND);
+    glEnable(GL_BLEND);
+    traverseAndRenderUIHierarchy(Root, renderer, viewportSize, shader, gpuMesh);
+    glDisable(GL_BLEND);
 }
 
 ImVec2 Engine::GetViewportInputRectSize() const
 {
-	return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2((float)WindowSizeX, (float)WindowSizeY);
+    return OverrideDefaultViewportInputRect ? OverrideViewportInputSize : ImVec2((float)WindowSizeX, (float)WindowSizeY);
 }
 
 void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& particleEmitters)
@@ -763,7 +763,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     glm::mat4 camTrans = sceneCamera->GetWorldTransform();
 
     glm::mat4 view = glm::inverse(camTrans);
-	view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
+    view[3] = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
     glm::mat4 projection = glm::perspective(
         glm::radians(sceneCamera->FieldOfView),
@@ -792,121 +792,121 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
         SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
     }
 
-	RendererContext.FrameBuffer.Bind();
+    RendererContext.FrameBuffer.Bind();
 
-	glViewport(
-		0, 0,
-		(int)viewportSize.x, (int)viewportSize.y
-	);
+    glViewport(
+        0, 0,
+        (int)viewportSize.x, (int)viewportSize.y
+    );
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_DEPTH_TEST);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	RendererContext.DrawMesh(
-		cubeMesh,
-		SkyboxShader,
-		skyRenderMatrix,
-		FaceCullingMode::FrontFace // Cull the Outside, not the Inside
-	);
+    RendererContext.DrawMesh(
+        cubeMesh,
+        SkyboxShader,
+        skyRenderMatrix,
+        FaceCullingMode::FrontFace // Cull the Outside, not the Inside
+    );
 
-	glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
 
-	// Main render pass
-	RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->GetWorldTransform(), GetRunningTime(), DebugWireframeRendering);
+    // Main render pass
+    RendererContext.DrawScene(CurrentScene, renderMatrix, sceneCamera->GetWorldTransform(), GetRunningTime(), DebugWireframeRendering);
 
-	for (EcParticleEmitter* emitter : particleEmitters)
-		emitter->Render(renderMatrix);
+    for (EcParticleEmitter* emitter : particleEmitters)
+        emitter->Render(renderMatrix);
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDisable(GL_BLEND);
-	glDisable(GL_DEPTH_TEST);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
 
-	if (GameObject* interface = ForegroundDataModel->FindChildWithComponent(EntityComponent::Interface))
-		renderUIElements(this, interface, RendererContext);
+    if (GameObject* interface = ForegroundDataModel->FindChildWithComponent(EntityComponent::Interface))
+        renderUIElements(this, interface, RendererContext);
 
-	//Do framebuffer stuff after everything is drawn
+    //Do framebuffer stuff after everything is drawn
 
-	glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
-	RendererContext.FrameBuffer.BindTexture();
+    glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
+    RendererContext.FrameBuffer.BindTexture();
 
-	if (env->PostProcess)
-	{
-		ZoneScopedN("ApplyPostFxSettings");
+    if (env->PostProcess)
+    {
+        ZoneScopedN("ApplyPostFxSettings");
 
-		PostFxShader.SetUniform("Phoenix_PostFxEnabled", 1);
-		PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
+        PostFxShader.SetUniform("Phoenix_PostFxEnabled", 1);
+        PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
-		PostFxShader.SetUniform(
-			"Phoenix_Gamma",
-			env->GammaCorrection
-		);
+        PostFxShader.SetUniform(
+            "Phoenix_Gamma",
+            env->GammaCorrection
+        );
 
-		SkyboxShader.SetUniform(
-			"Phoenix_HdrEnabled",
-			true
-		);
-	}
-	else
-	{
-		PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
-		SkyboxShader.SetUniform(
-			"Phoenix_HdrEnabled",
-			false
-		);
-	}
+        SkyboxShader.SetUniform(
+            "Phoenix_HdrEnabled",
+            true
+        );
+    }
+    else
+    {
+        PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
+        SkyboxShader.SetUniform(
+            "Phoenix_HdrEnabled",
+            false
+        );
+    }
 
-	glViewport(0, 0, WindowSizeX, WindowSizeY);
-	glDisable(GL_FRAMEBUFFER_SRGB);
+    glViewport(0, 0, WindowSizeX, WindowSizeY);
+    glDisable(GL_FRAMEBUFFER_SRGB);
 
-	{
-		ZoneScopedN("MainPostProcessing");
+    {
+        ZoneScopedN("MainPostProcessing");
 
-		RendererContext.DrawMesh(
-			quadMesh,
-			PostFxShader,
-			glm::mat4(1.f),
-			FaceCullingMode::None,
-			0
-		);
+        RendererContext.DrawMesh(
+            quadMesh,
+            PostFxShader,
+            glm::mat4(1.f),
+            FaceCullingMode::None,
+            0
+        );
 
-		RendererContext.FrameBuffer.Unbind();
-		PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
-		RendererContext.DrawMesh(
-			quadMesh,
-			PostFxShader,
-			glm::mat4(1.f),
-			FaceCullingMode::None,
-			0
-		);
-	}
+        RendererContext.FrameBuffer.Unbind();
+        PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
+        RendererContext.DrawMesh(
+            quadMesh,
+            PostFxShader,
+            glm::mat4(1.f),
+            FaceCullingMode::None,
+            0
+        );
+    }
 
-	if (DeveloperTools::Initialized)
-		DeveloperTools::Frame(deltaTime);
+    if (DeveloperTools::Initialized)
+        DeveloperTools::Frame(deltaTime);
 
-	// Material Editor may screw up some stuff
-	glViewport(0, 0, WindowSizeX, WindowSizeY);
-	RendererContext.FrameBuffer.Unbind();
+    // Material Editor may screw up some stuff
+    glViewport(0, 0, WindowSizeX, WindowSizeY);
+    RendererContext.FrameBuffer.Unbind();
 
-	{
-		ZoneScopedN("DearImGuiRender");
+    {
+        ZoneScopedN("DearImGuiRender");
 
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	}
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_FRAMEBUFFER_SRGB);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_FRAMEBUFFER_SRGB);
 }
 
 static void ensureDataModelValid(const ObjectHandle& DataModel)
 {
-	ZoneScoped;
-	PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
+    ZoneScoped;
+    PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
 
-	GameObject* workspace = DataModel->FindChildWithComponent(EntityComponent::Workspace);
-	PHX_ENSURE_MSG(workspace, "DataModel has no Workspace!");
-	PHX_ENSURE_MSG(DataModel->FindComponent<EcDataModel>(), "DataModel has no DataModel component!");
+    GameObject* workspace = DataModel->FindChildWithComponent(EntityComponent::Workspace);
+    PHX_ENSURE_MSG(workspace, "DataModel has no Workspace!");
+    PHX_ENSURE_MSG(DataModel->FindComponent<EcDataModel>(), "DataModel has no DataModel component!");
 }
 
 void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
@@ -914,8 +914,8 @@ void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
     ZoneScoped;
     ensureDataModelValid(Foreground);
 
-	if (std::find(BoundDataModels.begin(), BoundDataModels.end(), Foreground) == BoundDataModels.end())
-		RAISE_RT("Tried to make an unbound datamodel the foreground datamodel");
+    if (std::find(BoundDataModels.begin(), BoundDataModels.end(), Foreground) == BoundDataModels.end())
+        RAISE_RT("Tried to make an unbound datamodel the foreground datamodel");
 
     if (ForegroundDataModel)
     {
@@ -933,18 +933,18 @@ void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
 
 void Engine::BindDataModel(const ObjectHandle& DataModel)
 {
-	if (std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel) == BoundDataModels.end())
-		BoundDataModels.push_back(DataModel);
-	else
-		Log.WarningF("{} was already a bound datamodel", DataModel->Name);
+    if (std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel) == BoundDataModels.end())
+        BoundDataModels.push_back(DataModel);
+    else
+        Log.WarningF("{} was already a bound datamodel", DataModel->Name);
 }
 
 void Engine::UnbindDataModel(const ObjectHandle& DataModel)
 {
-	if (const auto& it = std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel); it != BoundDataModels.end())
-		BoundDataModels.erase(it);
-	else
-		RAISE_RT("{} was not a bound datamodel", DataModel->Name);
+    if (const auto& it = std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel); it != BoundDataModels.end())
+        BoundDataModels.erase(it);
+    else
+        RAISE_RT("{} was not a bound datamodel", DataModel->Name);
 }
 
 static void dispatchParallelVMs(Engine* engine)
@@ -956,7 +956,7 @@ static void dispatchParallelVMs(Engine* engine)
         if (vm->YieldedCoroutines.size() == 0 && vm->ParallelSpawnRequests.size() == 0)
             continue;
 
-		vm->Desynchronized = true;
+        vm->Desynchronized = true;
 
         engine->ThreadManagerInstance.Dispatch(
             "ParallelVM",
@@ -965,9 +965,9 @@ static void dispatchParallelVMs(Engine* engine)
                 ZoneScoped;
                 ZoneText(vm->Name.data(), vm->Name.size());
 
-				ScriptEngine::ParallelVMsExecuting++;
+                ScriptEngine::ParallelVMsExecuting++;
                 vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Parallel);
-				ScriptEngine::ParallelVMsExecuting--;
+                ScriptEngine::ParallelVMsExecuting--;
             },
             true
         );
@@ -996,7 +996,7 @@ void Engine::Start()
     Log.Info("Final initializations...");
 
     ScriptEngine::Initialize(); // can only do this after datamodel is bound
-	ComponentManagers.Sound.IsHeadless = IsHeadlessMode;
+    ComponentManagers.Sound.IsHeadless = IsHeadlessMode;
 
     double RunningTime = GetRunningTime();
     double LastFrame = RunningTime;
@@ -1020,72 +1020,72 @@ void Engine::Start()
 
     Log.Info("Main engine loop start");
 
-	while ((!PHX_HEADLESS_BUILD && !IsHeadlessMode) ? (!glfwWindowShouldClose(Window) && m_IsRunning) : m_IsRunning)
-	{
-		TIME_SCOPE_AS_N("EntireFrame", EntireFrameTimerScope);
-		ZoneScopedNC("Frame", tracy::Color::PaleTurquoise);
+    while ((!PHX_HEADLESS_BUILD && !IsHeadlessMode) ? (!glfwWindowShouldClose(Window) && m_IsRunning) : m_IsRunning)
+    {
+        TIME_SCOPE_AS_N("EntireFrame", EntireFrameTimerScope);
+        ZoneScopedNC("Frame", tracy::Color::PaleTurquoise);
 
-		if (ForegroundDataModel->IsDestructionPending)
-		{
-			Log.Warning("`Destroy` called on DataModel, shutting down");
-			break;
-		}
+        if (ForegroundDataModel->IsDestructionPending)
+        {
+            Log.Warning("`Destroy` called on DataModel, shutting down");
+            break;
+        }
 
-		m_Workspace = ForegroundDataModel->FindChildWithComponent(EntityComponent::Workspace);
+        m_Workspace = ForegroundDataModel->FindChildWithComponent(EntityComponent::Workspace);
 
-		if (!m_Workspace)
-			RAISE_RT("Workspace was removed");
+        if (!m_Workspace)
+            RAISE_RT("Workspace was removed");
 
-		if (EcDataModel* dm = PrimaryDataModel->FindComponent<EcDataModel>())
-		{
-			if (dm->Closed)
-			{
-				ExitCode = dm->ExitCode;
-				Close();
-				// run for an additional frame to process callbacks
-			}
-		}
-		else
-		{
-			Log.Warning("DataModel component removed from Primary Data Model, shutting down");
-			break;
-		}
+        if (EcDataModel* dm = PrimaryDataModel->FindComponent<EcDataModel>())
+        {
+            if (dm->Closed)
+            {
+                ExitCode = dm->ExitCode;
+                Close();
+                // run for an additional frame to process callbacks
+            }
+        }
+        else
+        {
+            Log.Warning("DataModel component removed from Primary Data Model, shutting down");
+            break;
+        }
 
-		RunningTime = GetRunningTime();
-		RendererContext.AccumulatedDrawCallCount = 0;
+        RunningTime = GetRunningTime();
+        RendererContext.AccumulatedDrawCallCount = 0;
 
-		this->FpsCap = std::clamp(this->FpsCap, 1, INT32_MAX);
-		int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
+        this->FpsCap = std::clamp(this->FpsCap, 1, INT32_MAX);
+        int throttledFpsCap = IsWindowFocused ? FpsCap : 10;
 
-		double deltaTime = RunningTime - LastFrame;
-		double fpsCapDelta = 1.0 / (double)throttledFpsCap;
-		LastFrame = RunningTime;
+        double deltaTime = RunningTime - LastFrame;
+        double fpsCapDelta = 1.0 / (double)throttledFpsCap;
+        LastFrame = RunningTime;
 
-		// make sure the order of timers is
-		// 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork
-		// `drawDeveloperUI` depends on this
-		static Timing::StaticMagicTimerThing FrameSleepTimer("FrameSleep");
-		static Timing::StaticMagicTimerThing FrameWorkTimer("FrameWork");
+        // make sure the order of timers is
+        // 0 - EntireFrame, 1 - FrameSleep, 2 - FrameWork
+        // `drawDeveloperUI` depends on this
+        static Timing::StaticMagicTimerThing FrameSleepTimer("FrameSleep");
+        static Timing::StaticMagicTimerThing FrameWorkTimer("FrameWork");
 
-		// Wait the appropriate amount of time between frames
-		if ((!VSync || !IsWindowFocused) && (Timing::FinalFrameTimes[FrameWorkTimer.TimerId] < fpsCapDelta) && !firstFrame)
-		{
-			Timing::ScopedTimer scoped(FrameSleepTimer.TimerId);
-			ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
+        // Wait the appropriate amount of time between frames
+        if ((!VSync || !IsWindowFocused) && (Timing::FinalFrameTimes[FrameWorkTimer.TimerId] < fpsCapDelta) && !firstFrame)
+        {
+            Timing::ScopedTimer scoped(FrameSleepTimer.TimerId);
+            ZoneScopedNC("SleepForFpsCap", tracy::Color::Wheat);
 
-			std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - Timing::FinalFrameTimes[FrameWorkTimer.TimerId]));
-		}
+            std::this_thread::sleep_for(std::chrono::duration<double>(fpsCapDelta - Timing::FinalFrameTimes[FrameWorkTimer.TimerId]));
+        }
 
-		firstFrame = false;
-		Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
+        firstFrame = false;
+        Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
 
-		ForegroundDataModel->FindComponent<EcDataModel>()->Bind();
+        ForegroundDataModel->FindComponent<EcDataModel>()->Bind();
 
-		if (!IsHeadlessMode)
-			TextureManagerInstance.FinalizeAsyncLoadedTextures();
+        if (!IsHeadlessMode)
+            TextureManagerInstance.FinalizeAsyncLoadedTextures();
 
-		MeshProviderInstance.FinalizeAsyncLoadedMeshes();
-		Logging::FlushParallelEvents();
+        MeshProviderInstance.FinalizeAsyncLoadedMeshes();
+        Logging::FlushParallelEvents();
 
         if (EcEnvironmentService* env = ComponentManagers.Environment.GetService(); env->SkyboxFacesBeingLoaded.size() == 6 && !IsHeadlessMode)
         {
@@ -1102,11 +1102,11 @@ void Engine::Start()
                 }
             }
 
-			if (skyboxLoaded)
-			{
-				ZoneScopedN("UploadSkyboxToGpu");
-				
-				glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
+            if (skyboxLoaded)
+            {
+                ZoneScopedN("UploadSkyboxToGpu");
+                
+                glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
 
                 for (uint32_t skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
                 {
@@ -1135,88 +1135,88 @@ void Engine::Start()
 
                 glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
                 env->SkyboxFacesBeingLoaded.clear();
-			}
-		}
+            }
+        }
 
-		RunningTime = GetRunningTime();
-		this->OnFrameStart.Fire(deltaTime);
+        RunningTime = GetRunningTime();
+        this->OnFrameStart.Fire(deltaTime);
 
-		{
-			ZoneScopedNC("PollEvents", tracy::Color::Orange);
+        {
+            ZoneScopedNC("PollEvents", tracy::Color::Orange);
 
-			glfwPollEvents();
-		}
+            glfwPollEvents();
+        }
 
-		if (!IsHeadlessMode)
-		{
-			ZoneNamedN(imguizone, "NewDearImGuiFrame", true);
-			// so scripts can use the `imgui` library
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplGlfw_NewFrame();
-			ImGui::NewFrame();
+        if (!IsHeadlessMode)
+        {
+            ZoneNamedN(imguizone, "NewDearImGuiFrame", true);
+            // so scripts can use the `imgui` library
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
 
-			if (!OverrideDefaultGuiViewportDockSpace)
-				ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
-			else
-			{
-				ImGuiViewport* viewport = ImGui::GetMainViewport();
-				viewport->WorkPos = OverrideViewportDockSpacePosition;
-				viewport->WorkSize = OverrideViewportDockSpaceSize;
+            if (!OverrideDefaultGuiViewportDockSpace)
+                ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+            else
+            {
+                ImGuiViewport* viewport = ImGui::GetMainViewport();
+                viewport->WorkPos = OverrideViewportDockSpacePosition;
+                viewport->WorkSize = OverrideViewportDockSpaceSize;
 
-				ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
-			}
-		}
+                ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
+            }
+        }
 
-		EcWorkspace* workspaceComponent = m_Workspace->FindComponent<EcWorkspace>();
-		ObjectHandle sceneCamObject = workspaceComponent->GetSceneCamera();
-		EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+        EcWorkspace* workspaceComponent = m_Workspace->FindComponent<EcWorkspace>();
+        ObjectHandle sceneCamObject = workspaceComponent->GetSceneCamera();
+        EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
-		if (!IsHeadlessMode)
-			workspaceComponent->UpdateSoundListener();
+        if (!IsHeadlessMode)
+            workspaceComponent->UpdateSoundListener();
 
-		for (size_t i = 0; i < BoundDataModels.size();)
-		{
-			if (!BoundDataModels[i]->FindComponent<EcDataModel>())
-			{
-				Log.WarningF("Bound datamodel {} lost its datamodel component", BoundDataModels[i]->Name);
-				BoundDataModels.erase(BoundDataModels.begin() + i);
-			}
-			else
-				i++;
-		}
+        for (size_t i = 0; i < BoundDataModels.size();)
+        {
+            if (!BoundDataModels[i]->FindComponent<EcDataModel>())
+            {
+                Log.WarningF("Bound datamodel {} lost its datamodel component", BoundDataModels[i]->Name);
+                BoundDataModels.erase(BoundDataModels.begin() + i);
+            }
+            else
+                i++;
+        }
 
-		for (const ObjectHandle& bound : BoundDataModels)
-			Reflection::SignalEvent(bound->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
+        for (const ObjectHandle& bound : BoundDataModels)
+            Reflection::SignalEvent(bound->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
         waitForParallelVMs();      // tsan ??
         ScriptEngine::StepVMs();   // serial phase
         dispatchParallelVMs(this);
 
-		// fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
-		// (really need a generic `Ref` system)
-		sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+        // fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
+        // (really need a generic `Ref` system)
+        sceneCamera = sceneCamObject->FindComponent<EcCamera>();
 
-		EcDirectionalLight* sun = nullptr;
-		{
-			TIME_SCOPE_AS("TraverseHierarchy");
+        EcDirectionalLight* sun = nullptr;
+        {
+            TIME_SCOPE_AS("TraverseHierarchy");
 
-			CurrentScene.RenderList.clear();
-			CurrentScene.LightingList.clear();
-			physWorld.Dynamics.clear();
-			physWorld.Statics.clear();
-			particleEmittersRenderList.clear();
+            CurrentScene.RenderList.clear();
+            CurrentScene.LightingList.clear();
+            physWorld.Dynamics.clear();
+            physWorld.Statics.clear();
+            particleEmittersRenderList.clear();
 
-			// Aggregate mesh and light data into lists
-			traverseHierarchy(
-				CurrentScene,
-				physWorld,
-				particleEmittersRenderList,
-				m_Workspace.Referred(),
-				sceneCamera,
-				deltaTime,
-				&sun,
-				PhysicsInstance.DebugCollisionAabbs
-			);
+            // Aggregate mesh and light data into lists
+            traverseHierarchy(
+                CurrentScene,
+                physWorld,
+                particleEmittersRenderList,
+                m_Workspace.Referred(),
+                sceneCamera,
+                deltaTime,
+                &sun,
+                PhysicsInstance.DebugCollisionAabbs
+            );
 
             // TODO weird skybox graphical corruption if we don't draw anything
             if (CurrentScene.RenderList.size() == 0)
@@ -1248,7 +1248,7 @@ void Engine::Start()
             }
 
             sceneCamera = sceneCamObject->FindComponent<EcCamera>();
-		}
+        }
 
         if (PhysicsInstance.Simulating && !PhysicsInstance.SimulatingForcePaused && physWorld.Dynamics.size() > 0)
             PhysicsInstance.Step(physWorld, deltaTime * PhysicsInstance.Timescale);
@@ -1264,63 +1264,63 @@ void Engine::Start()
                 CurrentScene.UsedShaders.insert(ShaderManagerInstance.LoadFromPath("@base/shaders/particle.shp"));
         }
 
-		if (!IsHeadlessMode && sun)
-		{
-			TIME_SCOPE_AS("Shadows");
-			ZoneScopedN("Shadows");
+        if (!IsHeadlessMode && sun)
+        {
+            TIME_SCOPE_AS("Shadows");
+            ZoneScopedN("Shadows");
 
-			Scene sunScene;
-			sunScene.RenderList.reserve(CurrentScene.RenderList.size());
-			sunScene.UsedShaders = CurrentScene.UsedShaders;
+            Scene sunScene;
+            sunScene.RenderList.reserve(CurrentScene.RenderList.size());
+            sunScene.UsedShaders = CurrentScene.UsedShaders;
 
-			for (const RenderItem& ri : CurrentScene.RenderList)
-				if (ri.CastsShadows)
-				{
-					sunScene.RenderList.push_back(ri);
-					sunScene.RenderList.back().FaceCulling = FaceCullingMode::FrontFace;
-				}
+            for (const RenderItem& ri : CurrentScene.RenderList)
+                if (ri.CastsShadows)
+                {
+                    sunScene.RenderList.push_back(ri);
+                    sunScene.RenderList.back().FaceCulling = FaceCullingMode::FrontFace;
+                }
 
-			glm::vec3 sunDirection = sun->Direction;
-			
-			glm::mat4 sunOrtho = glm::ortho(
-				-sun->ShadowViewSizeH, sun->ShadowViewSizeH, -sun->ShadowViewSizeV, sun->ShadowViewSizeV,
-				sun->ShadowViewNearPlane, sun->ShadowViewFarPlane
-			);
-			glm::mat4 sunView = glm::lookAt(
-				glm::normalize(sunDirection) * sun->ShadowViewDistance,
-				glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)
-			);
-			sunView[3] = glm::vec4(glm::vec3(sunView[3]) + sun->ShadowViewOffset, 1.f);
-			if (sun->ShadowViewMoveWithCamera)
-				sunView[3] = glm::vec4(glm::vec3(sunView[3]) - glm::vec3(sceneCamera->GetWorldTransform()[3]), 1.f);
+            glm::vec3 sunDirection = sun->Direction;
+            
+            glm::mat4 sunOrtho = glm::ortho(
+                -sun->ShadowViewSizeH, sun->ShadowViewSizeH, -sun->ShadowViewSizeV, sun->ShadowViewSizeV,
+                sun->ShadowViewNearPlane, sun->ShadowViewFarPlane
+            );
+            glm::mat4 sunView = glm::lookAt(
+                glm::normalize(sunDirection) * sun->ShadowViewDistance,
+                glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)
+            );
+            sunView[3] = glm::vec4(glm::vec3(sunView[3]) + sun->ShadowViewOffset, 1.f);
+            if (sun->ShadowViewMoveWithCamera)
+                sunView[3] = glm::vec4(glm::vec3(sunView[3]) - glm::vec3(sceneCamera->GetWorldTransform()[3]), 1.f);
 
-			glm::mat4 sunRenderMatrix = sunOrtho * sunView;
+            glm::mat4 sunRenderMatrix = sunOrtho * sunView;
 
-			SunShadowMap.Bind();
-			glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
-			glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
+            SunShadowMap.Bind();
+            glViewport(0, 0, SunShadowMapResolutionSq, SunShadowMapResolutionSq);
+            glClear(/*GL_COLOR_BUFFER_BIT |*/ GL_DEPTH_BUFFER_BIT);
 
-			for (uint32_t shdId : CurrentScene.UsedShaders)
-			{
-				ShaderProgram& shd = ShaderManagerInstance.GetShaderResource(shdId);
-				shd.SetUniform("Phoenix_IsShadowMap", true);
+            for (uint32_t shdId : CurrentScene.UsedShaders)
+            {
+                ShaderProgram& shd = ShaderManagerInstance.GetShaderResource(shdId);
+                shd.SetUniform("Phoenix_IsShadowMap", true);
 
-				glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Shadowmap);
-				SunShadowMap.BindTexture();
-				shd.SetUniform("Phoenix_ShadowAtlas", ReservedTextureSlot::Shadowmap);
+                glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Shadowmap);
+                SunShadowMap.BindTexture();
+                shd.SetUniform("Phoenix_ShadowAtlas", ReservedTextureSlot::Shadowmap);
 
-				shd.SetUniform("Phoenix_DirectionalLightProjection", sunRenderMatrix);
-			}
+                shd.SetUniform("Phoenix_DirectionalLightProjection", sunRenderMatrix);
+            }
 
-			RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
-			SunShadowMap.Unbind();
+            RendererContext.DrawScene(sunScene, sunRenderMatrix, glm::mat4(1.f), RunningTime, DebugWireframeRendering);
+            SunShadowMap.Unbind();
 
-			glViewport(0, 0, WindowSizeX, WindowSizeY);
-		}
+            glViewport(0, 0, WindowSizeX, WindowSizeY);
+        }
 
-		if (!IsHeadlessMode)
-		{
-			EcEnvironmentService* env = ComponentManagers.Environment.GetService();
+        if (!IsHeadlessMode)
+        {
+            EcEnvironmentService* env = ComponentManagers.Environment.GetService();
 
             for (uint32_t shdId : CurrentScene.UsedShaders)
             {
@@ -1333,120 +1333,120 @@ void Engine::Start()
                     shader.SetUniform("Phoenix_FogColor", env->FogColor.ToGenericValue());
             }
 
-			m_Render(deltaTime, particleEmittersRenderList);
-			RendererContext.SwapBuffers();
-		}
+            m_Render(deltaTime, particleEmittersRenderList);
+            RendererContext.SwapBuffers();
+        }
 
-		waitForParallelVMs();
+        waitForParallelVMs();
 
-		// End of frame
-		RunningTime = GetRunningTime();
+        // End of frame
+        RunningTime = GetRunningTime();
 
-		m_DrawnFramesInSecond++;
+        m_DrawnFramesInSecond++;
 
-		OnFrameEnd.Fire(deltaTime);
+        OnFrameEnd.Fire(deltaTime);
 
-		if (RunningTime - LastSecond > 1.0)
-		{
-			LastSecond = RunningTime;
+        if (RunningTime - LastSecond > 1.0)
+        {
+            LastSecond = RunningTime;
 
-			this->FramesPerSecond = m_DrawnFramesInSecond;
-			m_DrawnFramesInSecond = -1;
+            this->FramesPerSecond = m_DrawnFramesInSecond;
+            m_DrawnFramesInSecond = -1;
 
-			Logging::Save();
-		}
+            Logging::Save();
+        }
 
-		Memory::FrameFinish();
-		Timing::Finish();
-		FrameMark;
-	}
+        Memory::FrameFinish();
+        Timing::Finish();
+        FrameMark;
+    }
 
-	Log.Info("Main loop exited");
+    Log.Info("Main loop exited");
 }
 
 void Engine::Shutdown()
 {
-	ZoneScoped;
-	Log.Info("Engine destructing...");
+    ZoneScoped;
+    Log.Info("Engine destructing...");
 
-	HistoryInstance.IsRecordingEnabled = false;
+    HistoryInstance.IsRecordingEnabled = false;
 
-	Log.Info("Destroying DataModel...");
-	ComponentManagers.DataModel.NotifyAllOfShutdown();
-	ScriptEngine::StepVMs(); // step event callbacks
+    Log.Info("Destroying DataModel...");
+    ComponentManagers.DataModel.NotifyAllOfShutdown();
+    ScriptEngine::StepVMs(); // step event callbacks
 
-	ForegroundDataModel->Destroy();
-	ForegroundDataModel.Clear();
-	PrimaryDataModel.Clear();
-	m_Workspace = {};
-	BoundDataModels.clear();
+    ForegroundDataModel->Destroy();
+    ForegroundDataModel.Clear();
+    PrimaryDataModel.Clear();
+    m_Workspace = {};
+    BoundDataModels.clear();
 
-	DeveloperTools::Shutdown();
+    DeveloperTools::Shutdown();
 
-	Log.Info("Shutting down script engine...");
-	ScriptEngine::Shutdown();
+    Log.Info("Shutting down script engine...");
+    ScriptEngine::Shutdown();
 
-	// Do this after script engine shutdown, as we may have event connections
-	for (GameObjectManager::Collection& collection : ObjectManager.Collections)
-	{
-		delete collection.AddedEvent.Descriptor;
-		delete collection.RemovedEvent.Descriptor;
-		collection.AddedEvent.Descriptor = nullptr;
-		collection.RemovedEvent.Descriptor = nullptr;
-	}
+    // Do this after script engine shutdown, as we may have event connections
+    for (GameObjectManager::Collection& collection : ObjectManager.Collections)
+    {
+        delete collection.AddedEvent.Descriptor;
+        delete collection.RemovedEvent.Descriptor;
+        collection.AddedEvent.Descriptor = nullptr;
+        collection.RemovedEvent.Descriptor = nullptr;
+    }
 
-	Log.Info("Shutting down History...");
-	HistoryInstance.Shutdown();
+    Log.Info("Shutting down History...");
+    HistoryInstance.Shutdown();
 
-	Log.Info("Shutting down Component Managers...");
-	// skip the first "None" component manager
-	for (size_t i = 1; i < (size_t)EntityComponent::count; i++)
-	{
-		ZoneScopedN("Shutdown Component");
-		ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());
+    Log.Info("Shutting down Component Managers...");
+    // skip the first "None" component manager
+    for (size_t i = 1; i < (size_t)EntityComponent::count; i++)
+    {
+        ZoneScopedN("Shutdown Component");
+        ZoneText(s_EntityComponentNames[i].data(), s_EntityComponentNames[i].size());
 
-		ObjectManager.ComponentManagers[i]->Shutdown();
-	}
+        ObjectManager.ComponentManagers[i]->Shutdown();
+    }
 
-	Log.Info("Shutting down managers...");
+    Log.Info("Shutting down managers...");
 
-	MaterialManagerInstance.Shutdown();
-	TextureManagerInstance.Shutdown();
-	ShaderManagerInstance.Shutdown();
-	MeshProviderInstance.Shutdown();
+    MaterialManagerInstance.Shutdown();
+    TextureManagerInstance.Shutdown();
+    ShaderManagerInstance.Shutdown();
+    MeshProviderInstance.Shutdown();
 
-	ThreadManagerInstance.Shutdown();
+    ThreadManagerInstance.Shutdown();
 
-	Log.Info("Shutting down libraries...");
+    Log.Info("Shutting down libraries...");
 
-	if (!IsHeadlessMode)
-	{
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		RendererContext.Shutdown();
-	}
+    if (!IsHeadlessMode)
+    {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        RendererContext.Shutdown();
+    }
 
-	Log.Info("Shutting down GLFW...");
+    Log.Info("Shutting down GLFW...");
 
-	if (Window)
-	{
-		gltTerminate();
-		glfwDestroyWindow(Window);
-	}
-	glfwTerminate();
+    if (Window)
+    {
+        gltTerminate();
+        glfwDestroyWindow(Window);
+    }
+    glfwTerminate();
 
-	for (const GameObject& obj : ObjectManager.WorldArray)
-	{
-		if (obj.HardRefCount > 0)
-			Log.WarningF("Object {} still has {} reference(s)!", obj.GetFullName(), obj.HardRefCount);
-		else if (obj.Valid)
-			Log.WarningF("Object {} left dangling!", obj.GetFullName());
-	}
+    for (const GameObject& obj : ObjectManager.WorldArray)
+    {
+        if (obj.HardRefCount > 0)
+            Log.WarningF("Object {} still has {} reference(s)!", obj.GetFullName(), obj.HardRefCount);
+        else if (obj.Valid)
+            Log.WarningF("Object {} left dangling!", obj.GetFullName());
+    }
 
-	EngineInstance = nullptr;
+    EngineInstance = nullptr;
 }
 
 Engine::~Engine()
 {
-	assert(!EngineInstance);
+    assert(!EngineInstance);
 }

@@ -15,37 +15,37 @@ Timing::ScopedTimer __timingscoped_for_##VarName(VarName.TimerId); \
 
 namespace Timing
 {
-	void BeginTimer(uint8_t);
-	void EndLastTimer();
-	// mark end of the frame
-	void Finish();
+    void BeginTimer(uint8_t);
+    void EndLastTimer();
+    // mark end of the frame
+    void Finish();
 
-	// when each timer started
-	inline double StartTimes[UINT8_MAX] = { 0.0 };
-	// the length of time each timer took
-	inline double AccumulatedTimes[UINT8_MAX] = { 0.0 };
-	// after an entire frame, `AccumulatedTimes` is copied over into this
-	// and reset
-	inline double FinalFrameTimes[UINT8_MAX] = { 0.0 };
+    // when each timer started
+    inline double StartTimes[UINT8_MAX] = { 0.0 };
+    // the length of time each timer took
+    inline double AccumulatedTimes[UINT8_MAX] = { 0.0 };
+    // after an entire frame, `AccumulatedTimes` is copied over into this
+    // and reset
+    inline double FinalFrameTimes[UINT8_MAX] = { 0.0 };
 
-	inline const char* TimerNames[UINT8_MAX] = { NULL };
+    inline const char* TimerNames[UINT8_MAX] = { NULL };
 
-	// TODO 24/06/2025
-	// mmmm idk if i like this, but it seems
-	// like the only way
-	struct StaticMagicTimerThing
-	{
-		StaticMagicTimerThing(const char* Name);
+    // TODO 24/06/2025
+    // mmmm idk if i like this, but it seems
+    // like the only way
+    struct StaticMagicTimerThing
+    {
+        StaticMagicTimerThing(const char* Name);
 
-		static inline uint8_t s_NumTimers = 0;
-		uint8_t TimerId = UINT8_MAX;
-	};
+        static inline uint8_t s_NumTimers = 0;
+        uint8_t TimerId = UINT8_MAX;
+    };
 
-	struct ScopedTimer
-	{
-		ScopedTimer(uint8_t);
-		~ScopedTimer();
+    struct ScopedTimer
+    {
+        ScopedTimer(uint8_t);
+        ~ScopedTimer();
 
-		bool m_DidBegin = true;
-	};
+        bool m_DidBegin = true;
+    };
 }

@@ -14,311 +14,311 @@ static const std::string MissingTexPath = "!Missing";
 
 static std::string getFilePath(const std::string& Material)
 {
-	if (Material.find("materials/") == std::string::npos && Material.find(".mtl") == std::string::npos)
-		return "materials/" + Material + ".mtl";
-	else
-		return Material;
+    if (Material.find("materials/") == std::string::npos && Material.find(".mtl") == std::string::npos)
+        return "materials/" + Material + ".mtl";
+    else
+        return Material;
 }
 
 void RenderMaterial::Reload()
 {
-	ZoneScoped;
-	ZoneTextF("%s", this->Name.c_str());
+    ZoneScoped;
+    ZoneTextF("%s", this->Name.c_str());
 
-	std::string filePath = getFilePath(this->Name);
+    std::string filePath = getFilePath(this->Name);
 
-	bool matExists = true;
-	std::string fileData = FileRW::ReadFile(filePath, &matExists);
+    bool matExists = true;
+    std::string fileData = FileRW::ReadFile(filePath, &matExists);
 
-	size_t jsonStartLoc = fileData.find("{");
-	std::string jsonFileContents = fileData.substr(jsonStartLoc);
+    size_t jsonStartLoc = fileData.find("{");
+    std::string jsonFileContents = fileData.substr(jsonStartLoc);
 
-	nlohmann::json jsonMaterialData = {};
+    nlohmann::json jsonMaterialData = {};
 
-	ShaderManager* shdManager = ShaderManager::Get();
+    ShaderManager* shdManager = ShaderManager::Get();
 
-	if (matExists)
-	{
-		try
-		{
-			jsonMaterialData = nlohmann::json::parse(jsonFileContents);
-		}
-		catch (const nlohmann::json::parse_error& e)
-		{
-			Log.ErrorF(
-				"Parse error trying to load material {}: {}",
-				this->Name, e.what()
-			);
-		}
-	}
-	else
-	{
-		this->ShaderId = shdManager->LoadFromPath("error");
+    if (matExists)
+    {
+        try
+        {
+            jsonMaterialData = nlohmann::json::parse(jsonFileContents);
+        }
+        catch (const nlohmann::json::parse_error& e)
+        {
+            Log.ErrorF(
+                "Parse error trying to load material {}: {}",
+                this->Name, e.what()
+            );
+        }
+    }
+    else
+    {
+        this->ShaderId = shdManager->LoadFromPath("error");
 
-		Log.Error("Unknown material: '" + this->Name + "'");
+        Log.Error("Unknown material: '" + this->Name + "'");
 
-		return;
-	}
+        return;
+    }
 
-	TextureManager* texManager = TextureManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
-	std::string desiredShp = jsonMaterialData.value("Shader", jsonMaterialData.value("shaderprogram", "worldUber"));
-	this->ShaderId = shdManager->LoadFromPath(desiredShp);
+    std::string desiredShp = jsonMaterialData.value("Shader", jsonMaterialData.value("shaderprogram", "worldUber"));
+    this->ShaderId = shdManager->LoadFromPath(desiredShp);
 
-	nlohmann::json uniforms = jsonMaterialData.value("Uniforms", jsonMaterialData.value("uniforms", nlohmann::json::object()));
+    nlohmann::json uniforms = jsonMaterialData.value("Uniforms", jsonMaterialData.value("uniforms", nlohmann::json::object()));
 
-	int polygonMode = jsonMaterialData.value("PolygonMode", 0);
+    int polygonMode = jsonMaterialData.value("PolygonMode", 0);
 
-	if (polygonMode < 0 || polygonMode > 2)
-	{
-		Log.Error("Material had invalid polygon mode of " + std::to_string(polygonMode));
-		polygonMode = 0;
-	}
+    if (polygonMode < 0 || polygonMode > 2)
+    {
+        Log.Error("Material had invalid polygon mode of " + std::to_string(polygonMode));
+        polygonMode = 0;
+    }
 
-	this->PolygonMode = static_cast<MaterialPolygonMode>(polygonMode);
+    this->PolygonMode = static_cast<MaterialPolygonMode>(polygonMode);
 
-	for (auto memberIt = uniforms.begin(); memberIt != uniforms.end(); ++memberIt)
-	{
-		std::string uniformName = memberIt.key();
-		const nlohmann::json& value = memberIt.value();
+    for (auto memberIt = uniforms.begin(); memberIt != uniforms.end(); ++memberIt)
+    {
+        std::string uniformName = memberIt.key();
+        const nlohmann::json& value = memberIt.value();
 
-		switch (value.type())
-		{
-		case nlohmann::detail::value_t::boolean:
-		{
-			this->Uniforms.emplace(uniformName, (bool)value);
-			break;
-		}
-		case nlohmann::detail::value_t::number_float:
-		{
-			this->Uniforms.emplace(uniformName, (float)value);
-			break;
-		}
-		case nlohmann::detail::value_t::number_integer:
-		{
-			this->Uniforms.emplace(uniformName, (int32_t)value);
-			break;
-		}
-		case nlohmann::detail::value_t::number_unsigned:
-		{
-			this->Uniforms.emplace(uniformName, (uint32_t)value);
-			break;
-		}
+        switch (value.type())
+        {
+        case nlohmann::detail::value_t::boolean:
+        {
+            this->Uniforms.emplace(uniformName, (bool)value);
+            break;
+        }
+        case nlohmann::detail::value_t::number_float:
+        {
+            this->Uniforms.emplace(uniformName, (float)value);
+            break;
+        }
+        case nlohmann::detail::value_t::number_integer:
+        {
+            this->Uniforms.emplace(uniformName, (int32_t)value);
+            break;
+        }
+        case nlohmann::detail::value_t::number_unsigned:
+        {
+            this->Uniforms.emplace(uniformName, (uint32_t)value);
+            break;
+        }
 
-		default:
-		{
-			RAISE_RT(
-				"Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
-				this->Name, uniformName, value.type_name()
-			);
-		}
-		}
-	}
+        default:
+        {
+            RAISE_RT(
+                "Material '{}' tried to specify Uniform '{}', but it had unsupported type '{}'",
+                this->Name, uniformName, value.type_name()
+            );
+        }
+        }
+    }
 
-	this->ColorMap = texManager->LoadFromPath(jsonMaterialData.value(
-		"ColorMap",
-		jsonMaterialData.value("albedo", MissingTexPath)
-	), true);
+    this->ColorMap = texManager->LoadFromPath(jsonMaterialData.value(
+        "ColorMap",
+        jsonMaterialData.value("albedo", MissingTexPath)
+    ), true);
 
-	std::string metallicRoughnessPath = jsonMaterialData.value("MetallicRoughnessMap", jsonMaterialData.value("specular", ""));
-	std::string normalPath = jsonMaterialData.value("NormalMap", "");
-	std::string emissionPath = jsonMaterialData.value("EmissionMap", "");
+    std::string metallicRoughnessPath = jsonMaterialData.value("MetallicRoughnessMap", jsonMaterialData.value("specular", ""));
+    std::string normalPath = jsonMaterialData.value("NormalMap", "");
+    std::string emissionPath = jsonMaterialData.value("EmissionMap", "");
 
-	if (metallicRoughnessPath != "")
-		this->MetallicRoughnessMap = texManager->LoadFromPath(metallicRoughnessPath, true);
-	else
-		this->MetallicRoughnessMap = texManager->LoadFromPath("!White", true);
+    if (metallicRoughnessPath != "")
+        this->MetallicRoughnessMap = texManager->LoadFromPath(metallicRoughnessPath, true);
+    else
+        this->MetallicRoughnessMap = texManager->LoadFromPath("!White", true);
 
-	if (normalPath != "")
-		this->NormalMap = texManager->LoadFromPath(normalPath, true);
-	else
-		this->NormalMap = 0;
+    if (normalPath != "")
+        this->NormalMap = texManager->LoadFromPath(normalPath, true);
+    else
+        this->NormalMap = 0;
 
-	if (emissionPath != "")
-		this->EmissionMap = texManager->LoadFromPath(emissionPath, true);
-	else
-		this->EmissionMap = 0;
+    if (emissionPath != "")
+        this->EmissionMap = texManager->LoadFromPath(emissionPath, true);
+    else
+        this->EmissionMap = 0;
 
-	this->HasTranslucency = jsonMaterialData.value("HasTranslucency", jsonMaterialData.value("translucency", false));
+    this->HasTranslucency = jsonMaterialData.value("HasTranslucency", jsonMaterialData.value("translucency", false));
 
-	this->SpecExponent = jsonMaterialData.value("specExponent", 8.f);
-	this->SpecMultiply = jsonMaterialData.value("specMultiply", 0.5f);
+    this->SpecExponent = jsonMaterialData.value("specExponent", 8.f);
+    this->SpecMultiply = jsonMaterialData.value("specMultiply", 0.5f);
 
-	ShaderProgram& shader = GetShader();
-	// reserved slots for material textures
-	shader.SetUniform("Phoenix_Material.ColorMap", ReservedTextureSlot::MaterialColorMap);
-	shader.SetUniform("Phoenix_Material.MetallicRoughnessMap", ReservedTextureSlot::MaterialMetallicRoughnessMap);
-	shader.SetUniform("Phoenix_Material.NormalMap", ReservedTextureSlot::MaterialNormalMap);
-	shader.SetUniform("Phoenix_Material.EmissionMap", ReservedTextureSlot::MaterialEmissionMap);
+    ShaderProgram& shader = GetShader();
+    // reserved slots for material textures
+    shader.SetUniform("Phoenix_Material.ColorMap", ReservedTextureSlot::MaterialColorMap);
+    shader.SetUniform("Phoenix_Material.MetallicRoughnessMap", ReservedTextureSlot::MaterialMetallicRoughnessMap);
+    shader.SetUniform("Phoenix_Material.NormalMap", ReservedTextureSlot::MaterialNormalMap);
+    shader.SetUniform("Phoenix_Material.EmissionMap", ReservedTextureSlot::MaterialEmissionMap);
 }
 
 ShaderProgram& RenderMaterial::GetShader() const
 {
-	return ShaderManager::Get()->GetShaderResource(this->ShaderId);
+    return ShaderManager::Get()->GetShaderResource(this->ShaderId);
 }
 
 void RenderMaterial::ApplyUniforms()
 {
-	for (auto& it : Uniforms)
-		this->GetShader().SetUniform(it.first.c_str(), it.second);
+    for (auto& it : Uniforms)
+        this->GetShader().SetUniform(it.first.c_str(), it.second);
 }
 
 static MaterialManager* s_Instance = nullptr;
 
 void MaterialManager::Shutdown()
 {
-	s_Instance = nullptr;
+    s_Instance = nullptr;
 }
 
 MaterialManager::~MaterialManager()
 {
-	assert(!s_Instance);
+    assert(!s_Instance);
 }
 
 void MaterialManager::Initialize()
 {
-	ZoneScoped;
-	
-	s_Instance = this;
+    ZoneScoped;
+    
+    s_Instance = this;
 }
 
 MaterialManager* MaterialManager::Get()
 {
-	assert(s_Instance);
-	return s_Instance;
+    assert(s_Instance);
+    return s_Instance;
 }
 
 uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
 {
-	std::string namedyn = std::string(Name);
+    std::string namedyn = std::string(Name);
 
-	auto it = m_StringToMaterialId.find(namedyn);
+    auto it = m_StringToMaterialId.find(namedyn);
 
-	if (it == m_StringToMaterialId.end())
-	{
-		std::string fullPath = getFilePath(namedyn);
-		bool matExists = true;
-		std::string fileData = FileRW::ReadFile(fullPath, &matExists);
+    if (it == m_StringToMaterialId.end())
+    {
+        std::string fullPath = getFilePath(namedyn);
+        bool matExists = true;
+        std::string fileData = FileRW::ReadFile(fullPath, &matExists);
 
-		if (matExists)
-		{
-			uint32_t resourceId = static_cast<uint32_t>(m_Materials.size());
-			m_StringToMaterialId.emplace(Name, resourceId);
+        if (matExists)
+        {
+            uint32_t resourceId = static_cast<uint32_t>(m_Materials.size());
+            m_StringToMaterialId.emplace(Name, resourceId);
 
-			RenderMaterial& material = m_Materials.emplace_back(std::string(Name));
-			material.Name = Name;
-			material.Reload();
+            RenderMaterial& material = m_Materials.emplace_back(std::string(Name));
+            material.Name = Name;
+            material.Reload();
 
-			return resourceId;
-		}
-		else
-		{
-			Log.Error("Failed to load material '" + fullPath + "'");
+            return resourceId;
+        }
+        else
+        {
+            Log.Error("Failed to load material '" + fullPath + "'");
 
-			if (Name == "error")
-				RAISE_RT("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");
+            if (Name == "error")
+                RAISE_RT("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");
 
-			uint32_t id = LoadFromPath("error");
-			m_StringToMaterialId.emplace(Name, id);
+            uint32_t id = LoadFromPath("error");
+            m_StringToMaterialId.emplace(Name, id);
 
-			return id;
-		}
-	}
-	else
-		return it->second;
+            return id;
+        }
+    }
+    else
+        return it->second;
 }
 
 void MaterialManager::SaveToPath(const RenderMaterial& material, const std::string_view& Name)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	TextureManager* texManager = TextureManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
-	const Texture& colorMap = texManager->GetTextureResource(material.ColorMap);
-	const Texture& mrMap = texManager->GetTextureResource(material.MetallicRoughnessMap);
-	const Texture& emissionMap = texManager->GetTextureResource(material.EmissionMap);
-	const Texture& normalMap = texManager->GetTextureResource(material.NormalMap);
+    const Texture& colorMap = texManager->GetTextureResource(material.ColorMap);
+    const Texture& mrMap = texManager->GetTextureResource(material.MetallicRoughnessMap);
+    const Texture& emissionMap = texManager->GetTextureResource(material.EmissionMap);
+    const Texture& normalMap = texManager->GetTextureResource(material.NormalMap);
 
-	nlohmann::json newMtlConfig{};
+    nlohmann::json newMtlConfig{};
 
-	newMtlConfig["ColorMap"] = colorMap.ImagePath;
+    newMtlConfig["ColorMap"] = colorMap.ImagePath;
 
-	if (material.MetallicRoughnessMap != 0)
-		newMtlConfig["MetallicRoughnessMap"] = mrMap.ImagePath;
+    if (material.MetallicRoughnessMap != 0)
+        newMtlConfig["MetallicRoughnessMap"] = mrMap.ImagePath;
 
-	if (material.NormalMap != 0)
-		newMtlConfig["NormalMap"] = normalMap.ImagePath;
+    if (material.NormalMap != 0)
+        newMtlConfig["NormalMap"] = normalMap.ImagePath;
 
-	if (material.EmissionMap != 0)
-		newMtlConfig["EmissionMap"] = emissionMap.ImagePath;
+    if (material.EmissionMap != 0)
+        newMtlConfig["EmissionMap"] = emissionMap.ImagePath;
 
-	newMtlConfig["specExponent"] = material.SpecExponent;
-	newMtlConfig["specMultiply"] = material.SpecMultiply;
-	newMtlConfig["HasTranslucency"] = material.HasTranslucency;
-	newMtlConfig["BilinearFiltering"] = material.LinearlySmoothened;
-	newMtlConfig["Shader"] = material.GetShader().Name;
-	newMtlConfig["PolygonMode"] = static_cast<int>(material.PolygonMode);
+    newMtlConfig["specExponent"] = material.SpecExponent;
+    newMtlConfig["specMultiply"] = material.SpecMultiply;
+    newMtlConfig["HasTranslucency"] = material.HasTranslucency;
+    newMtlConfig["BilinearFiltering"] = material.LinearlySmoothened;
+    newMtlConfig["Shader"] = material.GetShader().Name;
+    newMtlConfig["PolygonMode"] = static_cast<int>(material.PolygonMode);
 
-	newMtlConfig["Uniforms"] = {};
+    newMtlConfig["Uniforms"] = {};
 
-	for (auto& it : material.Uniforms)
-	{
-		const Reflection::GenericValue& value = it.second;
+    for (auto& it : material.Uniforms)
+    {
+        const Reflection::GenericValue& value = it.second;
 
-		switch (value.Type)
-		{
-		case (Reflection::ValueType::Boolean):
-		{
-			newMtlConfig["Uniforms"][it.first] = value.AsBoolean();
-			break;
-		}
-		case (Reflection::ValueType::Integer):
-		{
-			newMtlConfig["Uniforms"][it.first] = value.AsInteger();
-			break;
-		}
-		case (Reflection::ValueType::Double):
-		{
-			newMtlConfig["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
-			break;
-		}
+        switch (value.Type)
+        {
+        case (Reflection::ValueType::Boolean):
+        {
+            newMtlConfig["Uniforms"][it.first] = value.AsBoolean();
+            break;
+        }
+        case (Reflection::ValueType::Integer):
+        {
+            newMtlConfig["Uniforms"][it.first] = value.AsInteger();
+            break;
+        }
+        case (Reflection::ValueType::Double):
+        {
+            newMtlConfig["Uniforms"][it.first] = static_cast<float>(value.AsDouble());
+            break;
+        }
 
-		[[unlikely]] default: { assert(false); }
+        [[unlikely]] default: { assert(false); }
 
-		}
-	}
+        }
+    }
 
-	std::string namedyn = std::string(Name);
+    std::string namedyn = std::string(Name);
 
-	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-	std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    std::chrono::year_month_day ymd = std::chrono::floor<std::chrono::days>(now);
 
-	std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
-		+ std::to_string((uint32_t)ymd.month()) + "-"
-		+ std::to_string((int32_t)ymd.year());
+    std::string dateStr = std::to_string((uint32_t)ymd.day()) + "-"
+        + std::to_string((uint32_t)ymd.month()) + "-"
+        + std::to_string((int32_t)ymd.year());
 
-	std::string filePath = getFilePath(namedyn);
+    std::string filePath = getFilePath(namedyn);
 
-	std::string fileContents = "PHOENIXF\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
+    std::string fileContents = "PHOENIXF\n#Asset Material\n#Date " + dateStr + "\n\n" + newMtlConfig.dump(2);
 
-	PHX_CHECK(FileRW::WriteFile(
-		filePath,
-		fileContents
-	));
+    PHX_CHECK(FileRW::WriteFile(
+        filePath,
+        fileContents
+    ));
 }
 
 RenderMaterial& MaterialManager::GetMaterialResource(uint32_t ResourceId)
 {
-	return m_Materials.at(ResourceId);
+    return m_Materials.at(ResourceId);
 }
 
 std::vector<RenderMaterial>& MaterialManager::GetLoadedMaterials()
 {
-	return m_Materials;
+    return m_Materials;
 }
 
 void MaterialManager::UnloadMaterial(const std::string& Name)
 {
-	if (const auto& it = m_StringToMaterialId.find(Name); it != m_StringToMaterialId.end())
-		m_StringToMaterialId.erase(it);
+    if (const auto& it = m_StringToMaterialId.find(Name); it != m_StringToMaterialId.end())
+        m_StringToMaterialId.erase(it);
 }

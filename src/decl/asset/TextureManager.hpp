@@ -5,95 +5,95 @@
 
 struct Texture
 {
-	enum class DimensionType : uint8_t
-	{
-		Texture2D = 0,
-		Texture3D,
-		TextureCube
-	};
+    enum class DimensionType : uint8_t
+    {
+        Texture2D = 0,
+        Texture3D,
+        TextureCube
+    };
 
-	enum class LoadStatus : uint8_t
-	{
-		NotAttempted,
-		InProgress,
-		Succeeded,
-		Failed,
-		Unloaded
-	};
+    enum class LoadStatus : uint8_t
+    {
+        NotAttempted,
+        InProgress,
+        Succeeded,
+        Failed,
+        Unloaded
+    };
 
-	std::string ImagePath;
+    std::string ImagePath;
 
-	uint32_t ResourceId = UINT32_MAX;
-	uint32_t GpuId = UINT32_MAX;
-	int Width = -1, Height = -1;
-	int NumColorChannels = -1;
+    uint32_t ResourceId = UINT32_MAX;
+    uint32_t GpuId = UINT32_MAX;
+    int Width = -1, Height = -1;
+    int NumColorChannels = -1;
 
-	DimensionType Type = DimensionType::Texture2D;
-	LoadStatus Status = LoadStatus::NotAttempted;
-	bool IsLinearSpace = true;
-	bool IsHdr = false;
-	
-	bool LoadedAsynchronously = false;
+    DimensionType Type = DimensionType::Texture2D;
+    LoadStatus Status = LoadStatus::NotAttempted;
+    bool IsLinearSpace = true;
+    bool IsHdr = false;
+    
+    bool LoadedAsynchronously = false;
 
-	// De-allocated after the Texture is uploaded to the GPU
-	void* TMP_ImageByteData = nullptr;
-	std::string FailureReason = "";
+    // De-allocated after the Texture is uploaded to the GPU
+    void* TMP_ImageByteData = nullptr;
+    std::string FailureReason = "";
 };
 
 class TextureManager
 {
 public:
-	void Shutdown();
-	// USE SHUTDOWN!!
-	~TextureManager();
+    void Shutdown();
+    // USE SHUTDOWN!!
+    ~TextureManager();
 
-	void Initialize(bool IsHeadless);
+    void Initialize(bool IsHeadless);
 
-	static TextureManager* Get();
+    static TextureManager* Get();
 
-	/*
-		Goes through all images which are done loading asynchronously and instantiates their texture objects with the ID.
-	*/
-	void FinalizeAsyncLoadedTextures();
+    /*
+        Goes through all images which are done loading asynchronously and instantiates their texture objects with the ID.
+    */
+    void FinalizeAsyncLoadedTextures();
 
-	/*
-		Load texture data from an image file and upload it to the GPU as a GL_TEXTURE_2D
-		@param The image path
-		@param Should it be loaded in a separate thread without freezing the game (default `true`)
-		@return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
-	*/
-	uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool LoadInLinearSpace = true);
+    /*
+        Load texture data from an image file and upload it to the GPU as a GL_TEXTURE_2D
+        @param The image path
+        @param Should it be loaded in a separate thread without freezing the game (default `true`)
+        @return The Texture Resource ID (texture can be queried with `::GetTextureResource`)
+    */
+    uint32_t LoadFromPath(const std::string& Path, bool ShouldLoadAsync = true, bool LoadInLinearSpace = true);
 
-	/*
-		Assign the Texture to the given Name, its Resource ID will be returned when queried with `::LoadFromPath`
-		IMPORTANT: If the `ResourceId` of the Texture is NOT `UINT32_MAX`, it will replace the Texture at that ID
-		@param The Texture
-		@param Its Internal Name
-		@return Its Texture Resource ID
-	*/
-	uint32_t Assign(const Texture& Texture, const std::string& Name);
+    /*
+        Assign the Texture to the given Name, its Resource ID will be returned when queried with `::LoadFromPath`
+        IMPORTANT: If the `ResourceId` of the Texture is NOT `UINT32_MAX`, it will replace the Texture at that ID
+        @param The Texture
+        @param Its Internal Name
+        @return Its Texture Resource ID
+    */
+    uint32_t Assign(const Texture& Texture, const std::string& Name);
 
-	/*
-		Get a Texture by its Resource ID
-	*/
-	Texture& GetTextureResource(uint32_t);
+    /*
+        Get a Texture by its Resource ID
+    */
+    Texture& GetTextureResource(uint32_t);
 
-	void UnloadTexture(uint32_t);
+    void UnloadTexture(uint32_t);
 
-	void BindNearestNeighbourSampler(uint32_t Unit);
-	void BindLinearSampler(uint32_t Unit);
-	void UnbindSampler(uint32_t Unit);
+    void BindNearestNeighbourSampler(uint32_t Unit);
+    void BindLinearSampler(uint32_t Unit);
+    void UnbindSampler(uint32_t Unit);
 
-	void m_UploadTextureToGpu(Texture&);
+    void m_UploadTextureToGpu(Texture&);
 
-	std::vector<Texture> m_Textures;
-	std::unordered_map<std::string, uint32_t> m_StringToTextureId;
+    std::vector<Texture> m_Textures;
+    std::unordered_map<std::string, uint32_t> m_StringToTextureId;
 
-	std::vector<std::promise<Texture>*> m_TexPromises;
-	std::vector<std::shared_future<Texture>> m_TexFutures;
+    std::vector<std::promise<Texture>*> m_TexPromises;
+    std::vector<std::shared_future<Texture>> m_TexFutures;
 
-	uint32_t m_NearestNeighbourTextureSampler = UINT32_MAX;
-	uint32_t m_LinearTextureSampler = UINT32_MAX;
+    uint32_t m_NearestNeighbourTextureSampler = UINT32_MAX;
+    uint32_t m_LinearTextureSampler = UINT32_MAX;
 
-	bool m_IsHeadless = false;
+    bool m_IsHeadless = false;
 };

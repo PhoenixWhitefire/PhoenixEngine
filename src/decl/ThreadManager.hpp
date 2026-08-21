@@ -10,40 +10,40 @@
 class ThreadManager
 {
 public:
-	void Shutdown();
-	// USE SHUTDOWN!!
-	~ThreadManager();
+    void Shutdown();
+    // USE SHUTDOWN!!
+    ~ThreadManager();
 
-	void Initialize(int NumThreads = -1);
+    void Initialize(int NumThreads = -1);
 
-	// queue a task
-	// "Critical" means "we can't skip this if we're shutting down"
-	// we skip non-critical tasks while shutting down to speed up
-	// how fast the window closes
-	// window waits on everything to finish so that the app does not
-	// appear like a suspicious background process if it gets frozen
-	// somewhere in teardown
-	void Dispatch(const std::string_view& Name, std::function<void()>, bool IsCritical);
+    // queue a task
+    // "Critical" means "we can't skip this if we're shutting down"
+    // we skip non-critical tasks while shutting down to speed up
+    // how fast the window closes
+    // window waits on everything to finish so that the app does not
+    // appear like a suspicious background process if it gets frozen
+    // somewhere in teardown
+    void Dispatch(const std::string_view& Name, std::function<void()>, bool IsCritical);
 
-	static ThreadManager* Get();
+    static ThreadManager* Get();
 
-	int Concurrency = 1;
+    int Concurrency = 1;
 
 private:
-	struct Task
-	{
-		std::function<void()> Function;
-		std::string_view Name;
-		bool IsCritical = true;
-	};
+    struct Task
+    {
+        std::function<void()> Function;
+        std::string_view Name;
+        bool IsCritical = true;
+    };
 
-	void m_StopThreads();
+    void m_StopThreads();
 
-	std::vector<std::jthread> m_Workers;
+    std::vector<std::jthread> m_Workers;
 
-	std::queue<Task> m_Tasks;
-	std::mutex m_TasksMutex;
-	std::condition_variable m_TasksCv;
+    std::queue<Task> m_Tasks;
+    std::mutex m_TasksMutex;
+    std::condition_variable m_TasksCv;
 
-	bool m_Stop = false;
+    bool m_Stop = false;
 };

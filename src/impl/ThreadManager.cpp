@@ -90,143 +90,143 @@ static void SetThreadName(std::thread* thread, const char* threadName)
 static ThreadManager* s_Instance;
 
 const char* const s_WorkerFiberNames[] = {
-	"Phoenix1",
-	"Phoenix2",
-	"Phoenix3",
-	"Phoenix4",
-	"Phoenix5",
-	"Phoenix6",
-	"Phoenix7",
-	"Phoenix8"
+    "Phoenix1",
+    "Phoenix2",
+    "Phoenix3",
+    "Phoenix4",
+    "Phoenix5",
+    "Phoenix6",
+    "Phoenix7",
+    "Phoenix8"
 };
 
 // 09/05/2025
 // https://www.geeksforgeeks.org/thread-pool-in-cpp/
 void ThreadManager::Initialize(int NumThreadsOverride)
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	size_t numThreads = static_cast<size_t>(std::max((float)std::thread::hardware_concurrency() * 0.75f, 3.f));
-	numThreads = std::min(numThreads, static_cast<size_t>(8ull));
+    size_t numThreads = static_cast<size_t>(std::max((float)std::thread::hardware_concurrency() * 0.75f, 3.f));
+    numThreads = std::min(numThreads, static_cast<size_t>(8ull));
 
-	if (NumThreadsOverride > -1)
-		numThreads = static_cast<size_t>(NumThreadsOverride);
+    if (NumThreadsOverride > -1)
+        numThreads = static_cast<size_t>(NumThreadsOverride);
 
-	Log.InfoF("Creating {} parallel threads...", numThreads);
-	Concurrency = (int)numThreads;
+    Log.InfoF("Creating {} parallel threads...", numThreads);
+    Concurrency = (int)numThreads;
 
-	for (size_t i = 0; i < numThreads; i++)
-	{
-		m_Workers.emplace_back(
-			[this, i]
-			{
-				TracyFiberEnter(s_WorkerFiberNames[i]);
-				SetThreadName(s_WorkerFiberNames[i]);
-				// thread-local
-				Log.ContextExtraTags = std::format("LogContext:{}", s_WorkerFiberNames[i]);
+    for (size_t i = 0; i < numThreads; i++)
+    {
+        m_Workers.emplace_back(
+            [this, i]
+            {
+                TracyFiberEnter(s_WorkerFiberNames[i]);
+                SetThreadName(s_WorkerFiberNames[i]);
+                // thread-local
+                Log.ContextExtraTags = std::format("LogContext:{}", s_WorkerFiberNames[i]);
 
-				while (true)
-				{
-					Task task;
+                while (true)
+                {
+                    Task task;
 
-					{
-						std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
+                    {
+                        std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
 
-						m_TasksCv.wait(
-							lock,
-							[this]
-							{
-								return !m_Tasks.empty() || m_Stop;
-							}
-						);
+                        m_TasksCv.wait(
+                            lock,
+                            [this]
+                            {
+                                return !m_Tasks.empty() || m_Stop;
+                            }
+                        );
 
-						if (m_Stop && m_Tasks.empty())
-						{
-							TracyFiberLeave;
-							return;
-						}
+                        if (m_Stop && m_Tasks.empty())
+                        {
+                            TracyFiberLeave;
+                            return;
+                        }
 
-						task = std::move(m_Tasks.front());
-						m_Tasks.pop();
+                        task = std::move(m_Tasks.front());
+                        m_Tasks.pop();
 
-						if (m_Stop && !task.IsCritical)
-							continue;
-					}
+                        if (m_Stop && !task.IsCritical)
+                            continue;
+                    }
 
-					ZoneScopedN("Task");
-					ZoneText(task.Name.data(), task.Name.size());
+                    ZoneScopedN("Task");
+                    ZoneText(task.Name.data(), task.Name.size());
 
-					task.Function();
-				}
+                    task.Function();
+                }
 
-				TracyFiberLeave;
-			}
-		);
-	}
+                TracyFiberLeave;
+            }
+        );
+    }
 
-	s_Instance = this;
+    s_Instance = this;
 
-	Log.Info("ThreadManager initialized");
+    Log.Info("ThreadManager initialized");
 }
 
 void ThreadManager::Dispatch(const std::string_view& Name, std::function<void()> Task, bool IsCritical)
 {
-	assert(s_Instance == this);
-	assert(!m_Stop);
+    assert(s_Instance == this);
+    assert(!m_Stop);
 
-	if (m_Workers.size() == 0)
-	{
-		Task();
-		return;
-	}
+    if (m_Workers.size() == 0)
+    {
+        Task();
+        return;
+    }
 
-	{
-		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
-		m_Tasks.push({
-			.Function = std::move(Task),
-			.Name = Name,
-			.IsCritical = IsCritical,
-		});
-	}
+    {
+        std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
+        m_Tasks.push({
+            .Function = std::move(Task),
+            .Name = Name,
+            .IsCritical = IsCritical,
+        });
+    }
 
-	m_TasksCv.notify_one();
+    m_TasksCv.notify_one();
 }
 
 void ThreadManager::m_StopThreads()
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	{
-		std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
-		m_Stop = true;
-	}
+    {
+        std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(m_TasksMutex);
+        m_Stop = true;
+    }
 
-	m_TasksCv.notify_all();
-	m_Workers.clear();
+    m_TasksCv.notify_all();
+    m_Workers.clear();
 }
 
 void ThreadManager::Shutdown()
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	m_StopThreads();
-	s_Instance = nullptr;
+    m_StopThreads();
+    s_Instance = nullptr;
 }
 
 ThreadManager::~ThreadManager()
 {
-	ZoneScoped;
+    ZoneScoped;
 
-	// we crashed before `::Shutdown` was called
-	if (s_Instance)
-	{
-		m_StopThreads();
-		s_Instance = nullptr;
-	}
+    // we crashed before `::Shutdown` was called
+    if (s_Instance)
+    {
+        m_StopThreads();
+        s_Instance = nullptr;
+    }
 }
 
 ThreadManager* ThreadManager::Get()
 {
-	assert(s_Instance);
-	return s_Instance;
+    assert(s_Instance);
+    return s_Instance;
 }

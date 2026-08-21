@@ -13,19 +13,19 @@
 
 static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Direction, const Mesh& mesh, float* maxDistance, glm::vec3 maxPoint, const glm::mat4& submeshTrans = glm::mat4(1.f))
 {
-	assert(mesh.MeshDataPreserved);
+    assert(mesh.MeshDataPreserved);
 
-	EcTransform* ct = Rb->CurTransform;
-	assert(ct);
+    EcTransform* ct = Rb->CurTransform;
+    assert(ct);
 
-	glm::vec3 size = {};
-	DecomposeTRS(ct->Transform, nullptr, nullptr, &size);
+    glm::vec3 size = {};
+    DecomposeTRS(ct->Transform, nullptr, nullptr, &size);
 
-	for (uint32_t ind : mesh.Indices)
-	{
-		const Vertex& v = mesh.Vertices[ind];
+    for (uint32_t ind : mesh.Indices)
+    {
+        const Vertex& v = mesh.Vertices[ind];
 
-		glm::vec3 vworld = glm::vec3(ct->Transform * submeshTrans * glm::vec4(v.Position * size, 1.f));
+        glm::vec3 vworld = glm::vec3(ct->Transform * submeshTrans * glm::vec4(v.Position * size, 1.f));
         float distance = glm::dot(vworld, Direction);
 
         if (distance > *maxDistance)
@@ -40,92 +40,92 @@ static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Directi
 
 static glm::vec3 findFurthestPoint_MeshComponent(const EcRigidBody* Rb, glm::vec3 Direction)
 {
-	EcMesh* cm = Rb->Object->FindComponent<EcMesh>();
+    EcMesh* cm = Rb->Object->FindComponent<EcMesh>();
 
-	uint32_t meshId = cm ? cm->RenderMeshId : 0;
-	const Mesh& mesh = MeshProvider::Get()->GetMeshResource(meshId);
+    uint32_t meshId = cm ? cm->RenderMeshId : 0;
+    const Mesh& mesh = MeshProvider::Get()->GetMeshResource(meshId);
 
-	float maxDistance = -FLT_MAX;
-	return findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, glm::vec3(0.f));
+    float maxDistance = -FLT_MAX;
+    return findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, glm::vec3(0.f));
 }
 
 static glm::vec3 findFurthestPoint_Cube(const EcRigidBody* Rb, glm::vec3 Direction)
 {
-	glm::mat3 rotation = glm::mat3(Rb->CurTransform->Transform);
-	glm::vec3 size = {};
-	DecomposeTRS(Rb->CurTransform->Transform, nullptr, nullptr, &size);
+    glm::mat3 rotation = glm::mat3(Rb->CurTransform->Transform);
+    glm::vec3 size = {};
+    DecomposeTRS(Rb->CurTransform->Transform, nullptr, nullptr, &size);
 
-	glm::vec3 localDir = glm::transpose(rotation) * Direction;
-	glm::vec3 result;
+    glm::vec3 localDir = glm::transpose(rotation) * Direction;
+    glm::vec3 result;
 
-	glm::vec3 halfSize = size / 2.f;
+    glm::vec3 halfSize = size / 2.f;
 
-	result.x = (localDir.x > 0.f) ? halfSize.x : -halfSize.x;
-	result.y = (localDir.y > 0.f) ? halfSize.y : -halfSize.y;
-	result.z = (localDir.z > 0.f) ? halfSize.z : -halfSize.z;
+    result.x = (localDir.x > 0.f) ? halfSize.x : -halfSize.x;
+    result.y = (localDir.y > 0.f) ? halfSize.y : -halfSize.y;
+    result.z = (localDir.z > 0.f) ? halfSize.z : -halfSize.z;
 
-	return rotation * result + glm::vec3(Rb->CurTransform->Transform[3]);
+    return rotation * result + glm::vec3(Rb->CurTransform->Transform[3]);
 }
 
 static glm::vec3 findFurthestPoint_Sphere(const EcRigidBody* Rb, glm::vec3 Direction)
 {
-	glm::vec3 center = glm::vec3(Rb->CurTransform->Transform[3]);
+    glm::vec3 center = glm::vec3(Rb->CurTransform->Transform[3]);
 
-	if (glm::length(Direction) < 0.0001f)
-		return center;
+    if (glm::length(Direction) < 0.0001f)
+        return center;
 
-	glm::vec3 size = {};
-	DecomposeTRS(Rb->CurTransform->Transform, nullptr, nullptr, &size);
+    glm::vec3 size = {};
+    DecomposeTRS(Rb->CurTransform->Transform, nullptr, nullptr, &size);
 
-	return center + glm::normalize(Direction) * (size.x / 2.f);
+    return center + glm::normalize(Direction) * (size.x / 2.f);
 }
 
 static glm::vec3 findFurthestPoint_Hulls(const EcRigidBody* Rb, glm::vec3 Direction)
 {
-	MeshProvider* meshProv = MeshProvider::Get();
-	float maxDistance = -FLT_MAX;
-	glm::vec3 maxPoint = {};
+    MeshProvider* meshProv = MeshProvider::Get();
+    float maxDistance = -FLT_MAX;
+    glm::vec3 maxPoint = {};
 
-	for (const EcRigidBody::Hull& hull : Rb->Hulls)
-	{
-		const Mesh& mesh = meshProv->GetMeshResource(hull.MeshId);
-		maxPoint = findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, maxPoint, hull.Transform);
-	}
+    for (const EcRigidBody::Hull& hull : Rb->Hulls)
+    {
+        const Mesh& mesh = meshProv->GetMeshResource(hull.MeshId);
+        maxPoint = findFurthestPoint_Mesh(Rb, Direction, mesh, &maxDistance, maxPoint, hull.Transform);
+    }
 
-	return Rb->Hulls.size() > 0 ? maxPoint : glm::vec3();
+    return Rb->Hulls.size() > 0 ? maxPoint : glm::vec3();
 }
 
 static glm::vec3 findFurthestPoint(const EcRigidBody* Rb, glm::vec3 Direction)
 {
-	switch (Rb->CollisionType)
-	{
-	case EnCollisionType::Sphere:
-		return findFurthestPoint_Sphere(Rb, Direction);
+    switch (Rb->CollisionType)
+    {
+    case EnCollisionType::Sphere:
+        return findFurthestPoint_Sphere(Rb, Direction);
 
-	case EnCollisionType::Hulls:
-		return findFurthestPoint_Hulls(Rb, Direction);
+    case EnCollisionType::Hulls:
+        return findFurthestPoint_Hulls(Rb, Direction);
 
-	case EnCollisionType::MeshComponent:
-		return  findFurthestPoint_MeshComponent(Rb, Direction);
+    case EnCollisionType::MeshComponent:
+        return  findFurthestPoint_MeshComponent(Rb, Direction);
 
-	case EnCollisionType::Cube: default:
-		return findFurthestPoint_Cube(Rb, Direction);
-	}
+    case EnCollisionType::Cube: default:
+        return findFurthestPoint_Cube(Rb, Direction);
+    }
 }
 
 using namespace Gjk;
 
 SupportPoint Gjk::Support(const EcRigidBody* A, const EcRigidBody* B, const glm::vec3& Direction)
 {
-	glm::vec3 pA = findFurthestPoint(A, Direction);
-	glm::vec3 pB = findFurthestPoint(B, -Direction);
+    glm::vec3 pA = findFurthestPoint(A, Direction);
+    glm::vec3 pB = findFurthestPoint(B, -Direction);
 
     return SupportPoint{ .P = pA - pB, .A = pA, .B = pB };
 }
 
 SupportPoint Gjk::Support(const EcRigidBody* A, const glm::vec3& Point, const glm::vec3& Direction)
 {
-	glm::vec3 pA = findFurthestPoint(A, Direction);
+    glm::vec3 pA = findFurthestPoint(A, Direction);
 
     return SupportPoint{ .P = pA - Point, .A = pA, .B = Point };
 }
@@ -138,96 +138,96 @@ bool Gjk::SameDirection(const glm::vec3& direction, const glm::vec3& ao)
 static bool line(Simplex& simp, glm::vec3& direction)
 {
     const SupportPoint& a = simp[0];
-	const SupportPoint& b = simp[1];
+    const SupportPoint& b = simp[1];
 
-	glm::vec3 ab = b.P - a.P;
-	glm::vec3 ao = -a.P;
+    glm::vec3 ab = b.P - a.P;
+    glm::vec3 ao = -a.P;
 
-	if (SameDirection(ab, ao))
-		direction = glm::cross(glm::cross(ab, ao), ab);
+    if (SameDirection(ab, ao))
+        direction = glm::cross(glm::cross(ab, ao), ab);
 
-	else
+    else
     {
-		simp = { a };
-		direction = ao;
-	}
+        simp = { a };
+        direction = ao;
+    }
 
-	return false;
+    return false;
 }
 
 static bool triangle(Simplex& simp, glm::vec3& direction)
 {
     const SupportPoint& a = simp[0];
-	const SupportPoint& b = simp[1];
-	const SupportPoint& c = simp[2];
+    const SupportPoint& b = simp[1];
+    const SupportPoint& c = simp[2];
 
-	glm::vec3 ab = b.P - a.P;
-	glm::vec3 ac = c.P - a.P;
-	glm::vec3 ao = -a.P;
+    glm::vec3 ab = b.P - a.P;
+    glm::vec3 ac = c.P - a.P;
+    glm::vec3 ao = -a.P;
 
-	glm::vec3 abc = glm::cross(ab, ac);
+    glm::vec3 abc = glm::cross(ab, ac);
 
-	if (SameDirection(glm::cross(abc, ac), ao))
+    if (SameDirection(glm::cross(abc, ac), ao))
     {
-		if (SameDirection(ac, ao))
+        if (SameDirection(ac, ao))
         {
-			simp = { a, c };
-			direction = glm::cross(glm::cross(ac, ao), ac);
-		}
+            simp = { a, c };
+            direction = glm::cross(glm::cross(ac, ao), ac);
+        }
 
-		else
+        else
         {
-			return line(simp = { a, b }, direction);
-		}
-	}
+            return line(simp = { a, b }, direction);
+        }
+    }
 
-	else
+    else
     {
-		if (SameDirection(glm::cross(ab, abc), ao))
-			return line(simp = { a, b }, direction);
+        if (SameDirection(glm::cross(ab, abc), ao))
+            return line(simp = { a, b }, direction);
 
-		else
+        else
         {
-			if (SameDirection(abc, ao))
-				direction = abc;
+            if (SameDirection(abc, ao))
+                direction = abc;
 
-			else
+            else
             {
-				simp = { a, c, b };
-				direction = -abc;
-			}
-		}
-	}
+                simp = { a, c, b };
+                direction = -abc;
+            }
+        }
+    }
 
-	return false;
+    return false;
 }
 
 static bool tetrahedron(Simplex& simp, glm::vec3& direction)
 {
     const SupportPoint& a = simp[0];
-	const SupportPoint& b = simp[1];
-	const SupportPoint& c = simp[2];
-	const SupportPoint& d = simp[3];
+    const SupportPoint& b = simp[1];
+    const SupportPoint& c = simp[2];
+    const SupportPoint& d = simp[3];
 
-	glm::vec3 ab = b.P - a.P;
-	glm::vec3 ac = c.P - a.P;
-	glm::vec3 ad = d.P - a.P;
-	glm::vec3 ao = -a.P;
+    glm::vec3 ab = b.P - a.P;
+    glm::vec3 ac = c.P - a.P;
+    glm::vec3 ad = d.P - a.P;
+    glm::vec3 ao = -a.P;
 
-	glm::vec3 abc = glm::cross(ab, ac);
-	glm::vec3 acd = glm::cross(ac, ad);
-	glm::vec3 adb = glm::cross(ad, ab);
+    glm::vec3 abc = glm::cross(ab, ac);
+    glm::vec3 acd = glm::cross(ac, ad);
+    glm::vec3 adb = glm::cross(ad, ab);
 
-	if (SameDirection(abc, ao))
-		return triangle(simp = { a, b, c }, direction);
+    if (SameDirection(abc, ao))
+        return triangle(simp = { a, b, c }, direction);
 
-	if (SameDirection(acd, ao))
-		return triangle(simp = { a, c, d }, direction);
+    if (SameDirection(acd, ao))
+        return triangle(simp = { a, c, d }, direction);
 
-	if (SameDirection(adb, ao))
-		return triangle(simp = { a, d, b }, direction);
+    if (SameDirection(adb, ao))
+        return triangle(simp = { a, d, b }, direction);
 
-	return true;
+    return true;
 }
 
 static bool nextSimplex(Simplex& simp, glm::vec3& direction)
@@ -249,143 +249,143 @@ static bool nextSimplex(Simplex& simp, glm::vec3& direction)
 
 Result Gjk::FindIntersection(const EcRigidBody* A, const EcRigidBody* B)
 {
-	ZoneScoped;
+    ZoneScoped;
 
     SupportPoint s = Support(A, B, glm::vec3(1.f, 0.f, 0.f));
 
-	Result result;
+    Result result;
     result.Simp.push_front(s);
 
     glm::vec3 direction = -s.P;
-	size_t numIterations = 0;
+    size_t numIterations = 0;
 
     while (true)
     {
         s = Support(A, B, direction);
 
         if (glm::dot(s.P, direction) <= 0)
-		{
-			result.HasIntersection = false;
+        {
+            result.HasIntersection = false;
             return result; // no intersection
-		}
+        }
 
         result.Simp.push_front(s);
 
         if (nextSimplex(result.Simp, direction))
-		{
-			result.HasIntersection = true;
+        {
+            result.HasIntersection = true;
             return result; // intersection
-		}
+        }
 
-		numIterations++;
+        numIterations++;
 
-		if (numIterations > 64)
-		{
-			result.HasIntersection = false;
-			Log.Warning("Too many iterations in Gjk::FindIntersection", "Gjk::FindIntersection");
+        if (numIterations > 64)
+        {
+            result.HasIntersection = false;
+            Log.Warning("Too many iterations in Gjk::FindIntersection", "Gjk::FindIntersection");
 
-			return result;
-		}
+            return result;
+        }
     }
 }
 
 static glm::vec3 closestPointOnSimplex(Simplex& simp)
 {
-	switch (simp.size())
-	{
-	case 1:
-		return simp[0].P;
+    switch (simp.size())
+    {
+    case 1:
+        return simp[0].P;
 
-	case 2:
-	{
-		glm::vec3 a = simp[0].P;
-		glm::vec3 ab = simp[0].P - a;
-		float t = -glm::dot(a, ab) / glm::dot(ab, ab);
-		return a + t * ab;
-	}
+    case 2:
+    {
+        glm::vec3 a = simp[0].P;
+        glm::vec3 ab = simp[0].P - a;
+        float t = -glm::dot(a, ab) / glm::dot(ab, ab);
+        return a + t * ab;
+    }
 
-	case 3:
-	{
-		glm::vec3 a = simp[0].P;
-		glm::vec3 n = glm::cross(simp[1].P - a, simp[2].P - a);
-		float denom = glm::dot(n, n);
+    case 3:
+    {
+        glm::vec3 a = simp[0].P;
+        glm::vec3 n = glm::cross(simp[1].P - a, simp[2].P - a);
+        float denom = glm::dot(n, n);
 
-		if (denom < 1e-10f)
-			return a; // please
+        if (denom < 1e-10f)
+            return a; // please
 
-		return (glm::dot(a, n) / denom) * n;
-	}
+        return (glm::dot(a, n) / denom) * n;
+    }
 
-	[[unlikely]] default: assert(false);
-	}
+    [[unlikely]] default: assert(false);
+    }
 
-	assert(false);
-	return glm::vec3(0.f);
+    assert(false);
+    return glm::vec3(0.f);
 }
 
 RaycastResult Gjk::FindRayIntersection(const EcRigidBody* A, const glm::vec3& Origin, const glm::vec3& Direction, float Distance)
 {
-	float t = 0.f;
-	glm::vec3 point = Origin;
+    float t = 0.f;
+    glm::vec3 point = Origin;
 
-	glm::vec3 dir = Direction;
+    glm::vec3 dir = Direction;
 
-	glm::vec3 a = point;
-	glm::vec3 b = findFurthestPoint(A, -dir);
-	SupportPoint s = {
-		.P = a - b,
-		.A = a,
-		.B = b,
-	};
+    glm::vec3 a = point;
+    glm::vec3 b = findFurthestPoint(A, -dir);
+    SupportPoint s = {
+        .P = a - b,
+        .A = a,
+        .B = b,
+    };
 
-	RaycastResult result = {};
-	result.Simp.push_front(s);
-	result.HasIntersection = false;
-	dir = -s.P;
+    RaycastResult result = {};
+    result.Simp.push_front(s);
+    result.HasIntersection = false;
+    dir = -s.P;
 
-	for (int i = 0; i < 64; i++)
-	{
-		a = point;
-		b = findFurthestPoint(A, -dir);
-		s = {
-			.P = a - b,
-			.A = a,
-			.B = b,
-		};
+    for (int i = 0; i < 64; i++)
+    {
+        a = point;
+        b = findFurthestPoint(A, -dir);
+        s = {
+            .P = a - b,
+            .A = a,
+            .B = b,
+        };
 
-		result.Simp.push_front(s);
+        result.Simp.push_front(s);
 
-		if (nextSimplex(result.Simp, dir))
-		{
-			result.HasIntersection = true;
-			result.Time = t;
-			result.Point = point;
-			// `result.Normal` will be computed via EPA in `IntersectionLib.cpp`
+        if (nextSimplex(result.Simp, dir))
+        {
+            result.HasIntersection = true;
+            result.Time = t;
+            result.Point = point;
+            // `result.Normal` will be computed via EPA in `IntersectionLib.cpp`
 
-			return result; // intersection
-		}
+            return result; // intersection
+        }
 
-		glm::vec3 v = closestPointOnSimplex(result.Simp);
-		dir = -v;
+        glm::vec3 v = closestPointOnSimplex(result.Simp);
+        dir = -v;
 
-		float dist = glm::dot(v, Direction);
+        float dist = glm::dot(v, Direction);
 
-		if (dist > -0.0001f)
-			return result; // no intersection
+        if (dist > -0.0001f)
+            return result; // no intersection
 
-		float step = glm::dot(v, v) / -dist;
+        float step = glm::dot(v, v) / -dist;
 
-		if (step <= 0.00001f)
-			return result; // no intersection
+        if (step <= 0.00001f)
+            return result; // no intersection
 
-		t += step;
+        t += step;
 
-		if (t > Distance)
-			return result; // no intersection
+        if (t > Distance)
+            return result; // no intersection
 
-		point = Origin + Direction * t;
-	}
+        point = Origin + Direction * t;
+    }
 
-	Log.Error("Iteration limit exhausted in FindRayIntersection", "Gjk::FindRayIntersection");
-	return result;
+    Log.Error("Iteration limit exhausted in FindRayIntersection", "Gjk::FindRayIntersection");
+    return result;
 }

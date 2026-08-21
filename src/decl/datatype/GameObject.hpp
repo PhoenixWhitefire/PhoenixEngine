@@ -20,160 +20,160 @@
 class GameObject
 {
 public:
-	template <class T>
-	T* FindComponent() const
-	{
-		EntityComponent type = T::Type;
-		for (const ReflectorRef& ref : Components)
-			if (ref.Type == type)
-				return static_cast<T*>(GetComponentManagerByComponentType(type)->GetComponent(ref.Id));
+    template <class T>
+    T* FindComponent() const
+    {
+        EntityComponent type = T::Type;
+        for (const ReflectorRef& ref : Components)
+            if (ref.Type == type)
+                return static_cast<T*>(GetComponentManagerByComponentType(type)->GetComponent(ref.Id));
 
-		return nullptr;
-	}
-	uint32_t AddComponent(EntityComponent Type);
-	void RemoveComponent(EntityComponent Type);
-	void* FindComponentByType(EntityComponent) const;
+        return nullptr;
+    }
+    uint32_t AddComponent(EntityComponent Type);
+    void RemoveComponent(EntityComponent Type);
+    void* FindComponentByType(EntityComponent) const;
 
-	void AddTag(const std::string&);
-	void RemoveTag(const std::string&);
-	bool HasTag(const std::string&) const;
+    void AddTag(const std::string&);
+    void RemoveTag(const std::string&);
+    bool HasTag(const std::string&) const;
 
-	const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
-	const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
-	const Reflection::EventDescriptor* FindEvent(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
+    const Reflection::PropertyDescriptor* FindProperty(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
+    const Reflection::MethodDescriptor* FindMethod(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
+    const Reflection::EventDescriptor* FindEvent(const std::string_view&, ReflectorRef* Reflector = nullptr) const;
 
-	Reflection::GenericValue GetPropertyValue(const std::string_view&) const;
-	void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
-	Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) const;
+    Reflection::GenericValue GetPropertyValue(const std::string_view&) const;
+    void SetPropertyValue(const std::string_view&, const Reflection::GenericValue&);
+    Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) const;
 
-	std::vector<Reflection::GenericValue> CallMethod(const std::string_view&, const std::vector<Reflection::GenericValue>&);
+    std::vector<Reflection::GenericValue> CallMethod(const std::string_view&, const std::vector<Reflection::GenericValue>&);
 
-	Reflection::PropertyMap GetProperties() const;
-	Reflection::MethodMap GetMethods() const;
-	Reflection::EventMap GetEvents() const;
+    Reflection::PropertyMap GetProperties() const;
+    Reflection::MethodMap GetMethods() const;
+    Reflection::EventMap GetEvents() const;
 
-	// the engine will NEED some objects to continue existing without being
-	// de-alloc'd, if only for a loop (`updateScripts`)
-	void IncrementHardRefs();
-	void DecrementHardRefs(); // de-alloc here when refcount drops to 0
+    // the engine will NEED some objects to continue existing without being
+    // de-alloc'd, if only for a loop (`updateScripts`)
+    void IncrementHardRefs();
+    void DecrementHardRefs(); // de-alloc here when refcount drops to 0
 
-	// won't necessarily de-alloc the object if the engine has any
-	// hard refs to it 24/12/2024
-	void Destroy();
+    // won't necessarily de-alloc the object if the engine has any
+    // hard refs to it 24/12/2024
+    void Destroy();
 
-	// preferable to use this instead of `::GetChildren`/`::GetDescendants`
-	// because it does not require any memory allocations
-	void ForEachChild(const std::function<bool(const ObjectHandle&)>&);
-	bool ForEachDescendant(const std::function<bool(const ObjectHandle&)>&);
-	std::vector<ObjectHandle> GetChildren() const;
-	std::vector<ObjectHandle> GetDescendants() const;
+    // preferable to use this instead of `::GetChildren`/`::GetDescendants`
+    // because it does not require any memory allocations
+    void ForEachChild(const std::function<bool(const ObjectHandle&)>&);
+    bool ForEachDescendant(const std::function<bool(const ObjectHandle&)>&);
+    std::vector<ObjectHandle> GetChildren() const;
+    std::vector<ObjectHandle> GetDescendants() const;
 
-	GameObject* GetParent() const;
-	GameObject* FindChild(const std::string_view&) const;
-	GameObject* FindChildWithComponent(EntityComponent) const;
+    GameObject* GetParent() const;
+    GameObject* FindChild(const std::string_view&) const;
+    GameObject* FindChildWithComponent(EntityComponent) const;
 
-	bool IsDescendantOf(const GameObject*) const;
+    bool IsDescendantOf(const GameObject*) const;
 
-	std::string GetFullName() const;
+    std::string GetFullName() const;
 
-	void SetParent(const ObjectHandle&);
-	void AddChild(const ObjectHandle&);
-	void RemoveChild(uint32_t);
+    void SetParent(const ObjectHandle&);
+    void AddChild(const ObjectHandle&);
+    void RemoveChild(uint32_t);
 
-	void EvaluateOwners();
+    void EvaluateOwners();
 
-	bool GetEnabled() const;
-	void SetEnabled(bool);
+    bool GetEnabled() const;
+    void SetEnabled(bool);
 
-	// performs a 1-1 copy, including copying the `Parent` property
-	ObjectHandle Duplicate();
+    // performs a 1-1 copy, including copying the `Parent` property
+    ObjectHandle Duplicate();
 
-	static Reflection::GenericValue s_ToGenericValue(GameObject*);
-	Reflection::GenericValue ToGenericValue();
+    static Reflection::GenericValue s_ToGenericValue(GameObject*);
+    Reflection::GenericValue ToGenericValue();
 
-	std::string Name = "GameObject";
+    std::string Name = "GameObject";
 
-	uint32_t ObjectId = PHX_GAMEOBJECT_NULL_ID;
-	uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
-	uint32_t OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
-	uint32_t OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
-	uint32_t NextFreeId = UINT32_MAX;
+    uint32_t ObjectId = PHX_GAMEOBJECT_NULL_ID;
+    uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
+    uint32_t OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
+    uint32_t OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
+    uint32_t NextFreeId = UINT32_MAX;
 
-	std::vector<uint32_t> Children;
-	std::vector<ReflectorRef> Components;
-	Reflection::Api ComponentApis;
-	std::unordered_map<std::string_view, ReflectorRef> MemberToComponentMap;
-	std::vector<uint16_t> Tags;
-	std::vector<Reflection::EventConnection> OnTagAddedCallbacks;
-	std::vector<Reflection::EventConnection> OnTagRemovedCallbacks;
-	std::vector<Reflection::EventConnection> OnTreeEnabledChangedCallbacks;
-	std::vector<Reflection::EventConnection> OnWorkspaceChangedCallbacks;
+    std::vector<uint32_t> Children;
+    std::vector<ReflectorRef> Components;
+    Reflection::Api ComponentApis;
+    std::unordered_map<std::string_view, ReflectorRef> MemberToComponentMap;
+    std::vector<uint16_t> Tags;
+    std::vector<Reflection::EventConnection> OnTagAddedCallbacks;
+    std::vector<Reflection::EventConnection> OnTagRemovedCallbacks;
+    std::vector<Reflection::EventConnection> OnTreeEnabledChangedCallbacks;
+    std::vector<Reflection::EventConnection> OnWorkspaceChangedCallbacks;
 
-	uint16_t HardRefCount = 0;
-	// How much of HardRefCount is from Luau
-	uint16_t HardRefCountFromLuau = 0;
+    uint16_t HardRefCount = 0;
+    // How much of HardRefCount is from Luau
+    uint16_t HardRefCountFromLuau = 0;
 
-	bool TreeEnabled = true;
-	bool Serializes = true;
-	bool IsDestructionPending = false;
-	bool Valid = true;
+    bool TreeEnabled = true;
+    bool Serializes = true;
+    bool IsDestructionPending = false;
+    bool Valid = true;
 
-	static nlohmann::json DumpApiToJson();
-	static const Reflection::StaticApi s_Api;
+    static nlohmann::json DumpApiToJson();
+    static const Reflection::StaticApi s_Api;
 
 private:
-	bool m_Enabled = true;
+    bool m_Enabled = true;
 };
 
 class GameObjectManager
 {
 public:
-	GameObjectManager();
-	~GameObjectManager();
+    GameObjectManager();
+    ~GameObjectManager();
 
-	static GameObjectManager* Get();
+    static GameObjectManager* Get();
 
-	// create with a component
-	ObjectHandle Create(EntityComponent);
-	ObjectHandle Create(const std::string_view&);
-	// create empty object
-	ObjectHandle Create();
+    // create with a component
+    ObjectHandle Create(EntityComponent);
+    ObjectHandle Create(const std::string_view&);
+    // create empty object
+    ObjectHandle Create();
 
-	template <class T>
-	static ObjectHandle s_Create(T A)
-	{
-		return Get()->Create(A);
-	}
+    template <class T>
+    static ObjectHandle s_Create(T A)
+    {
+        return Get()->Create(A);
+    }
 
-	GameObject* FindById(uint32_t);
-	GameObject* FromGenericValue(const Reflection::GenericValue&);
+    GameObject* FindById(uint32_t);
+    GameObject* FromGenericValue(const Reflection::GenericValue&);
 
-	hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
-	std::array<IComponentManager*, (size_t)EntityComponent::count> ComponentManagers{};
-	uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
-	uint32_t NextFreeId = UINT32_MAX;
+    hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
+    std::array<IComponentManager*, (size_t)EntityComponent::count> ComponentManagers{};
+    uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
+    uint32_t NextFreeId = UINT32_MAX;
 
-	struct Collection
-	{
-		std::string Name;
-		std::vector<uint32_t> Items = {};
+    struct Collection
+    {
+        std::string Name;
+        std::vector<uint32_t> Items = {};
 
-		struct Event
-		{
-			// We want these to exist in the same memory location for the entire lifetime of the Engine
-			Reflection::EventDescriptor* Descriptor = nullptr;
-			std::vector<Reflection::EventConnection> Callbacks = {};
-		};
+        struct Event
+        {
+            // We want these to exist in the same memory location for the entire lifetime of the Engine
+            Reflection::EventDescriptor* Descriptor = nullptr;
+            std::vector<Reflection::EventConnection> Callbacks = {};
+        };
 
-		Event AddedEvent;
-		Event RemovedEvent;
+        Event AddedEvent;
+        Event RemovedEvent;
 
-		uint16_t Id = UINT16_MAX;
-	};
+        uint16_t Id = UINT16_MAX;
+    };
 
-	std::vector<Collection> Collections;
-	std::unordered_map<std::string, uint16_t> CollectionNameToId;
+    std::vector<Collection> Collections;
+    std::unordered_map<std::string, uint16_t> CollectionNameToId;
 
-	// Returns a reference to a Collection, creating one if it does not exist
-	Collection& GetCollection(const std::string&);
+    // Returns a reference to a Collection, creating one if it does not exist
+    Collection& GetCollection(const std::string&);
 };

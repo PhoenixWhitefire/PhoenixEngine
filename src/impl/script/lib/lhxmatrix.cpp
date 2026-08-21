@@ -19,21 +19,21 @@ void luhx_pushmatrix(lua_State* L, const glm::mat4& mtx)
 
 static glm::vec3 checkVectorArg(lua_State* L, int argBaseIndex)
 {
-	int ty = lua_type(L, argBaseIndex);
-	luaL_argexpected(L, ty == LUA_TVECTOR || ty == LUA_TNUMBER, argBaseIndex, "vector or number");
+    int ty = lua_type(L, argBaseIndex);
+    luaL_argexpected(L, ty == LUA_TVECTOR || ty == LUA_TNUMBER, argBaseIndex, "vector or number");
 
-	if (ty == LUA_TNUMBER)
-	{
-		return glm::vec3(
-			static_cast<float>(luaL_checknumber(L, argBaseIndex)),
-			static_cast<float>(luaL_checknumber(L, argBaseIndex + 1)),
-			static_cast<float>(luaL_checknumber(L, argBaseIndex + 2))
-		);
-	}
-	else
-	{
-		return glm::make_vec3(luaL_checkvector(L, argBaseIndex));
-	}
+    if (ty == LUA_TNUMBER)
+    {
+        return glm::vec3(
+            static_cast<float>(luaL_checknumber(L, argBaseIndex)),
+            static_cast<float>(luaL_checknumber(L, argBaseIndex + 1)),
+            static_cast<float>(luaL_checknumber(L, argBaseIndex + 2))
+        );
+    }
+    else
+    {
+        return glm::make_vec3(luaL_checkvector(L, argBaseIndex));
+    }
 }
 
 static int matrix_new(lua_State* L)
@@ -45,14 +45,14 @@ static int matrix_new(lua_State* L)
         if (lua_gettop(L) != 16)
             luaL_error(L, "Matrix.new may only be called with 0 or 16 arguments");
 
-		for (int r = 1; r <= 4; r++)
-		{
-			for (int c = 1; c <= 4; c++)
-			{
-				float v = (float)luaL_checknumber(L, (r - 1) * 4 + c);
-				mat[c - 1][r - 1] = v;
-			}
-		}
+        for (int r = 1; r <= 4; r++)
+        {
+            for (int c = 1; c <= 4; c++)
+            {
+                float v = (float)luaL_checknumber(L, (r - 1) * 4 + c);
+                mat[c - 1][r - 1] = v;
+            }
+        }
     }
 
     luhx_pushmatrix(L, mat);
@@ -62,7 +62,7 @@ static int matrix_new(lua_State* L)
 static int matrix_translated(lua_State* L)
 {
     glm::mat4 m = { 1.f };
-	m[3] = glm::vec4(checkVectorArg(L, 1), 1.f);
+    m[3] = glm::vec4(checkVectorArg(L, 1), 1.f);
 
     luhx_pushmatrix(L, m);
     return 1;
@@ -72,16 +72,16 @@ static int matrix_rotatedYXZ(lua_State* L)
 {
     glm::vec3 ang = checkVectorArg(L, 1);
 
-	luhx_pushmatrix(L, glm::eulerAngleYXZ(ang.y, ang.x, ang.z));
-	return 1;
+    luhx_pushmatrix(L, glm::eulerAngleYXZ(ang.y, ang.x, ang.z));
+    return 1;
 }
 
 static int matrix_scaled(lua_State* L)
 {
-	glm::vec3 scale = checkVectorArg(L, 1);
+    glm::vec3 scale = checkVectorArg(L, 1);
 
-	luhx_pushmatrix(L, glm::scale(glm::mat4(1.f), scale));
-	return 1;
+    luhx_pushmatrix(L, glm::scale(glm::mat4(1.f), scale));
+    return 1;
 }
 
 static int matrix_lookAt(lua_State* L)
@@ -93,257 +93,257 @@ static int matrix_lookAt(lua_State* L)
     glm::vec3 up     = glm::make_vec3(luaL_optvector(L, 3, updefault));
 
     glm::vec3 forward = glm::normalize(center - eye);
-	glm::vec3 right   = glm::normalize(glm::cross(forward, up));
-	glm::vec3 newUp    = glm::cross(right, forward);
+    glm::vec3 right   = glm::normalize(glm::cross(forward, up));
+    glm::vec3 newUp    = glm::cross(right, forward);
 
-	glm::mat4 result(1.0f);
-	result[0] = glm::vec4(right,     0.0f);
-	result[1] = glm::vec4(newUp,     0.0f);
-	result[2] = glm::vec4(-forward,  0.0f);
-	result[3] = glm::vec4(eye,       1.0f);
+    glm::mat4 result(1.0f);
+    result[0] = glm::vec4(right,     0.0f);
+    result[1] = glm::vec4(newUp,     0.0f);
+    result[2] = glm::vec4(-forward,  0.0f);
+    result[3] = glm::vec4(eye,       1.0f);
 
     luhx_pushmatrix(L, result);
     return 1;
 }
 
 static const luaL_Reg matrix_funcs[] = {
-	{ "new", matrix_new },
+    { "new", matrix_new },
     { "translated", matrix_translated },
     // { "rotatedXYZ", matrix_rotatedXYZ },
-	// { "rotatedYXZ", matrix_rotatedYXZ},
-	{ "rotated", matrix_rotatedYXZ },
-	{ "scaled", matrix_scaled },
+    // { "rotatedYXZ", matrix_rotatedYXZ},
+    { "rotated", matrix_rotatedYXZ },
+    { "scaled", matrix_scaled },
     { "lookAt", matrix_lookAt },
 
-	{ NULL, NULL }
+    { NULL, NULL }
 };
 
 static int mtx_index(lua_State* L)
 {
     glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-	size_t klen = 0;
-	const char* k = luaL_checklstring(L, 2, &klen);
+    size_t klen = 0;
+    const char* k = luaL_checklstring(L, 2, &klen);
 
-	if (strcmp(k, "Translation") == 0)
-		luhx_pushvector3(L, glm::vec3(m[3]));
+    if (strcmp(k, "Translation") == 0)
+        luhx_pushvector3(L, glm::vec3(m[3]));
 
-	else if (strcmp(k, "Scale") == 0)
-	{
-		glm::vec3 scale = {};
-		DecomposeTRS(m, nullptr, nullptr, &scale);
+    else if (strcmp(k, "Scale") == 0)
+    {
+        glm::vec3 scale = {};
+        DecomposeTRS(m, nullptr, nullptr, &scale);
 
-		luhx_pushvector3(L, scale);
-	}
+        luhx_pushvector3(L, scale);
+    }
 
-	else if (strcmp(k, "Forward") == 0)
-		luhx_pushvector3(L, -glm::vec3(m[2]));
+    else if (strcmp(k, "Forward") == 0)
+        luhx_pushvector3(L, -glm::vec3(m[2]));
 
-	else if (strcmp(k, "Up") == 0)
-		luhx_pushvector3(L, glm::vec3(m[1]));
+    else if (strcmp(k, "Up") == 0)
+        luhx_pushvector3(L, glm::vec3(m[1]));
 
-	else if (strcmp(k, "Right") == 0)
-		luhx_pushvector3(L, glm::vec3(m[0]));
+    else if (strcmp(k, "Right") == 0)
+        luhx_pushvector3(L, glm::vec3(m[0]));
 
-	else if (strcmp(k, "ExtractAngles") == 0)
-	{
-		lua_pushcfunction(
-			L,
-			[](lua_State* L) -> int
-			{
-				const glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				glm::vec3 angles;
-				glm::extractEulerAngleYXZ(m, angles.y, angles.x, angles.z);
+    else if (strcmp(k, "ExtractAngles") == 0)
+    {
+        lua_pushcfunction(
+            L,
+            [](lua_State* L) -> int
+            {
+                const glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+                glm::vec3 angles;
+                glm::extractEulerAngleYXZ(m, angles.y, angles.x, angles.z);
 
-				lua_pushvector(L, angles.x, angles.y, angles.z);
-				return 1;
-			},
-			"Matrix.ExtractAngles"
-		);
-	}
+                lua_pushvector(L, angles.x, angles.y, angles.z);
+                return 1;
+            },
+            "Matrix.ExtractAngles"
+        );
+    }
 
-	else if (strcmp(k, "Inverse") == 0)
-	{
-		lua_pushcfunction(
-			L,
-			[](lua_State* L) -> int
-			{
-				const glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+    else if (strcmp(k, "Inverse") == 0)
+    {
+        lua_pushcfunction(
+            L,
+            [](lua_State* L) -> int
+            {
+                const glm::mat4& m = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 
-				luhx_pushmatrix(L, glm::inverse(m));
-				return 1;
-			},
-			"Matrix.Inverse"
-		);
-	}
+                luhx_pushmatrix(L, glm::inverse(m));
+                return 1;
+            },
+            "Matrix.Inverse"
+        );
+    }
 
-	else if (strcmp(k, "Lerp") == 0)
-	{
-		lua_pushcfunction(
-			L,
-			[](lua_State* L) -> int
-			{
-				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
+    else if (strcmp(k, "Lerp") == 0)
+    {
+        lua_pushcfunction(
+            L,
+            [](lua_State* L) -> int
+            {
+                const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+                const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
 
-				luhx_pushmatrix(L, glm::interpolate(a, b, (float)luaL_checknumber(L, 3)));
-				return 1;
-			},
-			"Matrix.Lerp"
-		);
-	}
+                luhx_pushmatrix(L, glm::interpolate(a, b, (float)luaL_checknumber(L, 3)));
+                return 1;
+            },
+            "Matrix.Lerp"
+        );
+    }
 
-	else if (strcmp(k, "WithTranslation") == 0)
-	{
-		lua_pushcfunction(
-			L,
-			[](lua_State* L) -> int
-			{
-				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				const glm::vec3 trans = checkVectorArg(L, 2);
+    else if (strcmp(k, "WithTranslation") == 0)
+    {
+        lua_pushcfunction(
+            L,
+            [](lua_State* L) -> int
+            {
+                const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+                const glm::vec3 trans = checkVectorArg(L, 2);
 
-				glm::vec3 scale = {};
-				glm::quat rotquat = {};
-				DecomposeTRS(a, nullptr, &rotquat, &scale);
+                glm::vec3 scale = {};
+                glm::quat rotquat = {};
+                DecomposeTRS(a, nullptr, &rotquat, &scale);
 
-				luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale));
-				return 1;
-			},
-			"Matrix.WithTranslation"
-		);
-	}
+                luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale));
+                return 1;
+            },
+            "Matrix.WithTranslation"
+        );
+    }
 
-	else if (strcmp(k, "WithRotation") == 0)
-	{
-		lua_pushcfunction(
-			L,
-			[](lua_State* L) -> int
-			{
-				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				const glm::vec3 rot = checkVectorArg(L, 2);
+    else if (strcmp(k, "WithRotation") == 0)
+    {
+        lua_pushcfunction(
+            L,
+            [](lua_State* L) -> int
+            {
+                const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+                const glm::vec3 rot = checkVectorArg(L, 2);
 
-				glm::vec3 trans = {};
-				glm::vec3 scale = {};
-				DecomposeTRS(a, &trans, nullptr, &scale);
+                glm::vec3 trans = {};
+                glm::vec3 scale = {};
+                DecomposeTRS(a, &trans, nullptr, &scale);
 
-				luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::eulerAngleYXZ(rot.y, rot.x, rot.z) * glm::scale(glm::mat4(1.f), scale));
-				return 1;
-			},
-			"Matrix.WithRotation"
-		);
-	}
+                luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::eulerAngleYXZ(rot.y, rot.x, rot.z) * glm::scale(glm::mat4(1.f), scale));
+                return 1;
+            },
+            "Matrix.WithRotation"
+        );
+    }
 
-	else if (strcmp(k, "WithScale") == 0)
-	{
-		lua_pushcfunction(
-			L,
-			[](lua_State* L) -> int
-			{
-				const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-				const glm::vec3 scale = checkVectorArg(L, 2);
+    else if (strcmp(k, "WithScale") == 0)
+    {
+        lua_pushcfunction(
+            L,
+            [](lua_State* L) -> int
+            {
+                const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
+                const glm::vec3 scale = checkVectorArg(L, 2);
 
-				glm::vec3 trans = {};
-				glm::quat rotquat = {};
-				DecomposeTRS(a, &trans, &rotquat, nullptr);
+                glm::vec3 trans = {};
+                glm::quat rotquat = {};
+                DecomposeTRS(a, &trans, &rotquat, nullptr);
 
-				luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale));
-				return 1;
-			},
-			"Matrix.WithScale"
-		);
-	}
+                luhx_pushmatrix(L, glm::translate(glm::mat4(1.f), trans) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale));
+                return 1;
+            },
+            "Matrix.WithScale"
+        );
+    }
 
-	else if (klen == 4 && k[0] == 'C' && k[2] == 'R')
-	{
-		char col = k[1];
-		char row = k[3];
+    else if (klen == 4 && k[0] == 'C' && k[2] == 'R')
+    {
+        char col = k[1];
+        char row = k[3];
 
-		// allows ASCII 49, 50, 51, 52, AKA
-		// 1, 2, 3, and 4
-		luaL_argcheck(L, col > 48 && col < 53, 2, "column index must be in range [1 .. 4]");
-		luaL_argcheck(L, row > 48 && row < 53, 2, "row index must be in range [1 .. 4]");
+        // allows ASCII 49, 50, 51, 52, AKA
+        // 1, 2, 3, and 4
+        luaL_argcheck(L, col > 48 && col < 53, 2, "column index must be in range [1 .. 4]");
+        luaL_argcheck(L, row > 48 && row < 53, 2, "row index must be in range [1 .. 4]");
 
-		lua_pushnumber(L, m[col - 49][row - 49]);
-	}
-	else
-		luaL_error(L, "'%s' is not a valid member of Matrices", k);
+        lua_pushnumber(L, m[col - 49][row - 49]);
+    }
+    else
+        luaL_error(L, "'%s' is not a valid member of Matrices", k);
 
-	return 1;
+    return 1;
 }
 
 static int mtx_eq(lua_State* L)
 {
     const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-	const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
+    const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
 
-	lua_pushboolean(L, a == b);
-	return 1;
+    lua_pushboolean(L, a == b);
+    return 1;
 }
 
 static int mtx_mul(lua_State* L)
 {
     const glm::mat4& a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
 
-	if (lua_isuserdata(L, 2))
-	{
-		const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
-		luhx_pushmatrix(L, a * b);
-	}
-	else
-	{
-		glm::vec4 v = glm::vec4(glm::make_vec3(luaL_checkvector(L, 2)), 1.f);
-		glm::vec4 t = a * v;
-		lua_pushvector(L, t.x, t.y, t.z);
-	}
+    if (lua_isuserdata(L, 2))
+    {
+        const glm::mat4& b = *(glm::mat4*)luaL_checkudatatagged(L, 2, UserdataTag::Matrix);
+        luhx_pushmatrix(L, a * b);
+    }
+    else
+    {
+        glm::vec4 v = glm::vec4(glm::make_vec3(luaL_checkvector(L, 2)), 1.f);
+        glm::vec4 t = a * v;
+        lua_pushvector(L, t.x, t.y, t.z);
+    }
 
-	return 1;
+    return 1;
 }
 
 static int mtx_add(lua_State* L)
 {
     glm::mat4 a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-	const glm::vec3& v = glm::make_vec3(luaL_checkvector(L, 2));
+    const glm::vec3& v = glm::make_vec3(luaL_checkvector(L, 2));
 
-	a[3] += glm::vec4(v, 0.f);
+    a[3] += glm::vec4(v, 0.f);
 
-	luhx_pushmatrix(L, a);
-	return 1;
+    luhx_pushmatrix(L, a);
+    return 1;
 }
 
 static int mtx_sub(lua_State* L)
 {
     glm::mat4 a = *(glm::mat4*)luaL_checkudatatagged(L, 1, UserdataTag::Matrix);
-	const glm::vec3& v = glm::make_vec3(luaL_checkvector(L, 2));
+    const glm::vec3& v = glm::make_vec3(luaL_checkvector(L, 2));
 
-	a[3] -= glm::vec4(v, 0.f);
+    a[3] -= glm::vec4(v, 0.f);
 
-	luhx_pushmatrix(L, a);
-	return 1;
+    luhx_pushmatrix(L, a);
+    return 1;
 }
 
 static void createmetatable(lua_State* L)
 {
     lua_createtable(L, 0, 6);
 
-	lua_pushliteral(L, LUHX_MATRIXLIBNAME);
-	lua_setfield(L, -2, "__type");
+    lua_pushliteral(L, LUHX_MATRIXLIBNAME);
+    lua_setfield(L, -2, "__type");
 
-	lua_pushcfunction(L, mtx_index, "Matrix.__index");
+    lua_pushcfunction(L, mtx_index, "Matrix.__index");
     lua_setfield(L, -2, "__index");
 
-	lua_pushcfunction(L, mtx_eq, "Matrix.__eq");
-	lua_setfield(L, -2, "__eq");
+    lua_pushcfunction(L, mtx_eq, "Matrix.__eq");
+    lua_setfield(L, -2, "__eq");
 
-	lua_pushcfunction(L, mtx_mul, "Matrix.__mul");
-	lua_setfield(L, -2, "__mul");
+    lua_pushcfunction(L, mtx_mul, "Matrix.__mul");
+    lua_setfield(L, -2, "__mul");
 
-	lua_pushcfunction(L, mtx_add, "Matrix.__add");
-	lua_setfield(L, -2, "__add");
+    lua_pushcfunction(L, mtx_add, "Matrix.__add");
+    lua_setfield(L, -2, "__add");
 
-	lua_pushcfunction(L, mtx_sub, "Matrix.__sub");
-	lua_setfield(L, -2, "__sub");
+    lua_pushcfunction(L, mtx_sub, "Matrix.__sub");
+    lua_setfield(L, -2, "__sub");
 
-	lua_pushliteral(L, "The metatable is locked");
-	lua_setfield(L, -2, "__metatable");
+    lua_pushliteral(L, "The metatable is locked");
+    lua_setfield(L, -2, "__metatable");
 
     lua_setuserdatametatable(L, UserdataTag::Matrix);
 }

@@ -17,92 +17,92 @@
 
 namespace Memory
 {
-	// if this list is changed, remember to update
-	// `CategoryNames` further down
-	enum class Category : uint8_t
-	{
-		Default = 0,
-		GameObject,
-		Reflection,
-		Rendering,
-		Mesh,
-		Texture,
-		Shader,
-		Material,
-		Physics,
-		Luau,
-		Sound,
-		Glfw,
+    // if this list is changed, remember to update
+    // `CategoryNames` further down
+    enum class Category : uint8_t
+    {
+        Default = 0,
+        GameObject,
+        Reflection,
+        Rendering,
+        Mesh,
+        Texture,
+        Shader,
+        Material,
+        Physics,
+        Luau,
+        Sound,
+        Glfw,
 
-		count
-	};
+        count
+    };
 
-	// can only be de-alloc'd correctly by `::Free`
-	void* Alloc(uint32_t Size, Category MemCat = Category::Default);
-	// can only be de-alloc'd correctly by `::Free`
-	void* ReAlloc(void*, uint32_t Size, Category MemCat = Category::Default);
-	// can only safely de-alloc pointers returned by `::Alloc`
-	void Free(void*);
-	// returns the pointer to the actual `malloc` block
-	void* GetPointerInfo(void*, uint32_t* Size = nullptr, uint8_t* Category = nullptr);
+    // can only be de-alloc'd correctly by `::Free`
+    void* Alloc(uint32_t Size, Category MemCat = Category::Default);
+    // can only be de-alloc'd correctly by `::Free`
+    void* ReAlloc(void*, uint32_t Size, Category MemCat = Category::Default);
+    // can only safely de-alloc pointers returned by `::Alloc`
+    void Free(void*);
+    // returns the pointer to the actual `malloc` block
+    void* GetPointerInfo(void*, uint32_t* Size = nullptr, uint8_t* Category = nullptr);
 
-	void FrameFinish();
+    void FrameFinish();
 
-	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::count)> Counters;
-	inline std::array<std::atomic_size_t, static_cast<size_t>(Category::count)> Activity;
+    inline std::array<std::atomic_size_t, static_cast<size_t>(Category::count)> Counters;
+    inline std::array<std::atomic_size_t, static_cast<size_t>(Category::count)> Activity;
 
-	static inline const char* CategoryNames[] = {
-		"Default",
-		"GameObject",
-		"Reflection",
-		"Rendering",
-		"Mesh",
-		"Texture",
-		"Shader",
-		"Material",
-		"Physics",
-		"Luau",
-		"Sound",
-		"Glfw",
-	};
+    static inline const char* CategoryNames[] = {
+        "Default",
+        "GameObject",
+        "Reflection",
+        "Rendering",
+        "Mesh",
+        "Texture",
+        "Shader",
+        "Material",
+        "Physics",
+        "Luau",
+        "Sound",
+        "Glfw",
+    };
 
-	static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::count);
+    static_assert(std::size(CategoryNames) == (uint8_t)Memory::Category::count);
 
-	// stl-conforming allocator
-	template <class T, Category C = Category::Default>
-	struct Allocator
-	{
-		using value_type = T;
+    // stl-conforming allocator
+    template <class T, Category C = Category::Default>
+    struct Allocator
+    {
+        using value_type = T;
 
-		Allocator() noexcept = default;
+        Allocator() noexcept = default;
 
-		T* allocate(size_t n)
-		{
-			size_t bytes = sizeof(T) * n;
-			assert(bytes < (size_t)UINT32_MAX);
-			return (T*)Alloc((uint32_t)bytes, C);
-		}
-		void deallocate(T* p, size_t)
-		{
-			Free((void*)p);
-		}
+        T* allocate(size_t n)
+        {
+            size_t bytes = sizeof(T) * n;
+            assert(bytes < (size_t)UINT32_MAX);
+            return (T*)Alloc((uint32_t)bytes, C);
+        }
+        void deallocate(T* p, size_t)
+        {
+            Free((void*)p);
+        }
 
-		template <class U>
-		struct rebind
-		{
-			using other = Allocator<U, C>;
-		};
-	};
+        template <class U>
+        struct rebind
+        {
+            using other = Allocator<U, C>;
+        };
+    };
 };
 
 template <class T, class U, Memory::Category C>
 bool operator ==(const Memory::Allocator<T, C>&, const Memory::Allocator<U, C>&) noexcept
 {
-	return true;
+    return true;
 }
 
 template <class T, class U, Memory::Category C>
 bool operator !=(const Memory::Allocator<T, C>&, const Memory::Allocator<U, C>&) noexcept
 {
-	return false;
+    return false;
 }

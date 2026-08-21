@@ -11,17 +11,17 @@
 
 uint32_t CameraComponentManager::CreateComponent(GameObject* Object)
 {
-	uint32_t id = ComponentManager<EcCamera>::CreateComponent(Object);
-	Components[id].Object = Object;
+    uint32_t id = ComponentManager<EcCamera>::CreateComponent(Object);
+    Components[id].Object = Object;
 
-	return id;
+    return id;
 }
 
 const Reflection::StaticPropertyMap& CameraComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
-		REFLECTION_PROPERTY_SIMPLE(EcCamera, UseSimpleController, Boolean),
-		REFLECTION_PROPERTY_SIMPLE(EcCamera, FieldOfView, Double),
+        REFLECTION_PROPERTY_SIMPLE(EcCamera, UseSimpleController, Boolean),
+        REFLECTION_PROPERTY_SIMPLE(EcCamera, FieldOfView, Double),
     };
 
     return props;
@@ -29,31 +29,31 @@ const Reflection::StaticPropertyMap& CameraComponentManager::GetProperties()
 
 glm::mat4 EcCamera::GetRenderMatrix(float AspectRatio) const
 {
-	glm::mat4 trans = GetWorldTransform();
+    glm::mat4 trans = GetWorldTransform();
 
-	glm::mat4 projectionMatrix = glm::perspective(
-		glm::radians(this->FieldOfView),
-		AspectRatio,
-		this->NearPlane,
-		this->FarPlane
-	);
-	glm::mat4 viewMatrix = glm::inverse(trans);
+    glm::mat4 projectionMatrix = glm::perspective(
+        glm::radians(this->FieldOfView),
+        AspectRatio,
+        this->NearPlane,
+        this->FarPlane
+    );
+    glm::mat4 viewMatrix = glm::inverse(trans);
 
-	return projectionMatrix * viewMatrix;
+    return projectionMatrix * viewMatrix;
 }
 
 glm::mat4 EcCamera::GetWorldTransform() const
 {
-	if (EcTransform* et = (Object.Referred() ? Object->FindComponent<EcTransform>() : nullptr))
-		return et->Transform;
-	else
-		return glm::mat4(1.f);
+    if (EcTransform* et = (Object.Referred() ? Object->FindComponent<EcTransform>() : nullptr))
+        return et->Transform;
+    else
+        return glm::mat4(1.f);
 }
 
 void EcCamera::SetWorldTransform(const glm::mat4& NewTrans)
 {
-	if (EcTransform* et = (Object.Referred() ? Object->FindComponent<EcTransform>() : nullptr))
-		et->SetWorldTransform(NewTrans);
-	else
-		RAISE_RT("Tried to set the World Transform of the camera at {}, but it does not have a Transform component!", (Object.Referred() ? Object->GetFullName() : "<UH OH>"));
+    if (EcTransform* et = (Object.Referred() ? Object->FindComponent<EcTransform>() : nullptr))
+        et->SetWorldTransform(NewTrans);
+    else
+        RAISE_RT("Tried to set the World Transform of the camera at {}, but it does not have a Transform component!", (Object.Referred() ? Object->GetFullName() : "<UH OH>"));
 }
