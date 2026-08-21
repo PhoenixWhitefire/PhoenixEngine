@@ -18,7 +18,7 @@ struct RenderMaterial
     std::string Name;
     uint32_t ShaderId = UINT32_MAX;
 
-    // Resource IDs for the `TextureManager` to resolve into a 
+    // Resource IDs for the `TextureManager` to resolve into a
     // Graphics Texture ID
     uint32_t ColorMap = 0;
     uint32_t MetallicRoughnessMap = 0;

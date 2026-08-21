@@ -156,12 +156,12 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
     this->Height = TargetHeight;
 
     glGenFramebuffers(1, &m_GpuId);
-    
+
     GLenum binding = MSSamples > 0 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
     glGenTextures(1, &GpuTextureId);
     glBindTexture(binding, GpuTextureId);
-    
+
     if (MSSamples > 0)
         glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, MSSamples, GL_RGB, Width, Height, GL_TRUE);
     else
@@ -217,7 +217,7 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
     else
     {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GpuTextureId, 0);
-        
+
         // Needed since we don't touch the color buffer
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
@@ -227,7 +227,7 @@ void GpuFrameBuffer::Initialize(int TargetWidth, int TargetHeight, int MSSamples
         status != GL_FRAMEBUFFER_COMPLETE
     )
         RAISE_RT("Could not create a framebuffer, error ID: {}", status);
-    
+
     Unbind();
 }
 
@@ -236,7 +236,7 @@ void GpuFrameBuffer::Delete()
     ZoneScoped;
 
     glDeleteTextures(1, &GpuTextureId);
-    
+
     if (m_RenderBufferId)
         glDeleteRenderbuffers(1, &m_RenderBufferId);
 

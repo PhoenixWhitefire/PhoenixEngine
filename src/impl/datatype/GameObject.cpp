@@ -609,7 +609,7 @@ void GameObject::SetParent(const ObjectHandle& newParent)
             "Tried to re-parent {} to {}, but its Parent has been locked due to `:Destroy`",
             GetFullName(), newParent ? newParent->GetFullName() : "nil"
         );
-    
+
     if (newParent.Reference.TargetId != this->ObjectId)
     {
         if (newParent && newParent->IsDescendantOf(this))
@@ -1191,7 +1191,7 @@ void* GameObject::FindComponentByType(EntityComponent Type) const
     for (const ReflectorRef& ref : Components)
         if (ref.Type == Type)
             return GetComponentManagerByComponentType(Type)->GetComponent(ref.Id);
-    
+
     return nullptr;
 }
 
@@ -1409,7 +1409,7 @@ static void dumpProperties(const Reflection::StaticPropertyMap Properties, nlohm
 
         if (!propIt.second.Set)
             pstr += " READONLY";
-        
+
         else if (!propIt.second.Serializes)
             pstr += " RUNTIMEONLY";
 
@@ -1426,10 +1426,10 @@ static void dumpMethods(const Reflection::StaticMethodMap& Functions, nlohmann::
 
         for (Reflection::ValueType i : funcIt.second.Parameters)
             istring += std::string(Reflection::TypeAsString(i)) + ", ";
-        
+
         for (Reflection::ValueType o : funcIt.second.Returns)
             ostring += std::string(Reflection::TypeAsString(o)) + ", ";
-        
+
         istring = istring.substr(0, istring.size() - 2);
         ostring = ostring.substr(0, ostring.size() - 2);
 
@@ -1455,14 +1455,14 @@ static void dumpEvents(const Reflection::StaticEventMap& Events, nlohmann::json&
 nlohmann::json GameObject::DumpApiToJson()
 {
     nlohmann::json dump;
-    
+
     nlohmann::json& gameObjectApi = dump["Base"];
     nlohmann::json& componentApi = dump["Components"];
 
     dumpProperties(s_Api.Properties, gameObjectApi);
     dumpMethods(s_Api.Methods, gameObjectApi);
     dumpEvents(s_Api.Events, gameObjectApi);
-    
+
     for (size_t i = 0; i < (size_t)EntityComponent::count; i++)
     {
         IComponentManager* manager = GameObjectManager::Get()->ComponentManagers[i];

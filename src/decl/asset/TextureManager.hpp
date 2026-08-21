@@ -32,7 +32,7 @@ struct Texture
     LoadStatus Status = LoadStatus::NotAttempted;
     bool IsLinearSpace = true;
     bool IsHdr = false;
-    
+
     bool LoadedAsynchronously = false;
 
     // De-allocated after the Texture is uploaded to the GPU

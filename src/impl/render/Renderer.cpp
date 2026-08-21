@@ -168,7 +168,7 @@ void Renderer::Initialize(uint32_t OurWidth, uint32_t OurHeight, GLFWwindow* Mai
     glEnable(GL_CULL_FACE);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glEnable(GL_FRAMEBUFFER_SRGB);
-    
+
     glViewport(0, 0, Width, Height);
 
     int glVersionMajor, glVersionMinor = 0;

@@ -32,7 +32,7 @@ Color::Color(const Reflection::GenericValue& gv)
             "Attempted to construct Color, but GenericValue was a {} instead",
             Reflection::TypeAsString(gv.Type)
         );
-        
+
     this->R = gv.Val.Vec3.x;
     this->G = gv.Val.Vec3.y;
     this->B = gv.Val.Vec3.z;

@@ -48,7 +48,7 @@ public:
 
     void Save(const Mesh&, const std::string_view& Path);
     void Save(uint32_t, const std::string_view& Path);
-    
+
     uint32_t LoadFromPath(
         const std::string& Path,
         bool ShouldLoadAsync = true,

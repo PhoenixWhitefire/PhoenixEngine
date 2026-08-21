@@ -132,7 +132,7 @@ void* Memory::ReAlloc(void* Pointer, uint32_t Size, Memory::Category MemCat)
     // I KNOW WHAT I'M DOING
     // TODO HOW TO FIX THAT
     // 18/05/2025
-        
+
 #ifdef TRACY_ENABLE
     if (MemCat != Category::Default)
         TracyFreeN(Pointer, CategoryNames[memIndex]);

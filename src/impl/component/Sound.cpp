@@ -295,7 +295,7 @@ void EcSound::Update(double)
         m_PlayRequested = false;
 
     ma_sound_set_volume(SoundInstance, Volume);
-    
+
     if (NextRequestedPosition >= 0.f)
     {
         if (ma_result result = ma_sound_seek_to_second(SoundInstance, NextRequestedPosition); result != MA_SUCCESS)

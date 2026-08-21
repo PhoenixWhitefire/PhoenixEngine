@@ -21,7 +21,7 @@ uint32_t ParticleEmitterComponentManager::CreateComponent(GameObject* Object)
 
     return id;
 }
-    
+
 const Reflection::StaticPropertyMap& ParticleEmitterComponentManager::GetProperties()
 {
     static const Reflection::StaticPropertyMap props = {
@@ -44,7 +44,7 @@ const Reflection::StaticPropertyMap& ParticleEmitterComponentManager::GetPropert
                 static_cast<EcParticleEmitter*>(g)->Rate = static_cast<uint32_t>(newRate);
             }
         ),
-        
+
         REFLECTION_PROPERTY(
             "Image",
             String,

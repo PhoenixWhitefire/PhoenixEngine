@@ -19,7 +19,7 @@ static int json_encode(lua_State* L)
     nlohmann::json json = ScriptEngine::L::ToJson(L, 1);
     std::string dumped = json.dump(indent);
     lua_pushlstring(L, dumped.data(), dumped.size());
-    
+
     return 1;
 }
 

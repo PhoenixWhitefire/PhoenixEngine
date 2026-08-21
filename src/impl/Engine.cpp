@@ -128,7 +128,7 @@ void Engine::LoadConfiguration()
         try
         {
             nlohmann::json config = nlohmann::json::parse(ConfigAscii);
-            
+
             for (auto it = config.begin(); it != config.end(); it++)
                 if (Config.find(it.key()) == Config.end())
                     Config[it.key()] = it.value();
@@ -136,7 +136,7 @@ void Engine::LoadConfiguration()
         catch (const nlohmann::json::parse_error& err)
         {
             ConfigLoadSucceeded = false;
-            
+
             ConfigLoadErrorMessage = std::format(
                 "Failed to load configuration file: {}\nA fallback will be used.",
                 err.what()
@@ -174,7 +174,7 @@ static void windowResizeCallback(GLFWwindow*, int newWidth, int newHeight)
 
 static void windowFocusChangedCallback(GLFWwindow*, int focused)
 {
-    Engine::Get()->IsWindowFocused = (bool)focused;	
+    Engine::Get()->IsWindowFocused = (bool)focused;
 }
 
 static void windowKeyCallback(GLFWwindow*, int key, int scancode, int action, int mods)
@@ -295,7 +295,7 @@ void Engine::m_InitializeVideo()
     Log.InfoF("GLFW platform: {}", glfwGetPlatform());
 
     GLFWmonitor* primaryDisplay = glfwGetPrimaryMonitor();
-    
+
     glfwGetMonitorWorkarea(primaryDisplay, nullptr, nullptr, &WindowSizeX, &WindowSizeY);
 
     constexpr int requestedGLVersionMajor = 4;
@@ -543,7 +543,7 @@ static void traverseHierarchy(
         EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
         EcPointLight* point = object->FindComponent<EcPointLight>();
         EcSpotLight* spot = object->FindComponent<EcSpotLight>();
-        
+
         if (directional)
         {
             RendererScene.LightingList.push_back(LightItem{
@@ -594,7 +594,7 @@ static void traverseHierarchy(
                 Sun,
                 DebugCollisionAabbs
             );
-        
+
         if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())
         {
             emitter->Update(DeltaTime);
@@ -1105,7 +1105,7 @@ void Engine::Start()
             if (skyboxLoaded)
             {
                 ZoneScopedN("UploadSkyboxToGpu");
-                
+
                 glBindTexture(GL_TEXTURE_CUBE_MAP, env->SkyboxTextureGpuId);
 
                 for (uint32_t skyboxFaceIndex = 0; skyboxFaceIndex < 6; skyboxFaceIndex++)
@@ -1281,7 +1281,7 @@ void Engine::Start()
                 }
 
             glm::vec3 sunDirection = sun->Direction;
-            
+
             glm::mat4 sunOrtho = glm::ortho(
                 -sun->ShadowViewSizeH, sun->ShadowViewSizeH, -sun->ShadowViewSizeV, sun->ShadowViewSizeV,
                 sun->ShadowViewNearPlane, sun->ShadowViewFarPlane

@@ -178,7 +178,7 @@ MaterialManager::~MaterialManager()
 void MaterialManager::Initialize()
 {
     ZoneScoped;
-    
+
     s_Instance = this;
 }
 
