@@ -34,6 +34,7 @@
 #include "script/ScriptEngine.hpp"
 #include "render/TextureSlots.hpp"
 #include "DeveloperTools.hpp"
+#include "UserInput.hpp"
 #include "Utilities.hpp"
 #include "Timing.hpp"
 #include "FileRW.hpp"
@@ -701,6 +702,64 @@ static void traverseAndRenderUIHierarchy(
             gpuMesh.ElementBuffer.Bind();
         }
 
+        if (EcUIButton* ubtn = child->FindComponent<EcUIButton>())
+        {
+            Engine* engine = Engine::Get();
+
+            double cx = 0.0;
+            double cy = 0.0;
+            glfwGetCursorPos(engine->Window, &cx, &cy);
+
+            cx = cx - (double)engine->ViewportInputPosition.x;
+            cy = cy - (double)engine->ViewportInputPosition.y;
+            double nx = (2.0 * cx) / (double)ViewportSize.x - 1.0;
+            double ny = (2.0 * cy) / (double)ViewportSize.y - 1.0;
+
+            if (nx >= currentPosition.x - currentSize.x
+                && nx <= currentPosition.x + currentSize.x
+                && ny >= currentPosition.y - currentSize.y
+                && ny <= currentPosition.y + currentSize.y
+            )
+            {
+                if (!ubtn->IsHovering)
+                {
+                    ubtn->IsHovering = true;
+                    Reflection::SignalEvent(ubtn->HoverChangedCallbacks, { true }, "UIButton.HoverChanged");
+                }
+
+                if (UserInput::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT))
+                {
+                    if (!ubtn->IsClicking)
+                    {
+                        ubtn->IsClicking = true;
+                        Reflection::SignalEvent(ubtn->ClickChangedCallbacks, { true }, "UIButton.ClickChanged");
+                    }
+                }
+                else
+                {
+                    if (ubtn->IsClicking)
+                    {
+                        ubtn->IsClicking = false;
+                        Reflection::SignalEvent(ubtn->ClickChangedCallbacks, { false }, "UIButton.ClickChanged");
+                    }
+                }
+            }
+            else
+            {
+                if (ubtn->IsHovering)
+                {
+                    ubtn->IsHovering = false;
+                    Reflection::SignalEvent(ubtn->HoverChangedCallbacks, { false }, "UIButton.HoverChanged");
+                }
+
+                if (ubtn->IsClicking)
+                {
+                    ubtn->IsClicking = false;
+                    Reflection::SignalEvent(ubtn->HoverChangedCallbacks, { false }, "UIButton.ClickChanged");
+                }
+            }
+        }
+
         traverseAndRenderUIHierarchy(child.Dereference(), renderer, ViewportSize, shader, gpuMesh, currentPosition, currentSize, currentRotation);
         return true; // continue
     });
@@ -1274,11 +1333,13 @@ void Engine::Start()
             sunScene.UsedShaders = CurrentScene.UsedShaders;
 
             for (const RenderItem& ri : CurrentScene.RenderList)
+            {
                 if (ri.CastsShadows)
                 {
                     sunScene.RenderList.push_back(ri);
                     sunScene.RenderList.back().FaceCulling = FaceCullingMode::FrontFace;
                 }
+            }
 
             glm::vec3 sunDirection = sun->Direction;
 

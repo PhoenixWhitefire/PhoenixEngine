@@ -8,7 +8,6 @@ local History = game:GetService("History")
 local Physics = game:GetService("Physics")
 local Engine = game:GetService("Engine")
 
-local EditorCameraTransform = require("@ed/EditorCameraTransform")
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
 local Configuration = require("@ed/Configuration")
 local Preferences = require("@ed/Preferences")
@@ -463,8 +462,6 @@ local function tryToSave(datamodel: GameObject?, firstAttempt: string?)
                 Time = os.time(),
             }
             fs.write("@project/phoenix.editor", json.encode(edconf :: JsonEncodable))
-
-            EditorCameraTransform.Save(Workspace.SceneCamera)
         end)
 
         if not modifiedDate then

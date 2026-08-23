@@ -123,8 +123,8 @@ const Reflection::StaticMethodMap& PlayerInputComponentManager::GetMethods()
             REFLECTION_SPAN({ Reflection::ValueType::Vector2 }),
             [](void*, const std::vector<Reflection::GenericValue>&) -> std::vector<Reflection::GenericValue>
             {
-                double x = 0;
-                double y = 0;
+                double x = 0.0;
+                double y = 0.0;
                 glfwGetCursorPos(glfwGetCurrentContext(), &x, &y);
 
                 return { glm::vec2(x, y) };

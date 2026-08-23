@@ -333,9 +333,6 @@
         }
       },
       "Sound": {
-        "Events": {
-          "OnLoaded": "(Boolean)"
-        },
         "Methods": {
           "Play": "() -> ()"
         },
@@ -375,7 +372,12 @@
       },
       "UIButton": {
         "Events": {
-          "OnClicked": "()"
+          "ClickChanged": "(Boolean)",
+          "HoverChanged": "(Boolean)"
+        },
+        "Properties": {
+          "IsClicking": "Boolean",
+          "IsHovering": "Boolean"
         }
       },
       "UIFrame": {

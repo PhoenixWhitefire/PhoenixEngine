@@ -2275,9 +2275,6 @@
   "@phoenix/globaltype/Sound.Looped": {
     "documentation": "Whether playback should loop once it reaches the end"
   },
-  "@phoenix/globaltype/Sound.OnLoaded": {
-    "documentation": "Fires when the Sound finishes loading, and whether it loaded successfully or not"
-  },
   "@phoenix/globaltype/Sound.Play": {
     "documentation": "Play the Sound from the beginning"
   },
@@ -2320,8 +2317,17 @@
   "@phoenix/globaltype/TreeLink.Target": {
     "documentation": "The target to link"
   },
-  "@phoenix/globaltype/UIButton.OnClicked": {
-    "documentation": "Fires when the button is clicked"
+  "@phoenix/globaltype/UIButton.ClickChanged": {
+    "documentation": "Fires when the button click state is changed, providing whether it is currently held or released"
+  },
+  "@phoenix/globaltype/UIButton.HoverChanged": {
+    "documentation": "Fires when the button hover state is changed, providing whether or not it is currently being hovered"
+  },
+  "@phoenix/globaltype/UIButton.IsClicking": {
+    "documentation": "Whether the cursor is currently holding the button down"
+  },
+  "@phoenix/globaltype/UIButton.IsHovering": {
+    "documentation": "Whether the cursor is currently hovering over the button"
   },
   "@phoenix/globaltype/UIFrame.BackgroundColor": {
     "documentation": "The color of the frame"

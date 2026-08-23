@@ -214,10 +214,8 @@ glm::vec3 EcWorkspace::ScreenPointToVector(glm::vec2 point, float length) const
 {
     Engine* engine = Engine::Get();
 
-    float x = point.x;
-    float y = point.y;
-    x = x - engine->ViewportInputPosition.x;
-    y = y - engine->ViewportInputPosition.y;
+    float x = point.x - engine->ViewportInputPosition.x;
+    float y = point.y - engine->ViewportInputPosition.y;
 
     ImVec2 viewportSize = engine->GetViewportInputRectSize();
 

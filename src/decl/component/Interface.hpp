@@ -49,7 +49,10 @@ struct EcUIText : public Component<EntityComponent::UIText>
 
 struct EcUIButton : public Component<EntityComponent::UIButton>
 {
-    std::vector<Reflection::EventConnection> OnClickedCallbacks;
+    std::vector<Reflection::EventConnection> ClickChangedCallbacks;
+    std::vector<Reflection::EventConnection> HoverChangedCallbacks;
+    bool IsClicking = false;
+    bool IsHovering = false;
 
     bool Valid = true;
 };
@@ -89,5 +92,6 @@ public:
 class UIButtonComponentManager : public ComponentManager<EcUIButton>
 {
 public:
+    const Reflection::StaticPropertyMap& GetProperties() override;
     const Reflection::StaticEventMap& GetEvents() override;
 };

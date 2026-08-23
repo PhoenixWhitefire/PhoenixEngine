@@ -1119,7 +1119,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
             --imgui.setcursorposition(vector.create(cursor.x, cavail.y + tsy * 4 + 20))
             --imgui.dummy()
 
-            imgui.text("All files will be committed automatically.\nCommit message:")
+            imgui.text("All files will be committed, including untracked non-ignored files.\nCommit message:")
             imgui.setnextitemwidth(cxavail)
             GitCommitMessage = imgui.inputstring("##CommitMessage", GitCommitMessage)
 

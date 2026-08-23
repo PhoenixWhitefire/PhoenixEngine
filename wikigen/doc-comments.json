@@ -805,7 +805,12 @@
       "UIButton": {
         "Description": "Button behaviour",
         "Events": {
-          "OnClicked": "Fires when the button is clicked"
+          "ClickChanged": "Fires when the button click state is changed, providing whether it is currently held or released",
+          "HoverChanged": "Fires when the button hover state is changed, providing whether or not it is currently being hovered"
+        },
+        "Properties": {
+          "IsClicking": "Whether the cursor is currently holding the button down",
+          "IsHovering": "Whether the cursor is currently hovering over the button"
         }
       },
       "UIFrame": {

@@ -155,8 +155,6 @@ local function editorFrame(State, DeltaTime)
         end
     end
 
-    CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
-
     -- TODO luau
     -- Stages[State.CurrentStage].Render(DeltaTime)
 

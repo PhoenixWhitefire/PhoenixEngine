@@ -72,7 +72,15 @@ const Reflection::StaticPropertyMap& SoundComponentManager::GetProperties()
         REFLECTION_PROPERTY(
             "TimePosition",
             Double,
-            REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Position),
+            [](void* p) -> Reflection::GenericValue
+            {
+                const EcSound* sound = static_cast<EcSound*>(p);
+
+                if (sound->NextRequestedPosition != -1.f)
+                    return sound->NextRequestedPosition;
+                else
+                    return sound->Position;
+            },
             [](void* p, const Reflection::GenericValue& gv)
             {
                 EcSound* sound = static_cast<EcSound*>(p);
@@ -119,7 +127,7 @@ const Reflection::StaticPropertyMap& SoundComponentManager::GetProperties()
         REFLECTION_PROPERTY("Length", Double, REFLECTION_PROPERTY_GET_SIMPLE(EcSound, Length), nullptr),
 
         REFLECTION_PROPERTY("FinishedLoading", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcSound, FinishedLoading), nullptr),
-        REFLECTION_PROPERTY("LoadSucceeded", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcSound, LoadSucceeded), nullptr)
+        REFLECTION_PROPERTY("LoadSucceeded", Boolean, REFLECTION_PROPERTY_GET_SIMPLE(EcSound, LoadSucceeded), nullptr),
     };
 
     return props;
@@ -139,7 +147,7 @@ const Reflection::StaticMethodMap& SoundComponentManager::GetMethods()
 
                 return {};
             }
-        } }
+        } },
     };
 
     return methods;
@@ -147,10 +155,7 @@ const Reflection::StaticMethodMap& SoundComponentManager::GetMethods()
 
 const Reflection::StaticEventMap& SoundComponentManager::GetEvents()
 {
-    static const Reflection::StaticEventMap events =
-    {
-        REFLECTION_EVENT(EcSound, OnLoaded, Reflection::ValueType::Boolean)
-    };
+    static const Reflection::StaticEventMap events = {};
 
     return events;
 }
@@ -253,7 +258,6 @@ void EcSound::Reload()
         return;
     }
 
-    Reflection::SignalEvent(OnLoadedCallbacks, { SoundFile }, "Sound.OnLoaded");
     FinishedLoading = true;
     LoadSucceeded = true;
 }
@@ -290,7 +294,7 @@ void EcSound::Update(double)
             Log.ErrorF("Failed to start sound '{}': {} (code {})", Object->GetFullName(), ma_result_description(result), (int)result);
     }
 
-    ma_sound_set_looping(SoundInstance, Looped); // TODO doesn't work
+    ma_sound_set_looping(SoundInstance, Looped);
     if (!Looped && Length - Position < 0.05f && NextRequestedPosition < 0.f)
         m_PlayRequested = false;
 
@@ -299,10 +303,14 @@ void EcSound::Update(double)
     if (NextRequestedPosition >= 0.f)
     {
         if (ma_result result = ma_sound_seek_to_second(SoundInstance, NextRequestedPosition); result != MA_SUCCESS)
+        {
             Log.ErrorF(
                 "Failed to seek to position {} (in seconds) for sound '{}': {} (code {})",
                 NextRequestedPosition, Object->GetFullName(), ma_result_description(result), (int)result
             );
+        }
+        else
+            Position = NextRequestedPosition;
         NextRequestedPosition = -1.f;
     }
 

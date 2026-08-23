@@ -101,10 +101,21 @@ void UITextComponentManager::DeleteComponent(uint32_t Id)
     ComponentManager<EcUIText>::DeleteComponent(Id);
 }
 
+const Reflection::StaticPropertyMap& UIButtonComponentManager::GetProperties()
+{
+    static const Reflection::StaticPropertyMap props = {
+        REFLECTION_PROPERTY_SIMPLE(EcUIButton, IsClicking, Boolean),
+        REFLECTION_PROPERTY_SIMPLE(EcUIButton, IsHovering, Boolean),
+    };
+
+    return props;
+}
+
 const Reflection::StaticEventMap& UIButtonComponentManager::GetEvents()
 {
     static const Reflection::StaticEventMap events = {
-        REFLECTION_EVENT(EcUIButton, OnClicked),
+        REFLECTION_EVENT(EcUIButton, ClickChanged, Reflection::ValueType::Boolean),
+        REFLECTION_EVENT(EcUIButton, HoverChanged, Reflection::ValueType::Boolean),
     };
 
     return events;

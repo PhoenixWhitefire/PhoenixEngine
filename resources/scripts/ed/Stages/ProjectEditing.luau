@@ -203,6 +203,7 @@ function ProjectEditing.Render(DeltaTime: number)
 
     CommonUI.RenderMainMenuBar(DeltaTime)
     CommonUI.RenderViewport(DeltaTime)
+    CoreTools.Update(State.Project, Preferences, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
 
     if (game.Time - State.LastAutosaved) / 60 > Preferences.AutosaveInterval then
         if not History.CurrentActionName then

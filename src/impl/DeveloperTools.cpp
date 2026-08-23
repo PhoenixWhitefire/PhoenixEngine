@@ -105,6 +105,7 @@ static const std::array AddableInterfaceComponents = {
     "UIFrame",
     "UIText",
     "UIImage",
+    "UIButton",
     "UITransform",
 };
 
@@ -2079,7 +2080,7 @@ static void recursiveIterateTree(const ObjectHandle& current)
 
         bool open = ImGui::TreeNodeEx(object->Name.c_str(), flags, "%s", "");
 
-        nodeClicked = ImGui::IsItemActivated() ? object : nodeClicked;
+        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? object : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
@@ -2152,14 +2153,14 @@ static void recursiveIterateTree(const ObjectHandle& current)
             ImVec4(),
             object->TreeEnabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : (object->GetEnabled() ? ImVec4(.6f, .6f, .6f, 1.f) : ImVec4(.4f, .4f, .4f, 1.f))
         );
-        nodeClicked = ImGui::IsItemActivated() ? object : nodeClicked;
+        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? object : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
         ImGui::SameLine();
         ImGui::TextUnformatted(object->Name.c_str());
 
-        nodeClicked = ImGui::IsItemActivated() ? object : nodeClicked;
+        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? object : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
@@ -2927,14 +2928,13 @@ static void renderDocumentationViewer()
 
 static bool isInInterface(const ObjectHandle& Object)
 {
-    if (Object->FindComponent<EcInterfaceService>())
-        return true;
+    ObjectRef checking = Object.Reference;
 
-    while (const GameObject* parent = Object->GetParent())
+    while (checking)
     {
-        if (parent->FindComponent<EcInterfaceService>())
+        if (checking->FindComponent<EcInterfaceService>())
             return true;
-        parent = parent->GetParent();
+        checking = checking->GetParent();
     }
 
     return false;
@@ -4121,7 +4121,9 @@ static void renderProperties()
                 }
             }
 
-            for (size_t i = 0; i < inInterface ? AddableInterfaceComponents.size() : AddableComponents.size(); i++)
+            size_t addableCount = inInterface ? AddableInterfaceComponents.size() : AddableComponents.size();
+
+            for (size_t i = 0; i < addableCount; i++)
             {
                 const std::string_view comp = inInterface ? AddableInterfaceComponents[i] : AddableComponents[i];
 

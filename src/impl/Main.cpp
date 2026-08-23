@@ -67,8 +67,8 @@ static void handleInputs(double deltaTime)
     EcCamera* camera = workspace->FindComponent<EcWorkspace>()->GetSceneCamera()->FindComponent<EcCamera>();
     GLFWwindow* window = engine->Window;
 
-    double mouseX;
-    double mouseY;
+    double mouseX = 0.0;
+    double mouseY = 0.0;
     glfwGetCursorPos(window, &mouseX, &mouseY);
 
     if (camera->UseSimpleController && camera->Object->FindComponent<EcTransform>())

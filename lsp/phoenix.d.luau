@@ -629,8 +629,6 @@ export type EcSound = {
   Volume: number,
 
   Play: (self: EcSound) -> (),
-
-  OnLoaded: EventSignal<(boolean)>,
 }
 
 export type EcSpotLight = {
@@ -652,8 +650,11 @@ export type EcTreeLink = {
 }
 
 export type EcUIButton = {
+  IsClicking: boolean,
+  IsHovering: boolean,
 
-  OnClicked: EventSignal<()>,
+  ClickChanged: EventSignal<(boolean)>,
+  HoverChanged: EventSignal<(boolean)>,
 }
 
 export type EcUIFrame = {
