@@ -533,7 +533,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 
     if hasProps or hasFuncs or hasEvnts then
         if hasProps then
-            s = "### Properties:\n"
+            s = "### Properties\n"
 
             local orderedProps = keysOf(t.Properties)
             table.sort(orderedProps)
@@ -564,7 +564,11 @@ local function dumpReflectionApi(t, d, cn, externType)
                     docWarn(`Type '{luautype}' has Array or Map, for {cn}.{n}`)
                 end
 
-                s ..= `* \`{ if isReadOnly then "read " else "" }{ n }: { luautype }\`: { desc }\n`
+                s ..= string.format(
+                    "```luau\n%s%s: %s\n```\n\n%s\n\n",
+                    if isReadOnly then "read " else "", n, luautype, desc
+                )
+
                 documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
                     documentation = desc
                 }
@@ -616,7 +620,11 @@ local function dumpReflectionApi(t, d, cn, externType)
                     end
                 end
 
-                s ..= `* \`{ n }{ subst }\`: { desc }\n`
+                s ..= string.format(
+                    "```luau\n%s%s\n```\n\n%s\n\n",
+                    n, subst, desc
+                )
+
                 documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
                     documentation = desc
                 }
@@ -754,7 +762,11 @@ local function dumpReflectionApi(t, d, cn, externType)
                     end
                 end
 
-                s ..= `* \`{ n }({ argsSig })\`: { desc }\n`
+                s ..= string.format(
+                    "```luau\n%s(%s)\n```\n\n%s\n\n",
+                    n, argsSig, desc
+                )
+
                 documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
                     documentation = desc
                 }
