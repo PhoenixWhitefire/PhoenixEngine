@@ -383,12 +383,6 @@
             "Description": "Binds the datamodel provided. Bound datamodels fire their `OnFrameBegin` events",
             "Type": "(self, DataModel: GameObject & EcDataModel) : ()"
           },
-          "Exit": {
-            "Description": "Shuts down the Engine and exits the process with the specified Exit Code (or 0 by default)",
-            "ParameterNames": [
-              "ExitCode"
-            ]
-          },
           "GetCliArguments": {
             "Description": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable",
             "Out": "{ string }"
@@ -397,20 +391,13 @@
             "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)",
             "Type": "(self, Key: string) : JsonDecodable"
           },
-          "GetCurrentVM": "Returns the name of the currently-bound VM",
-          "PollSystemEvents": "Responds to signals sent to the application by the OS. This is done automatically at the start of each frame as well",
-          "SaveConfig": "Saves the Engine's current configuration state to the configuration file (`phoenix.conf`)",
-          "SetConfigValue": {
-            "Description": "Sets `Key` to `Value` in the Engine's loaded configuration without saving it to file",
-            "Type": "(self, Key: string, Value: JsonEncodable) : ()"
-          },
-          "SetCurrentVM": {
-            "Description": "Binds the given VM as the \"current\" one. This causes all Scripts which load afterward to use the specified VM, it does *not* change the VM of any Scripts loaded beforehand",
-            "ParameterNames": "VmName"
-          },
           "SetForegroundDataModel": {
             "Description": "Switches the foreground datamodel to the one provided. Foreground datamodels are what are rendered on screen",
             "Type": "(self, DataModel: GameObject & EcDataModel) : ()"
+          },
+          "SetWindowTitle": {
+            "Description": "Sets the title of the game window",
+            "ParameterNames": "Title"
           },
           "ShowMessageBox": {
             "Description": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message",

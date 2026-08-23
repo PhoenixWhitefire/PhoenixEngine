@@ -162,6 +162,7 @@
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
           "SetForegroundDataModel": "(GameObject) -> ()",
+          "SetWindowTitle": "(String) -> ()",
           "ShowMessageBox": "(String, String, String?, String?, Integer?) -> (Integer)",
           "UnbindDataModel": "(GameObject) -> ()"
         },

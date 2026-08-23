@@ -163,6 +163,23 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
             }
         } },
 
+        { "SetWindowTitle", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::String }),
+            {},
+            [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                Engine* engine = Engine::Get();
+
+                if (!engine->IsHeadlessMode)
+                {
+                    const std::string_view title = inputs[0].AsStringView();
+                    glfwSetWindowTitle(engine->Window, title.data()); // GenericValue guarantees null-termination
+                }
+
+                return {};
+            }
+        } },
+
         { "GetCliArguments", Reflection::MethodDescriptor{
             {},
             REFLECTION_SPAN({ Reflection::ValueType::Array }),

@@ -1777,6 +1777,9 @@
   "@phoenix/globaltype/Engine.SetForegroundDataModel": {
     "documentation": "Switches the foreground datamodel to the one provided. Foreground datamodels are what are rendered on screen"
   },
+  "@phoenix/globaltype/Engine.SetWindowTitle": {
+    "documentation": "Sets the title of the game window"
+  },
   "@phoenix/globaltype/Engine.ShowMessageBox": {
     "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
   },

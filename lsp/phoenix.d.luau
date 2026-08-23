@@ -471,6 +471,7 @@ export type EcEngine = {
   GetCliArguments: (self: EcEngine) -> { string },
   GetConfigValue: (self: EcEngine, Key: string) -> JsonDecodable,
   SetForegroundDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
+  SetWindowTitle: (self: EcEngine, Title: string) -> (),
   ShowMessageBox: (self: EcEngine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> number,
   UnbindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
 }

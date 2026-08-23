@@ -223,6 +223,14 @@ function State.ChangeStageTo(NewStage: Types.Stage)
     PluginManager.OnEditorStageChanged(State.CurrentStage, NewStage)
     CoreTools.OnEditorStageChanged(NewStage)
     State.CurrentStage = NewStage
+
+    if NewStage == "ProjectEditing" then
+        Engine:SetWindowTitle(`PhoenixEngine - Editing { State.Project.Name }`)
+    elseif NewStage == "ProjectPlaying" then
+        Engine:SetWindowTitle(`PhoenixEngine - Playtesting { State.Project.Name }`)
+    else
+        Engine:SetWindowTitle("PhoenixEngine")
+    end
 end
 
 game:BindToClose(handleEngineShutdown)
