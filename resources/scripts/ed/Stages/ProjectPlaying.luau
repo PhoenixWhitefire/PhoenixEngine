@@ -12,7 +12,7 @@ local Preferences = require("@ed/Preferences")
 local CommonUI = require("@ed/CommonUI")
 local State = require("@ed/State")
 
-local ProjectEditing = require("@ed/stages/ProjectEditing")
+local ProjectEditing = require("@ed/Stages/ProjectEditing")
 
 local GameClosedConnection = nil
 

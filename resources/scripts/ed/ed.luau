@@ -51,12 +51,13 @@ if not fs.isdirectory(Preferences.ProjectsDirectory) then
     fs.mkdir(Preferences.ProjectsDirectory)
 end
 
-local shuttingDown = false
-
 local function handleEngineShutdown()
-    shuttingDown = true
-
     CommonUI.SaveSettings()
+
+    if State.CurrentStage == "ProjectPlaying" then
+        State.ChangeStageTo("ProjectEditing") -- TODO :)
+    end
+
     State.ChangeStageTo("SelectProject")
 end
 

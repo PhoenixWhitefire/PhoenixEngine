@@ -285,6 +285,7 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
     end
 
     fs.write("@project/phoenix.editor", json.encode(edFile))
+    fs.remove("@project/phoenix.lock")
 
     DeveloperTools:CloseTextDocuments()
 

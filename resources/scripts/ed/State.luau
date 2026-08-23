@@ -305,7 +305,25 @@ local function openProject_(State: StateType, ManualPath: string?)
         game.OnFrameBegin:Wait()
     end
 
-    fs.definealias("project", `{ Preferences.ProjectsDirectory }/{ assert(path) }`)
+    local projectPath = `{ Preferences.ProjectsDirectory }/{ assert(path) }`
+
+    if fs.isfile(`{ projectPath }/phoenix.lock`) then
+        local choice = Engine:ShowMessageBox(
+            "Conflict",
+            "The project appears to already be open in another instance of the Editor.\n "
+                .. "Would you like to open the project anyway?",
+            "yesno",
+            "warning"
+        )
+
+        if choice == 0 then
+            return
+        end
+    end
+
+    fs.write(`{ projectPath }/phoenix.lock`, "This file is just here to mark that the project is open in another instance of the Editor")
+
+    fs.definealias("project", projectPath)
     fs.definealias("_projres", "@project/resources")
     fs.setunqualifiedroot("@project/")
     assert(path)
