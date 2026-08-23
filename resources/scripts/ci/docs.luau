@@ -133,9 +133,9 @@ type _RUNTIME = {
     }
 }
 
-export type EventSignal<T...> = {
-    read Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
-    read Wait: (self: EventSignal<T...>) -> (T...)
+export type EventSignal<F, T...> = {
+    read Connect: (self: EventSignal<F, T...>, Callback: F) -> (EventConnection),
+    read Wait: (self: EventSignal<F, T...>) -> (T...)
 }
 
 declare extern type KeyInputEvent with
@@ -709,20 +709,57 @@ local function dumpReflectionApi(t, d, cn, externType)
                     continue
                 end
 
-                local argTypes = if d.Events[n].ArgumentTypes then `({d.Events[n].ArgumentTypes})` else rtolsub(v)
+                local argsSig = ""
+                local argTypesSig = "()"
 
-                s ..= `* \`{ n }{ argTypes }\`: { desc }\n`
+                if d.Events[n].Arguments then
+                    argsSig = ""
+                    argTypesSig = ""
+
+                    for _, arg in d.Events[n].Arguments do
+                        argsSig ..= `{ arg.Name }: { arg.Type }, `
+                        argTypesSig ..= `{ arg.Type }, `
+                    end
+
+                    argsSig = string.sub(argsSig, 1, #argsSig - 2)
+                    argTypesSig = string.sub(argTypesSig, 1, #argTypesSig - 2)
+                else
+                    local argNames = d.Events[n].ArgumentNames or {}
+
+                    if typeof(argNames) == "string" then
+                        argNames = string.split(argNames, ", ")
+                    end
+
+                    if v ~= "()" then
+                        argsSig = ""
+                        argTypesSig = ""
+
+                        local subs = rtolsub(v)
+                        subs = string.sub(subs, 1, #subs - 1)
+                        subs = string.sub(subs, 2, #subs)
+                        local argTypes = string.split(subs, ", ")
+
+                        if #argTypes ~= #argNames then
+                            docWarn(`Expected { #argTypes } argument names for { cn }.{ n }, got { #argNames }`)
+                            continue
+                        end
+
+                        for i, argType in argTypes do
+                            argsSig ..= `{ argNames[i] }: { argType }, `
+                            argTypesSig ..= `{ argType }, `
+                        end
+
+                        argsSig = string.sub(argsSig, 1, #argsSig - 2)
+                        argTypesSig = string.sub(argTypesSig, 1, #argTypesSig - 2)
+                    end
+                end
+
+                s ..= `* \`{ n }({ argsSig })\`: { desc }\n`
                 documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
                     documentation = desc
                 }
 
-                if d.Events[n].ArgumentTypes then
-                    if #string.split(d.Events[n].ArgumentTypes, ",") ~= #string.split(v, ",") then
-                        docWarn(`incorrect number of event callback argument types: {n} ({d.Events[n].ArgumentTypes}) vs {v}`)
-                    end
-                end
-
-                definitionsFile ..= `  { n }: EventSignal<{argTypes}>{ if externType then "" else "," }\n`
+                definitionsFile ..= `  { n }: EventSignal<({ argsSig }) -> (), { argTypesSig }>{ if externType then "" else "," }\n`
             end
         end
     else

@@ -3,15 +3,19 @@
     "Base": {
       "Events": {
         "OnTagAdded": {
+          "ArgumentNames": "Tag",
           "Description": "Fires when the Object receives a new tag, passing the tag to the callback"
         },
         "OnTagRemoved": {
+          "ArgumentNames": "Tag",
           "Description": "Fires when the Object loses a tag, passing the tag to the callback"
         },
         "OnTreeEnabledChanged": {
+          "ArgumentNames": "TreeEnabled",
           "Description": "Fires when the value of `.TreeEnabled` changes"
         },
         "OnWorkspaceChanged": {
+          "ArgumentNames": "Previous, Current",
           "Description": "Fires when the Object moves between Workspaces"
         }
       },
@@ -217,11 +221,11 @@
           },
           "GetComponentCreatedSignal": {
             "Description": "Returns a signal that fires when a given component is created from the world",
-            "Type": "<T>(self, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) : EventSignal<GameObject & index<Components, T>>"
+            "Type": "<T>(self, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) : EventSignal<(Object: GameObject & index<Components, T>) -> (), GameObject & index<Components, T>>"
           },
           "GetComponentDeletedSignal": {
             "Description": "Returns a signal that fires when a given component is deleted from the world",
-            "Type": "(self, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) : EventSignal<GameObject>"
+            "Type": "(self, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) : EventSignal<(Object: GameObject) -> (), GameObject>"
           },
           "GetObjectsWithComponent": {
             "Description": "Returns a list of all objects with the given component",
@@ -229,12 +233,12 @@
           },
           "GetTagAddedSignal": {
             "Description": "Returns a signal that fires when the given tag is added to any Objects",
-            "Out": "EventSignal<GameObject>",
+            "Out": "EventSignal<(Object: GameObject) -> (), GameObject>",
             "ParameterNames": "Tag"
           },
           "GetTagRemovedSignal": {
             "Description": "Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d",
-            "Out": "EventSignal<GameObject>",
+            "Out": "EventSignal<(Object: GameObject) -> (), GameObject>",
             "ParameterNames": "Tag"
           },
           "GetTagged": {
@@ -251,6 +255,7 @@
             "Description": "This event fires when the datamodel is closing. Do not yield within the callback as the thread may never be resumed again"
           },
           "OnFrameBegin": {
+            "ArgumentNames": "DeltaTime",
             "Description": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
           }
         },
@@ -278,10 +283,22 @@
       "DeveloperTools": {
         "Description": "Built-in development tools",
         "Events": {
-          "BreakpointRemoved": "Fires when a breakpoint is removed, providing the file and line number",
+          "BreakpointRemoved": {
+            "ArgumentNames": "File, Line",
+            "Description": "Fires when a breakpoint is removed"
+          },
           "BreakpointUpdated": {
             "Description": "Fires when a breakpoint is added or modified",
-            "ArgumentTypes": "string, DebugBreakpointInfo"
+            "Arguments": [
+              {
+                "Name": "File",
+                "Type": "string"
+              },
+              {
+                "Name": "Breakpoint",
+                "Type": "DebugBreakpointInfo"
+              }
+            ]
           },
           "DebuggerRequestedStop": "Fires when the developer clicks 'Stop' in the debugger"
         },
@@ -512,7 +529,28 @@
         "Events": {
           "OnMessaged": {
             "Description": "Fires whenever a Log Message is created",
-            "ArgumentTypes": "number, EnumLogType, string, string, { LoggingLogValue }"
+            "Arguments": [
+              {
+                "Name": "Time",
+                "Type": "number"
+              },
+              {
+                "Name": "Type",
+                "Type": "EnumLogType"
+              },
+              {
+                "Name": "Message",
+                "Type": "string"
+              },
+              {
+                "Name": "ExtraTags",
+                "Type": "string"
+              },
+              {
+                "Name": "Values",
+                "Type": "{ LoggingLogValue }"
+              }
+            ]
           }
         },
         "Methods": {
@@ -585,15 +623,30 @@
         "Description": "Checking player inputs",
         "Events": {
           "KeyEvent": {
-            "ArgumentTypes": "KeyInputEvent",
+            "Arguments": [
+              {
+                "Name": "Event",
+                "Type": "KeyInputEvent"
+              }
+            ],
             "Description": "Fires whenever a key-related event occurs"
           },
           "MouseButtonEvent": {
-            "ArgumentTypes": "MouseButtonInputEvent",
+            "Arguments": [
+              {
+                "Name": "Event",
+                "Type": "MouseButtonInputEvent"
+              }
+            ],
             "Description": "Fires whenever a mouse-button-related event occurs"
           },
           "ScrollEvent": {
-            "ArgumentTypes": "ScrollInputEvent",
+            "Arguments": [
+              {
+                "Name": "Event",
+                "Type": "ScrollInputEvent"
+              }
+            ],
             "Description": "Fires whenever the player scrolls with a scroll device (such as the mouse wheel)"
           }
         },
@@ -692,7 +745,10 @@
       "ScriptEngine": {
         "Description": "Managing Luau",
         "Events": {
-          "BreakpointMoved": "Fires when a breakpoint queued by `:SetScriptBreakpoint` is applied to a different line number than originally requested"
+          "BreakpointMoved": {
+            "ArgumentNames": "File, RequestedLine, ActualLine",
+            "Description": "Fires when a breakpoint queued by `:SetScriptBreakpoint` is applied to a different line number than originally requested"
+          }
         },
         "Methods": {
           "CloseVM": {
@@ -769,6 +825,7 @@
         "Description": "Gives a physical position and size to an Object",
         "Events": {
           "OnScriptMoved": {
+            "ArgumentNames": "Previous, Current",
             "Description": "Fires when a script moves the object"
           }
         },
@@ -792,8 +849,14 @@
       "UIButton": {
         "Description": "Button behaviour",
         "Events": {
-          "ClickChanged": "Fires when the button click state is changed, providing whether it is currently held or released",
-          "HoverChanged": "Fires when the button hover state is changed, providing whether or not it is currently being hovered"
+          "ClickChanged": {
+            "ArgumentNames": "IsHolding",
+            "Description": "Fires when the button click state changes"
+          },
+          "HoverChanged": {
+            "ArgumentNames": "IsHovering",
+            "Description": "Fires when the button hover state changes"
+          }
         },
         "Properties": {
           "IsClicking": "Whether the cursor is currently holding the button down",

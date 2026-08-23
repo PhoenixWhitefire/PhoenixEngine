@@ -69,9 +69,9 @@ type _RUNTIME = {
     }
 }
 
-export type EventSignal<T...> = {
-    read Connect: (self: EventSignal<T...>, Callback: (T...) -> ()) -> (EventConnection),
-    read Wait: (self: EventSignal<T...>) -> (T...)
+export type EventSignal<F, T...> = {
+    read Connect: (self: EventSignal<F, T...>, Callback: F) -> (EventConnection),
+    read Wait: (self: EventSignal<F, T...>) -> (T...)
 }
 
 declare extern type KeyInputEvent with
@@ -343,10 +343,10 @@ export type GameObject = {
   RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   RemoveTag: (self: GameObject, Tag: string) -> (),
 
-  OnTagAdded: EventSignal<(string)>,
-  OnTagRemoved: EventSignal<(string)>,
-  OnTreeEnabledChanged: EventSignal<(boolean)>,
-  OnWorkspaceChanged: EventSignal<(GameObject, GameObject)>,
+  OnTagAdded: EventSignal<(Tag: string) -> (), string>,
+  OnTagRemoved: EventSignal<(Tag: string) -> (), string>,
+  OnTreeEnabledChanged: EventSignal<(TreeEnabled: boolean) -> (), boolean>,
+  OnWorkspaceChanged: EventSignal<(Previous: GameObject, Current: GameObject) -> (), GameObject, GameObject>,
 }
 
 export type EcAnimation = {
@@ -390,11 +390,11 @@ export type EcCamera = {
 export type EcCollections = {
 
   GetCollections: (self: EcCollections) -> { string },
-  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<GameObject & index<Components, T>>,
-  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<GameObject>,
+  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject & index<Components, T>) -> (), GameObject & index<Components, T>>,
+  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject) -> (), GameObject>,
   GetObjectsWithComponent: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> GameObject & index<Components, T>,
-  GetTagAddedSignal: (self: EcCollections, Tag: string) -> EventSignal<GameObject>,
-  GetTagRemovedSignal: (self: EcCollections, Tag: string) -> EventSignal<GameObject>,
+  GetTagAddedSignal: (self: EcCollections, Tag: string) -> EventSignal<(Object: GameObject) -> (), GameObject>,
+  GetTagRemovedSignal: (self: EcCollections, Tag: string) -> EventSignal<(Object: GameObject) -> (), GameObject>,
   GetTagged: (self: EcCollections, Tag: string) -> { GameObject },
 }
 
@@ -408,8 +408,8 @@ export type EcDataModel = {
   Close: (self: EcDataModel, ExitCode: number?) -> (),
   GetService: <T>(self: EcDataModel, Service: keyof<Services> & T) -> GameObject & index<Services, T>,
 
-  Closing: EventSignal<()>,
-  OnFrameBegin: EventSignal<(number)>,
+  Closing: EventSignal<() -> (), ()>,
+  OnFrameBegin: EventSignal<(DeltaTime: number) -> (), number>,
 }
 
 export type EcDeveloperTools = {
@@ -438,9 +438,9 @@ export type EcDeveloperTools = {
   SetExplorerSelections: (self: EcDeveloperTools, Selections: { GameObject }) -> (),
   SetToolEnabled: (self: EcDeveloperTools, ToolName: string, Enabled: boolean) -> (),
 
-  BreakpointRemoved: EventSignal<(string, number)>,
-  BreakpointUpdated: EventSignal<(string, DebugBreakpointInfo)>,
-  DebuggerRequestedStop: EventSignal<()>,
+  BreakpointRemoved: EventSignal<(File: string, Line: number) -> (), string, number>,
+  BreakpointUpdated: EventSignal<(File: string, Breakpoint: DebugBreakpointInfo) -> (), string, DebugBreakpointInfo>,
+  DebuggerRequestedStop: EventSignal<() -> (), ()>,
 }
 
 export type EcDirectionalLight = {
@@ -514,7 +514,7 @@ export type EcLogging = {
 
   Write: (self: EcLogging, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
 
-  OnMessaged: EventSignal<(number, EnumLogType, string, string, { LoggingLogValue })>,
+  OnMessaged: EventSignal<(Time: number, Type: EnumLogType, Message: string, ExtraTags: string, Values: { LoggingLogValue }) -> (), number, EnumLogType, string, string, { LoggingLogValue }>,
 }
 
 export type EcMesh = {
@@ -570,9 +570,9 @@ export type EcPlayerInput = {
   ResetViewportInputRect: (self: EcPlayerInput) -> (),
   SetViewportInputRect: (self: EcPlayerInput, Position: vector, Size: vector) -> (),
 
-  KeyEvent: EventSignal<(KeyInputEvent)>,
-  MouseButtonEvent: EventSignal<(MouseButtonInputEvent)>,
-  ScrollEvent: EventSignal<(ScrollInputEvent)>,
+  KeyEvent: EventSignal<(Event: KeyInputEvent) -> (), KeyInputEvent>,
+  MouseButtonEvent: EventSignal<(Event: MouseButtonInputEvent) -> (), MouseButtonInputEvent>,
+  ScrollEvent: EventSignal<(Event: ScrollInputEvent) -> (), ScrollInputEvent>,
 }
 
 export type EcPointLight = {
@@ -615,7 +615,7 @@ export type EcScriptEngine = {
   SetScriptBreakpoint: (self: EcScriptEngine, VM: string, ScriptPath: string, Line: number, Enabled: boolean) -> number,
   SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
 
-  BreakpointMoved: EventSignal<(string, number, number)>,
+  BreakpointMoved: EventSignal<(File: string, RequestedLine: number, ActualLine: number) -> (), string, number, number>,
 }
 
 export type EcSound = {
@@ -643,7 +643,7 @@ export type EcTransform = {
   LocalTransform: Matrix,
   Transform: Matrix,
 
-  OnScriptMoved: EventSignal<(Matrix, Matrix)>,
+  OnScriptMoved: EventSignal<(Previous: Matrix, Current: Matrix) -> (), Matrix, Matrix>,
 }
 
 export type EcTreeLink = {
@@ -654,8 +654,8 @@ export type EcUIButton = {
   IsClicking: boolean,
   IsHovering: boolean,
 
-  ClickChanged: EventSignal<(boolean)>,
-  HoverChanged: EventSignal<(boolean)>,
+  ClickChanged: EventSignal<(IsHolding: boolean) -> (), boolean>,
+  HoverChanged: EventSignal<(IsHovering: boolean) -> (), boolean>,
 }
 
 export type EcUIFrame = {
