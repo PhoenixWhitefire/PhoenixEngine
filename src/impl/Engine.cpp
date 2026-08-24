@@ -1281,7 +1281,7 @@ void Engine::Start()
             if (CurrentScene.RenderList.size() == 0)
                 CurrentScene.RenderList.push_back(RenderItem{
                     .RenderMeshId = 1,
-                    .MaterialId = MaterialManagerInstance.LoadFromPath("@base/materials/plastic.mtl"),
+                    .MaterialId = MaterialManagerInstance.LoadFromPath("@base/materials/Smooth.mtl"),
                     .Transparency = 1.f
                 });
 

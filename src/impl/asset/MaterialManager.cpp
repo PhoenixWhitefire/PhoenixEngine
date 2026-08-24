@@ -140,6 +140,7 @@ void RenderMaterial::Reload()
         this->EmissionMap = 0;
 
     this->HasTranslucency = jsonMaterialData.value("HasTranslucency", jsonMaterialData.value("translucency", false));
+    this->LinearlySmoothened = jsonMaterialData.value("BilinearFiltering", true);
 
     this->SpecExponent = jsonMaterialData.value("specExponent", 8.f);
     this->SpecMultiply = jsonMaterialData.value("specMultiply", 0.5f);

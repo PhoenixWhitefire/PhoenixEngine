@@ -78,7 +78,7 @@ public:
     */
     Texture& GetTextureResource(uint32_t);
 
-    void UnloadTexture(uint32_t);
+    void UnloadTexture(const std::string&);
 
     void BindNearestNeighbourSampler(uint32_t Unit);
     void BindLinearSampler(uint32_t Unit);

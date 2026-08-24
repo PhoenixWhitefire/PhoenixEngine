@@ -69,7 +69,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetallnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 39,
@@ -137,7 +137,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetallnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 39,
@@ -205,7 +205,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetallnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 39,
@@ -273,7 +273,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetallnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 39,
@@ -341,7 +341,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetallnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 39,
@@ -409,7 +409,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetallnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 39,
@@ -477,7 +477,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetallnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 39,

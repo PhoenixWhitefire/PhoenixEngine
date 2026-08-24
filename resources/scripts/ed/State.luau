@@ -147,7 +147,7 @@ local function createNewProject_(State: StateType)
 
     stubCoreAssets()
 
-    for _, v in { "brick", "error", "neon", "plastic", "smoothplastic", "wood", "woodplanks" } do
+    for _, v in { "Smooth", "Checkered", "error" } do
         fs.copy(`@_editres/materials/{v}.mtl`, `@_projres/materials/{v}.mtl`)
     end
 

@@ -1,0 +1,17 @@
+PHOENIXF
+#Asset Material
+#Date 13-5-2026
+
+{
+  "ColorMap": "!Checkered",
+  "HasTranslucency": false,
+  "MetallicRoughnessMap": "!White",
+  "PolygonMode": 0,
+  "Shader": "@base/shaders/worldUberTriProjected.shp",
+  "Uniforms": {
+    "MaterialProjectionFactor": 0.05000000074505806
+  },
+  "BilinearFiltering": false,
+  "specExponent": 4.0,
+  "specMultiply": 0.25
+}

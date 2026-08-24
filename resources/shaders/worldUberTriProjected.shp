@@ -4,6 +4,6 @@
   },
   "Fragment": "@base/shaders/worldUber.frag",
   "Geometry": "@base/shaders/worldUber.geom",
-  "InheritUniformsOf": "worldUber",
+  "InheritUniformsOf": "@base/shaders/worldUber.shp",
   "Vertex": "@base/shaders/worldUber.vert"
 }

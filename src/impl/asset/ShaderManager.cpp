@@ -195,10 +195,7 @@ void ShaderProgram::Reload()
 
 	bool shpExists = true;
 	std::string realShpPath = normalizeName(Name);
-	std::string shpContents = FileRW::ReadFile(
-		realShpPath,
-		&shpExists
-	);
+	std::string shpContents = FileRW::ReadFile(realShpPath, &shpExists);
 
 	if (!shpExists)
 	{
@@ -217,7 +214,16 @@ void ShaderProgram::Reload()
 		return;
 	}
 
-	nlohmann::json shpJson = nlohmann::json::parse(shpContents);
+	nlohmann::json shpJson;
+
+	try
+	{
+		shpJson = nlohmann::json::parse(shpContents);
+	}
+	catch (const nlohmann::json::parse_error& e)
+	{
+		SP_LOADERROR(std::format("Error parsing {} ({}) shader definition: {}", Name, realShpPath, e.what()));
+	}
 
 	if (const auto uancestorIt = shpJson.find("InheritUniformsOf"); uancestorIt != shpJson.end())
 		UniformsAncestor = uancestorIt.value();

@@ -3,14 +3,11 @@ PHOENIXF
 #Date 13-5-2026
 
 {
-  "ColorMap": "textures/materials/plastic.jpg",
+  "ColorMap": "!White",
   "HasTranslucency": false,
   "MetallicRoughnessMap": "!White",
   "PolygonMode": 0,
-  "Shader": "worldUberTriProjected",
-  "Uniforms": {
-    "MaterialProjectionFactor": 0.05000000074505806
-  },
+  "Shader": "@base/shaders/worldUber.shp",
   "specExponent": 4.0,
   "specMultiply": 0.25
 }

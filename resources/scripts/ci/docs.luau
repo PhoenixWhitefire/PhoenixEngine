@@ -362,7 +362,7 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
     end
 
     assert(typeof(returns) == "string")
-    return `#### \`{libname}.{ funcname }{generics}({ docargs }){ if #returns > 0 then ": " .. returns else "" }\`\n`, lspDef
+    return `function {libname}.{ funcname }{generics}({ docargs }){ if #returns > 0 then ": " .. returns else "" }`, lspDef
 end
 
 local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string)
@@ -428,7 +428,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 
                 for _, vIn in ins do
                     local docsig, defsig = dumpFuncSignature(libname, k, vIn, v.Out or "", v)
-                    str ..= docsig
+                    str ..= `\`\`\`luau\n{ docsig }\n\`\`\`\n`
 
                     if not hasWholeDefinition then
                         definitionsFile ..= `{ defsig } & `
@@ -441,7 +441,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
                 end
             else
                 assert(typeof(v.Type) == "string")
-                str ..= `#### {libname}.{k}{v.Type}`
+                str ..= `\`\`\`luau\n{libname}.{k}{v.Type}\n\`\`\`\n`
 
                 if not hasWholeDefinition then
                     definitionsFile ..= v.Type .. ",\n"
@@ -452,7 +452,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
                 docWarn(`Error with member {k}`)
                 return str
             end
-            str ..= `#### \`{libname}.{ k }: { v.Type }\`\n`
+            str ..= `\`\`\`luau\n{libname}.{ k }: { v.Type }\n\`\`\`\n`
 
             if not hasWholeDefinition then
                 definitionsFile ..= `  { k }: { v.Type },\n`
@@ -579,7 +579,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 
         if hasFuncs then
             definitionsFile ..= "\n"
-            s ..= "\n### Methods:\n"
+            s ..= "\n### Methods\n"
 
             local orderedFuncs = keysOf(t.Methods)
             table.sort(orderedFuncs)
@@ -620,10 +620,7 @@ local function dumpReflectionApi(t, d, cn, externType)
                     end
                 end
 
-                s ..= string.format(
-                    "```luau\n%s%s\n```\n\n%s\n\n",
-                    n, subst, desc
-                )
+                --local visibleSig = string.gsub(subst, " : ", ": ")
 
                 documentationData[`@{DOCS_PREFIX}/globaltype/{cn}.{n}`] = {
                     documentation = desc
@@ -685,15 +682,36 @@ local function dumpReflectionApi(t, d, cn, externType)
                     subst = `(self, ` .. subst:sub(2, #subst)
                 end
 
+                local visibleSig = subst:gsub(`self, `, ""):gsub(`self`, "")
+
+                local retValsLoc = assert((string.find(visibleSig, " : "))) + 3
+                local numRetVals = #string.split(string.sub(visibleSig, retValsLoc, #visibleSig), ", ")
+
+                if numRetVals == 1 and string.find(visibleSig, "%(", retValsLoc) then
+                    visibleSig = string.sub(visibleSig, 1, retValsLoc - 1) .. string.sub(visibleSig, retValsLoc + 1, #visibleSig - 1)
+                end
+
+                if string.sub(visibleSig, #visibleSig - 2, #visibleSig) == " : " then
+                    visibleSig = string.sub(visibleSig, 1, #visibleSig - 3)
+                else
+                    visibleSig = visibleSig:gsub(" : ", ": ")
+                end
+
                 subst = GameObjectOverrides[n] or subst
-                subst = subst:gsub("%) : ", ") -> ")
                 subst = string.gsub(subst, "self", `self: { if cn == "GameObject" then "" else "Ec" }{cn}`)
+
+                subst = subst:gsub("%) : ", ") -> ")
 
                 if n ~= "SetShaderVariable" then
                     definitionsFile ..= `  { n }: { subst }{ if externType then "" else "," }\n`
                 else
-                    definitionsFile ..= "  SetShaderVariable: ((_: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),\n"
+                    definitionsFile ..= "  SetShaderVariable: ((self: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),\n"
                 end
+
+                s ..= string.format(
+                    "```luau\nfunction %s%s\n```\n\n%s\n\n",
+                    n, visibleSig, desc
+                )
 
                 if subst:find("Array") or subst:find("Map") then
                     docWarn(`Type '{subst}' has Array or Map, for {cn}.{n}`)
@@ -703,7 +721,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 
         if hasEvnts then
             definitionsFile ..= "\n"
-            s ..= "\n### Events:\n"
+            s ..= "\n### Events\n"
 
             local orderedEvents = keysOf(t.Events)
             table.sort(orderedEvents)
@@ -763,7 +781,7 @@ local function dumpReflectionApi(t, d, cn, externType)
                 end
 
                 s ..= string.format(
-                    "```luau\n%s(%s)\n```\n\n%s\n\n",
+                    "```luau\n%s:Connect(function(%s)\n```\n\n%s\n\n",
                     n, argsSig, desc
                 )
 
@@ -899,17 +917,17 @@ local function documentDatatype(name)
             end
 
             if not v.Type then
-                datatype ..= `#### \`{ rk }({ args }){ if returns then ": " .. returns else "" }\`\n`
+                datatype ..= `\`\`\`luau\nfunction { rk }({ args }){ if returns then ": " .. returns else "" }\n\`\`\`\n`
 
                 if name ~= "EventSignal" then
                     definitionsFile ..= `  function { rk }({ defargs }): ( { returns or "" } )\n`
                 end
             else
-                datatype ..= `#### \`{ rk }{ v.Type }\`\n`
+                datatype ..= `\`\`\`luau\n{ rk }{ v.Type }\n\`\`\`\n`
                 definitionsFile ..= `  { rk }: { v.Type }\n`
             end
         else
-            datatype ..= `#### \`.{ k }: { v.Type }\`\n`
+            datatype ..= `\`\`\`luau\n.{ k }: { v.Type }\n\`\`\`\n`
 
             if name ~= "EventSignal" then
                 definitionsFile ..= `  { k }: { v.Type }`
@@ -1144,10 +1162,10 @@ for _, name in orderedGlobals do
             generics = `<{contents.Generics}>`
         end
 
-        globals ..= `#### \`{ name }{generics}({ args }): { returns }\`\n`
+        globals ..= `\`\`\`luau\n{ name }{generics}({ args }): { returns }\n\`\`\`\n`
         definitionsFile ..= `declare function { name }{generics}( { args } ){ if #returns > 0 then ": " .. returns else "" }\n`
     else
-        globals ..= `#### \`{ name }: { apiDump.ScriptEnv.Globals[name] }\`\n`
+        globals ..= `\`\`\`luau\n{ name }: { apiDump.ScriptEnv.Globals[name] }\n\`\`\`\n`
         definitionsFile ..= `declare { name }: { apiDump.ScriptEnv.Globals[name] }\n`
     end
 

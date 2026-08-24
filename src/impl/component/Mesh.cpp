@@ -4,10 +4,9 @@
 
 #include "asset/MaterialManager.hpp"
 #include "asset/MeshProvider.hpp"
-#include "component/Workspace.hpp"
-#include "component/RigidBody.hpp"
 #include "component/Animation.hpp"
 #include "component/Bone.hpp"
+#include "datatype/GameObject.hpp"
 
 static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 {
@@ -30,8 +29,8 @@ uint32_t MeshComponentManager::CreateComponent(GameObject* Object)
     uint32_t id = ComponentManager<EcMesh>::CreateComponent(Object);
 
     EcMesh& cm = Components[id];
-    cm.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
-    cm.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+    cm.MaterialId = MaterialManager::Get()->LoadFromPath(cm.Material);
+    cm.RenderMeshId = MeshProvider::Get()->LoadFromPath(cm.Asset);
     cm.ComponentId = id;
     cm.Object = Object;
 
@@ -56,8 +55,8 @@ Reflection::GenericValue MeshComponentManager::GetDefaultPropertyValue(const std
 Reflection::GenericValue MeshComponentManager::GetDefaultPropertyValue(const Reflection::PropertyDescriptor* Property)
 {
     static EcMesh Defaults;
-    Defaults.MaterialId = MaterialManager::Get()->LoadFromPath("plastic");
-    Defaults.RenderMeshId = MeshProvider::Get()->LoadFromPath("!Cube");
+    Defaults.MaterialId = MaterialManager::Get()->LoadFromPath(Defaults.Material);
+    Defaults.RenderMeshId = MeshProvider::Get()->LoadFromPath(Defaults.Asset);
 
     return Property->Get((void*)&Defaults);
 }
@@ -100,19 +99,17 @@ const Reflection::StaticPropertyMap& MeshComponentManager::GetProperties()
         REFLECTION_PROPERTY(
             "Material",
             String,
-            [](void* p)
-            -> Reflection::GenericValue
+            [](void* p) -> Reflection::GenericValue
             {
-                EcMesh* m = static_cast<EcMesh*>(p);
-                MaterialManager* mtlManager = MaterialManager::Get();
-
-                return mtlManager->GetMaterialResource(m->MaterialId).Name;
+                const EcMesh* m = static_cast<EcMesh*>(p);
+                return m->Material;
             },
             [](void* p, const Reflection::GenericValue& gv)
             {
                 EcMesh* m = static_cast<EcMesh*>(p);
                 MaterialManager* mtlManager = MaterialManager::Get();
 
+                m->Material = gv.AsString();
                 m->MaterialId = mtlManager->LoadFromPath(gv.AsStringView());
             }
         )

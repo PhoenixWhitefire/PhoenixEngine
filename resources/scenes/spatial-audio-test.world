@@ -87,7 +87,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Material": "plastic",
+      "Material": "Smooth",
       "MetalnessFactor": 1.0,
       "Name": "Mesh",
       "Parent": 69,

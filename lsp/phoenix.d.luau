@@ -588,7 +588,7 @@ export type EcRenderer = {
   VSync: boolean,
 
   SetShaderTextureVariable: (self: EcRenderer, Shader: string, Variable: string, TexturePath: string, InLinearColorSpace: boolean) -> (),
-  SetShaderVariable: ((_: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),
+  SetShaderVariable: ((self: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),
 }
 
 export type EcRigidBody = {

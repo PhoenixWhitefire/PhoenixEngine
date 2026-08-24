@@ -282,7 +282,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
             for _, g in CoreTools.HoveringOverCamera:GetChildren() do
                 if g:HasComponent("Mesh") then
                     local m = g :: EcMesh
-                    m.Material = "@base/materials/plastic.mtl"
+                    m.Material = "./resources/materials/Smooth.mtl"
                     m.Tint = DefaultCameraModelColors[g.Name]
                 end
             end
@@ -291,7 +291,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
         for _, g in CoreTools.HoveringOverCamera:GetChildren() do
             if g:HasComponent("Mesh") then
                 local m = g :: EcMesh
-                m.Material = "@base/materials/plastic.mtl"
+                m.Material = "./resources/materials/Smooth.mtl"
                 m.Tint = DefaultCameraModelColors[g.Name]
             end
         end

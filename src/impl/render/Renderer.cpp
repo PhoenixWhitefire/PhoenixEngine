@@ -556,6 +556,7 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
     ZoneScopedC(tracy::Color::HotPink);
 
     MaterialManager* mtlManager = MaterialManager::Get();
+    TextureManager* texManager = TextureManager::Get();
 
     RenderMaterial& material = mtlManager->GetMaterialResource(RenderData.MaterialId);
     ShaderProgram& shader = material.GetShader();
@@ -586,10 +587,12 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
 
         }
     else
+    {
         if (material.PolygonMode == RenderMaterial::MaterialPolygonMode::Points)
             glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
         else
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -615,11 +618,6 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
         RenderData.TintColor
     );
 
-    //shader.SetTextureUniform("ColorMap", material.ColorMap);
-    //shader.SetTextureUniform("MetallicRoughnessMap", material.MetallicRoughnessMap);
-
-    TextureManager* texManager = TextureManager::Get();
-
     glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::MaterialColorMap);
     glBindTexture(GL_TEXTURE_2D, texManager->GetTextureResource(material.ColorMap).GpuId);
 
@@ -643,6 +641,17 @@ void Renderer::m_SetMaterialData(const RenderItem& RenderData, bool DebugWirefra
     }
     else
         shader.SetUniform("Phoenix_Material.HasEmissionMap", false);
+
+    if (material.LinearlySmoothened)
+    {
+        for (uint32_t unit : { ReservedTextureSlot::MaterialColorMap, ReservedTextureSlot::MaterialMetallicRoughnessMap, ReservedTextureSlot::MaterialNormalMap, ReservedTextureSlot::MaterialEmissionMap })
+            texManager->BindLinearSampler(unit);
+    }
+    else
+    {
+        for (uint32_t unit : { ReservedTextureSlot::MaterialColorMap, ReservedTextureSlot::MaterialMetallicRoughnessMap, ReservedTextureSlot::MaterialNormalMap, ReservedTextureSlot::MaterialEmissionMap })
+            texManager->BindNearestNeighbourSampler(unit);
+    }
 }
 
 void Renderer::SwapBuffers()

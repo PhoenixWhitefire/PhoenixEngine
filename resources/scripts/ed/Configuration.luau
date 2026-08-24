@@ -58,6 +58,8 @@ return table.freeze({
         "shaders/boxframe.shp",
         "shaders/boxframe.frag",
         "shaders/include/worldCommon.frag",
+        "materials/Smooth.mtl",
+        "materials/Checkered.mtl",
     },
 
     GetLogo = getLogo

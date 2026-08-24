@@ -190,7 +190,19 @@ local function canInteractWithLogSubMessage(ExtraTags: string, DirectValue: unkn
         local lineMatch = ExtraTags:match("Line:%d+")
         shortSrc = shortSrc:sub(1, assert((shortSrc:find(","))))
 
-        return true, `Open { shortSrc:sub(#("Script:") + 1, #shortSrc - 1) }{ if lineMatch then lineMatch:sub(#("Line:"), #lineMatch) else "" }`
+        local scriptPath = shortSrc:sub(#("Script:") + 1, #shortSrc - 1)
+
+        if scriptPath:find("resources/scripts/ed") then
+            return false, "Editor script"
+        end
+
+        local resLoc = string.find(scriptPath, "resources/")
+
+        if resLoc then
+            scriptPath = string.sub(scriptPath, resLoc + #("resources/"), #scriptPath)
+        end
+
+        return true, `Open { scriptPath }{ if lineMatch then lineMatch:sub(#("Line:"), #lineMatch) else "" }`
     end
 
     if source and source:find("CommandBar") then

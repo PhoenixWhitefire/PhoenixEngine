@@ -230,27 +230,27 @@ void main()
 	else
 	{
 		vec3 blending = getTriPlanarBlending(Frag_VertexNormal);
-		vec2 uvXAxis = Frag_ModelPosition.zy * vec2(1.f, -1.f) * MaterialProjectionFactor;
-		vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;
-		vec2 uvZAxis = -Frag_ModelPosition.xy * MaterialProjectionFactor;
+		//vec2 uvXAxis = Frag_ModelPosition.zy * vec2(1.f, -1.f) * MaterialProjectionFactor;
+		//vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;
+		//vec2 uvZAxis = -Frag_ModelPosition.xy * MaterialProjectionFactor;
 		
-		vec4 xAxis = textureLod(Phoenix_Material.ColorMap, uvXAxis, mipLevel);
-		vec4 yAxis = textureLod(Phoenix_Material.ColorMap, uvYAxis, mipLevel);
-		vec4 zAxis = textureLod(Phoenix_Material.ColorMap, uvZAxis, mipLevel);
+		vec4 xAxis = textureLod(Phoenix_Material.ColorMap, Frag_ModelPosition.yz, mipLevel);
+		vec4 yAxis = textureLod(Phoenix_Material.ColorMap, Frag_ModelPosition.xz, mipLevel);
+		vec4 zAxis = textureLod(Phoenix_Material.ColorMap, Frag_ModelPosition.xy, mipLevel);
 
 		Albedo = xAxis * blending.x + yAxis * blending.y + zAxis * blending.z;
 
-		vec2 specXAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, uvXAxis, mipLevel).rg;
-		vec2 specYAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, uvYAxis, mipLevel).rg;
-		vec2 specZAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, uvZAxis, mipLevel).rg;
+		vec2 specXAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, Frag_ModelPosition.yz, mipLevel).rg;
+		vec2 specYAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, Frag_ModelPosition.xz, mipLevel).rg;
+		vec2 specZAxis = textureLod(Phoenix_Material.MetallicRoughnessMap, Frag_ModelPosition.xy, mipLevel).rg;
 
 		MetallicRoughnessSample = specXAxis * blending.x + specYAxis * blending.y + specZAxis * blending.z;
 
 		if (Phoenix_Material.HasNormalMap)
 		{
-			vec3 normXAxis = textureLod(Phoenix_Material.NormalMap, uvXAxis, mipLevel).rgb;
-			vec3 normYAxis = textureLod(Phoenix_Material.NormalMap, uvYAxis, mipLevel).rgb;
-			vec3 normZAxis = textureLod(Phoenix_Material.NormalMap, uvZAxis, mipLevel).rgb;
+			vec3 normXAxis = textureLod(Phoenix_Material.NormalMap, Frag_ModelPosition.yz, mipLevel).rgb;
+			vec3 normYAxis = textureLod(Phoenix_Material.NormalMap, Frag_ModelPosition.xz, mipLevel).rgb;
+			vec3 normZAxis = textureLod(Phoenix_Material.NormalMap, Frag_ModelPosition.xy, mipLevel).rgb;
 
 			NormalSample = normXAxis * blending.x + normYAxis * blending.y + normZAxis * blending.z;
 			//vertexNormal += (normSample - vec3(0.f, 0.f, 1.f)) * 2.f - 1.f;
@@ -258,9 +258,9 @@ void main()
 
 		if (Phoenix_Material.HasEmissionMap)
 		{
-			vec3 emissionXAxis = textureLod(Phoenix_Material.EmissionMap, uvXAxis, mipLevel).rgb;
-			vec3 emissionYAxis = textureLod(Phoenix_Material.EmissionMap, uvYAxis, mipLevel).rgb;
-			vec3 emissionZAxis = textureLod(Phoenix_Material.EmissionMap, uvZAxis, mipLevel).rgb;
+			vec3 emissionXAxis = textureLod(Phoenix_Material.EmissionMap, Frag_ModelPosition.yz, mipLevel).rgb;
+			vec3 emissionYAxis = textureLod(Phoenix_Material.EmissionMap, Frag_ModelPosition.xz, mipLevel).rgb;
+			vec3 emissionZAxis = textureLod(Phoenix_Material.EmissionMap, Frag_ModelPosition.xy, mipLevel).rgb;
 
 			EmissionSample = emissionXAxis * blending.x + emissionYAxis * blending.y + emissionZAxis * blending.z;
 		}

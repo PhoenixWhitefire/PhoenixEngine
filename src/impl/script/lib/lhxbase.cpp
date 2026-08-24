@@ -190,7 +190,7 @@ static void appendToLog(lua_State* L, Logging::MessageType Type)
         size_t l = 0;
         const char* s = luaL_tolstring(L, 1, &l);
 
-        Log.Append(s);
+        Log.Write(s, Type, tags);
         return;
     }
 
@@ -199,7 +199,7 @@ static void appendToLog(lua_State* L, Logging::MessageType Type)
     for (int i = 1; i <= n; i++)
         values.push_back(serialize(L, i));
 
-    Log.AppendWithValues(Type, "", values);
+    Log.AppendWithValues(Type, "", values, tags);
 }
 
 static int base_print(lua_State* L)

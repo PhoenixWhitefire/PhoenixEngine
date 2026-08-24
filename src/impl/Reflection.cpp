@@ -26,8 +26,11 @@ static void fromString(Reflection::GenericValue& G, const char* Data)
         G.Val.Str[G.Size] = 0;
     }
     else
+    {
         // store it directly
         memcpy(G.Val.StrSso, Data, G.Size);
+        G.Val.StrSso[G.Size] = 0;
+    }
 }
 
 Reflection::GenericValue::GenericValue(const std::string_view& str)

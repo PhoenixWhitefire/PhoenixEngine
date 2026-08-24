@@ -111,7 +111,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "Name": "Box",
       "Parent": 0
     },
@@ -148,7 +148,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "MeshAsset": "!Cylinder",
       "Name": "Reel1",
       "Parent": 0
@@ -186,7 +186,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "MeshAsset": "!Cylinder",
       "Name": "Reel2",
       "Parent": 0
@@ -224,7 +224,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "MeshAsset": "!Pyramid",
       "Name": "Lens",
       "Parent": 0
@@ -263,7 +263,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "Name": "BoxI",
       "Parent": 0,
       "Tint": [
@@ -306,7 +306,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "MeshAsset": "!Pyramid",
       "Name": "LensI",
       "Parent": 0,
@@ -350,7 +350,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "MeshAsset": "!Cylinder",
       "Name": "Reel1I",
       "Parent": 0,
@@ -394,7 +394,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/smoothplastic.mtl",
+      "Material": "@base/materials/Smooth.mtl",
       "MeshAsset": "!Cylinder",
       "Name": "Reel2I",
       "Parent": 0,

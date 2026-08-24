@@ -36,6 +36,26 @@ static constexpr uint8_t MissingTextureBytes[] = {
     static_cast<uint8_t>(0xFFu),
 };
 
+// a 2x2 grey checkerboard
+// 24/08/2026
+static constexpr uint8_t CheckeredTextureBytes[] = {
+    static_cast<uint8_t>(0xEEu),
+    static_cast<uint8_t>(0xEEu),
+    static_cast<uint8_t>(0xEEu),
+
+    static_cast<uint8_t>(0xCCu),
+    static_cast<uint8_t>(0xCCu),
+    static_cast<uint8_t>(0xCCu),
+
+    static_cast<uint8_t>(0xCCu),
+    static_cast<uint8_t>(0xCCu),
+    static_cast<uint8_t>(0xCCu),
+
+    static_cast<uint8_t>(0xEEu),
+    static_cast<uint8_t>(0xEEu),
+    static_cast<uint8_t>(0xEEu),
+};
+
 static constexpr uint32_t WhiteTextureBytes = 0xFFFFFF;
 static constexpr uint32_t BlackTextureBytes = 0x000000;
 
@@ -193,19 +213,16 @@ void TextureManager::Initialize(bool IsHeadless)
     createAndUploadTextureData("!Missing", const_cast<uint8_t*>(MissingTextureBytes), 2, 2);
     createAndUploadTextureData("!White", const_cast<uint8_t*>((const uint8_t*)&WhiteTextureBytes), 1, 1);
     createAndUploadTextureData("!Black", const_cast<uint8_t*>((const uint8_t*)&BlackTextureBytes), 1, 1);
+    createAndUploadTextureData("!Checkered", const_cast<uint8_t*>(CheckeredTextureBytes), 2, 2);
 
     glGenSamplers(1, &m_NearestNeighbourTextureSampler);
     glGenSamplers(1, &m_LinearTextureSampler);
 
-    BindNearestNeighbourSampler(0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glSamplerParameteri(m_NearestNeighbourTextureSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(m_NearestNeighbourTextureSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    BindLinearSampler(0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    UnbindSampler(0);
+    glSamplerParameteri(m_LinearTextureSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glSamplerParameteri(m_LinearTextureSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 void TextureManager::Shutdown()
@@ -535,9 +552,13 @@ void TextureManager::FinalizeAsyncLoadedTextures()
     }
 }
 
-void TextureManager::UnloadTexture(uint32_t Id)
+void TextureManager::UnloadTexture(const std::string& Path)
 {
-    Texture& tex = GetTextureResource(Id);
+    const auto& it = m_StringToTextureId.find(FileRW::ResolvePathNormalized(Path));
+    if (it == m_StringToTextureId.end())
+        return;
+
+    Texture& tex = GetTextureResource(it->second);
     if (tex.Status == Texture::LoadStatus::Unloaded)
         return;
 

@@ -22,6 +22,7 @@ struct EcMesh : public Component<EntityComponent::Mesh>
 	float RoughnessFactor = 1.f;
 
 	std::string Asset = "!Cube";
+	std::string Material = "@base/materials/Smooth.mtl";
 	uint32_t GpuSkinningBuffer = UINT32_MAX;
 
 	uint32_t ComponentId = UINT32_MAX;

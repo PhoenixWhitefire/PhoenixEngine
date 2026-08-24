@@ -110,7 +110,7 @@ static const std::array AddableInterfaceComponents = {
 };
 
 static nlohmann::json DefaultNewMaterial = {
-    { "ColorMap", "textures/materials/plastic.png" },
+    { "ColorMap", "!Checkered" },
     { "specExponent", 32.f },
     { "specMultiply", 0.5f }
 };
@@ -1431,6 +1431,8 @@ static std::string getMaterialFilePath(const std::string& Material)
         return Material;
 }
 
+static bool MtlTakeFocus = false;
+
 // 02/09/2024
 // That one Gianni Matragrano shitpost where it's a
 // baguette with a doge face on a white background low-res
@@ -1442,6 +1444,12 @@ static void renderMaterialEditor()
 
     if (!DeveloperTools::MaterialsShown)
         return;
+
+    if (MtlTakeFocus)
+    {
+        MtlTakeFocus = false;
+        ImGui::SetNextWindowFocus();
+    }
 
     if (!ImGui::Begin("Materials", &DeveloperTools::MaterialsShown))
     {
@@ -1634,11 +1642,20 @@ static void renderMaterialEditor()
     ImGui::Combo("Polygon Mode", &curPolyMode, "Fill\0Line\0Point\0");
     curItem.PolygonMode = static_cast<RenderMaterial::MaterialPolygonMode>(std::clamp(curPolyMode, 0, 2));
 
+    ImGui::Checkbox("Bilinear filtering", &curItem.LinearlySmoothened);
+
     glEnable(GL_FRAMEBUFFER_SRGB);
+
+    if (curItem.LinearlySmoothened)
+        ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear);
+    else
+        ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerNearest);;
+
     mtlEditorTexture("Color Map: ", &curItem.ColorMap, MtlDiffuseBuf, false);
     mtlEditorTexture("Metallic-Roughness Map: ", &curItem.MetallicRoughnessMap, MtlSpecBuf, false);
     mtlEditorTexture("Normal Map: ", &curItem.NormalMap, MtlNormalBuf);
     mtlEditorTexture("Emission Map:", &curItem.EmissionMap, MtlEmissionBuf);
+
     glDisable(GL_FRAMEBUFFER_SRGB);
 
     uniformsEditor(curItem.Uniforms, &SelectedUniformIdx, "Variables");
@@ -3936,12 +3953,22 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
         for (int i = 0; i < (int)materials.size(); i++)
         {
             const RenderMaterial& material = materials[i];
+            if (material.Name.size() > 2 && material.Name[0] == '.' && material.Name[1] == '/')
+                continue;
+
+            std::string_view displayedName = material.Name.c_str();
+
+            constexpr std::string_view BasePrefix = "@base/";
+            constexpr size_t BasePrefixLen = BasePrefix.size();
+
+            if (displayedName.starts_with(BasePrefix))
+                displayedName = displayedName.substr(BasePrefixLen, displayedName.size() - BasePrefixLen);
 
             bool visible = AssetSearch.size() == 0 || stringToLowerCase(material.Name).find(assetSearchLowercase) != std::string::npos;
 
             if (visible)
             {
-                if (ImGui::MenuItem(material.Name.c_str()))
+                if (ImGui::MenuItem(displayedName.data()))
                 {
                     setProperties(PropertyName, material.Name);
                     didSet = true;
@@ -3951,6 +3978,7 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
                 {
                     DeveloperTools::MaterialsShown = true;
                     MtlCurItem = i;
+                    MtlTakeFocus = true;
                 }
 
                 ImGui::SetItemTooltip("'%s'\n\nRight-click for details.", material.Name.c_str());

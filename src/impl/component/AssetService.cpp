@@ -305,8 +305,7 @@ const Reflection::StaticMethodMap& AssetServiceComponentManager::GetMethods()
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
                 TextureManager* texManager = TextureManager::Get();
-                uint32_t resId = texManager->LoadFromPath(inputs[0].AsString(), false);
-                texManager->UnloadTexture(resId);
+                texManager->UnloadTexture(inputs[0].AsString());
 
                 return {};
             }
