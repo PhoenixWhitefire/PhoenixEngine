@@ -1162,7 +1162,7 @@ for _, name in orderedGlobals do
             generics = `<{contents.Generics}>`
         end
 
-        globals ..= `\`\`\`luau\n{ name }{generics}({ args }): { returns }\n\`\`\`\n`
+        globals ..= `\`\`\`luau\nfunction { name }{generics}({ args }): { returns }\n\`\`\`\n`
         definitionsFile ..= `declare function { name }{generics}( { args } ){ if #returns > 0 then ": " .. returns else "" }\n`
     else
         globals ..= `\`\`\`luau\n{ name }: { apiDump.ScriptEnv.Globals[name] }\n\`\`\`\n`
