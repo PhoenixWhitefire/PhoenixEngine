@@ -584,28 +584,35 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 
             const nlohmann::json& memberValue = propIt.value();
             const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
+            bool isSizeCompat = false;
 
-            if (!prop)
+            if (propName != "LocalSize" && propName != "Size")
             {
-                SF_WARN(
-                    "Member '{}' is not defined in the API (Name: '{}')!",
-                    propName,
-                    name
-                );
-                continue;
+                if (!prop)
+                {
+                    SF_WARN(
+                        "Member '{}' is not defined in the API (Name: '{}')!",
+                        propName,
+                        name
+                    );
+                    continue;
+                }
+                else if (!prop->Set)
+                {
+                    SF_WARN(
+                        "Member '{}' of '{}' is read-only!",
+                        propName,
+                        name
+                    );
+                    continue;
+                }
+            }
+            else
+            {
+                isSizeCompat = true;
             }
 
-            if (!prop->Set)
-            {
-                SF_WARN(
-                    "Member '{}' of '{}' is read-only!",
-                    propName,
-                    name
-                );
-                continue;
-            }
-
-            Reflection::ValueType propType = prop->Type;
+            Reflection::ValueType propType = prop ? prop->Type : Reflection::ValueType::Vector3; // Size, LocalSize
             propType = Reflection::ValueType(propType & ~Reflection::ValueType::Null);
 
             if (propType == Reflection::ValueType::GameObject)
@@ -632,7 +639,8 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
 
                 try
                 {
-                    newObject->SetPropertyValue(propName, assignment);
+                    if (!isSizeCompat)
+                        newObject->SetPropertyValue(propName, assignment);
                 }
                 catch (const std::runtime_error& err)
                 {

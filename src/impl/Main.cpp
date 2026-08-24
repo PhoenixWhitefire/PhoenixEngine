@@ -15,6 +15,7 @@
 #include <chrono>
 
 #ifdef __clang__
+#include <sys/resource.h>
 #include <sys/prctl.h>
 #include <sys/wait.h>
 #include <execinfo.h>
@@ -199,9 +200,6 @@ struct EngineInitConfig
     bool DoApiDump = false;
 };
 
-static const char* MapFileFromArgs = nullptr;
-static const char* ScriptTool = nullptr;
-
 static void init(Engine* engine, const EngineInitConfig& InitConfig)
 {
     ZoneScoped;
@@ -263,7 +261,7 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
     bool worldLoadSuccess = true;
     std::vector<ObjectHandle> roots;
 
-    if (!ScriptTool)
+    if (!InitConfig.ScriptTool)
     {
         bool fileRead = true;
         std::string fileContentsOrError = FileRW::ReadFile(mapFile, &fileRead);
@@ -286,7 +284,7 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
         wp->FindComponent<EcWorkspace>()->SetSceneCamera(cam);
         cam->FindComponent<EcCamera>()->UseSimpleController = true;
 
-        dm->FindComponent<EcDataModel>()->LiveScripts = ScriptTool;
+        dm->FindComponent<EcDataModel>()->LiveScripts = InitConfig.ScriptTool.value();
 
         roots.push_back(dm);
     }
@@ -391,11 +389,11 @@ static void processCliArgs(EngineInitConfig& InitConfig, int argc, char** argv)
         {
             if (i + 1 < argc)
             {
-                MapFileFromArgs = argv[i + 1];
+                InitConfig.RootScene = argv[i + 1];
 
                 Log.InfoF(
                     "Map to load specified from launch argument. Map was: {}",
-                    MapFileFromArgs
+                    InitConfig.RootScene.value()
                 );
 
                 i++;
@@ -407,11 +405,11 @@ static void processCliArgs(EngineInitConfig& InitConfig, int argc, char** argv)
         {
             if (i + 1 < argc)
             {
-                ScriptTool = argv[i + 1];
+                InitConfig.ScriptTool = argv[i + 1];
 
                 Log.InfoF(
                     "Standalone tool: {}",
-                    ScriptTool
+                    InitConfig.ScriptTool.value()
                 );
 
                 i++;
@@ -593,6 +591,10 @@ static void launcher(int argc, char** argv)
 
             std::abort();
         }
+
+        struct rlimit rl = rlimit{ RLIM_INFINITY, RLIM_INFINITY };
+        setrlimit(RLIMIT_CORE, &rl);
+        prctl(PR_SET_DUMPABLE, 1);
 
         std::vector<char*> newArguments;
         newArguments.push_back(argv[0]);
