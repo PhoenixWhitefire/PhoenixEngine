@@ -140,7 +140,6 @@ local function createNewProject_(State: StateType)
     fs.mkdir("@_projres/shaders/include")
     fs.mkdir("@_projres/scripts")
     fs.mkdir("@_projres/textures")
-    fs.mkdir("@_projres/textures/materials")
 
     fs.mkdir("@_projres/scripts/modules")
     fs.write("@_projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
@@ -151,7 +150,6 @@ local function createNewProject_(State: StateType)
         fs.copy(`@_editres/materials/{v}.mtl`, `@_projres/materials/{v}.mtl`)
     end
 
-    fs.copy("@_editres/textures/materials", "@_projres/textures/materials")
     fs.copy("@_editres/textures/Sky1", "@_projres/textures/Sky1")
     fs.copy("@_editres/textures/image-placeholder.png", "@_projres/textures/image-placeholder.png")
     fs.copy("@_editres/scripts/defaultconfig.luau", "@_projres/scripts/.config.luau")

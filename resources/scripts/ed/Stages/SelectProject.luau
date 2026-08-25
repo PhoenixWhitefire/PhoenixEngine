@@ -158,6 +158,7 @@ local function renderRenderProjects()
     imgui.setcursorposition(cpos.x, cpos.y + 10)
 
     cpos = imgui.cursorposition()
+    imgui.dummy()
     imgui.setcursorposition(cpos.x + 10, cpos.y)
 
     renderProjectSelectorTiles(State.RecentProjects)
@@ -224,6 +225,7 @@ local function renderSavedProjects()
     imgui.newline()
 
     local cpos = imgui.cursorposition()
+    imgui.dummy()
     imgui.setcursorposition(cpos.x, cpos.y + 10)
 
     cpos = imgui.cursorposition()

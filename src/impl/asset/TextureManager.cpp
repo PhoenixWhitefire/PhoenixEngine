@@ -559,7 +559,7 @@ void TextureManager::UnloadTexture(const std::string& Path)
         return;
 
     Texture& tex = GetTextureResource(it->second);
-    if (tex.Status == Texture::LoadStatus::Unloaded)
+    if (tex.Status != Texture::LoadStatus::Succeeded)
         return;
 
     m_StringToTextureId.erase(tex.ImagePath);

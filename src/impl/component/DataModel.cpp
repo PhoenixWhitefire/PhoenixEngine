@@ -69,9 +69,9 @@ const Reflection::StaticPropertyMap& DataModelComponentManager::GetProperties()
         REFLECTION_PROPERTY(
             "AreScriptsBound",
             Boolean,
-            [](void *p) -> Reflection::GenericValue
+            [](void* p) -> Reflection::GenericValue
             {
-                return static_cast<EcDataModel *>(p)->Modules.size() > 0;
+                return static_cast<EcDataModel*>(p)->Modules.size() > 0;
             },
             nullptr
         ),
