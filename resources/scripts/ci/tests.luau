@@ -2,6 +2,9 @@
 -- Simple testing engine
 
 -- Sleep for a little bit to avoid tests appearing to take several milliseconds due to initial slowdowns
+local task = phoenix.task
+local fs = phoenix.fs
+
 task.wait(0.04)
 
 task.delay(15, function()

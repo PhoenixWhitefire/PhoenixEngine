@@ -8,6 +8,11 @@ type Plugin = Types.Plugin
 type PluginInternal = Plugin & { _thread: thread }
 type ToolbarButton = Types.ToolbarButton
 
+local imgui = phoenix.imgui
+local task = phoenix.task
+local json = phoenix.json
+local fs = phoenix.fs
+
 local PluginManager = {}
 PluginManager.Plugins = {} :: { PluginInternal }
 local IsPluginManagementWindowOpen = false

@@ -2,6 +2,9 @@
 local DefaultThemes = require("@ed/DefaultThemes")
 local ErrorMessage = require("@ed/ErrorMessage")
 
+local json = phoenix.json
+local fs = phoenix.fs
+
 type ThemeData = index<typeof(DefaultThemes), string>
 
 local themeLineage = {}

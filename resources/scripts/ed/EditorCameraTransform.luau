@@ -1,6 +1,9 @@
 -- SaveEditorCameraTransform.luau, 07/06/2026
 local EditorCameraTransform = {}
 
+local json = phoenix.json
+local fs = phoenix.fs
+
 type SavedEditorCamera = {
     FieldOfView: number,
     Position: {

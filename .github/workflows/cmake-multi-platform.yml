@@ -182,6 +182,6 @@ jobs:
     - name: Test (Ubuntu)
       if: runner.os == 'Linux'
       shell: bash
-      run: >
+      run: |
         ./PhoenixEngine --headless --tool scripts/ci/tests.luau
         ./PhoenixEngine --headless -ed_ci

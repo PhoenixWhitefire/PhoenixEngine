@@ -5,6 +5,11 @@ local History = game:GetService("History")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
+local imgui = phoenix.imgui
+local task = phoenix.task
+local json = phoenix.json
+local fs = phoenix.fs
+
 fs.definealias("_editres", "./resources")
 fs.definealias("_etextures", "@_editres/textures")
 fs.definealias("base", "./resources")

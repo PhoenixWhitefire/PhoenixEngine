@@ -14,6 +14,11 @@ local Output = require("@ed/Output")
 local State = require("@ed/State")
 local Theme = require("@ed/Theme")
 
+local imgui = phoenix.imgui
+local task = phoenix.task
+local json = phoenix.json
+local fs = phoenix.fs
+
 function SelectProject.Enter(_prev)
     if not fs.isfile(Configuration.RecentProjectsPath) then
         fs.write(Configuration.RecentProjectsPath, "[]")

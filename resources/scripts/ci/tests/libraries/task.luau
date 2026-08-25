@@ -1,4 +1,5 @@
 local Types = require("@ci/test-types.luau")
+local task = phoenix.task
 
 return function(test: Types.Test, expect: Types.Expect)
     test("wait", function()

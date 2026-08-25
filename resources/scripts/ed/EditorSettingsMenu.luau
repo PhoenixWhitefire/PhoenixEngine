@@ -11,6 +11,10 @@ local Preferences = require("@ed/Preferences")
 local ApplyTheme = require("@ed/ApplyTheme")
 local Theme = require("@ed/Theme")
 
+local imgui = phoenix.imgui
+local json = phoenix.json
+local fs = phoenix.fs
+
 local SettingsSectionHorizontalSize = 0
 local LastUpdatedThemes = 0
 local AvailableThemes = {

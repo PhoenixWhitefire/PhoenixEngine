@@ -9,6 +9,9 @@ local EditorSettingsMenu = require("@ed/EditorSettingsMenu")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
 
+local json = phoenix.json
+local fs = phoenix.fs
+
 function ExternalCodeEditor.Open(ProjectName: string)
     if not Preferences.CodeEditorPath or #Preferences.CodeEditorPath == 0 then
         Engine:ShowMessageBox(

@@ -2141,14 +2141,14 @@ nlohmann::json ScriptEngine::DumpApiToJson()
                         ) || librarySpecificMembers.size() == 0
                     )
                     {
-                        if (k == "Enum")
+                        if (k == "phoenix" || k == "Enum")
                         {
                             nlohmann::json enu;
 
                             lua_pushnil(luhx);
                             while (lua_next(luhx, -2))
                             {
-                                enu[luaL_checkstring(luhx, -2)] = lua_tointeger(luhx, -1);
+                                enu[luaL_checkstring(luhx, -2)] = k == "phoenix" ? nlohmann::json(luaL_typename(luhx, -1)) : nlohmann::json(lua_tointeger(luhx, -1));
                                 lua_pop(luhx, 1);
                             }
 

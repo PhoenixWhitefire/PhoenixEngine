@@ -22,19 +22,19 @@ void luhx_openlibs(lua_State*);
 
 int luhxopen_base(lua_State*);
 
-#define LUHX_FSLIBNAME "fs"
+#define LUHX_FSLIBNAME "phoenix.fs"
 int luhxopen_fs(lua_State*);
 
-#define LUHX_IMGUILIBNAME "imgui"
+#define LUHX_IMGUILIBNAME "phoenix.imgui"
 int luhxopen_imgui(lua_State*);
 
-#define LUHX_JSONLIBNAME "json"
+#define LUHX_JSONLIBNAME "phoenix.json"
 int luhxopen_json(lua_State*);
 
-#define LUHX_TASKLIBNAME "task"
+#define LUHX_TASKLIBNAME "phoenix.task"
 int luhxopen_task(lua_State*);
 
-#define LUHX_PARALLELLIBNAME "parallel"
+#define LUHX_PARALLELLIBNAME "phoenix.parallel"
 int luhxopen_parallel(lua_State*);
 
 int luhxopen_debug(lua_State*);

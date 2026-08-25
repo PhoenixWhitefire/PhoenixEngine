@@ -1322,7 +1322,5 @@ int luhxopen_imgui(lua_State* L)
         lua_setfield(L, -2, l->name);
     }
 
-    lua_setglobal(L, LUHX_IMGUILIBNAME);
-
     return 1;
 }

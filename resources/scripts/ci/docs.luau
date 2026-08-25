@@ -2,6 +2,10 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
+local task = phoenix.task
+local json = phoenix.json
+local fs = phoenix.fs
+
 task.delay(60, function()
     warn("Docgen appears to have hung - exiting")
     game:Close(1)
@@ -365,11 +369,11 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
     return `function {libname}.{ funcname }{generics}({ docargs }){ if #returns > 0 then ": " .. returns else "" }`, lspDef
 end
 
-local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string)
+local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string, definitionsFile: string, isPhoenix: boolean?): (string, string)
     libm = libm or docComments.ScriptEnv.Datatypes[libname].Library
 
     if not t then
-        return ""
+        return "", definitionsFile
     end
 
     local lib = docComments.ScriptEnv.Libraries[libname]
@@ -377,7 +381,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
     local wholeDefinition = if lib then lib.Type else nil
     local hasWholeDefinition = wholeDefinition ~= nil
 
-    definitionsFile ..= if hasWholeDefinition then `declare { libname }: { wholeDefinition }\n` else `declare { libname }: \{\n,\n`
+    definitionsFile ..= if isPhoenix then `{libname}: \{\n  ` else if hasWholeDefinition then `declare { libname }: { wholeDefinition }\n` else `declare { libname }: \{\n,\n`
 
     local str = ""
     local first = true
@@ -450,7 +454,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
         else
             if not v.Type or typeof(v.Type) ~= "string" then
                 docWarn(`Error with member {k}`)
-                return str
+                return str, definitionsFile
             end
             str ..= `\`\`\`luau\n{libname}.{ k }: { v.Type }\n\`\`\`\n`
 
@@ -485,10 +489,10 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
 
     if not hasWholeDefinition then
         definitionsFile = string.sub(definitionsFile, 1, #definitionsFile - 2)
-        definitionsFile ..= `\n}\n`
+        definitionsFile ..= if isPhoenix then `\n},\n` else `\n}\n`
     end
 
-    return str
+    return str, definitionsFile
 end
 
 local rtol: { [string]: string } = {
@@ -607,7 +611,7 @@ local function dumpReflectionApi(t, d, cn, externType)
                             docWarn(`{cn}.{n} has both a .Out and a .Type`)
                         end
 
-                        subst = subst:sub(1, assert((subst:find(":"))))
+                        subst = string.sub(subst, 1, assert((string.find(subst, ":"))))
                         subst ..= ` {docs.Out}`
                     end
 
@@ -615,7 +619,7 @@ local function dumpReflectionApi(t, d, cn, externType)
                         assert(not docs.Type, `{cn}.{n} has both a .In and a .Type`)
                         assert(typeof(docs.In) == "string")
 
-                        subst = subst:sub(assert((subst:find(":"))) - 1, #subst)
+                        subst = string.sub(subst, assert((string.find(subst, ":"))) - 1, #subst)
                         subst = " (" .. docs.In .. ")" .. subst
                     end
                 end
@@ -909,7 +913,7 @@ local function documentDatatype(name)
                     table.insert(newinputs, `Param_{i}: {t}`)
                 end
 
-                if not args:find(":") then
+                if not string.find(args, ":") then
                     defargs = "self, " .. table.concat(newinputs, ", ")
                 else
                     defargs = "self, " .. args
@@ -969,8 +973,13 @@ local function documentDatatype(name)
         definitionsFile ..= "\n"
     end
 
-    datatypes ..= "\n" .. dumpLibMembers(dt.Library, apiDump.ScriptEnv.Datatypes[name].Library, name)
+    local newDatas
+    local newDefs
+    newDatas, newDefs = dumpLibMembers(dt.Library, apiDump.ScriptEnv.Datatypes[name].Library, name, definitionsFile)
+
+    datatypes ..= "\n" .. newDatas
     datatypes ..= datatype
+    definitionsFile = newDefs
 end
 
 for _, name in orderedDatatypes do
@@ -1028,17 +1037,19 @@ dumpCreatables()
 
 definitionsFile ..= "\n"
 
-for _, name in orderedLibraries do
-    local lib = docComments.ScriptEnv.Libraries[name]
+local function documentLibrary(name, definitionsFile: string, isPhoenix: boolean): string
+    local lib = if isPhoenix then docComments.ScriptEnv.Libraries[`phoenix.{name}`] else docComments.ScriptEnv.Libraries[name]
+
+    if not lib then
+        docWarn(`Library { name } is not documented`)
+        return definitionsFile
+    end
+
     libraries ..= `### \`{ name }\`\n`
 
     if not lib then
-        lib = docComments.ScriptEnv.Datatypes[name].Library
-    end
-
-    if not lib then
         docWarn(`The '{ name }' library has no documentation`)
-        continue
+        return definitionsFile
     end
 
     local totalcomment = ""
@@ -1055,7 +1066,11 @@ for _, name in orderedLibraries do
     libraries ..= "\n"
 
     if name ~= "Enum" then
-        libraries ..= dumpLibMembers(lib.Members, apiDump.ScriptEnv.Libraries[name], name)
+        if name ~= "phoenix" then
+            local newLibs, newDefs = dumpLibMembers(lib.Members, if isPhoenix then apiDump.ScriptEnv.Libraries.phoenix[name] else apiDump.ScriptEnv.Libraries[name], name, definitionsFile, isPhoenix)
+            libraries ..= newLibs
+            definitionsFile = newDefs
+        end
     else
         -- thank you johnny
         -- https://github.com/JohnnyMorganz/luau-lsp/blob/b700f428a23779c43be96e09cb999b16604289d5/scripts/globalTypes.d.luau#L59
@@ -1141,7 +1156,23 @@ for _, name in orderedLibraries do
     end
 
     definitionsFile ..= "\n"
+    return definitionsFile
 end
+
+local phoenixDefs = "declare phoenix: {\n"
+
+for _, name in orderedLibraries do
+    if name == "phoenix" then
+        for sub, _ in apiDump.ScriptEnv.Libraries.phoenix do
+            phoenixDefs = documentLibrary(sub, phoenixDefs, true)
+        end
+    else
+        definitionsFile = documentLibrary(name, definitionsFile, false)
+    end
+end
+
+phoenixDefs ..= "}\n"
+definitionsFile ..= phoenixDefs
 
 definitionsFile ..= "\n\n"
 

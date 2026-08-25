@@ -13,6 +13,9 @@ local Preferences = require("@ed/Preferences")
 local Theme = require("@ed/Theme")
 local State = require("@ed/State")
 
+local imgui = phoenix.imgui
+local task = phoenix.task
+
 type LogMessageComponent = {
     String: string,
     Value: unknown,

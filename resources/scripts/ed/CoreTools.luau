@@ -15,6 +15,8 @@ CoreTools.CameraModel = assert(cam)
 
 local Types = require("./Types")
 
+local imgui = phoenix.imgui
+
 local GizmoActive = true
 local GizmoMode = 1
 local GizmoMoveIncrement = 0.5

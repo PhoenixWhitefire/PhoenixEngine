@@ -1673,7 +1673,10 @@
           }
         }
       },
-      "fs": {
+      "phoenix": {
+        "Description": "Non-standard runtime functionality. Prefer to use `@std` instead"
+      },
+      "phoenix.fs": {
         "Description": [
           "Interacting with the player's filesystem",
           "Several aliases may be used with functions in this library, these are unrelated to `require` aliases although the same syntax is used",
@@ -1939,7 +1942,7 @@
           }
         }
       },
-      "imgui": {
+      "phoenix.imgui": {
         "Description": "UI with Dear ImGui",
         "Members": {
           "anyitemactive": {
@@ -2582,7 +2585,7 @@
           }
         }
       },
-      "json": {
+      "phoenix.json": {
         "Description": "Encoding and decoding JSON files",
         "Members": {
           "encode": {
@@ -2604,7 +2607,7 @@
           }
         }
       },
-      "parallel": {
+      "phoenix.parallel": {
         "Description": "Parallelization of Luau",
         "Members": {
           "atomicinteger": {
@@ -2641,7 +2644,7 @@
           }
         }
       },
-      "task": {
+      "phoenix.task": {
         "Description": "Scheduling of tasks (coroutines or functions)",
         "Members": {
           "defer": {

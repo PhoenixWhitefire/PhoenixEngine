@@ -1076,37 +1076,8 @@ declare debug: {
   zonetext: (( Text: string ) -> ())
 }
 
-declare fs: {
-  copy: (( From: string, To: string ) -> ()),
-  cwd: ((  ) -> (string)),
-  definealias: (( Alias: string, For: string ) -> ()),
-  execute: (( Command: string ) -> (string)),
-  home: ((  ) -> (string)),
-  isdirectory: (( string ) -> (boolean)),
-  isfile: (( string ) -> (boolean)),
-  issymlink: (( Path: string ) -> (boolean)),
-  lastwritten: (( Path: string ) -> (number)),
-  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
-  mkdir: (( Path: string ) -> ()),
-  move: (( CurrentPath: string, NewPath: string ) -> ()),
-  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
-  promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
-  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string?)),
-  read: (( Path: string ) -> (string?, string?)),
-  readsymlink: (( Path: string ) -> (string)),
-  remove: (( Path: string ) -> ()),
-  removealias: (( Alias: string ) -> ()),
-  rename: (( Path: string, NewName: string ) -> ()),
-  resolvepath: (Path: string) -> string,
-  resolvepathabsolute: (Path: string) -> string,
-  setunqualifiedroot: (( Alias: string ) -> ()),
-  symlink: (( Path: string, Target: string ) -> ()),
-  systemopen: (( Path: string ) -> ()),
-  watch: (( Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> () ) -> (() -> ())),
-  write: (( Path: string, Contents: string | buffer, CreateDirectories: boolean? ) -> ())
-}
-
-declare imgui: {
+declare phoenix: {
+imgui: {
   anyitemactive: ((  ) -> (boolean)),
   begin: (( WindowTitle: string, WindowFlags: string?, HasCloseButton: boolean? ) -> (boolean, boolean)),
   beginchild: (( Name: string, Size: vector?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
@@ -1189,14 +1160,53 @@ declare imgui: {
   windowhovered: (( Flags: string? ) -> (boolean)),
   windowposition: ((  ) -> (vector)),
   windowsize: ((  ) -> (vector))
-}
+},
 
-declare json: {
+fs: {
+  copy: (( From: string, To: string ) -> ()),
+  cwd: ((  ) -> (string)),
+  definealias: (( Alias: string, For: string ) -> ()),
+  execute: (( Command: string ) -> (string)),
+  home: ((  ) -> (string)),
+  isdirectory: (( string ) -> (boolean)),
+  isfile: (( string ) -> (boolean)),
+  issymlink: (( Path: string ) -> (boolean)),
+  lastwritten: (( Path: string ) -> (number)),
+  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
+  mkdir: (( Path: string ) -> ()),
+  move: (( CurrentPath: string, NewPath: string ) -> ()),
+  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
+  promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
+  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string?)),
+  read: (( Path: string ) -> (string?, string?)),
+  readsymlink: (( Path: string ) -> (string)),
+  remove: (( Path: string ) -> ()),
+  removealias: (( Alias: string ) -> ()),
+  rename: (( Path: string, NewName: string ) -> ()),
+  resolvepath: (Path: string) -> string,
+  resolvepathabsolute: (Path: string) -> string,
+  setunqualifiedroot: (( Alias: string ) -> ()),
+  symlink: (( Path: string, Target: string ) -> ()),
+  systemopen: (( Path: string ) -> ()),
+  watch: (( Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> () ) -> (() -> ())),
+  write: (( Path: string, Contents: string | buffer, CreateDirectories: boolean? ) -> ())
+},
+
+json: {
   encode: (( Value: JsonEncodable, Indent: number? ) -> (string)),
   parse: (( Json: string ) -> (JsonDecodable))
-}
+},
 
-declare parallel: {
+task: {
+  defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
+  delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
+  load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
+  loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
+  setglobal: (( Coroutine: thread, Global: string, Value: unknown ) -> ()),
+  wait: (( SleepTime: number? ) -> (number))
+},
+
+parallel: {
   atomicinteger: (( Id: string, InitialValue: number? ) -> (AtomicInteger)),
   desynchronize: ((  ) -> ()),
   mutex: (( Id: string ) -> (Mutex)),
@@ -1204,17 +1214,9 @@ declare parallel: {
   spawn: (( FilePath: string, ...unknown ) -> ()),
   synchronize: ((  ) -> ()),
   synchronized: ((  ) -> (boolean))
-}
+},
 
-declare task: {
-  defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
-  delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
-  load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
-  loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
-  setglobal: (( Coroutine: thread, Global: string, Value: unknown ) -> ()),
-  wait: (( SleepTime: number? ) -> (number))
 }
-
 
 
 declare _VMNAME: string

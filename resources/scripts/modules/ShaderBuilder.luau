@@ -4,6 +4,8 @@
 
 local ShaderBuilder = {}
 
+local fs = require("@std/fs")
+
 type Variable = {
     Type: string,
     Value: any
@@ -22,10 +24,10 @@ type NodeGraph = {
     RootNodes: { Node }
 }
 
-local InitialState, InitialStateError = fs.read("shaders/ShaderGraphInitial.frag")
+local InitialState = fs.read(fs.open("shaders/ShaderGraphInitial.frag"))
 local FinishCode = "\n\n//END SHADER GRAPH TRANSPILATION\n\n}"
 
-assert(InitialState, InitialStateError)
+assert(InitialState)
 
 local VariableDeclarationMap: { [string]: (string, Variable) -> (string) } = {
     Number = function(Name, Variable)

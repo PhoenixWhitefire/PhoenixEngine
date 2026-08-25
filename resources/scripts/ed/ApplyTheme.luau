@@ -5,6 +5,8 @@ local ErrorMessage = require("@ed/ErrorMessage")
 local GetThemeData = require("@ed/GetThemeData")
 local Theme = require("@ed/Theme")
 
+local imgui = phoenix.imgui
+
 local BaseImGuiStyles = {
     Dark = "d",
     Light = "l",

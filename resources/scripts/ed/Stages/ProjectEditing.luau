@@ -21,6 +21,9 @@ local Output = require("@ed/Output")
 local State = require("@ed/State")
 local Types = require("@ed/Types")
 
+local json = phoenix.json
+local fs = phoenix.fs
+
 local ProjectClosedByDataModelConnection = nil
 local LastSelectedInEditMode = {}
 local EditorCam = Workspace.SceneCamera

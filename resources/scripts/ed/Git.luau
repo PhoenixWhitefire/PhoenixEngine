@@ -5,6 +5,8 @@ local Git = {
     DiffResult = "",
 }
 
+local fs = phoenix.fs
+
 function Git.Initialize()
     Git.Available = fs.execute("git --version"):find("git version") ~= nil
     print(if Git.Available then "Git is available" else "Git is not available")

@@ -1,5 +1,6 @@
 local Collections = game:GetService("Collections")
 local Types = require("@ci/test-types.luau")
+local task = phoenix.task
 
 return function(test: Types.Test, expect: Types.Expect)
     test("GetTagged", function()

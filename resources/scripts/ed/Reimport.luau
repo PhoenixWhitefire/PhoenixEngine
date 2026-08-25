@@ -18,6 +18,9 @@ local Configuration = require("@ed/Configuration")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
 
+local json = phoenix.json
+local fs = phoenix.fs
+
 if fs.isfile("./editor/models.json") then
     Reimport.ModelModifiedTimes = json.parse(assert(fs.read("./editor/models.json"))) :: { [string]: number }
 end

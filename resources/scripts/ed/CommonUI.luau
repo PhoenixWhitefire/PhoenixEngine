@@ -27,6 +27,11 @@ local State = require("@ed/State")
 local Theme = require("@ed/Theme")
 local Git = require("@ed/Git")
 
+local imgui = phoenix.imgui
+local task = phoenix.task
+local json = phoenix.json
+local fs = phoenix.fs
+
 local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
 local RibbonPopupDistance = 16
