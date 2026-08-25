@@ -422,7 +422,7 @@ void Engine::Initialize(int ThreadCount, bool Headless)
             ZoneScopedN("Blue Frame");
             Log.Info("Blue frame...");
 
-            RendererContext.FrameBuffer.Unbind();
+            RendererContext.Framebuffer.Unbind();
 
             glDisable(GL_FRAMEBUFFER_SRGB);
 
@@ -439,7 +439,13 @@ void Engine::Initialize(int ThreadCount, bool Headless)
         PostFxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/postprocessing.shp"));
         SkyboxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/skybox.shp"));
 
-        PostFxShader.SetUniform("Phoenix_FramebufferTexture", ReservedTextureSlot::PostProcessFramebuffer);
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Framebuffer);
+        RendererContext.Framebuffer.BindTexture();
+
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
+        RendererContext.PostProcessBuffer.BindTexture();
+
+        PostFxShader.SetUniform("Phoenix_PostProcessBuffer", ReservedTextureSlot::PostProcessFramebuffer);
         SkyboxShader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
         SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
         //PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
@@ -851,7 +857,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
         SkyboxShader.SetUniform("Phoenix_IsSkyboxEquirectangular", false);
     }
 
-    RendererContext.FrameBuffer.Bind();
+    RendererContext.PostProcessBuffer.Bind();
 
     glViewport(
         0, 0,
@@ -887,7 +893,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     //Do framebuffer stuff after everything is drawn
 
     glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
-    RendererContext.FrameBuffer.BindTexture();
+    RendererContext.PostProcessBuffer.BindTexture();
 
     if (env->PostProcess)
     {
@@ -909,6 +915,12 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     else
     {
         PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
+
+        PostFxShader.SetUniform(
+            "Phoenix_Gamma",
+            env->GammaCorrection
+        );
+
         SkyboxShader.SetUniform(
             "Phoenix_HdrEnabled",
             false
@@ -921,6 +933,9 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     {
         ZoneScopedN("MainPostProcessing");
 
+        // Post-process buffer is input, Framebuffer is output
+        RendererContext.Framebuffer.Bind();
+
         RendererContext.DrawMesh(
             quadMesh,
             PostFxShader,
@@ -929,8 +944,13 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
             0
         );
 
-        RendererContext.FrameBuffer.Unbind();
+        // Framebuffer is input, Screen is output
+        RendererContext.Framebuffer.Unbind();
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
+        RendererContext.Framebuffer.BindTexture();
+
         PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
+        PostFxShader.SetUniform("Phoenix_Gamma", 1.f);
         RendererContext.DrawMesh(
             quadMesh,
             PostFxShader,
@@ -945,7 +965,7 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 
     // Material Editor may screw up some stuff
     glViewport(0, 0, WindowSizeX, WindowSizeY);
-    RendererContext.FrameBuffer.Unbind();
+    RendererContext.Framebuffer.Unbind();
 
     {
         ZoneScopedN("DearImGuiRender");
@@ -1066,7 +1086,7 @@ void Engine::Start()
     m_FboResourceId = TextureManagerInstance.Assign({
         .ImagePath = "!Framebuffer:Main",
         .ResourceId = UINT32_MAX,
-        .GpuId = RendererContext.FrameBuffer.GpuTextureId,
+        .GpuId = RendererContext.Framebuffer.GpuTextureId,
         .Width = WindowSizeX, .Height = WindowSizeY,
         .NumColorChannels = 3
     }, "!Framebuffer:Main");
@@ -1138,7 +1158,10 @@ void Engine::Start()
         firstFrame = false;
         Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
 
-        ForegroundDataModel->FindComponent<EcDataModel>()->Bind();
+        if (EcDataModel* dm = ForegroundDataModel->FindComponent<EcDataModel>())
+            dm->Bind();
+        else
+            RAISE_RT("Foreground datamodel lost datamodel component");
 
         if (!IsHeadlessMode)
             TextureManagerInstance.FinalizeAsyncLoadedTextures();

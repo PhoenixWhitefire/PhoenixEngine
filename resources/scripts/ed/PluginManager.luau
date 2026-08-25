@@ -5,10 +5,11 @@ local State = require("./State.luau")
 local Types = require("./Types.luau")
 type EditorStage = Types.Stage
 type Plugin = Types.Plugin
+type PluginInternal = Plugin & { _thread: thread }
 type ToolbarButton = Types.ToolbarButton
 
 local PluginManager = {}
-PluginManager.Plugins = {} :: { Plugin }
+PluginManager.Plugins = {} :: { PluginInternal }
 local IsPluginManagementWindowOpen = false
 local PluginSettings: { [string]: { Enabled: boolean }? } = {}
 
@@ -114,6 +115,7 @@ local function loadPlugin_(Path, ParentPath: string?)
                 data.Icon = fs.resolvepath(data.Icon)
             end
 
+            data._thread = co
             table.insert(PluginManager.Plugins, data)
 
             if getPluginSettings(data).Enabled and data.OnLoad then
@@ -181,6 +183,7 @@ function PluginManager.Shutdown()
             setPluginAlias(plugin.ParentPath)
             plugin:OnShutdown()
             fs.removealias("plugin")
+            coroutine.close(plugin._thread)
         end
     end
 

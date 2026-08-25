@@ -182,7 +182,6 @@ end
 local function handleCoreAssetAliasMigration(config)
     local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
     assert(typeof(editorconf) == "table")
-    editorconf = editorconf
 
     local SymlinkMigrationChoices = {
         Migrated = 1,
@@ -241,6 +240,71 @@ local function handleCoreAssetAliasMigration(config)
             end
         end)
     end
+end
+
+local function migrateMaterialsRecursive(start)
+    local migrated = 0
+
+    for path, kind in fs.listdir(start) do
+        if kind == "f" then
+            local contents, error = fs.read(path)
+
+            if not contents then
+                warn(`Failed to read { path } for material migration: { error }`)
+                continue
+            end
+
+            local subs = 0
+            local didMigrate = false
+
+            contents, subs = string.gsub(contents, `\"shaders/worldUber\"`, `\"@base/shaders/worldUber.shp\"`)
+            didMigrate = didMigrate or subs > 0
+
+            contents, subs = string.gsub(contents, `\"shaders/worldUberTriProjected\"`, `\"@base/shaders/worldUberTriProjected.shp\"`)
+            didMigrate = didMigrate or subs > 0
+
+            contents, subs = string.gsub(contents, `\"worldUber\"`, `\"@base/shaders/worldUber.shp\"`)
+            didMigrate = didMigrate or subs > 0
+
+            contents, subs = string.gsub(contents, `\"worldUberTriProjected\"`, `\"@base/shaders/worldUberTriProjected.shp\"`)
+            didMigrate = didMigrate or subs > 0
+
+            if didMigrate then
+                local writeSuccess, writeError = pcall(fs.write, path, contents, false)
+
+                if writeSuccess then
+                    migrated += 1
+                else
+                    warn(`Failed to migrate { path }: { writeError }`)
+                end
+            end
+
+        elseif kind == "d" then
+            migrated += migrateMaterialsRecursive(path)
+        end
+    end
+
+    return migrated
+end
+
+local function handleMaterialMigration(config)
+    local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
+    assert(typeof(editorconf) == "table")
+
+    local lastSavedData = editorconf.Saved
+
+    if lastSavedData then
+        assert(typeof(lastSavedData) == "table")
+        lastSavedData = lastSavedData
+
+        if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 6 then
+            return
+        end
+    end
+
+    warn("Migrating materials...")
+    local migrated = migrateMaterialsRecursive("materials/")
+    print(`Successfully migrated { migrated } materials`)
 end
 
 local function openProject_(State: StateType, ManualPath: string?)
@@ -339,6 +403,7 @@ local function openProject_(State: StateType, ManualPath: string?)
     assert(typeof(config) == "table", "Configuration file is corrupt")
 
     handleCoreAssetAliasMigration(config)
+    handleMaterialMigration(config)
 
     local objects, error = AssetManager:LoadScene("@_projres/scenes/root.world")
 

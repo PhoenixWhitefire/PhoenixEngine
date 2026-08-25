@@ -1,0 +1,33 @@
+{
+  "GameObjects": [
+    {
+      "$_components": [
+        "DataModel"
+      ],
+      "Name": "Crossroads",
+      "$_objectId": 0
+    },
+    {
+      "$_components": [
+        "Workspace"
+      ],
+      "Parent": 0,
+      "$_objectId": 1
+    },
+    {
+      "$_components": [
+        "Camera",
+        "Transform"
+      ],
+      "Parent": 1,
+      "UseSimpleController": true
+    },
+    {
+      "$_sceneLink": "scenes/crossroads-evening.hxscene",
+      "$_components": [
+        "Model"
+      ],
+      "Parent": 1
+    }
+  ]
+}

@@ -9,7 +9,7 @@ in vec2 Frag_UV;
 
 out vec4 FragColor;
 
-uniform sampler2D Phoenix_FramebufferTexture;
+uniform sampler2D Phoenix_PostProcessBuffer;
 
 uniform bool Phoenix_PostFxEnabled = false;
 // uniform sampler2D Phoenix_DistortionTexture;
@@ -42,12 +42,12 @@ void main()
 {
 	if (!Phoenix_PostFxEnabled)
 	{
-		FragColor = texture(Phoenix_FramebufferTexture, Frag_UV);
+		FragColor = texture(Phoenix_PostProcessBuffer, Frag_UV);
 		FragColor.rgb = pow(FragColor.rgb, vec3(1.f / Phoenix_Gamma));
 		return;
 	}
 
-	ivec2 TextureSize = textureSize(Phoenix_FramebufferTexture, 0);
+	ivec2 TextureSize = textureSize(Phoenix_PostProcessBuffer, 0);
 
 	// the size of the pixel relative to the screen
 	vec2 PixelScale = vec2(1.0f / TextureSize.x, 1.0f / TextureSize.y);
@@ -63,16 +63,7 @@ void main()
 	}
 
 	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
-	vec3 Color = texture(Phoenix_FramebufferTexture, sampleUV).xyz;
-
-	float gamma = Phoenix_Gamma;
-
-	/*if (Time > 10.f)
-	{
-	        float t = Time - 5.f;
-		Color *= mix(vec3(1.f, 1.f, 1.f), vec3(3.f, 0.1f, 0.1f), clamp((t - 5.f) / 10, 0.f, 1.f));
-		gamma = mix(1.f, 1.5f, clamp(t - 10.f, 0.f, t) / 10.f);
-	}*/
+	vec3 Color = texture(Phoenix_PostProcessBuffer, sampleUV).xyz;
 
 	//Color += texture(BloomTexture, sampleUV).xyz;
 
@@ -98,7 +89,7 @@ void main()
 				float DistFactor = 1.f - Dist;
 				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;
 
-				vec3 SampleCol = texture(Phoenix_FramebufferTexture, Frag_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
+				vec3 SampleCol = texture(Phoenix_PostProcessBuffer, Frag_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
 				BlurredColor += SampleCol * SampleWeight;
 			}
 		}
@@ -116,7 +107,7 @@ void main()
 	Color = Color * (luminanceO / luminanceI);
 	*/
 
-	Color = pow(Color, vec3(gamma, gamma, gamma));
+	Color = pow(Color, vec3(1.f / Phoenix_Gamma));
 
 	FragColor = vec4(Color, 1.0f);
 }

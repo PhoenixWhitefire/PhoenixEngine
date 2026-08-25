@@ -15,6 +15,7 @@
 #include "component/RigidBody.hpp"
 #include "component/Light.hpp"
 #include "component/Mesh.hpp"
+#include "FileRW.hpp"
 #include "Log.hpp"
 
 #define SF_WARN(err, ...) Log.WarningF( \
@@ -530,6 +531,32 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
     {
         const nlohmann::json& item = gameObjectsNode[itemIndex];
         ObjectHandle newObject = createObjectFromJsonItem(item, itemIndex, Version);
+
+        if (const auto& link = item.find("$_sceneLink"); link != item.end())
+        {
+            bool subSceneExists = true;
+            std::string subSceneContents = FileRW::ReadFile(link.value());
+
+            if (!subSceneExists)
+            {
+                bool dess = true;
+                std::vector<ObjectHandle> subRoots = SceneFormat::Deserialize(subSceneContents, &dess);
+
+                if (dess)
+                {
+                    for (const ObjectHandle& sub : subRoots)
+                        sub->SetParent(newObject);
+                }
+                else
+                {
+                    SF_WARN("Sub-scene '{}' failed to deserialize: {}", (std::string)link.value(), SceneFormat::GetLastErrorString());
+                }
+            }
+            else
+            {
+                SF_WARN("Sub-scene file '{}' not found", (std::string)link.value());
+            }
+        }
 
         std::string name = item.find("Name") != item.end() ? (std::string)item["Name"] : newObject->Name;
 

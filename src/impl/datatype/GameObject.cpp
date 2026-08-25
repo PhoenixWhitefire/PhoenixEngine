@@ -399,7 +399,9 @@ GameObject* GameObjectManager::FindById(uint32_t Id)
         return nullptr;
 
     GameObject& obj = WorldArray[Id];
-    assert(obj.Valid);
+    if (!obj.Valid)
+        RAISE_RT("Object ID {} refers to invalidated object '{}'", Id, obj.GetFullName());
+
     return &obj;
 }
 

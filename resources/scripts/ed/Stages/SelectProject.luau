@@ -267,7 +267,7 @@ local SelectedProjectsCategory = 1
 local PrevSelectedProjectsCategory = 0
 
 function SelectProject.Render(DeltaTime: number)
-    assert(typeof(DeltaTime) == "number")
+    debug.zonebegin()
 
     if not CommonUI.EnableBottomBarInStartPage and imgui.beginfullscreen("Start Page", 0, 18) then
         local startPos = imgui.cursorposition()
@@ -333,6 +333,8 @@ function SelectProject.Render(DeltaTime: number)
     if CommonUI.EnableBottomBarInStartPage then
         CommonUI.RenderBottomBar()
     end
+
+    debug.zoneend()
 end
 
 return SelectProject

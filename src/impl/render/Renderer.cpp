@@ -198,7 +198,8 @@ void Renderer::Initialize(uint32_t OurWidth, uint32_t OurHeight, GLFWwindow* Mai
     m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Paint));
     m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, TextureUV));
 
-    this->FrameBuffer.Initialize(Width, Height, m_MsaaSamples);
+    this->Framebuffer.Initialize(Width, Height, m_MsaaSamples);
+    this->PostProcessBuffer.Initialize(Width, Height, m_MsaaSamples);
 
     glGenBuffers(1, &InstancingBuffer);
 
@@ -258,7 +259,8 @@ void Renderer::Shutdown()
     m_VertexArray.Delete();
     m_ElementBuffer.Delete();
     m_VertexBuffer.Delete();
-    FrameBuffer.Delete();
+    Framebuffer.Delete();
+    PostProcessBuffer.Delete();
 
     Window = nullptr;
 }
@@ -279,7 +281,8 @@ void Renderer::ChangeResolution(uint32_t NewWidth, uint32_t NewHeight)
 
     glViewport(0, 0, Width, Height);
 
-    this->FrameBuffer.ChangeResolution(Width, Height);
+    Framebuffer.ChangeResolution(Width, Height);
+    PostProcessBuffer.ChangeResolution(Width, Height);
 }
 
 void Renderer::DrawScene(
@@ -302,7 +305,7 @@ void Renderer::DrawScene(
         ZoneScopedNC("Prepare", tracy::Color::AliceBlue);
 
         glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Framebuffer);
-        this->FrameBuffer.BindTexture();
+        Framebuffer.BindTexture();
 
         ShaderManager* shdManager = ShaderManager::Get();
 

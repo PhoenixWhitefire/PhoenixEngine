@@ -241,32 +241,21 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
         ScriptEngine::L::PushGenericValue(L, Dm->Object->ToGenericValue());
         lua_setglobal(L, "game");
 
-        int resumeResult = ScriptEngine::L::Resume(L, nullptr, 0);
+        lua_pushthread(L);
+        int ref = lua_ref(L, -1);
+        lua_pop(L, 1);
 
-        if (resumeResult != LUA_OK && resumeResult != LUA_YIELD && resumeResult != LUA_BREAK)
-        {
-            lua_Debug ar = {};
-            lua_getinfo(L, 1, "l", &ar);
+        // We can't resume this immediately because it can cause the DataModel to be re-allocated
+        lvm.YieldedCoroutines.push_back(ScriptEngine::YieldedCoroutine{
+            .DebugString = "DataModel",
+            .Coroutine = L,
+            .CoroutineReference = ref,
+            .DataModel = Dm->Object,
+            .RmWait = { 0.f, 0.f },
+            .Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Wait,
+        });
 
-            const char* err = lua_tostring(L, -1);
-
-            Log.Error(
-                std::format("DataModel Script init: {}", err ? err : "unknown error"),
-                std::format("Script:{},Line:{}", Module, ar.currentline)
-            );
-            lua_pop(L, 1);
-            ScriptEngine::L::DumpStacktrace(L);
-
-            lua_resetthread(L);
-            lua_pop(mainThread, 1);
-
-            return nullptr;
-        }
-        else
-        {
-            lua_pop(mainThread, 1);
-            return L;
-        }
+        return L;
     }
     else
     {

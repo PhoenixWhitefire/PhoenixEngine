@@ -56,7 +56,8 @@ public:
     };
     static_assert(sizeof(InstanceDrawInfo) == ((4*4) + (3*1) + 1) * 4);
 
-    GpuFrameBuffer FrameBuffer;
+    GpuFrameBuffer Framebuffer;
+    GpuFrameBuffer PostProcessBuffer;
 
     GLFWwindow* Window = nullptr;
     uint32_t Width = 0, Height = 0;

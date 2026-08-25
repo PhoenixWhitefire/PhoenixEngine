@@ -11,6 +11,6 @@ out vec2 Frag_UV;
 
 void main()
 {
-	gl_Position = vec4(VertexPosition.x * Phoenix_Scale.x, VertexPosition.y * Phoenix_Scale.y, 0.f, 1.f);
+	gl_Position = vec4(VertexPosition.x * 2.f, VertexPosition.y * 2.f, 0.f, 1.f);
 	Frag_UV = vec2(TexUV.x, 1.f - TexUV.y);
 }

@@ -137,8 +137,12 @@ function ProjectPlaying.Leave(_new)
 end
 
 function ProjectPlaying.Render(DeltaTime: number)
+    debug.zonebegin()
+
     CommonUI.RenderMainMenuBar(DeltaTime)
     CommonUI.RenderViewport(DeltaTime)
+
+    debug.zoneend()
 end
 
 return ProjectPlaying

@@ -688,6 +688,11 @@ local function exportProject()
     fs.mkdir(exportTo)
     fs.copy("@project", exportTo)
     fs.remove(`{ exportTo }/phoenix.editor`)
+    fs.remove(`{ exportTo }/phoenix.lock`)
+    fs.remove(`{ exportTo }/.git`)
+    fs.remove(`{ exportTo }/.gitignore`)
+    fs.remove(`{ exportTo }/.gitmodules`)
+    fs.remove(`{ exportTo }/.vscode`)
 
     fs.copy(enginePath, `{exportTo}/{State.Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)
 
@@ -810,6 +815,8 @@ local function updateGitBranches()
 end
 
 function CommonUI.RenderMainMenuBar(dt: number)
+    debug.zonebegin()
+
     if ErrorMessage.Queue[1] then
         local front = ErrorMessage.Queue[1]
 
@@ -1295,9 +1302,13 @@ function CommonUI.RenderMainMenuBar(dt: number)
         wasSettingsOpen = false
         CommonUI.SaveSettings()
     end
+
+    debug.zoneend()
 end
 
 function CommonUI.RenderBottomBar()
+    debug.zonebegin()
+
     local w = Renderer.Resolution
 
     imgui.setnextwindowposition(0, w.y - 35)
@@ -1333,9 +1344,13 @@ function CommonUI.RenderBottomBar()
     imgui.setitemtooltip(noteStr)
 
     imgui.endw()
+
+    debug.zoneend()
 end
 
 function CommonUI.RenderViewport(DeltaTime: number)
+    debug.zonebegin()
+
     if State.CurrentStage == "ProjectEditing" and State.Project.Workspace then
         local mouseVec = Workspace:ScreenPointToVector(PlayerInput:GetCursorPosition(), 1000)
         local rayresult = if not PlayerInput.IsMouseSunk
@@ -1421,6 +1436,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
     if not render then
         PlayerInput:SetViewportInputRect(vector.zero, vector.create(1, 1))
         imgui.endw()
+        debug.zoneend()
         return
     end
 
@@ -1456,6 +1472,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
     imgui.image("!Framebuffer:Main", nil, true)
 
     imgui.endw()
+    debug.zoneend()
 end
 
 CommonUI.GetCenteredX = getCenteredX

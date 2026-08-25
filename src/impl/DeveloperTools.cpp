@@ -382,10 +382,13 @@ void DeveloperTools::Initialize(Renderer* renderer)
     GlobalsDocPrologue = FileRW::ReadFile("./wikigen/globals-prologue.md", &prologueFound);
     PHX_CHECK(prologueFound && "Globals prologue - ./wikigen/globals-prologue.md");
 
-    ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
-    ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
+    GameObjectManager* objectManager = GameObjectManager::Get();
+    uint32_t prevDm = objectManager->DataModel;
+
+    ObjectHandle tempdm = objectManager->Create("DataModel");
+    ObjectHandle tempwp = objectManager->Create("Workspace");
     tempwp->SetParent(tempdm);
-    GameObjectManager::Get()->DataModel = tempdm->ObjectId;
+    objectManager->DataModel = tempdm->ObjectId;
 
     s_EditorLuauLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
     s_EditorLuauLang.mTokenRegexStrings.push_back({ "`(.+|)`", TextEditor::PaletteIndex::String }); // string interpolation
@@ -461,6 +464,7 @@ void DeveloperTools::Initialize(Renderer* renderer)
     tempwp->Destroy();
     tempdm->Destroy();
 
+    objectManager->DataModel = prevDm;
     DeveloperTools::Initialized = true;
 }
 
@@ -1588,9 +1592,9 @@ static void renderMaterialEditor()
         ImGui::EndPopup();
     }
 
-    GpuFrameBuffer prevFbo = MtlPreviewRenderer->FrameBuffer;
-    MtlPreviewRenderer->FrameBuffer = MtlEditorPreview;
-    MtlPreviewRenderer->FrameBuffer.Bind();
+    GpuFrameBuffer prevFbo = MtlPreviewRenderer->Framebuffer;
+    MtlPreviewRenderer->Framebuffer = MtlEditorPreview;
+    MtlPreviewRenderer->Framebuffer.Bind();
 
     MtlEditorPreview.Bind();
     glViewport(0, 0, 256, 256);
@@ -1608,8 +1612,8 @@ static void renderMaterialEditor()
     );
 
     MtlEditorPreview.Unbind();
-    MtlPreviewRenderer->FrameBuffer = prevFbo;
-    MtlPreviewRenderer->FrameBuffer.Bind();
+    MtlPreviewRenderer->Framebuffer = prevFbo;
+    MtlPreviewRenderer->Framebuffer.Bind();
     glViewport(0, 0, prevFbo.Width, prevFbo.Height);
 
     ImGui::Text("Shader:");

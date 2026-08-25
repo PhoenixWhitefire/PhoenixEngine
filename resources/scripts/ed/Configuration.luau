@@ -27,7 +27,7 @@ end
 return table.freeze({
     RecentProjectsPath = "./editor/recent-projects.json",
     ReimportableModelTag = "Phoenix_ReimportableModel",
-    EditorBuild = 5,
+    EditorBuild = 6,
     GitHubUrl = "https://github.com/PhoenixWhitefire/PhoenixEngine",
     GameEditingVMName = "GameEditingVM",
     PlaytestVMName = "Playtest",

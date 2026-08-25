@@ -149,6 +149,8 @@ local function handleUndoRedoKeybinds()
 end
 
 local function editorFrame(State, DeltaTime)
+    debug.zonebegin()
+
     if not History.IsRecordingAction then
         if State.CurrentStage == "ProjectEditing" then
             handleUndoRedoKeybinds()
@@ -167,6 +169,8 @@ local function editorFrame(State, DeltaTime)
     else
         error(`Unexpected editor stage '{ State.CurrentStage }'`)
     end
+
+    debug.zoneend()
 end
 
 local function stageUpdate(State, DeltaTime)

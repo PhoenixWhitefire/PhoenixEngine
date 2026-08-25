@@ -199,7 +199,7 @@ end
 local ShowedAutosaveDelayedMessage = false
 
 function ProjectEditing.Render(DeltaTime: number)
-    assert(typeof(DeltaTime) == "number")
+    debug.zonebegin()
 
     CommonUI.RenderMainMenuBar(DeltaTime)
     CommonUI.RenderViewport(DeltaTime)
@@ -232,6 +232,8 @@ function ProjectEditing.Render(DeltaTime: number)
             end
         end
     end
+
+    debug.zoneend()
 end
 
 function ProjectEditing.Leave(NextStage: Types.Stage)
