@@ -1,9 +1,9 @@
 return {
-  luau = {
-    languagemode = "strict",
-    aliases = {
-      scripts = "./",
-      modules = "./modules/"
+    luau = {
+        languagemode = "strict",
+        aliases = {
+            scripts = "./",
+            modules = "./modules/"
+        }
     }
-  }
 }
