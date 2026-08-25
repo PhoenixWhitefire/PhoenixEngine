@@ -3,7 +3,8 @@ return {
         languagemode = "strict",
         aliases = {
             scripts = "./",
-            modules = "./modules/"
+            modules = "./modules/",
+            std = "__LUTE_STANDARD__"
         }
     }
 }

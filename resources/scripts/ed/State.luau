@@ -157,8 +157,17 @@ local function createNewProject_(State: StateType)
 
     fs.copy("@_editres/textures/Sky1", "@_projres/textures/Sky1")
     fs.copy("@_editres/textures/image-placeholder.png", "@_projres/textures/image-placeholder.png")
-    fs.copy("@_editres/scripts/defaultconfig.luau", "@_projres/scripts/.config.luau")
     fs.copy(Configuration.GetLogo(), "@project/icon.png")
+
+    local configFile = assert(fs.read("@_editres/scripts/defaultconfig.luau"))
+    local substitutions = 0
+    configFile, substitutions = string.gsub(configFile, "__LUTE_STANDARD__", fs.resolvepathabsolute(Configuration.EditorLuteStdPath))
+
+    if substitutions == 0 then
+        warn(`Failed to link Lute's @std`)
+    end
+
+    fs.write("@_projres/scripts/.config.luau", configFile)
 
     local dm = GameObject.fromTemplate("DataModel")
     local projWp = GameObject.fromTemplate("Workspace")
