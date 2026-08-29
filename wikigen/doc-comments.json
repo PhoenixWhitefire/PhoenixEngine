@@ -2649,13 +2649,15 @@
         "Members": {
           "defer": {
             "Description": "Schedules the given function or coroutine to be resumed at the next scheduler step",
-            "Generics": "A...",
-            "In": "Task: ((A...) -> ()) | thread, A..."
+            "Generics": "A..., R...",
+            "In": "Task: ((A...) -> R...) | thread, A...",
+            "Out": "thread"
           },
           "delay": {
             "Description": "Schedules the given function or coroutine to be resumed some number of seconds later",
-            "Generics": "A...",
-            "In": "Delay: number, Task: ((A...) -> ()) | thread, A..."
+            "Generics": "A..., R...",
+            "In": "Delay: number, Task: ((A...) -> R...) | thread, A...",
+            "Out": "thread"
           },
           "load": {
             "Description": [
@@ -2673,6 +2675,12 @@
           "setglobal": {
             "Description": "Sets a global for a given coroutine",
             "In": "Coroutine: thread, Global: string, Value: unknown"
+          },
+          "spawn": {
+            "Description": "Runs the given function or coroutine immediately. If it yields, the calling thread continues running",
+            "Generics": "A..., R...",
+            "In": "Task: ((A...) -> R...) | thread, A...",
+            "Out": "thread"
           },
           "wait": {
             "Description": "Yields the thread for the specified number of seconds. Default is `0`",

@@ -107,8 +107,8 @@ void ScriptEngine::Shutdown()
     std::vector<LuauVM*> vms;
     vms.reserve(VMs.size());
 
-    for (auto& [_, vm] : VMs)
-        vms.push_back(&vm);
+    for (auto& [_, vm ] : VMs)
+        vms.push_back(vm);
 
     for (LuauVM* vm : vms)
         vm->Close();
@@ -134,12 +134,13 @@ ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
     if (it != VMs.end())
         RAISE_RT("A VM already exists with that name");
 
-    VMs[Name] = LuauVM{
+    LuauVM* vm = new LuauVM{
         .Name = Name,
-        .MainThread = L::CreateMainThread(Name),
     };
+    vm->MainThread = vm->CreateMainThread();
+    VMs[Name] = vm;
 
-    return VMs[Name];
+    return *VMs[Name];
 }
 
 ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
@@ -148,9 +149,10 @@ ScriptEngine::ParallelVM* ScriptEngine::CreateParallelVM()
 
     ParallelVM* vm = new ParallelVM;
     vm->Name = name;
-    vm->MainThread = L::CreateMainThread(name);
+    vm->MainThread = vm->CreateMainThread();
 
-    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(vm->MainThread);
+    StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(vm->MainThread);
+    vmud->VM = vm;
     vmud->PVM = vm;
 
     lua_Callbacks* cb = lua_callbacks(vm->MainThread);
@@ -221,7 +223,7 @@ static int shouldResume_Promise(ScriptEngine::YieldedCoroutine& CorInfo, lua_Sta
     {
         std::vector<Reflection::GenericValue> returnVals = future.get();
         for (const Reflection::GenericValue& v : returnVals)
-            ScriptEngine::L::PushGenericValue(L, v);
+            ScriptEngine::PushGenericValue(L, v);
 
         delete CorInfo.RmPromise;
         CorInfo.RmPromise = nullptr;
@@ -248,14 +250,14 @@ static const ResumptionModeHandler s_ResumptionModeHandlers[] = {
     shouldResume_Polled,
 };
 
-static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
+void ScriptEngine::ParallelVM::m_ProcessParallelSpawnRequests()
 {
     ZoneScoped;
 
-    vm->ParallelSpawnRequestsMutex.lock();
-    std::vector<std::pair<std::string, std::vector<Reflection::GenericValue>>> requests = vm->ParallelSpawnRequests;
-    vm->ParallelSpawnRequests.clear();
-    vm->ParallelSpawnRequestsMutex.unlock();
+    ParallelSpawnRequestsMutex.lock();
+    std::vector<std::pair<std::string, std::vector<Reflection::GenericValue>>> requests = ParallelSpawnRequests;
+    ParallelSpawnRequests.clear();
+    ParallelSpawnRequestsMutex.unlock();
 
     for (const auto& [ path, arguments ] : requests)
     {
@@ -271,7 +273,7 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
             continue;
         }
 
-        lua_State* L = lua_newthread(vm->MainThread);
+        lua_State* L = lua_newthread(MainThread);
         luaL_sandboxthread(L);
 
         int result = ScriptEngine::CompileAndLoad(L, contents, "@" + FileRW::ResolvePathNormalized(path));
@@ -279,12 +281,12 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
         if (result != 0)
         {
             Log.ErrorF("Failed to compile parallel script '{}': {}", path, lua_tostring(L, -1));
-            lua_pop(vm->MainThread, 1);
+            lua_pop(MainThread, 1);
             continue;
         }
 
         for (const Reflection::GenericValue& gv : arguments)
-            ScriptEngine::L::PushGenericValue(L, gv);
+            ScriptEngine::PushGenericValue(L, gv);
 
         ZoneNamedN(resumezone, "resume", true);
         result = lua_resume(L, nullptr, (int)arguments.size());
@@ -292,10 +294,10 @@ static void processParallelSpawnRequests(ScriptEngine::ParallelVM* vm)
         if (result != LUA_OK && result != LUA_YIELD && result != LUA_BREAK)
         {
             Log.ErrorF("Parallel script init: {}", lua_tostring(L, -1));
-            ScriptEngine::L::DumpStacktrace(L);
+            ScriptEngine::DumpStacktrace(L);
         }
 
-        lua_pop(vm->MainThread, 1);
+        lua_pop(MainThread, 1);
     }
 }
 
@@ -304,7 +306,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
     ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(Name.data(), Name.size());
 
-    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(MainThread);
+    StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(MainThread);
 
     if (vmud->BeingDebugged)
         return;
@@ -352,7 +354,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
         }
 
         lua_State* coroutine = yc->Coroutine;
-        L::StateUserdata* corUd = (L::StateUserdata*)lua_getthreaddata(coroutine);
+        StateUserdata* corUd = (StateUserdata*)lua_getthreaddata(coroutine);
         assert(!corUd->BeingDebugged && "That should only be set on the main thread!");
 
         int corRef = yc->CoroutineReference;
@@ -377,7 +379,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
             // TODO parallel debugger
             int resumeStatus = -1;
             if (isSynchronized)
-                resumeStatus = L::Resume(coroutine, nullptr, nretvals);
+                resumeStatus = Resume(coroutine, nullptr, nretvals);
             else
             {
                 vmud->LastResumed = GetRunningTime();
@@ -395,7 +397,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
                 );
                 lua_settop(coroutine, top);
 
-                L::DumpStacktrace(coroutine);
+                DumpStacktrace(coroutine);
             }
 
             lua_unref(coroutine, corRef);
@@ -425,14 +427,14 @@ void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
         }
         */
 
-        processParallelSpawnRequests(this);
+        m_ProcessParallelSpawnRequests();
         LuauVM::StepScheduler();
     }
     else
         LuauVM::StepScheduler(&YieldedCoroutinesSync);
 }
 
-static void processParallelEvents()
+void ScriptEngine::m_ProcessParallelEvents()
 {
     ZoneScoped;
 
@@ -459,16 +461,16 @@ void ScriptEngine::StepVMs()
         vm->StepParallelScheduler(ExecutionPhase::Serial);
     }
 
-    processParallelEvents();
+    m_ProcessParallelEvents();
 
-    for (auto& it : VMs)
-        it.second.StepScheduler();
+    for (auto& [ _, vm ] : VMs)
+        vm->StepScheduler();
 }
 
 // Also in `EngineService.cpp`!!
 #define JSON_ENCODED_DATA_TAG "__HX_EncodedData"
 
-void ScriptEngine::L::PushJson(lua_State* L, const nlohmann::json& v)
+void ScriptEngine::PushJson(lua_State* L, const nlohmann::json& v)
 {
     switch (v.type())
     {
@@ -568,7 +570,7 @@ if (Context.size() > 0) \
 else \
     luaL_error(L, e, __VA_ARGS__); } \
 
-nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string Context)
+nlohmann::json ScriptEngine::ToJson(lua_State* L, int StackIndex, std::string Context)
 {
     switch (lua_type(L, StackIndex))
     {
@@ -669,7 +671,7 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
                 if (Context.size() == 0)
                     Context = "Array";
 
-                t[index - 1] = L::ToJson(L, -1, Context + "[" + std::to_string(index) + "]");
+                t[index - 1] = ToJson(L, -1, Context + "[" + std::to_string(index) + "]");
             }
             else
             {
@@ -682,7 +684,7 @@ nlohmann::json ScriptEngine::L::ToJson(lua_State* L, int StackIndex, std::string
                 if (Context.size() == 0)
                     Context = "Dictionary";
 
-                t[key] = L::ToJson(L, -1, Context + "." + key);
+                t[key] = ToJson(L, -1, Context + "." + key);
             }
 
             lua_pop(L, 1);
@@ -854,28 +856,28 @@ int ScriptEngine::SetScriptBreakpoint(const std::string& VM, const std::string& 
     if (lvmit == VMs.end())
         RAISE_RT("Invalid Luau VM '{}'", VM);
 
-    LuauVM& lvm = lvmit->second;
+    LuauVM* lvm = lvmit->second;
     std::string path = FileRW::ResolvePathAbsolute(Script);
-    int initial = lua_gettop(lvm.MainThread);
+    int initial = lua_gettop(lvm->MainThread);
 
-    lua_getfield(lvm.MainThread, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);
-    assert(lua_type(lvm.MainThread, -1) == LUA_TTABLE);
+    lua_getfield(lvm->MainThread, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);
+    assert(lua_type(lvm->MainThread, -1) == LUA_TTABLE);
 
     int lineApplied = Line;
 
-    if (lua_getfield(lvm.MainThread, -1, path.c_str()) == LUA_TNIL)
+    if (lua_getfield(lvm->MainThread, -1, path.c_str()) == LUA_TNIL)
     {
         std::vector<std::pair<int, bool>>& queued = QueuedScriptBreakpoints[path];
         queued.emplace_back(Line, Enabled);
     }
     else
     {
-        assert(lua_type(lvm.MainThread, -1) == LUA_TFUNCTION);
-        lineApplied = lua_breakpoint(lvm.MainThread, -1, Line, (int)Enabled);
+        assert(lua_type(lvm->MainThread, -1) == LUA_TFUNCTION);
+        lineApplied = lua_breakpoint(lvm->MainThread, -1, Line, (int)Enabled);
     }
 
-    assert(lua_gettop(lvm.MainThread) >= initial);
-    lua_settop(lvm.MainThread, initial);
+    assert(lua_gettop(lvm->MainThread) >= initial);
+    lua_settop(lvm->MainThread, initial);
     return lineApplied;
 }
 
@@ -883,9 +885,6 @@ int ScriptEngine::SetScriptBreakpoint(const std::string& VM, const std::string& 
 
 static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int Depth)
 {
-    using namespace ScriptEngine;
-    using namespace ScriptEngine::L;
-
     switch (lua_type(L, StackIndex))
     {
     case LUA_TNIL:
@@ -974,12 +973,12 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
                 lua_pushvalue(CL, -1); // keep the function value
 
                 for (const Reflection::GenericValue& i : Inputs)
-                    PushGenericValue(CL, i);
+                    ScriptEngine::PushGenericValue(CL, i);
 
-                StateUserdata* ud = (StateUserdata*)lua_getthreaddata(CL);
+                ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(CL);
                 ud->YieldBlockers.push_back(fndbinfo.c_str());
 
-                int status = L::ProtectedCall(CL, (int)Inputs.size(), -1, 0);
+                int status = ScriptEngine::ProtectedCall(CL, (int)Inputs.size(), -1, 0);
 
                 ud->YieldBlockers.pop_back();
 
@@ -987,7 +986,7 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
                 {
                     std::vector<Reflection::GenericValue> retvals;
                     for (int i = 2; i < lua_gettop(CL); i++)
-                        retvals.push_back(ToGeneric(CL, i));
+                        retvals.push_back(ScriptEngine::ToGeneric(CL, i));
 
                     return retvals;
                 }
@@ -1073,12 +1072,12 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
     }
 }
 
-Reflection::GenericValue ScriptEngine::L::ToGeneric(lua_State* L, int StackIndex)
+Reflection::GenericValue ScriptEngine::ToGeneric(lua_State* L, int StackIndex)
 {
     return toGenericValue(L, StackIndex, 0);
 }
 
-void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int StackIndex)
+void ScriptEngine::CheckType(lua_State* L, Reflection::ValueType Type, int StackIndex)
 {
     ZoneScoped;
 
@@ -1111,7 +1110,7 @@ void ScriptEngine::L::CheckType(lua_State* L, Reflection::ValueType Type, int St
     }
 }
 
-void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
+void ScriptEngine::PushGenericValue(lua_State* L, const Reflection::GenericValue& gv)
 {
     luaL_checkstack(L, 1, "::PushGenericValue");
 
@@ -1183,7 +1182,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
         for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
         {
             lua_pushinteger(L, index + 1);
-            L::PushGenericValue(L, array[index]);
+            PushGenericValue(L, array[index]);
             lua_settable(L, -3);
         }
 
@@ -1201,7 +1200,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
 
         for (int index = 0; static_cast<size_t>(index) < array.size(); index++)
         {
-            L::PushGenericValue(L, array[index]);
+            PushGenericValue(L, array[index]);
 
             if ((index + 1) % 2 == 0)
                 lua_settable(L, -3);
@@ -1239,7 +1238,7 @@ void ScriptEngine::L::PushGenericValue(lua_State* L, const Reflection::GenericVa
     }
 }
 
-int ScriptEngine::L::HandleMethodCall(
+int ScriptEngine::HandleMethodCall(
     lua_State* L,
     const Reflection::MethodDescriptor* func,
     ReflectorRef Reflector
@@ -1313,8 +1312,8 @@ int ScriptEngine::L::HandleMethodCall(
     {
         Reflection::ValueType paramType = paramTypes[index - 1];
 
-        ScriptEngine::L::CheckType(L, paramType, index + 1);
-        inputs.push_back(L::ToGeneric(L, index + 1));
+        ScriptEngine::CheckType(L, paramType, index + 1);
+        inputs.push_back(ToGeneric(L, index + 1));
 
         if (paramType == Reflection::ValueType::Vector2)
             inputs.back().Type = Reflection::ValueType::Vector2; // no native Vector2 type, but `vector` still works fine
@@ -1322,7 +1321,7 @@ int ScriptEngine::L::HandleMethodCall(
 
     if (func->Yields)
     {
-        return ScriptEngine::L::Yield(
+        return ScriptEngine::Yield(
             L,
             0,
             [func, inputs, Reflector](YieldedCoroutine& yc)
@@ -1354,7 +1353,7 @@ int ScriptEngine::L::HandleMethodCall(
         const Reflection::GenericValue& output = outputs[i];
         assert(Reflection::TypeFits(func->Returns[i], output.Type));
 
-        L::PushGenericValue(L, output);
+        PushGenericValue(L, output);
     }
 
     StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
@@ -1382,7 +1381,7 @@ int ScriptEngine::L::HandleMethodCall(
 #pragma clang diagnostic pop
 #endif
 
-int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure, std::deque<YieldedCoroutine>* YieldedCorosOverride)
+int ScriptEngine::LuauVM::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure, std::deque<YieldedCoroutine>* YieldedCorosOverride)
 {
     ZoneScoped;
 
@@ -1430,12 +1429,10 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
         RAISE_RT("Cannot yield with '{}' right now (across metamethod/C-call boundary)", ar.name ? ar.name : "<unknown>");
     }
 
-    std::vector<SharedMutex*>& lsms = ud->PVM ? ud->PVM->LockedSharedMutexes : VMs[ud->VM].LockedSharedMutexes;
-
-    if (lsms.size() > 0)
+    if (LockedSharedMutexes.size() > 0)
     {
         std::string mutexesStr;
-        for (SharedMutex* sm : lsms)
+        for (SharedMutex* sm : LockedSharedMutexes)
         {
             sm->Mutex.unlock();
             mutexesStr.append(sm->Name + ", ");
@@ -1447,7 +1444,7 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
 
     // TODO a kind of hack to get what datamodel we're in
     lua_getglobal(L, "game");
-    Reflection::GenericValue datamodelVal = ScriptEngine::L::ToGeneric(L, -1);
+    Reflection::GenericValue datamodelVal = ScriptEngine::ToGeneric(L, -1);
     GameObject* dmObject = GameObjectManager::Get()->FromGenericValue(datamodelVal);
     assert(dmObject);
     // need to do that before `lua_yield` because of thread chicanery idk how it works
@@ -1465,30 +1462,27 @@ int ScriptEngine::L::Yield(lua_State* L, int NumResults, std::function<void(Yiel
         .DataModel = dmObject,
         .Mode = YieldedCoroutine::ResumptionMode::INVALID,
     };
-    L::DumpStacktrace(L, &yc.DebugString);
+    DumpStacktrace(L, &yc.DebugString);
 
     Configure(yc);
     assert(yc.Mode != YieldedCoroutine::ResumptionMode::INVALID);
 
     if (!YieldedCorosOverride)
-    {
-        LuauVM* vm = nullptr;
-
-        if (ud->PVM)
-            vm = ud->PVM;
-        else
-            vm = &VMs.at(ud->VM);
-
-        vm->YieldedCoroutines.push_back(yc);
-    }
+        YieldedCoroutines.push_back(yc);
     else
         YieldedCorosOverride->push_back(yc);
 
     return yieldResult; // will probably always be -1 but just in case
 }
 
+int ScriptEngine::Yield(lua_State* L, int NumResults, std::function<void(YieldedCoroutine&)> Configure, std::deque<YieldedCoroutine>* YieldedCorosOverride)
+{
+    StateUserdata* ud = (StateUserdata*)lua_getthreaddata(L);
+    return ud->VM->Yield(L, NumResults, Configure, YieldedCorosOverride);
+}
+
 // modified version of `db_traceback` from `VM/src/ldblib.cpp`
-void ScriptEngine::L::DumpStacktrace(
+void ScriptEngine::DumpStacktrace(
     lua_State* L,
     std::string* Into,
     int Level,
@@ -1579,7 +1573,7 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
         return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
-static void initRequireConfig(luarequire_Configuration* config)
+void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
 {
     config->is_require_allowed = [](lua_State*, void*, const char*)
         {
@@ -1742,7 +1736,7 @@ static void initRequireConfig(luarequire_Configuration* config)
 
             // new thread needs to have the globals sandboxed
             luaL_sandboxthread(ML);
-            ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
+            DumpStacktrace(L, &((StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
 
             bool isAotBytecode = modulePath.find(".luauc") != std::string::npos;
             std::string bytecode;
@@ -1767,7 +1761,7 @@ static void initRequireConfig(luarequire_Configuration* config)
                 lua_pushstring(ML, ldname);
                 lua_setglobal(ML, "_LOADNAME");
 
-                int status = ScriptEngine::L::Resume(ML, L, 0);
+                int status = Resume(ML, L, 0);
 
                 if (status == LUA_OK)
                 {
@@ -1789,7 +1783,7 @@ static void initRequireConfig(luarequire_Configuration* config)
             if (lua_status(ML) != LUA_OK)
             {
                 std::string trace;
-                ScriptEngine::L::DumpStacktrace(L, &trace);
+                DumpStacktrace(L, &trace);
                 trace = "\n" + trace;
 
                 lua_pushlstring(L, trace.data(), trace.size());
@@ -1807,10 +1801,10 @@ static void initRequireConfig(luarequire_Configuration* config)
     assert(!config->get_alias);
 }
 
-lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
+lua_State* ScriptEngine::LuauVM::CreateMainThread()
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
-    ZoneText(VmName.data(), VmName.size());
+    ZoneText(Name.data(), Name.size());
 
     lua_State* state = lua_newstate(l_alloc, nullptr);
 
@@ -1828,7 +1822,7 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     std::filesystem::path* requirePath = new std::filesystem::path;
     luaopen_require(
         state,
-        initRequireConfig,
+        s_InitRequireConfig,
         requirePath
     );
 
@@ -1843,7 +1837,7 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
     luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel));
     lua_setglobal(state, "game");
 
-    lua_pushlstring(state, VmName.data(), VmName.size());
+    lua_pushlstring(state, Name.data(), Name.size());
     lua_setglobal(state, "_VMNAME");
 
     StateUserdata* vmud = new StateUserdata;
@@ -1922,9 +1916,9 @@ lua_State* ScriptEngine::L::CreateMainThread(const std::string& VmName)
             }
         };
 
-    vmud->AllowedExecutionTime = DefaultVMAllowedExecutionTime;
+    vmud->AllowedExecutionTime = ScriptEngine::Get()->DefaultVMAllowedExecutionTime;
     vmud->LastResumed = GetRunningTime();
-    vmud->VM = VmName;
+    vmud->VM = this;
     lua_setthreaddata(state, vmud);
 
     luaL_sandbox(state);
@@ -1948,14 +1942,14 @@ void ScriptEngine::LuauVM::Close()
             it->Dead = true;
     }
 
-    L::StateUserdata* vmud = (L::StateUserdata*)lua_getthreaddata(L);
+    StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(L);
 
     if (vmud->BeingDebugged)
         DeveloperTools::LeaveDebugger();
 
     for (lua_State* co : vmud->Coroutines)
     {
-        L::StateUserdata* ud = (L::StateUserdata*)lua_getthreaddata(co);
+        StateUserdata* ud = (StateUserdata*)lua_getthreaddata(co);
         while (!ud->EventConnections.empty())
         {
             EventConnectionData* ec = ud->EventConnections.back();
@@ -1971,13 +1965,12 @@ void ScriptEngine::LuauVM::Close()
     lua_close(L);
     delete vmud; // delete after closing VM due to `userthread` callback
 
-    VMs.erase(Name);
+    ScriptEngine::Get()->VMs.erase(Name);
 }
 
 static void breakHere(lua_State* L, DebugBreakReason Reason)
 {
-    using namespace ScriptEngine;
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 
     if (vmud->DebuggerAttached)
     {
@@ -1990,9 +1983,7 @@ static void breakHere(lua_State* L, DebugBreakReason Reason)
 
 static lua_Status finishCoroutine(lua_State* L, int status)
 {
-    using namespace ScriptEngine;
-    using namespace L;
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 
     if (!vmud->PVM && !vmud->BeingDebugged)
     {
@@ -2017,7 +2008,7 @@ static lua_Status finishCoroutine(lua_State* L, int status)
     return (lua_Status)status;
 }
 
-lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
+lua_Status ScriptEngine::Resume(lua_State* L, lua_State* from, int narg)
 {
     std::string extTags;
 
@@ -2034,7 +2025,7 @@ lua_Status ScriptEngine::L::Resume(lua_State* L, lua_State* from, int narg)
     return finishCoroutine(L, status);
 }
 
-lua_Status ScriptEngine::L::ProtectedCall(lua_State* L, int narg, int nret, int errfunc)
+lua_Status ScriptEngine::ProtectedCall(lua_State* L, int narg, int nret, int errfunc)
 {
     StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
     vmud->LastResumed = GetRunningTime();
@@ -2116,7 +2107,7 @@ nlohmann::json ScriptEngine::DumpApiToJson()
                 {
                     std::string type = tn;
 
-                    GameObject* obj = GameObjectManager::Get()->FromGenericValue(L::ToGeneric(luhx, -1));
+                    GameObject* obj = GameObjectManager::Get()->FromGenericValue(ToGeneric(luhx, -1));
 
                     for (const ReflectorRef& ref : obj->Components)
                     {

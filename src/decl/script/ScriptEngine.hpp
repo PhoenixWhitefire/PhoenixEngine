@@ -20,16 +20,19 @@
 struct EventConnectionData;
 struct SharedMutex;
 
-namespace ScriptEngine
+class ScriptEngine
 {
+public:
     void Initialize();
     void Shutdown();
 
-    std::string CompileBytecode(const std::string_view&, int OptimizationLevel = -1, int DebugLevel = -1);
-    int LoadBytecode(lua_State*, const std::string_view& Bytecode, const std::string& ChunkName);
-    int CompileAndLoad(lua_State*, const std::string_view& SourceCode, const std::string& ChunkName);
+    static ScriptEngine* Get();
+
+    static std::string CompileBytecode(const std::string_view&, int OptimizationLevel = -1, int DebugLevel = -1);
+    static int LoadBytecode(lua_State*, const std::string_view& Bytecode, const std::string& ChunkName);
+    static int CompileAndLoad(lua_State*, const std::string_view& SourceCode, const std::string& ChunkName);
+    static lua_Type ReflectionTypeToLuauType(Reflection::ValueType);
     nlohmann::json DumpApiToJson();
-    lua_Type ReflectionTypeToLuauType(Reflection::ValueType);
 
     int SetScriptBreakpoint(
         const std::string& VM,
@@ -95,8 +98,19 @@ namespace ScriptEngine
 
     struct LuauVM
     {
+        lua_State* CreateMainThread();
         void StepScheduler(std::deque<YieldedCoroutine>* Yielded = nullptr);
         void Close();
+
+        // This yields the given Luau thread (ensuring that we are in a yieldable context),
+        // and calls `Configure` to set the resumption mode and do any final preparations.
+        // Like `lua_yield`, returns `-1`.
+        int Yield(
+            lua_State* L,
+            int NumResults,
+            std::function<void(YieldedCoroutine&)> Configure,
+            std::deque<YieldedCoroutine>* YieldedCorosOverride = nullptr
+        );
 
         std::deque<YieldedCoroutine> YieldedCoroutines = {};
         std::vector<SharedMutex*> LockedSharedMutexes = {};
@@ -116,6 +130,8 @@ namespace ScriptEngine
         int ParallelAllocated = 0;
         bool IsParallel = false;
         bool Desynchronized = false;
+    private:
+        void m_ProcessParallelSpawnRequests();
     };
 
     void StepVMs();
@@ -123,40 +139,35 @@ namespace ScriptEngine
     LuauVM& RegisterNewVM(const std::string& Name);
     ParallelVM* CreateParallelVM();
 
-    inline std::unordered_map<std::string, LuauVM> VMs;
-    inline std::vector<ParallelVM*> ParallelVMs;
-    inline std::atomic_int ParallelVMsExecuting = 0;
+    std::unordered_map<std::string, LuauVM*> VMs;
+    std::vector<ParallelVM*> ParallelVMs;
+    std::atomic_int ParallelVMsExecuting = 0;
 
-    inline std::vector<std::function<void()>> ParallelEvents;
-    inline std::mutex ParallelEventsMutex;
+    std::vector<std::function<void()>> ParallelEvents;
+    std::mutex ParallelEventsMutex;
 
-    inline double DefaultVMAllowedExecutionTime = 0.0;
-};
+    double DefaultVMAllowedExecutionTime = 0.0;
 
-namespace ScriptEngine::L
-{
-    lua_State* CreateMainThread(const std::string& VmName);
+    static lua_Status Resume(lua_State* L, lua_State* from, int narg);
+    static lua_Status ProtectedCall(lua_State* L, int narg, int nret, int errfunc);
 
-    lua_Status Resume(lua_State* L, lua_State* from, int narg);
-    lua_Status ProtectedCall(lua_State* L, int narg, int nret, int errfunc);
-
-    Reflection::GenericValue ToGeneric(
+    static Reflection::GenericValue ToGeneric(
         lua_State*,
         int StackIndex = -1
     );
-    nlohmann::json ToJson(lua_State*, int StackIndex = -1, std::string Context = "");
-    void CheckType(
+    static nlohmann::json ToJson(lua_State*, int StackIndex = -1, std::string Context = "");
+    static void CheckType(
         lua_State*,
         Reflection::ValueType,
         int StackIndex = -1
     );
 
-    void PushGenericValue(lua_State*, const Reflection::GenericValue&);
-    void PushJson(lua_State*, const nlohmann::json&);
+    static void PushGenericValue(lua_State*, const Reflection::GenericValue&);
+    static void PushJson(lua_State*, const nlohmann::json&);
 
-    void DumpStacktrace(lua_State* L, std::string* Into = nullptr, int Level = 0, const char* Message = nullptr);
+    static void DumpStacktrace(lua_State* L, std::string* Into = nullptr, int Level = 0, const char* Message = nullptr);
 
-    int HandleMethodCall(
+    static int HandleMethodCall(
         lua_State* L,
         const Reflection::MethodDescriptor* fnaf, // THE MIMICCCCC!!!!
         ReflectorRef
@@ -165,18 +176,19 @@ namespace ScriptEngine::L
     // This yields the given Luau thread (ensuring that we are in a yieldable context),
     // and calls `Configure` to set the resumption mode and do any final preparations.
     // Like `lua_yield`, returns `-1`.
-    int Yield(
+    static int Yield(
         lua_State*,
         int NumResults,
         std::function<void(YieldedCoroutine&)> Configure,
         std::deque<YieldedCoroutine>* YieldedCorosOverride = nullptr
     );
 
-    bool IsSynchronized(lua_State*);
+    static bool IsSynchronized(lua_State*);
 
     struct StateUserdata
     {
-        std::string VM;
+        ScriptEngine::LuauVM* VM = nullptr;
+        ScriptEngine::ParallelVM* PVM = nullptr;
         std::string SpawnTrace;
         std::vector<EventConnectionData*> EventConnections;
         std::vector<lua_State*> Coroutines; // Only populated for the main thread
@@ -184,8 +196,10 @@ namespace ScriptEngine::L
         std::stack<std::string> UnfinishedProfilerZones;
         double AllowedExecutionTime = 0.0;
         double LastResumed = 0.0;
-        ParallelVM* PVM = nullptr;
         bool DebuggerAttached = false;
         bool BeingDebugged = false;
     };
+private:
+    void m_ProcessParallelEvents();
+    static void s_InitRequireConfig(struct luarequire_Configuration*);
 };

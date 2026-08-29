@@ -1198,8 +1198,8 @@ json: {
 },
 
 task: {
-  defer: (<A...>( Task: ((A...) -> ()) | thread, A... ) -> ()),
-  delay: (<A...>( Delay: number, Task: ((A...) -> ()) | thread, A... ) -> ()),
+  defer: (<A..., R...>( Task: ((A...) -> R...) | thread, A... ) -> (thread)),
+  delay: (<A..., R...>( Delay: number, Task: ((A...) -> R...) | thread, A... ) -> (thread)),
   load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
   loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
   setglobal: (( Coroutine: thread, Global: string, Value: unknown ) -> ()),

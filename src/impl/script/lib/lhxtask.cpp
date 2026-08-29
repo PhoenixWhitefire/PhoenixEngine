@@ -3,14 +3,13 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
-#include "ThreadManager.hpp"
 #include "FileRW.hpp"
 
 static int task_wait(lua_State* L)
 {
     double sleepTime = luaL_optnumber(L, 1, 0.f);
 
-    return ScriptEngine::L::Yield(
+    return ScriptEngine::Yield(
         L,
         0,
         [sleepTime](ScriptEngine::YieldedCoroutine& yc)
@@ -22,7 +21,45 @@ static int task_wait(lua_State* L)
     );
 }
 
-static void schedule(lua_State* L, double sleepTime, int taskStackIndex, int numFnArgs)
+static int task_spawn(lua_State* L)
+{
+    int taskType = lua_type(L, 1);
+    luaL_argexpected(L, taskType == LUA_TFUNCTION || taskType == LUA_TTHREAD, 1, "function or thread (coroutine)");
+
+    lua_State* co = nullptr;
+
+    if (taskType == LUA_TFUNCTION)
+    {
+        co = lua_newthread(L);
+        lua_xmove(L, co, 1);
+    }
+    else
+        co = lua_tothread(L, 1);
+
+    lua_xmove(L, co, lua_gettop(L));
+    lua_pushthread(co);
+    lua_xmove(co, L, 1);
+
+    int result = ScriptEngine::Resume(co, L, lua_gettop(co) - 1);
+
+    if (result != LUA_OK && result != LUA_YIELD && result != LUA_BREAK)
+    {
+        int top = lua_gettop(co);
+        const char* err = lua_tostring(co, -1); // can't use `luaL_tolstring` because it might do a metatable check and trigger another exception
+
+        Log.ErrorF(
+            "Spawn: {}",
+            err ? err : "unknown error"
+        );
+        lua_settop(co, top);
+
+        ScriptEngine::DumpStacktrace(co);
+    }
+
+    return 1;
+}
+
+static int schedule(lua_State* L, double sleepTime, int taskStackIndex, int numFnArgs)
 {
     int taskType = lua_type(L, taskStackIndex);
     luaL_argexpected(L, taskType == LUA_TFUNCTION || taskType == LUA_TTHREAD, taskStackIndex, "function or thread (coroutine)");
@@ -51,7 +88,7 @@ static void schedule(lua_State* L, double sleepTime, int taskStackIndex, int num
     assert(lua_gettop(arguments) == numFnArgs);
 
     lua_getglobal(L, "game");
-    Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
+    Reflection::GenericValue dmgv = ScriptEngine::ToGeneric(L, -1);
     GameObject* dm = GameObjectManager::Get()->FromGenericValue(dmgv);
 
     ScriptEngine::YieldedCoroutine yc = {
@@ -66,32 +103,26 @@ static void schedule(lua_State* L, double sleepTime, int taskStackIndex, int num
         .Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred
     };
 
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-    std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
+    ud->VM->YieldedCoroutines.push_back(yc);
 
-    if (vmud->PVM)
-        yieldedCoros = &vmud->PVM->YieldedCoroutines;
-    else
-        yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
-
-    yieldedCoros->push_back(yc);
+    lua_pushthread(DL);
+    lua_xmove(DL, L, 1);
+    return 1;
 }
 
 static int task_defer(lua_State* L)
 {
     int numFnArgs = lua_gettop(L) - 1;
-    schedule(L, 0.f, 1, numFnArgs);
-
-    return 0;
+    return schedule(L, 0.f, 1, numFnArgs);
 }
 
 static int task_delay(lua_State* L)
 {
     double sleepTime = luaL_checknumber(L, 1);
     int numFnArgs = lua_gettop(L) - 2;
-    schedule(L, sleepTime, 2, numFnArgs);
 
-    return 0;
+    return schedule(L, sleepTime, 2, numFnArgs);;
 }
 
 static int task_load(lua_State* L)
@@ -107,7 +138,7 @@ static int task_load(lua_State* L)
 
     // new thread needs to have the globals sandboxed
     luaL_sandboxthread(ML);
-    ScriptEngine::L::DumpStacktrace(L, &((ScriptEngine::L::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
+    ScriptEngine::DumpStacktrace(L, &((ScriptEngine::StateUserdata*)lua_getthreaddata(ML))->SpawnTrace);
 
     if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
     {
@@ -165,6 +196,7 @@ static int task_setglobal(lua_State* L)
 
 const luaL_Reg task_funcs[] = {
     { "wait", task_wait },
+    { "spawn", task_spawn },
     { "defer", task_defer },
     { "delay", task_delay },
     { "load", task_load },
