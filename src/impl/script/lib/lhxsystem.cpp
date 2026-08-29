@@ -5,6 +5,8 @@
 
 #ifdef __clang__
 #include <sys/sysinfo.h>
+#else
+#include <Windows.h>
 #endif
 
 #include "script/luhx.hpp"
