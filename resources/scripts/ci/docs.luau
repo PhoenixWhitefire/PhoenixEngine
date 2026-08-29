@@ -2,9 +2,11 @@
 
 print("Docs CI begin\n\n\n\n\n")
 
-local task = phoenix.task
+local task = require("@std/task")
+-- local json = require("@std/json")
+local fs = require("@std/fs")
+
 local json = phoenix.json
-local fs = phoenix.fs
 
 task.delay(60, function()
     warn("Docgen appears to have hung - exiting")
@@ -17,14 +19,14 @@ local BASE_PATH = "./wikigen"
 local DOCS_PREFIX = "phoenix"
 local WIKI_PATH = ".github/wiki"
 
-local apiDump = json.parse(assert(fs.read("./apidump.json"))) :: { [string]: any }
-local docComments = json.parse(assert(fs.read(BASE_PATH .. "/doc-comments.json"))) :: { [string]: any }
+local apiDump = json.parse(assert(fs.readFileToString("./apidump.json"))) :: { [string]: any }
+local docComments = json.parse(assert(fs.readFileToString(BASE_PATH .. "/doc-comments.json"))) :: { [string]: any }
 
-local datatypesPrologue = fs.read(BASE_PATH .. "/datatypes-prologue.md")
-local librariesPrologue = fs.read(BASE_PATH .. "/libraries-prologue.md")
-local globalsPrologue = fs.read(BASE_PATH .. "/globals-prologue.md")
-local componentsPrologue = fs.read(BASE_PATH .. "/components-prologue.md")
-local enumsPrologue = fs.read(BASE_PATH .. "/enums-prologue.md")
+local datatypesPrologue = fs.readFileToString(BASE_PATH .. "/datatypes-prologue.md")
+local librariesPrologue = fs.readFileToString(BASE_PATH .. "/libraries-prologue.md")
+local globalsPrologue = fs.readFileToString(BASE_PATH .. "/globals-prologue.md")
+local componentsPrologue = fs.readFileToString(BASE_PATH .. "/components-prologue.md")
+local enumsPrologue = fs.readFileToString(BASE_PATH .. "/enums-prologue.md")
 
 assert(datatypesPrologue)
 assert(librariesPrologue)
@@ -370,7 +372,7 @@ local function dumpFuncSignature(libname, funcname, In, Out, V)
 end
 
 local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, libname: string, definitionsFile: string, isPhoenix: boolean?): (string, string)
-    libm = libm or docComments.ScriptEnv.Datatypes[libname].Library
+    libm = libm or (if docComments.ScriptEnv.Datatypes[libname] then docComments.ScriptEnv.Datatypes[libname].Library else {})
 
     if not t then
         return "", definitionsFile
@@ -1222,12 +1224,12 @@ definitionsFile ..= "\n\n"
 
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
 
-fs.write(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv, true)
-fs.write(WIKI_PATH .. "/API-‐-Components.md", components, true)
-fs.write(WIKI_PATH .. "/API-‐-Enums.md", enums, true)
+fs.writeStringToFile(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv, true)
+fs.writeStringToFile(WIKI_PATH .. "/API-‐-Components.md", components, true)
+fs.writeStringToFile(WIKI_PATH .. "/API-‐-Enums.md", enums, true)
 
-fs.write("./lsp/phoenix.d.luau", definitionsFile, true)
-fs.write("./lsp/phoenix.json", json.encode(documentationData), true)
+fs.writeStringToFile("./lsp/phoenix.d.luau", definitionsFile, true)
+fs.writeStringToFile("./lsp/phoenix.json", json.encode(documentationData), true)
 
 print("Docs CI finish\n\n\n\n\n")
 

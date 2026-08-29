@@ -1,7 +1,8 @@
 -- parallel.luau, 28/05/2026
 local Types = require("@ci/test-types")
+local task = require("@std/task")
+
 local parallel = phoenix.parallel
-local task = phoenix.task
 
 local SCRIPT = "scripts/ci/tests/libraries/parallel.luau"
 

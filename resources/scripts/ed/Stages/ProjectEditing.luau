@@ -222,7 +222,7 @@ function ProjectEditing.Render(DeltaTime: number)
     end
 
     for vis, _ in CoreTools.VisualizationTargets do
-        if vis == CoreTools.HoveringOverCamera then
+        if vis == CoreTools.HoveringOverCamera or not vis:HasComponent("Transform") or not Workspace.SceneCamera:HasComponent("Transform") then
             continue
         end
 

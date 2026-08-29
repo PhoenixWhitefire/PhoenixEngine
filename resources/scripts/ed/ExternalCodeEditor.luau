@@ -5,12 +5,15 @@ local ExternalCodeEditor = {
 
 local Engine = game:GetService("Engine")
 
+local process = require("@std/process")
+-- local json = require("@std/json")
+local fs = require("@std/fs")
+
 local EditorSettingsMenu = require("@ed/EditorSettingsMenu")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
 
 local json = phoenix.json
-local fs = phoenix.fs
 
 function ExternalCodeEditor.Open(ProjectName: string)
     if not Preferences.CodeEditorPath or #Preferences.CodeEditorPath == 0 then
@@ -29,8 +32,8 @@ function ExternalCodeEditor.Open(ProjectName: string)
         if Preferences.CodeEditorPath == "code" or Preferences.CodeEditorPath == "codium" then
             local folderPath = `@project/.vs{ Preferences.CodeEditorPath }`
 
-            if not fs.isdirectory(folderPath) then
-                local lsp = fs.resolvepathabsolute("./lsp")
+            if fs.type(folderPath) ~= "dir" then
+                local lsp = phoenix.fs.resolvepathabsolute("./lsp")
 
                 local data = {
                     ["luau-lsp.types.definitionFiles"] = {
@@ -42,7 +45,8 @@ function ExternalCodeEditor.Open(ProjectName: string)
                     ["luau-lsp.sourcemap.enabled"] = false,
                 }
 
-                local success, error = pcall(fs.write, `{ folderPath }/settings.json`, json.encode(data, 4), true)
+                fs.createDirectory(folderPath)
+                local success, error = pcall(fs.writeStringToFile, `{ folderPath }/settings.json`, json.encode(data, 4))
 
                 if not success then
                     ErrorMessage.Push(`Failed to create VS Code/Codium settings file: { error }`)
@@ -50,7 +54,7 @@ function ExternalCodeEditor.Open(ProjectName: string)
             end
         end
 
-        local result = fs.execute(`{ Preferences.CodeEditorPath } "{ fs.resolvepathabsolute("@project") }"`)
+        local result = process.system(`{ Preferences.CodeEditorPath } "{ phoenix.fs.resolvepathabsolute("@project") }"`).stdout
 
         if #result > 1 then
             warn("Open code editor result: ", result)

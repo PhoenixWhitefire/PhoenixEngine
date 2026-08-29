@@ -6,7 +6,7 @@ type Watcher = {
 
 local Reimport = {
     Watchers = {} :: { [string]: Watcher? },
-    ModelModifiedTimes = {},
+    ModelModifiedTimes = {} :: { [string]: number },
 }
 
 local AssetManager = game:GetService("AssetManager")
@@ -18,11 +18,13 @@ local Configuration = require("@ed/Configuration")
 local ErrorMessage = require("@ed/ErrorMessage")
 local Preferences = require("@ed/Preferences")
 
-local json = phoenix.json
-local fs = phoenix.fs
+-- local json = require("@std/json")
+local fs = require("@std/fs")
 
-if fs.isfile("./editor/models.json") then
-    Reimport.ModelModifiedTimes = json.parse(assert(fs.read("./editor/models.json"))) :: { [string]: number }
+local json = phoenix.json
+
+if fs.type("./editor/models.json") == "file" then
+    Reimport.ModelModifiedTimes = json.parse(assert(fs.readFileToString("./editor/models.json"))) :: { [string]: number }
 end
 
 local function onReimportableTagAdded(Object: GameObject)
@@ -101,7 +103,7 @@ local function wrapReimportWatcher(reimportable, watcher: Watcher)
             History:FinishAction(action)
         end
 
-        Reimport.ModelModifiedTimes[reimportable.ImportPath] = fs.lastwritten(reimportable.ImportPath)
+        Reimport.ModelModifiedTimes[reimportable.ImportPath] = fs.metadata(reimportable.ImportPath).modified:toSeconds()
     end
 
     return reimportWatcher
@@ -121,7 +123,7 @@ function Reimport.WatchModel(reimportable: GameObject & EcModel)
         return
     end
 
-    if not fs.isfile(reimportable.ImportPath) then
+    if fs.type(reimportable.ImportPath) == "file" then
         ErrorMessage.Push(`Cannot watch { reimportable:GetFullName() } for auto re-import, file '{ reimportable.ImportPath }' not found`)
         warn(debug.traceback())
         return
@@ -131,7 +133,7 @@ function Reimport.WatchModel(reimportable: GameObject & EcModel)
         Models = { reimportable },
         Disconnect = dummyDisconnect
     }
-    watcher.Disconnect = fs.watch(reimportable.ImportPath, wrapReimportWatcher(reimportable, watcher))
+    watcher.Disconnect = phoenix.fs.watch(reimportable.ImportPath, wrapReimportWatcher(reimportable, watcher))
 
     Reimport.Watchers[reimportable.ImportPath] = watcher
 end
@@ -140,7 +142,7 @@ function Reimport.CheckAll()
     for path, watcher in Reimport.Watchers do
         assert(watcher)
 
-        if Reimport.ModelModifiedTimes[path] and Reimport.ModelModifiedTimes[path] < fs.lastwritten(path) then
+        if Reimport.ModelModifiedTimes[path] and Reimport.ModelModifiedTimes[path] < fs.metadata(path).modified:toSeconds() then
             print(`Re-importing { path }`)
 
             local success, importedOrError = pcall(function()
@@ -171,7 +173,7 @@ function Reimport.CheckAll()
                 History:FinishAction(action)
             end
 
-            Reimport.ModelModifiedTimes[path] = fs.lastwritten(path)
+            Reimport.ModelModifiedTimes[path] = fs.metadata(path).modified:toSeconds()
         end
     end
 end

@@ -5,15 +5,15 @@ local Git = {
     DiffResult = "",
 }
 
-local fs = phoenix.fs
+local process = require("@std/process")
 
 function Git.Initialize()
-    Git.Available = fs.execute("git --version"):find("git version") ~= nil
+    Git.Available = process.system("git --version").stdout:find("git version") ~= nil
     print(if Git.Available then "Git is available" else "Git is not available")
 end
 
 function Git.Command(Command)
-    return fs.execute(`git -C "{ fs.resolvepathabsolute("@project") }" { Command }`)
+    return process.system(`git -C "{ phoenix.fs.resolvepathabsolute("@project") }" { Command }`).stdout
 end
 
 return Git

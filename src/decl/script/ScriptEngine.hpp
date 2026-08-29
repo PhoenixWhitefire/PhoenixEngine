@@ -104,6 +104,8 @@ public:
         void StepScheduler(std::deque<YieldedCoroutine>* Yielded = nullptr);
         void Close();
 
+        virtual ~LuauVM() = default;
+
         // This yields the given Luau thread (ensuring that we are in a yieldable context),
         // and calls `Configure` to set the resumption mode and do any final preparations.
         // Like `lua_yield`, returns `-1`.

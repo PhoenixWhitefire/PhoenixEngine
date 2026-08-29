@@ -110,15 +110,15 @@ ScriptEngine* ScriptEngine::Get()
 
 void ScriptEngine::Initialize()
 {
+    assert(!Instance);
+    Instance = this;
+
     FFlag::LuauManagedDebugNames.value = true;
 
     RegisterNewVM(ROOT_LVM_NAME);
 
     // changing a reference to a static function variable
     Luau::assertHandler() = luauAssertHandler;
-
-    assert(!Instance);
-    Instance = this;
 }
 
 void ScriptEngine::Shutdown()
@@ -132,7 +132,10 @@ void ScriptEngine::Shutdown()
         vms.push_back(vm);
 
     for (LuauVM* vm : vms)
+    {
         vm->Close();
+        delete vm;
+    }
 
     assert(VMs.size() == 0);
 
@@ -147,6 +150,9 @@ void ScriptEngine::Shutdown()
 
     ParallelVMs.clear();
     CollectParallelResourceGarbage();
+
+    assert(Instance);
+    Instance = nullptr;
 }
 
 ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
@@ -155,9 +161,8 @@ ScriptEngine::LuauVM& ScriptEngine::RegisterNewVM(const std::string& Name)
     if (it != VMs.end())
         RAISE_RT("A VM already exists with that name");
 
-    LuauVM* vm = new LuauVM{
-        .Name = Name,
-    };
+    LuauVM* vm = new LuauVM;
+    vm->Name = Name,
     vm->MainThread = vm->CreateMainThread();
     VMs[Name] = vm;
 
@@ -1607,9 +1612,12 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
             ((std::filesystem::path*)ctx)->assign(FileRW::ResolvePathNormalized(chname + 1));
             return NAVIGATE_SUCCESS;
         };
-    config->jump_to_alias = [](lua_State*, void*, const char*)
+    config->jump_to_alias = [](lua_State*, void* ctx, const char* target)
         {
-            return NAVIGATE_NOT_FOUND;
+            std::filesystem::path* path = (std::filesystem::path*)ctx;
+            *path = target;
+
+            return NAVIGATE_SUCCESS;
         };
     config->to_parent = [](lua_State*, void* ctx)
         {
@@ -2211,6 +2219,7 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 
     lua_close(base);
     luhxVM.Close();
+    delete &luhxVM;
 
     GameObjectManager::Get()->DataModel = PHX_GAMEOBJECT_NULL_ID;
     tempdm->Destroy();

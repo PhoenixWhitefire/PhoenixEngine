@@ -1,8 +1,9 @@
 -- SaveEditorCameraTransform.luau, 07/06/2026
 local EditorCameraTransform = {}
 
+local fs = require("@std/fs")
+
 local json = phoenix.json
-local fs = phoenix.fs
 
 type SavedEditorCamera = {
     FieldOfView: number,
@@ -37,12 +38,12 @@ function EditorCameraTransform.Save(EditorCam: EcCamera & EcTransform)
     }
 
     local editordata = {}
-    if fs.isfile("@project/phoenix.editor") then
-        editordata = json.parse(assert(fs.read("@project/phoenix.editor"))) :: any
+    if fs.type("@project/phoenix.editor") == "file" then
+        editordata = json.parse(assert(fs.readFileToString("@project/phoenix.editor"))) :: any
     end
 
     editordata.SavedEditorCamera = savedCamTrans
-    fs.write("@project/phoenix.editor", json.encode(editordata))
+    fs.writeStringToFile("@project/phoenix.editor", json.encode(editordata))
 end
 
 function EditorCameraTransform.Load(EditorCam: EcCamera & EcTransform)
@@ -60,8 +61,8 @@ function EditorCameraTransform.Load(EditorCam: EcCamera & EcTransform)
         }
     }
 
-    if fs.isfile("@project/phoenix.editor") then
-        local editordata = json.parse(assert(fs.read("@project/phoenix.editor"))) :: any
+    if fs.type("@project/phoenix.editor") == "file" then
+        local editordata = json.parse(assert(fs.readFileToString("@project/phoenix.editor"))) :: any
         savedCamTrans = (editordata.SavedEditorCamera :: SavedEditorCamera) or savedCamTrans
 
         savedCamTrans.FieldOfView = savedCamTrans.FieldOfView or 90

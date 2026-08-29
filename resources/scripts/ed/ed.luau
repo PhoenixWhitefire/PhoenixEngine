@@ -5,14 +5,16 @@ local History = game:GetService("History")
 local Logging = game:GetService("Logging")
 local Engine = game:GetService("Engine")
 
-local imgui = phoenix.imgui
-local task = phoenix.task
-local json = phoenix.json
-local fs = phoenix.fs
+local process = require("@std/process")
+local task = require("@std/task")
+local fs = require("@std/fs")
 
-fs.definealias("_editres", "./resources")
-fs.definealias("_etextures", "@_editres/textures")
-fs.definealias("base", "./resources")
+local imgui = phoenix.imgui
+local json = phoenix.json
+
+phoenix.fs.definealias("_editres", "./resources")
+phoenix.fs.definealias("_etextures", "@_editres/textures")
+phoenix.fs.definealias("base", "./resources")
 
 local PluginManager = require("@ed/PluginManager")
 local ErrorMessage = require("@ed/ErrorMessage")
@@ -32,7 +34,7 @@ Preferences = Preferences :: AsIndexerForm<typeof(Preferences)> & typeof(Prefere
 
 Git.Initialize()
 
-local savedEditorPreferences = if fs.isfile("./editor/settings.json") then json.parse(assert(fs.read("./editor/settings.json"))) else Preferences
+local savedEditorPreferences = if fs.type("./editor/settings.json") == "file" then json.parse(assert(fs.readFileToString("./editor/settings.json"))) else Preferences
 assert(typeof(savedEditorPreferences) == "table")
 -- TODO luau cast
 savedEditorPreferences = savedEditorPreferences :: { [string]: JsonDecodable }
@@ -47,13 +49,13 @@ if not Engine.IsHeadless then
     ApplyTheme(Preferences.Theme)
 end
 
-if not fs.isdirectory("./editor") then
-    fs.mkdir("./editor")
-    fs.mkdir("./editor/themes")
+if fs.type("./editor") ~= "dir" then
+    fs.createDirectory("./editor")
+    fs.createDirectory("./editor/themes")
 end
 
-if not fs.isdirectory(Preferences.ProjectsDirectory) then
-    fs.mkdir(Preferences.ProjectsDirectory)
+if fs.type(Preferences.ProjectsDirectory) ~= "dir" then
+    fs.createDirectory(Preferences.ProjectsDirectory)
 end
 
 local function handleEngineShutdown()
@@ -67,7 +69,7 @@ local function handleEngineShutdown()
 end
 
 local function checkIfLatestVersionBuilt()
-    local commitHashFetchResult = fs.execute("git rev-parse HEAD")
+    local commitHashFetchResult = process.system("git rev-parse HEAD").stdout
 
     -- commit hashes are 40 characters
     if #commitHashFetchResult < 40 then
@@ -287,9 +289,9 @@ if loadProjectIndex then
     if not name then
         Logging:Write("`--project` specified without the project name!", Enum.LogType.Error)
     else
-        local checkPath = fs.resolvepathabsolute(`{ Preferences.ProjectsDirectory }/{ name }`)
+        local checkPath = phoenix.fs.resolvepathabsolute(`{ Preferences.ProjectsDirectory }/{ name }`)
 
-        if fs.isdirectory(checkPath) then
+        if fs.type(checkPath) == "dir" then
             State:OpenProject(name)
         else
             if Engine.IsHeadless then

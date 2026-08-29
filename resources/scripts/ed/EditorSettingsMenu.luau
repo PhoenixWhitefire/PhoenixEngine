@@ -11,9 +11,10 @@ local Preferences = require("@ed/Preferences")
 local ApplyTheme = require("@ed/ApplyTheme")
 local Theme = require("@ed/Theme")
 
+local fs = require("@std/fs")
+
 local imgui = phoenix.imgui
 local json = phoenix.json
-local fs = phoenix.fs
 
 local SettingsSectionHorizontalSize = 0
 local LastUpdatedThemes = 0
@@ -99,7 +100,7 @@ end
 local NewThemeName = ""
 
 local function applyThemeChanges()
-    fs.write(`./editor/{ Preferences.Theme }`, json.encode(Theme))
+    fs.writeStringToFile(`./editor/{ Preferences.Theme }`, json.encode(Theme))
     ApplyTheme(Preferences.Theme)
 end
 
@@ -141,7 +142,7 @@ local function renderAppearanceSection()
             local shortPath = `themes/{ NewThemeName }.json`
             local fullPath = `./editor/{ shortPath }`
 
-            if fs.isfile(fullPath) then
+            if fs.type(fullPath) == "file" then
                 ErrorMessage.Push("A theme with that name already exists!")
             else
                 local newThemeData = {
@@ -153,7 +154,7 @@ local function renderAppearanceSection()
                 }
 
                 local s, e = pcall(function()
-                    fs.write(fullPath, json.encode(newThemeData))
+                    fs.writeStringToFile(fullPath, json.encode(newThemeData))
                 end)
 
                 if s then
@@ -296,25 +297,26 @@ local function renderProjectSection()
     imgui.setitemtooltip(Preferences.ProjectsDirectory)
 
     if imgui.button("Change") then
-        local newDir = fs.promptopenfolder("Select Projects directory", Preferences.ProjectsDirectory)
+        local newDir = phoenix.fs.promptopenfolder("Select Projects directory", Preferences.ProjectsDirectory)
 
-        if newDir and fs.resolvepathabsolute(newDir) ~= fs.resolvepathabsolute(Preferences.ProjectsDirectory) then
+        if newDir and phoenix.fs.resolvepathabsolute(newDir) ~= phoenix.fs.resolvepathabsolute(Preferences.ProjectsDirectory) then
             local moveSuccess, err = pcall(function()
-                for p, t in fs.listdir(Preferences.ProjectsDirectory) do
-                    local subst, count = p:gsub(fs.resolvepathabsolute(Preferences.ProjectsDirectory), fs.resolvepathabsolute(newDir))
-
-                    if count == 0 then
-                        error(`Failed to substitute '{fs.resolvepathabsolute(newDir)}' to replace '{fs.resolvepathabsolute(Preferences.ProjectsDirectory)}' in '{p}'`)
+                for _, entry in fs.listDirectory(Preferences.ProjectsDirectory) do
+                    if entry.type ~= "dir" then
+                        continue
                     end
 
-                    fs.move(p, subst)
+                    local old = Preferences.ProjectsDirectory .. "/" .. entry.name
+                    local new = newDir .. "/" .. entry.name
+
+                    fs.move(old, new)
                 end
             end)
 
             if not moveSuccess then
                 Engine:ShowMessageBox(
                     "Failed to move projects",
-                    `Failed to move your projects from '{ fs.resolvepathabsolute(Preferences.ProjectsDirectory) }' to '{ fs.resolvepathabsolute(newDir) }'.\n\nError: { err }\n\n`
+                    `Failed to move your projects from '{ phoenix.fs.resolvepathabsolute(Preferences.ProjectsDirectory) }' to '{ phoenix.fs.resolvepathabsolute(newDir) }'.\n\nError: { err }\n\n`
                     .. `Your Projects directory has not been updated.`,
                     "ok",
                     "error"
@@ -384,27 +386,20 @@ local function updateAvailableThemes()
     LastUpdatedThemes = game.Time
     AvailableThemes = { "Light", "Dark" }
 
-    if not fs.isdirectory("./editor") then
-        fs.mkdir("./editor")
+    if fs.type("./editor") ~= "dir" then
+        fs.createDirectory("./editor")
     end
 
-    if not fs.isdirectory(ThemesDirectory) then
-        fs.mkdir(ThemesDirectory)
+    if fs.type(ThemesDirectory) ~= "dir" then
+        fs.createDirectory(ThemesDirectory)
     end
 
-    for path, type in fs.listdir(ThemesDirectory) do
-        if type ~= "f" then
+    for _, entry in fs.listDirectory(ThemesDirectory) do
+        if entry.type ~= "file" then
             continue
         end
 
-        local edLoc = path:find("editor/")
-        local shortened = path
-
-        if edLoc then
-            shortened = path:sub(edLoc + #("editor/"), #path)
-        end
-
-        table.insert(AvailableThemes, shortened)
+        table.insert(AvailableThemes, "themes/" .. entry.name)
     end
 end
 

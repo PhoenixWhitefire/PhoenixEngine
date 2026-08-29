@@ -1129,6 +1129,9 @@
   "@phoenix/global/fs.execute": {
     "documentation": "* Executes a shell command"
   },
+  "@phoenix/global/fs.exists": {
+    "documentation": "* Whether a filesystem entry exists at the provided path"
+  },
   "@phoenix/global/fs.home": {
     "documentation": "* Fetches the user's 'home' or profile directory\n* Returns the Current Working Directory if it cannot be determined"
   },
@@ -1191,6 +1194,9 @@
   },
   "@phoenix/global/fs.systemopen": {
     "documentation": "* Opens the given path with the system's registered handler\n* Can be a path to a folder, a file, or a URL"
+  },
+  "@phoenix/global/fs.tempdir": {
+    "documentation": "* Returns a path to the system's temporary directory (such as `/tmp` or `%TEMP%`)"
   },
   "@phoenix/global/fs.watch": {
     "documentation": "* Watch a file or directory for changes\n* Returns a function that, when called, disconnects the listener"
@@ -1483,6 +1489,21 @@
   "@phoenix/global/parallel.synchronized": {
     "documentation": "* Returns whether the current thread is synchronized with the main thread"
   },
+  "@phoenix/global/system": {
+    "documentation": "* Information about the player's system"
+  },
+  "@phoenix/global/system.freememory": {
+    "documentation": "* The amount of free memory the system has, in bytes"
+  },
+  "@phoenix/global/system.hostname": {
+    "documentation": "* The name of the system"
+  },
+  "@phoenix/global/system.threadcount": {
+    "documentation": "* The number of CPU threads the system has available"
+  },
+  "@phoenix/global/system.totalmemory": {
+    "documentation": "* The total amount of memory the system has, including memory in use, in bytes"
+  },
   "@phoenix/global/task": {
     "documentation": "* Scheduling of tasks (coroutines or functions)"
   },
@@ -1500,6 +1521,9 @@
   },
   "@phoenix/global/task.setglobal": {
     "documentation": "* Sets a global for a given coroutine"
+  },
+  "@phoenix/global/task.spawn": {
+    "documentation": "* Runs the given function or coroutine immediately. If it yields, the calling thread continues running"
   },
   "@phoenix/global/task.wait": {
     "documentation": "* Yields the thread for the specified number of seconds. Default is `0`"

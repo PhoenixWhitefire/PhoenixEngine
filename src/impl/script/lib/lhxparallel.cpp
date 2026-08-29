@@ -9,7 +9,6 @@
 #include "script/SharedMutex.hpp"
 #include "ThreadManager.hpp"
 #include "Memory.hpp"
-#include "FileRW.hpp"
 
 static void createParallelVMs()
 {

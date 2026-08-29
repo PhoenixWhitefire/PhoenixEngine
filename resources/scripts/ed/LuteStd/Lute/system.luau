@@ -16,28 +16,27 @@ local system = {}
 
 --- Returns the number of logical CPU threads available on the current machine.
 function system.threadCount(): number
-	return 8
+	return phoenix.system.threadcount()
 end
 
 --- Returns the hostname of the current machine.
 function system.hostName(): string
-	return phoenix.fs.home()
+	return phoenix.system.hostname()
 end
 
 --- Returns the path to the system's temporary directory.
 function system.tmpdir(): string
-	return if system.os == "windows" then "%temp%"
-		else "/tmp"
+	return phoenix.fs.tempdir()
 end
 
 --- Returns the total amount of system memory in bytes.
 function system.totalMemory(): number
-	return 8 * 10^9
+	return phoenix.system.totalmemory()
 end
 
 --- Returns the amount of free (available) system memory in bytes.
 function system.freeMemory(): number
-	return system.totalMemory() / 2
+	return phoenix.system.freememory()
 end
 
 --- Returns the system uptime in seconds.

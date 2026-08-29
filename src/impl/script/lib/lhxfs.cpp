@@ -117,7 +117,9 @@ static int fs_listdir(lua_State* L)
     std::error_code ec;
     lua_newtable(L);
 
-    for (const auto& entry : std::filesystem::directory_iterator(FileRW::ResolvePathNormalized(path), ec))
+    const std::string normalizedPath = FileRW::ResolvePathNormalized(path);
+
+    for (const auto& entry : std::filesystem::directory_iterator(normalizedPath, ec))
     {
         switch (filter)
         {
@@ -160,8 +162,16 @@ static int fs_listdir(lua_State* L)
     }
 
     if (ec)
-        luaL_error(L, "listdir '%s': %s", FileRW::ResolvePathNormalized(path).c_str(), ec.message().c_str());
+        luaL_error(L, "listdir '%s': %s", normalizedPath.c_str(), ec.message().c_str());
 
+    return 1;
+}
+
+static int fs_exists(lua_State* L)
+{
+    setSelfAlias(L);
+
+    lua_pushboolean(L, std::filesystem::exists(luaL_checkstring(L, 1)));
     return 1;
 }
 
@@ -712,6 +722,14 @@ static int fs_lastwritten(lua_State* L)
     return 1;
 }
 
+static int fs_tempdir(lua_State* L)
+{
+    const std::string tempPath = std::filesystem::temp_directory_path().string();
+
+    lua_pushlstring(L, tempPath.data(), tempPath.size());
+    return 1;
+}
+
 static int fs_systemopen(lua_State* L)
 {
     setSelfAlias(L);
@@ -739,6 +757,7 @@ static const luaL_Reg fs_funcs[] = {
     { "write", fs_write },
     { "read", fs_read },
     { "listdir", fs_listdir },
+    { "exists", fs_exists },
     { "isfile", fs_isfile },
     { "isdirectory", fs_isdirectory },
     { "issymlink", fs_issymlink },
@@ -759,6 +778,7 @@ static const luaL_Reg fs_funcs[] = {
     { "resolvepathabsolute", fs_resolvepathabsolute },
     { "watch", fs_watch },
     { "lastwritten", fs_lastwritten },
+    { "tempdir", fs_tempdir },
     { "systemopen", fs_systemopen },
 
     { "promptsave", fs_promptsave },

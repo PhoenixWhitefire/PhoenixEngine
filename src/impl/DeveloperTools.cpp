@@ -274,6 +274,7 @@ static std::string getDescriptionAsString(const nlohmann::json& DescriptionJson,
         return std::format("Unexpected description type '{}'", DescriptionJson.type_name());
 }
 
+/*
 static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, const std::string& RuntimeType)
 {
     if (!Docs.is_object())
@@ -314,6 +315,7 @@ static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, con
 
     return RuntimeType;
 }
+*/
 
 void DeveloperTools::Initialize(Renderer* renderer)
 {
@@ -382,6 +384,14 @@ void DeveloperTools::Initialize(Renderer* renderer)
     GlobalsDocPrologue = FileRW::ReadFile("./wikigen/globals-prologue.md", &prologueFound);
     PHX_CHECK(prologueFound && "Globals prologue - ./wikigen/globals-prologue.md");
 
+    s_EditorLuauLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
+    s_EditorLuauLang.mTokenRegexStrings.push_back({ "`(.+|)`", TextEditor::PaletteIndex::String }); // string interpolation
+
+    s_EditorLuauLang.mKeywords.emplace("continue");
+    s_EditorLuauLang.mIdentifiers.clear();
+    s_EditorLuauLang.mName = "Luau";
+
+    /*
     GameObjectManager* objectManager = GameObjectManager::Get();
     uint32_t prevDm = objectManager->DataModel;
 
@@ -390,20 +400,16 @@ void DeveloperTools::Initialize(Renderer* renderer)
     tempwp->SetParent(tempdm);
     objectManager->DataModel = tempdm->ObjectId;
 
-    s_EditorLuauLang.mTokenRegexStrings[5].first = "[a-zA-Z_][a-zA-Z0-9_\\.]*"; // allow identifiers to have `.` so that `task.defer` etc can match as one single token
-    s_EditorLuauLang.mTokenRegexStrings.push_back({ "`(.+|)`", TextEditor::PaletteIndex::String }); // string interpolation
-
-    s_EditorLuauLang.mKeywords.emplace("continue");
-    s_EditorLuauLang.mIdentifiers.clear();
-    s_EditorLuauLang.mName = "Luau";
-
     const nlohmann::json& scriptEnvDocs = DocumentationJson.value("ScriptEnv", nlohmann::json::object());
 
     const nlohmann::json& datatypesDocs = scriptEnvDocs.value("Datatypes", nlohmann::json::object());
     const nlohmann::json& librariesDocs = scriptEnvDocs.value("Libraries", nlohmann::json::object());
     const nlohmann::json& globalsDocs = scriptEnvDocs.value("Globals", nlohmann::json::object());
 
-    ScriptEngine::LuauVM& LVM = ScriptEngine::Get()->RegisterNewVM("EnvironmentScraper");
+    ScriptEngine& scriptEngine = Engine::Get()->ScriptManager;
+    scriptEngine.Initialize();
+
+    ScriptEngine::LuauVM& LVM = scriptEngine.RegisterNewVM("EnvironmentScraper");
     lua_State* L = LVM.MainThread;
     lua_pushnil(L);
 
@@ -465,6 +471,9 @@ void DeveloperTools::Initialize(Renderer* renderer)
     tempdm->Destroy();
 
     objectManager->DataModel = prevDm;
+    scriptEngine.Shutdown();
+    */
+
     DeveloperTools::Initialized = true;
 }
 
@@ -2856,11 +2865,14 @@ static void renderDocumentationViewer()
         ImGui::SeparatorText(DocumentationViewerSubPageName.c_str());
         renderDescription(library["Description"], nCharsPerLine);
 
-        ImGui::NewLine();
-        ImGui::SeparatorText("Members");
+        if (const auto& membersIt = library.find("Members"); membersIt != library.end())
+        {
+            ImGui::NewLine();
+            ImGui::SeparatorText("Members");
 
-        for (auto memberIt = library["Members"].begin(); memberIt != library["Members"].end(); memberIt++)
-            renderApiMemberBulletpoint(memberIt, nCharsPerLine);
+            for (auto memberIt = membersIt.value().begin(); memberIt != membersIt.value().end(); memberIt++)
+                renderApiMemberBulletpoint(memberIt, nCharsPerLine);
+        }
 
         break;
     }
@@ -2877,7 +2889,7 @@ static void renderDocumentationViewer()
             const nlohmann::json& member = memberIt.value();
 
             if (const auto& dumpedType = ApiDumpJson["ScriptEnv"]["Globals"][memberIt.key()]; dumpedType != "function")
-                renderPropertySignature(memberIt.key(), dumpedType);
+                renderPropertySignature(memberIt.key(), dumpedType.is_null() ? "*ERROR*" : dumpedType);
             else
                 renderFunctionSignature(memberIt);
 

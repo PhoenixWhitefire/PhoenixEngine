@@ -176,17 +176,20 @@ static void handleInputs(double deltaTime)
         PreviouslyPressingF11 = false;
 }
 
-static void doApiDump()
+static void doApiDump(Engine* engine)
 {
     ZoneScoped;
 
     Log.Info("Dumping API...");
+    engine->ScriptManager.Initialize();
 
     nlohmann::json apiDump;
     apiDump["GameObject"] = GameObject::DumpApiToJson();
-    apiDump["ScriptEnv"] = ScriptEngine::Get()->DumpApiToJson();
+    apiDump["ScriptEnv"] = engine->ScriptManager.DumpApiToJson();
 
     PHX_CHECK(FileRW::WriteFile("./apidump.json", apiDump.dump(2)));
+
+    engine->ScriptManager.Shutdown();
     Log.Info("API dump finished");
 }
 
@@ -206,7 +209,7 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
     engine->Initialize(InitConfig.ThreadManagerThreadCount.value_or(-1), InitConfig.Headless.value_or(false));
 
     if (InitConfig.DoApiDump)
-        doApiDump();
+        doApiDump(engine);
 
     if (!engine->IsHeadlessMode)
     {

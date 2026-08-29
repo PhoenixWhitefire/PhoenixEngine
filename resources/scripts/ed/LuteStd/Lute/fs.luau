@@ -121,8 +121,8 @@ function fs.stat(path: string): FileMetadata
         type = fs.type(path),
         permissions = { readonly = not isWriteable },
         size = #contents,
-        created = time.duration.seconds(modified),
-        accessed = time.duration.seconds(modified),
+        created = time.duration.seconds(0),
+        accessed = time.duration.seconds(0),
         modified = time.duration.seconds(modified),
     }
 end
@@ -169,7 +169,7 @@ end
 
 --- Returns `true` if a file or directory exists at `path`.
 function fs.exists(path: string): boolean
-    return fs.type(path) ~= "unknown"
+    return fs.exists(path)
 end
 
 --- Copies the file at `src` to `dest`.

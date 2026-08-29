@@ -6,6 +6,6 @@ type expectTable<T...> = {
 }
 
 export type Test = (string, () -> ()) -> ()
-export type Expect = <T>(T) -> (expectTable<T> & { never: expectTable<T> })
+export type Expect = <T...>(T...) -> (expectTable<T...> & { never: expectTable<T...> })
 
 return nil

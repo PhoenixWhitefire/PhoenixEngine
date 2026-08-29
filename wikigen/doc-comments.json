@@ -1305,9 +1305,6 @@
         "Description": "Same as `print`, except generates a Warning message",
         "Generics": "T...",
         "In": "...: T..."
-      },
-      "workspace": {
-        "Description": "Shorthand for `game.Workspace`"
       }
     },
     "Libraries": {
@@ -1722,6 +1719,11 @@
             "In": "Command: string",
             "Out": "string"
           },
+          "exists": {
+            "Description": "Whether a filesystem entry exists at the provided path",
+            "In": "Path: string",
+            "Out": "boolean"
+          },
           "home": {
             "Description": [
               "Fetches the user's 'home' or profile directory",
@@ -1916,6 +1918,10 @@
               "Can be a path to a folder, a file, or a URL"
             ],
             "In": "Path: string"
+          },
+          "tempdir": {
+            "Description": "Returns a path to the system's temporary directory (such as `/tmp` or `%TEMP%`)",
+            "Out": "string"
           },
           "watch": {
             "Description": [
@@ -2641,6 +2647,27 @@
           "synchronized": {
             "Description": "Returns whether the current thread is synchronized with the main thread",
             "Out": "boolean"
+          }
+        }
+      },
+      "phoenix.system": {
+        "Description": "Information about the player's system",
+        "Members": {
+          "freememory": {
+            "Description": "The amount of free memory the system has, in bytes",
+            "Out": "number"
+          },
+          "hostname": {
+            "Description": "The name of the system",
+            "Out": "string"
+          },
+          "threadcount": {
+            "Description": "The number of CPU threads the system has available",
+            "Out": "number"
+          },
+          "totalmemory": {
+            "Description": "The total amount of memory the system has, including memory in use, in bytes",
+            "Out": "number"
           }
         }
       },

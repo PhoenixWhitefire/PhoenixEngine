@@ -1,2 +1,3 @@
-Libraries specific to the Phoenix Engine Luau runtime
+Libraries specific to the Phoenix Engine Luau runtime.
+It is recommended that you use the modules under the `@std` alias instead.
 

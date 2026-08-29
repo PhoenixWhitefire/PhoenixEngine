@@ -1167,6 +1167,7 @@ fs: {
   cwd: ((  ) -> (string)),
   definealias: (( Alias: string, For: string ) -> ()),
   execute: (( Command: string ) -> (string)),
+  exists: (( Path: string ) -> (boolean)),
   home: ((  ) -> (string)),
   isdirectory: (( string ) -> (boolean)),
   isfile: (( string ) -> (boolean)),
@@ -1188,8 +1189,19 @@ fs: {
   setunqualifiedroot: (( Alias: string ) -> ()),
   symlink: (( Path: string, Target: string ) -> ()),
   systemopen: (( Path: string ) -> ()),
+  tempdir: ((  ) -> (string)),
   watch: (( Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> () ) -> (() -> ())),
   write: (( Path: string, Contents: string | buffer, CreateDirectories: boolean? ) -> ())
+},
+
+parallel: {
+  atomicinteger: (( Id: string, InitialValue: number? ) -> (AtomicInteger)),
+  desynchronize: ((  ) -> ()),
+  mutex: (( Id: string ) -> (Mutex)),
+  sharedbuffer: (( Id: string, Size: number --[[| integer]] ) -> (SharedBuffer)),
+  spawn: (( FilePath: string, ...unknown ) -> ()),
+  synchronize: ((  ) -> ()),
+  synchronized: ((  ) -> (boolean))
 },
 
 json: {
@@ -1203,17 +1215,15 @@ task: {
   load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
   loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
   setglobal: (( Coroutine: thread, Global: string, Value: unknown ) -> ()),
+  spawn: (<A..., R...>( Task: ((A...) -> R...) | thread, A... ) -> (thread)),
   wait: (( SleepTime: number? ) -> (number))
 },
 
-parallel: {
-  atomicinteger: (( Id: string, InitialValue: number? ) -> (AtomicInteger)),
-  desynchronize: ((  ) -> ()),
-  mutex: (( Id: string ) -> (Mutex)),
-  sharedbuffer: (( Id: string, Size: number --[[| integer]] ) -> (SharedBuffer)),
-  spawn: (( FilePath: string, ...unknown ) -> ()),
-  synchronize: ((  ) -> ()),
-  synchronized: ((  ) -> (boolean))
+system: {
+  freememory: ((  ) -> (number)),
+  hostname: ((  ) -> (string)),
+  threadcount: ((  ) -> (number)),
+  totalmemory: ((  ) -> (number))
 },
 
 }

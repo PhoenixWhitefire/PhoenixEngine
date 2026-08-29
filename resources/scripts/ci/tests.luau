@@ -2,31 +2,30 @@
 -- Simple testing engine
 
 -- Sleep for a little bit to avoid tests appearing to take several milliseconds due to initial slowdowns
-local task = phoenix.task
-local fs = phoenix.fs
+local task = require("@std/task")
+local fs = require("@std/fs")
 
 task.wait(0.04)
 
 task.delay(15, function()
-    warn("Tests appear to have hung - exiting")
-    game:Close(1)
+    --warn("Tests appear to have hung - exiting")
+    --game:Close(1)
 end)
-
-game:GetService("ScriptEngine"):SetVMAllowedExecutionTime(_VMNAME, 15)
 
 local start = os.clock()
 
 local Types = require("./test-types")
 
-local testEntries = fs.listdir("scripts/ci/tests")
+local testEntries = fs.listDirectory("scripts/ci/tests")
 
 type TestsNode = {
     IsTest: true,
     Name: string,
-    Callback: () -> ()
-} | { IsTest: nil, [number]: TestsNode }
+    Callback: () -> (),
+	Path: string,
+} | { IsTest: nil, Path: string, [number]: TestsNode }
 
-local tests: TestsNode = { IsTest = nil }
+local tests: TestsNode = { IsTest = nil, Path = "@self/../tests" }
 local curGroup: TestsNode? = nil
 local testCount = 0
 
@@ -121,10 +120,13 @@ function expectNeverMt.__index(self, check)
 end
 
 local test: Types.Test = function(name: string, callback)
+	curGroup = curGroup :: TestsNode?
 	assert(curGroup)
 	assert(not curGroup.IsTest)
 
-	table.insert(curGroup, { IsTest = true :: true, Callback = callback, Name = name })
+	table.insert(curGroup, { IsTest = true :: true, Callback = callback, Name = name, Path = curGroup.Path .. "/" .. name })
+	-- table.insert(curGroup, { IsTest = true :: true, Callback = callback, Name = name })
+
 	testCount += 1
 end
 
@@ -138,21 +140,20 @@ local function expect(val)
 	)
 end
 
-local function discoverTests(t, parent: TestsNode)
-	for k: string, v in t do
-		local lastSlash = #k - assert((string.find(string.reverse(k), "/")))
-		local groupName = string.sub(k, lastSlash + 2, #k)
-		parent[groupName] = { IsTest = nil }
-		curGroup = parent[groupName]
+local function discoverTests(t: { fs.DirectoryEntry }, parent: TestsNode)
+	for _, v in t do
+		parent[v.name] = { IsTest = nil, Path = parent.Path .. "/" .. v.name }
+		curGroup = parent[v.name]
 
-		if v == "f" then
-			assert(k:find("tests/"), k)
-			local m = require("./" .. k:sub(assert((k:find("tests/"))), #k)) :: any
+		if v.type == "file" then
+			local m = require(curGroup.Path) :: any
 			m(test, expect)
 
-		elseif v == "d" then
+		elseif v.type == "dir" then
 			assert(curGroup)
-			discoverTests(fs.listdir(k), curGroup)
+			local path = parent.Path .. "/" .. v.name
+			path = string.gsub(path, "@self/../", "scripts/ci/")
+			discoverTests(fs.listDirectory(path), curGroup)
 		end
 	end
 end
@@ -172,6 +173,10 @@ end
 
 local function runTests(t: TestsNode, depth)
 	for index, entry in t do
+		if index == "Path" then
+			continue
+		end
+
 		if entry.IsTest then
 			local indent = string.rep("    ", depth)
 

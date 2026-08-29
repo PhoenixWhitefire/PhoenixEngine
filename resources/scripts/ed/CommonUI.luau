@@ -27,10 +27,11 @@ local State = require("@ed/State")
 local Theme = require("@ed/Theme")
 local Git = require("@ed/Git")
 
+local task = require("@std/task")
+local fs = require("@std/fs")
+
 local imgui = phoenix.imgui
-local task = phoenix.task
 local json = phoenix.json
-local fs = phoenix.fs
 
 local HoveringOverMenuBar = false
 local HoveringOverRibbonTab = false
@@ -55,7 +56,7 @@ local CommandBarActive = false
 local CommandBarHistory: { string } = {}
 local CommandBarHistoryCursor = 1
 
-local commandBarSavedHistory = if fs.isfile("./editor/command-history.json") then json.parse(assert(fs.read("./editor/command-history.json"))) else {}
+local commandBarSavedHistory = if fs.type("./editor/command-history.json") == "file" then json.parse(assert(fs.readFileToString("./editor/command-history.json"))) else {}
 assert(typeof(commandBarSavedHistory) == "table")
 CommandBarHistory = commandBarSavedHistory :: { string }
 CommandBarHistoryCursor = #CommandBarHistory + 1
@@ -343,7 +344,7 @@ local function homeTab(_: number)
 
     if tabButton("Import Model", "@_etextures/editor-icons/Model.png") then
         task.defer(function()
-            local paths = fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
+            local paths = phoenix.fs.promptopen(nil, { "*.gltf", "*.glb" }, "Models")
 
             if paths[1] then
                 local importAction = History:TryBeginAction("Import Model")
@@ -375,7 +376,7 @@ local function homeTab(_: number)
                     History:FinishAction(importAction)
                 end
 
-                Reimport.ModelModifiedTimes[paths[1]] = fs.lastwritten(paths[1])
+                Reimport.ModelModifiedTimes[paths[1]] = fs.metadata(paths[1]).modified:toSeconds()
                 Reimport.WatchModel(importedOrError)
             else
                 print("No model selected")
@@ -430,7 +431,7 @@ function CommonUI.SaveSettings()
             updateDevToolsOpenState()
         end
 
-        fs.write("./editor/settings.json", json.encode(Preferences :: JsonEncodable))
+        fs.writeStringToFile("./editor/settings.json", json.encode(Preferences :: JsonEncodable))
 
         if State.Project.DataModel and ExternalCodeEditor.RequestOpenSettingsMenuToConfigure and Preferences.CodeEditorPath and #Preferences.CodeEditorPath > 0 then
             task.defer(ExternalCodeEditor.Open, State.Project.Name)
@@ -438,8 +439,8 @@ function CommonUI.SaveSettings()
 
         ExternalCodeEditor.RequestOpenSettingsMenuToConfigure = false
 
-        fs.write("./editor/models.json", json.encode(Reimport.ModelModifiedTimes))
-        fs.write("./editor/command-history.json", json.encode(CommandBarHistory))
+        fs.writeStringToFile("./editor/models.json", json.encode(Reimport.ModelModifiedTimes))
+        fs.writeStringToFile("./editor/command-history.json", json.encode(CommandBarHistory))
 
         if State.CurrentStage == "ProjectEditing" or State.CurrentStage == "ProjectPlaying" then
             ScriptEngine:SetVMAllowedExecutionTime(Configuration.GameEditingVMName, Preferences.ScriptAllowedExecutionTime)
@@ -540,11 +541,11 @@ local CurrentRibbonTab: number = 1
 local function findEnginePath(): string?
     local commandPath = Engine:GetCliArguments()[1]
 
-    if fs.isfile("./" .. commandPath) then
+    if fs.type("./" .. commandPath) == "file" then
         return "./" .. commandPath
     end
 
-    if fs.isfile(commandPath) then
+    if fs.type(commandPath) == "file" then
         return commandPath
     end
 
@@ -552,36 +553,36 @@ local function findEnginePath(): string?
     if choice == 0 then
         return nil
     else
-        return fs.promptopen()[1]
+        return phoenix.fs.promptopen()[1]
     end
 end
 
-local function compileScriptBytecodeRecursive(dir)
-    for path, ty in fs.listdir(dir) do
-        if ty == "f" then
-            if path:find(".config.luau") then
+local function compileScriptBytecodeRecursive(dir: string)
+    for _, entry in fs.listDirectory(dir) do
+        local path = dir .. "/" .. entry.name
+
+        if entry.type == "file" then
+            if entry.name == ".config.luau" then
                 continue
             end
 
-            local extLoc = path:find(".luau")
-            if not extLoc or extLoc ~= #path - #(".luau") + 1 then
+            local extLoc = entry.name:find(".luau")
+            if not extLoc or extLoc ~= #entry.name - #(".luau") + 1 then
                 continue
             end
 
-            local contents, err = fs.read(path)
-            if not contents then
-                error(`Error compiling bytecode for '{ path }': { err }`)
-            end
+            local contents = fs.readFileToString(path)
 
             local bytecode = ScriptEngine:CompileToBytecode(
                 contents,
                 2, -- optimization level
                 1  -- debug level
             )
-            fs.write(path .. "c", bytecode) -- file extension is `.luauc`
+            fs.writeStringToFile(path .. "c", buffer.tostring(bytecode)) -- file extension is `.luauc`
 
             fs.remove(path) -- remove original source code
-        else
+
+        elseif entry.type == "dir" then
             compileScriptBytecodeRecursive(path)
         end
     end
@@ -599,7 +600,7 @@ local function exportProject()
 
     imgui.openpopup("Export Project")
     local exportName = State.Project.Name
-    local exportDir = fs.promptopenfolder("Choose export directory")
+    local exportDir = phoenix.fs.promptopenfolder("Choose export directory")
     local exportTo = `{exportDir}/{exportName}`
 
     if not exportDir then
@@ -625,7 +626,7 @@ local function exportProject()
         imgui.sameline()
 
         if imgui.button("...") then
-            exportDir = fs.promptopenfolder("Change export directory")
+            exportDir = phoenix.fs.promptopenfolder("Change export directory")
         end
 
         keepOnlyScriptBytecode = imgui.checkbox("Export scripts as bytecode", keepOnlyScriptBytecode)
@@ -638,7 +639,7 @@ local function exportProject()
         imgui.text(exportTo)
 
         if prevExportTo ~= exportTo then
-            if fs.isdirectory(exportTo) then
+            if fs.type(exportTo) == "dir" then
                 imgui.text("This directory already exists!")
             end
         else
@@ -660,7 +661,7 @@ local function exportProject()
         if imgui.button("Export") then
             print("Export button clicked")
 
-            if fs.isdirectory(exportTo) then
+            if fs.type(exportTo) == "dir" then
                 local chosenOption = Engine:ShowMessageBox(
                     "Export will overwrite",
                     `The directory:\n\n{ exportTo }\n\nalready exists. Are you sure you want to overwrite it? This will erase all of its content!`,
@@ -690,7 +691,7 @@ local function exportProject()
 
     print("Exporting")
 
-    fs.mkdir(exportTo)
+    fs.createDirectory(exportTo)
     fs.copy("@project", exportTo)
     fs.remove(`{ exportTo }/phoenix.editor`)
     fs.remove(`{ exportTo }/phoenix.lock`)
@@ -699,10 +700,10 @@ local function exportProject()
     fs.remove(`{ exportTo }/.gitmodules`)
     fs.remove(`{ exportTo }/.vscode`)
 
-    if not fs.isdirectory(`{ exportTo }/resources/scripts/std`) then
-        local configFile = assert(fs.read(`{ exportTo }/resources/scripts/.config.luau`))
+    if not fs.exists(`{ exportTo }/resources/scripts/std`) then
+        local configFile = fs.readFileToString(`{ exportTo }/resources/scripts/.config.luau`)
         local substitutions = 0
-        configFile, substitutions = string.gsub(configFile, fs.resolvepathabsolute(Configuration.EditorLuteStdPath), "./std")
+        configFile, substitutions = string.gsub(configFile, phoenix.fs.resolvepathabsolute(Configuration.EditorLuteStdPath), "./std")
 
         if substitutions == 0 then
             Engine:ShowMessageBox("Potential error", "@std was not linked, no possible substitutions were found in the resources/scripts/.config.luau file")
@@ -715,7 +716,7 @@ local function exportProject()
 
     for _, a in Configuration.CoreAssets do
         local path = `{ exportTo }/resources/{ a }`
-        if fs.isfile(path) then
+        if fs.type(path) == "file" then
             fs.remove(path)
             fs.copy(`./resources/{ a }`, path)
         end
@@ -893,7 +894,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
             end
 
             if imgui.menuitem("Open Project folder") then
-                fs.systemopen("@project")
+                phoenix.fs.systemopen("@project")
             end
         end
 
@@ -903,7 +904,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
 
         if State.CurrentStage == "ProjectEditing" then
             if imgui.menuitem("Project Settings") then
-                local conf = json.parse(assert(fs.read("@project/phoenix.conf"))) :: any
+                local conf = json.parse(assert(fs.readFileToString("@project/phoenix.conf"))) :: any
 
                 task.defer(function()
                     imgui.openpopup("Project Settings")
@@ -928,17 +929,17 @@ function CommonUI.RenderMainMenuBar(dt: number)
                             if buttonSelection == 1 then
                                 local prevName = State.Project.Name
 
-                                fs.rename(`{ Preferences.ProjectsDirectory }/{ State.Project.Name }`, newProjectName)
-                                fs.definealias("project", `{ Preferences.ProjectsDirectory }/{ newProjectName }`)
+                                phoenix.fs.rename(`{ Preferences.ProjectsDirectory }/{ State.Project.Name }`, newProjectName)
+                                phoenix.fs.definealias("project", `{ Preferences.ProjectsDirectory }/{ newProjectName }`)
 
                                 State.Project.Name = newProjectName
 
-                                local conf = json.parse(assert(fs.read("@project/phoenix.conf")))
+                                local conf = json.parse(assert(fs.readFileToString("@project/phoenix.conf")))
                                 assert(typeof(conf) == "table")
                                 -- TODO: fix cast
                                 conf["GameTitle" :: string] = newProjectName
 
-                                fs.write(
+                                fs.writeStringToFile(
                                     "@project/phoenix.conf",
                                     -- TODO luau cast
                                     json.encode(conf :: JsonEncodable)
@@ -963,7 +964,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
 
                             if buttonSelection == 1 then
                                 task.defer(function()
-                                    local path = fs.promptopen(nil, { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
+                                    local path = phoenix.fs.promptopen(nil, { "*.png" , "*.jpg", "*.jpeg" }, "Images")[1]
 
                                     if path then
                                         fs.remove("@project/icon.png")
@@ -979,7 +980,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
                         conf.DefaultVMAllowedExecutionTime = imgui.inputnumber("Exported script allowed execution time", conf.DefaultVMAllowedExecutionTime or 30)
 
                         if imgui.button("Save") then
-                            fs.write("@project/phoenix.conf", json.encode(conf))
+                            fs.writeStringToFile("@project/phoenix.conf", json.encode(conf))
                         end
 
                         imgui.endpopup()
@@ -995,10 +996,10 @@ function CommonUI.RenderMainMenuBar(dt: number)
                         if imgui.menuitem("Initialize repository") then
                             task.defer(function()
                                 print(Git.Command("init"))
-                                State.Project.HasGitRepository = fs.isdirectory("@project/.git")
+                                State.Project.HasGitRepository = fs.type("@project/.git") == "dir"
 
                                 if State.Project.HasGitRepository then
-                                    fs.write("@project/.gitignore", "# Generated by Phoenix Engine Editor\n\nphoenix.editor\nphoenix.lock\n")
+                                    fs.writeStringToFile("@project/.gitignore", "# Generated by Phoenix Engine Editor\n\nphoenix.editor\nphoenix.lock\n")
                                 end
                             end)
                         end
@@ -1269,7 +1270,7 @@ function CommonUI.RenderMainMenuBar(dt: number)
                 if canUpdate and imgui.button(buttonText) then
                     if State.CurrentStage ~= "SelectProject" then
                         Engine:ShowMessageBox("Update", "You must close the current project to update")
-                    elseif fs.isfile("./update.zip") then
+                    elseif fs.exists("./update.zip") then
                         Engine:ShowMessageBox("Update", "Delete or rename the 'update.zip' file in the Editor's installation directory to proceed", "ok", "error")
                     else
                         imgui.closecurrentpopup()

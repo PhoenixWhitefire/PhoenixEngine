@@ -1,5 +1,5 @@
 local Types = require("@ci/test-types.luau")
-local task = phoenix.task
+local task = require("@std/task")
 
 return function(test: Types.Test, expect: Types.Expect)
     test("Connect and disconnect", function()

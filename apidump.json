@@ -768,6 +768,7 @@
           "cwd": "function",
           "definealias": "function",
           "execute": "function",
+          "exists": "function",
           "home": "function",
           "isdirectory": "function",
           "isfile": "function",
@@ -789,6 +790,7 @@
           "setunqualifiedroot": "function",
           "symlink": "function",
           "systemopen": "function",
+          "tempdir": "function",
           "watch": "function",
           "write": "function"
         },
@@ -889,12 +891,19 @@
           "synchronize": "function",
           "synchronized": "function"
         },
+        "system": {
+          "freememory": "function",
+          "hostname": "function",
+          "threadcount": "function",
+          "totalmemory": "function"
+        },
         "task": {
           "defer": "function",
           "delay": "function",
           "load": "function",
           "loadfile": "function",
           "setglobal": "function",
+          "spawn": "function",
           "wait": "function"
         }
       }
