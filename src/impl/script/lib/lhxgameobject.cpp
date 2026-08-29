@@ -161,7 +161,7 @@ static void pushMethod(lua_State* L, std::string_view Name, const Reflection::Me
                 if (!method)
                     luaL_error(L, "%s not available on %s", name, object->GetFullName().c_str());
 
-                return ScriptEngine::L::HandleMethodCall(
+                return ScriptEngine::HandleMethodCall(
                     L,
                     method,
                     ref
@@ -197,7 +197,7 @@ static int obj_index(lua_State* L)
 
     if (const Reflection::PropertyDescriptor* prop = obj->FindProperty(key, &ref))
     {
-        ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+        ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
         if (ScriptEngine::ParallelVM* P = ud->PVM)
         {
             if (P->Desynchronized && !prop->ParallelReadSafe)
@@ -207,7 +207,7 @@ static int obj_index(lua_State* L)
         Reflection::GenericValue gv = prop->Get(ref.Referred());
         assert(Reflection::TypeFits(prop->Type, gv.Type));
 
-        ScriptEngine::L::PushGenericValue(L, gv);
+        ScriptEngine::PushGenericValue(L, gv);
     }
 
     else if (const Reflection::EventDescriptor* event = obj->FindEvent(key, &ref))
@@ -260,15 +260,15 @@ static int obj_newindex(lua_State* L)
             );
         }
 
-        ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+        ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
         if (ScriptEngine::ParallelVM* P = ud->PVM)
         {
             if (P->Desynchronized && !prop->ParallelWriteSafe)
                 luaL_error(L, "`%s` is not safe to set while desynchronized", key.data());
         }
 
-        ScriptEngine::L::CheckType(L, prop->Type, 3);
-        Reflection::GenericValue newValue = ScriptEngine::L::ToGeneric(L, 3);
+        ScriptEngine::CheckType(L, prop->Type, 3);
+        Reflection::GenericValue newValue = ScriptEngine::ToGeneric(L, 3);
 
         try
         {
@@ -316,7 +316,7 @@ static int obj_namecall(lua_State* L)
     if (!func)
         luaL_error(L, "'%s' is not a valid method of %s", k, g->GetFullName().c_str());
 
-    ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
     if (ScriptEngine::ParallelVM* P = ud->PVM)
     {
         if (P->Desynchronized && !func->ParallelSafe)
@@ -327,7 +327,7 @@ static int obj_namecall(lua_State* L)
 
     try
     {
-        numresults = ScriptEngine::L::HandleMethodCall(
+        numresults = ScriptEngine::HandleMethodCall(
             L,
             func,
             reflector

@@ -195,11 +195,11 @@ static int fs_issymlink(lua_State* L)
 
 static ScriptEngine::LuauVM& getSerialLuauVM(lua_State* L)
 {
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
     if (vmud->PVM)
         luaL_error(L, "Function cannot be called by a parallel VM");
 
-    return ScriptEngine::VMs.at(vmud->VM);
+    return *vmud->VM;
 }
 
 static int fs_definealias(lua_State* L)
@@ -382,7 +382,7 @@ static int fs_remove(lua_State* L)
 
 static void resetTimeoutForVM(lua_State* L)
 {
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
     vmud->LastResumed = GetRunningTime();
 }
 
@@ -552,7 +552,7 @@ static int fs_execute(lua_State* L)
 {
     const char* command = luaL_checkstring(L, 1);
 
-    return ScriptEngine::L::Yield(
+    return ScriptEngine::Yield(
         L,
         0,
         [command](ScriptEngine::YieldedCoroutine& yc)
@@ -662,21 +662,23 @@ static int fs_watch(lua_State* L)
                 .Type = (int)Type
             };
 
-            std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(ScriptEngine::ParallelEventsMutex);
-            ScriptEngine::ParallelEvents.push_back([fwe]()
+            ScriptEngine* scriptEngine = ScriptEngine::Get();
+
+            std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(scriptEngine->ParallelEventsMutex);
+            scriptEngine->ParallelEvents.push_back([fwe]()
             {
                 lua_pushvalue(fwe.Thread, -1);
                 lua_pushlstring(fwe.Thread, fwe.File.data(), fwe.File.size());
                 lua_pushinteger(fwe.Thread, fwe.Type);
 
-                int status = ScriptEngine::L::ProtectedCall(fwe.Thread, 2, 0, 0);
+                int status = ScriptEngine::ProtectedCall(fwe.Thread, 2, 0, 0);
 
                 if (status != LUA_OK)
                 {
                     assert(status != LUA_YIELD && lua_isstring(fwe.Thread, -1));
 
                     std::string err;
-                    ScriptEngine::L::DumpStacktrace(fwe.Thread, &err, 0, lua_tostring(fwe.Thread, -1));
+                    ScriptEngine::DumpStacktrace(fwe.Thread, &err, 0, lua_tostring(fwe.Thread, -1));
                     Log.Error(err);
                 }
             });

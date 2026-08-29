@@ -1304,7 +1304,7 @@ int luhxopen_imgui(lua_State* L)
             L,
             [](lua_State* L)
             {
-                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+                ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
 
                 if (vmud->PVM && vmud->PVM->Desynchronized)
                     luaL_error(L, "Dear ImGui bindings cannot be used while desynchronized");

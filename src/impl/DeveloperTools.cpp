@@ -403,7 +403,7 @@ void DeveloperTools::Initialize(Renderer* renderer)
     const nlohmann::json& librariesDocs = scriptEnvDocs.value("Libraries", nlohmann::json::object());
     const nlohmann::json& globalsDocs = scriptEnvDocs.value("Globals", nlohmann::json::object());
 
-    ScriptEngine::LuauVM& LVM = ScriptEngine::RegisterNewVM("EnvironmentScraper");
+    ScriptEngine::LuauVM& LVM = ScriptEngine::Get()->RegisterNewVM("EnvironmentScraper");
     lua_State* L = LVM.MainThread;
     lua_pushnil(L);
 
@@ -5041,6 +5041,7 @@ static void renderInfo(double DeltaTime)
     static std::string SelectedVM = "RootLVM";
     static std::string SearchFilter = "";
     Engine* engine = Engine::Get();
+    ScriptEngine& scriptEngine = engine->ScriptManager;
 
     // We need to keep track of two different states,
     // Whether we called `ImGui::Begin`, and whether the developer closed the window
@@ -5276,9 +5277,9 @@ static void renderInfo(double DeltaTime)
 
         int selectionIndex = 0;
         std::vector<const char*> vms;
-        vms.reserve(ScriptEngine::VMs.size());
+        vms.reserve(scriptEngine.VMs.size());
 
-        for (const auto& [ name, vm ] : ScriptEngine::VMs)
+        for (const auto& [ name, vm ] : scriptEngine.VMs)
         {
             if (name == SelectedVM)
                 selectionIndex = (int)vms.size();
@@ -5290,7 +5291,7 @@ static void renderInfo(double DeltaTime)
 
         if (ImGui::Button("Create and inspect Luau VM heap snapshot"))
         {
-            lua_State* L = ScriptEngine::VMs.at(SelectedVM).MainThread;
+            lua_State* L = scriptEngine.VMs.at(SelectedVM)->MainThread;
             lua_gc(L, LUA_GCCOLLECT, 0);
 
             LuauHeapSnapshot snapshot;
@@ -5326,7 +5327,7 @@ static void renderInfo(double DeltaTime)
                     else if (tt == LUA_TTHREAD)
                     {
                         GCObject* gco = (GCObject*)ptr;
-                        const ScriptEngine::L::StateUserdata* ud = (const ScriptEngine::L::StateUserdata*)lua_getthreaddata(&gco->th);
+                        const ScriptEngine::StateUserdata* ud = (const ScriptEngine::StateUserdata*)lua_getthreaddata(&gco->th);
                         assert(ud);
 
                         nodeName = std::format("(thread: {})", ud->SpawnTrace);
@@ -5386,7 +5387,7 @@ static void renderInfo(double DeltaTime)
 
         if (ImGui::Button("Dump Luau VM heap snapshot"))
         {
-            lua_State* L = ScriptEngine::VMs.at(SelectedVM).MainThread;
+            lua_State* L = scriptEngine.VMs.at(SelectedVM)->MainThread;
             lua_gc(L, LUA_GCCOLLECT, 0);
 
             FILE* file = fopen("./heap-dump-temp", "w");
@@ -5460,7 +5461,7 @@ static void renderInfo(double DeltaTime)
                 }
             }
 
-            lua_State* L = ScriptEngine::VMs.at(SelectedVM).MainThread;
+            lua_State* L = scriptEngine.VMs.at(SelectedVM)->MainThread;
 
             for (const void* root : CurrentHeapSnapshot.Roots)
             {
@@ -5916,9 +5917,8 @@ static std::string breakReason;
 static lua_State* debuggerL = nullptr;
 static lua_Debug debuggerAr = {};
 static DebugBreakReason debuggerReason = DebugBreakReason::BrokeIntoDebugger;
-static ScriptEngine::L::StateUserdata* corUd = nullptr;
+static ScriptEngine::StateUserdata* corUd = nullptr;
 static bool s_CallstackJumpToCurrentThread = false;
-static int CurrentVMIndex = 0;
 static bool InDebugger = false;
 static bool DebuggerFirstFrame = false;
 static bool DebuggerSecondFrame = true;
@@ -5928,19 +5928,20 @@ static void resetScriptTimeouts()
 {
     ZoneScoped;
     double now = GetRunningTime();
+    ScriptEngine* scriptEngine = ScriptEngine::Get();
 
-    for (const auto& [ _, vm ] : ScriptEngine::VMs)
+    for (const auto& [ _, vm ] : scriptEngine->VMs)
     {
-        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+        ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(vm->MainThread);
         vmud->LastResumed = now;
     }
 
-    while (ScriptEngine::ParallelVMsExecuting != 0)
+    while (scriptEngine->ParallelVMsExecuting != 0)
         std::this_thread::sleep_for(std::chrono::microseconds(100));
 
-    for (ScriptEngine::ParallelVM* pvm : ScriptEngine::ParallelVMs)
+    for (ScriptEngine::ParallelVM* pvm : scriptEngine->ParallelVMs)
     {
-        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(pvm->MainThread);
+        ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(pvm->MainThread);
         vmud->LastResumed = now;
     }
 }
@@ -5994,7 +5995,7 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
         };
 
     lua_singlestep(L, true);
-    lua_Status status = ScriptEngine::L::Resume(L, L, 0);
+    lua_Status status = ScriptEngine::Resume(L, L, 0);
 
     if (status == LUA_BREAK)
     {
@@ -6017,7 +6018,7 @@ static void debuggerStep(lua_State* L, ShouldBreakFunction shouldBreakFunc)
         DeveloperTools::LeaveDebugger();
 }
 
-static bool isSteppable(const ScriptEngine::L::StateUserdata* vmud, DebugBreakReason Reason, lua_State* L)
+static bool isSteppable(const ScriptEngine::StateUserdata* vmud, DebugBreakReason Reason, lua_State* L)
 {
     if (!vmud->DebuggerAttached)
         tinyfd_messageBox("Cannot step", "The selected coroutine cannot be stepped because the Debugger was detached", "ok", "error", 1);
@@ -6046,7 +6047,7 @@ static void processDebuggerAction()
         else
         {
             lua_singlestep(debuggerL, false);
-            lua_Status status = ScriptEngine::L::Resume(debuggerL, nullptr, 0);
+            lua_Status status = ScriptEngine::Resume(debuggerL, nullptr, 0);
 
             if (status != LUA_BREAK && status != LUA_ERRRUN)
                 DeveloperTools::LeaveDebugger();
@@ -6071,7 +6072,7 @@ static void processDebuggerAction()
         int idx = (int)s_QueuedDebuggerAction.value();
         s_QueuedDebuggerAction.reset();
 
-        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
+        ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
 
         if (isSteppable(vmud, debuggerReason, debuggerL))
             debuggerStep(debuggerL, shouldBreakFuncs[idx]);
@@ -6085,7 +6086,7 @@ static void renderCoroutine(lua_State* coroutine, size_t numCoroutineIdChars)
     lua_Debug car = {};
     lua_getinfo(coroutine, 0, "slnu", &car);
 
-    const auto ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(coroutine);
+    const auto ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(coroutine);
     std::string identifier = std::format("{}:{}", car.short_src ? car.short_src : (ud ? ud->SpawnTrace : "MainThread"), car.currentline);
     std::string targetFile = car.short_src ? car.short_src : "";
     int targetLine = car.currentline;
@@ -6183,12 +6184,12 @@ static void renderCoroutine(lua_State* coroutine, size_t numCoroutineIdChars)
         {
             tab = &invokeTextEditor(identifier != "<coroutine>" ? targetFile : std::format(
                 "!InlineDocument:Coroutine is not inside a function\n\nVM: {}\nSpawn trace:\n{}",
-                ud->VM, ud->SpawnTrace
+                ud->VM->Name, ud->SpawnTrace
             ));
         }
         else
         {
-            tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", ud->VM));
+            tab = &invokeTextEditor(std::format("!InlineDocument:Coroutine is the main thread for VM {}", ud->VM->Name));
         }
 
         tab->DebuggerCurrentLine = targetLine;
@@ -6266,7 +6267,7 @@ void renderDebugger()
 
     lua_State*& L = debuggerL;
     lua_Debug& ar = debuggerAr;
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 
     if (!vmud->BeingDebugged)
     {
@@ -6317,7 +6318,7 @@ void renderDebugger()
         ImGui::Text("In: %s", ar.name ? ar.name : "<anonymous function>");
         ImGui::TextUnformatted(errorMessage.c_str());
         ImGui::SetItemTooltip("%s", errorMessage.c_str());
-        ImGui::Text("VM: %s", corUd->VM.c_str());
+        ImGui::Text("VM: %s", corUd->VM->Name.c_str());
 
         if (vmud->DebuggerAttached)
         {
@@ -6333,7 +6334,7 @@ void renderDebugger()
         }
         else
         {
-            ImGui::Text("The Debugger has been detached for %s.", corUd->VM.c_str());
+            ImGui::Text("The Debugger has been detached for %s.", corUd->VM->Name.c_str());
         }
     }
     ImGui::End();
@@ -6463,14 +6464,12 @@ void renderDebugger()
 
     if (ImGui::Begin("Callstack"))
     {
-        const ScriptEngine::LuauVM& vm = ScriptEngine::VMs.at(corUd->VM);
-
         size_t numCoroutineIdChars = size_t((ImGui::GetContentRegionAvail().x * 1.2f) / ImGui::CalcTextSize("").y);
         if (numCoroutineIdChars < 3)
             numCoroutineIdChars = 3;
 
-        renderCoroutine(vm.MainThread, numCoroutineIdChars);
-        for (lua_State* coroutine : ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread))->Coroutines)
+        renderCoroutine(corUd->VM->MainThread, numCoroutineIdChars);
+        for (lua_State* coroutine : ((ScriptEngine::StateUserdata*)lua_getthreaddata(corUd->VM->MainThread))->Coroutines)
             renderCoroutine(coroutine, numCoroutineIdChars);
     }
     ImGui::End();
@@ -6482,7 +6481,6 @@ static int DebuggingCoroRef = LUA_NOREF;
 
 void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Reason)
 {
-    using namespace ScriptEngine::L;
     ZoneScoped;
 
     if (lua_stackdepth(L) == 0)
@@ -6539,7 +6537,7 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
     else
         errorMessage = BreakExplanations[Reason];
 
-    corUd = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(L);
+    corUd = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
     s_QueuedDebuggerAction.reset();
 
     InDebugger = true;
@@ -6570,25 +6568,13 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
     tab.SetUIFocus = true;
 
     s_CallstackJumpToCurrentThread = true;
-
-    int cvii = 0;
-    for (auto it = ScriptEngine::VMs.begin(); it != ScriptEngine::VMs.end(); it++)
-    {
-        if (it->first == corUd->VM)
-        {
-            CurrentVMIndex = cvii;
-            break;
-        }
-        cvii++;
-    }
-
     DebuggerSteppingLine = ar->currentline;
 
     if (Reason == DebugBreakReason::Breakpoint && (debuggerL != L || debuggerAr.currentline != ar->currentline))
     {
         lua_break(L);
 
-        ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+        ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
         vmud->BeingDebugged = true;
         DebuggerSteppingLine++;
     }
@@ -6621,7 +6607,7 @@ void DeveloperTools::LeaveDebugger()
     s_QueuedDebuggerAction.reset();
     InDebugger = false;
 
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(debuggerL));
     vmud->BeingDebugged = false;
 
     lua_singlestep(debuggerL, false);

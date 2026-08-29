@@ -214,11 +214,13 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
         return nullptr;
     }
 
-    auto vmIt = ScriptEngine::VMs.find(Dm->VM);
-    if (vmIt == ScriptEngine::VMs.end())
+    ScriptEngine* scriptEngine = ScriptEngine::Get();
+
+    auto vmIt = scriptEngine->VMs.find(Dm->VM);
+    if (vmIt == scriptEngine->VMs.end())
         RAISE_RT("DataModel {} cannot load modules because its VM '{}' does not exist", Dm->Object->GetFullName(), Dm->VM);
 
-    ScriptEngine::LuauVM& lvm = vmIt->second;
+    ScriptEngine::LuauVM& lvm = *vmIt->second;
     lua_State* mainThread = lvm.MainThread;
 
     lua_State* L = lua_newthread(mainThread);
@@ -238,7 +240,7 @@ static lua_State* loadModule(const std::string& Module, EcDataModel* Dm)
         ZoneScopedN("ResumeMain");
         ZoneText(Module.data(), Module.size());
 
-        ScriptEngine::L::PushGenericValue(L, Dm->Object->ToGenericValue());
+        ScriptEngine::PushGenericValue(L, Dm->Object->ToGenericValue());
         lua_setglobal(L, "game");
 
         lua_pushthread(L);
@@ -306,8 +308,8 @@ void EcDataModel::Bind()
         }
     }
 
-    for (auto& [ _, vm ] : ScriptEngine::VMs)
-        lua_gc(vm.MainThread, LUA_GCCOLLECT, 0);
+    for (auto& [ _, vm ] : ScriptEngine::Get()->VMs)
+        lua_gc(vm->MainThread, LUA_GCCOLLECT, 0);
 }
 
 void EcDataModel::Close()

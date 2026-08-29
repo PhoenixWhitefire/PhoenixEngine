@@ -64,7 +64,7 @@ static void queueEvent(
     if (ec->ConnectionId == UINT32_MAX)
         return; // Event has been disconnected, so our various threads may have been de-allocated
 
-    const std::string& spawnTrace = ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(eL))->SpawnTrace;
+    const std::string& spawnTrace = ((ScriptEngine::StateUserdata*)lua_getthreaddata(eL))->SpawnTrace;
     ZoneText(spawnTrace.data(), spawnTrace.size());
     (void)spawnTrace;
 
@@ -81,7 +81,7 @@ static void queueEvent(
         return;
     }
 
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(eL));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(eL));
 
     assert(Inputs.size() == rev->CallbackInputs.size());
     assert(lua_isfunction(eL, 2));
@@ -112,7 +112,7 @@ static void queueEvent(
     if (vmud->PVM)
         yieldedCoros = &vmud->PVM->YieldedCoroutinesSync;
     else
-        yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
+        yieldedCoros = &vmud->VM->YieldedCoroutines;
 
     yieldedCoros->push_back(ScriptEngine::YieldedCoroutine{
         .DebugString = "DeferredEventResumption",
@@ -143,7 +143,7 @@ static void queueEvent(
                 {
                     assert(Reflection::TypeFits(rev->CallbackInputs[i], Inputs[i].Type));
                     (void)rev;
-                    ScriptEngine::L::PushGenericValue(L, Inputs[i]);
+                    ScriptEngine::PushGenericValue(L, Inputs[i]);
                 }
 
                 return (int)Inputs.size();
@@ -159,18 +159,18 @@ static void cleanupConnection(lua_State* L, EventConnectionData* ec)
 
     assert(lua_mainthread(L) == lua_mainthread(ec->L));
 
-    ScriptEngine::L::StateUserdata* ud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(ec->L);
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(ec->L);
     const auto& it = std::find(ud->EventConnections.begin(), ud->EventConnections.end(), ec);
     assert(it != ud->EventConnections.end());
     ud->EventConnections.erase(it);
 
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(ec->L));
+    ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(ec->L));
     std::deque<ScriptEngine::YieldedCoroutine>* yieldedCoros = nullptr;
 
     if (vmud->PVM)
         yieldedCoros = &vmud->PVM->YieldedCoroutinesSync;
     else
-        yieldedCoros = &ScriptEngine::VMs.at(vmud->VM).YieldedCoroutines;
+        yieldedCoros = &vmud->VM->YieldedCoroutines;
 
     for (ScriptEngine::YieldedCoroutine& yc : *yieldedCoros)
     {
@@ -229,7 +229,7 @@ static int sig_namecall(lua_State* L)
         lua_rawsetptagged(eL, LUA_ENVIRONINDEX, eL, LightUserdataTag::EventConnectionData);
 
         lua_getglobal(L, "game");
-        Reflection::GenericValue dmgv = ScriptEngine::L::ToGeneric(L, -1);
+        Reflection::GenericValue dmgv = ScriptEngine::ToGeneric(L, -1);
         if (dmgv.Type == Reflection::ValueType::GameObject)
         {
             GameObject* dm = GameObjectManager::Get()->FromGenericValue(dmgv);
@@ -273,7 +273,7 @@ static int sig_namecall(lua_State* L)
         ec->SpawningThreadRef = lua_ref(L, -1);
         lua_pop(L, 1);
 
-        ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(L))->EventConnections.push_back(ec);
+        ((ScriptEngine::StateUserdata*)lua_getthreaddata(L))->EventConnections.push_back(ec);
 
         incrementReflectorRefs(reflector);
         return 1;
@@ -310,7 +310,7 @@ static int sig_namecall(lua_State* L)
                     if (!*resume)
                     {
                         std::string warning;
-                        ScriptEngine::L::DumpStacktrace(L, &warning, 0, "Event was cleaned up, thread will not resume");
+                        ScriptEngine::DumpStacktrace(L, &warning, 0, "Event was cleaned up, thread will not resume");
 
                         Log.Warning(warning);
                     }
@@ -328,10 +328,10 @@ static int sig_namecall(lua_State* L)
         ec->Event = rev;
         ec->L = L;
 
-        ((ScriptEngine::L::StateUserdata*)lua_getthreaddata(L))->EventConnections.push_back(ec);
+        ((ScriptEngine::StateUserdata*)lua_getthreaddata(L))->EventConnections.push_back(ec);
         incrementReflectorRefs(reflector);
 
-        return ScriptEngine::L::Yield(
+        return ScriptEngine::Yield(
             L,
             0,
             [=](ScriptEngine::YieldedCoroutine& yc)
@@ -356,7 +356,7 @@ static int sig_namecall(lua_State* L)
                             int count = (int)values->size();
 
                             for (const Reflection::GenericValue& gv : *values)
-                                ScriptEngine::L::PushGenericValue(L, gv);
+                                ScriptEngine::PushGenericValue(L, gv);
 
                             rev->Disconnect(reflector.Referred(), ec->ConnectionId);
                             return count;

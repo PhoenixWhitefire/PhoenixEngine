@@ -12,7 +12,8 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
-                ScriptEngine::RegisterNewVM(std::string(inputs[0].AsStringView()));
+                ScriptEngine* scriptEngine = ScriptEngine::Get();
+                scriptEngine->RegisterNewVM(std::string(inputs[0].AsStringView()));
 
                 return {};
             }
@@ -23,11 +24,12 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
-                const auto& it = ScriptEngine::VMs.find(std::string(inputs[0].AsStringView()));
-                if (it == ScriptEngine::VMs.end())
+                ScriptEngine* scriptEngine = ScriptEngine::Get();
+                const auto& it = scriptEngine->VMs.find(std::string(inputs[0].AsStringView()));
+                if (it == scriptEngine->VMs.end())
                     RAISE_RT("Invalid VM");
 
-                it->second.Close();
+                it->second->Close();
                 return {};
             }
         } },
@@ -37,27 +39,28 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
             REFLECTION_SPAN({ Reflection::ValueType::Boolean, REFLECTION_OPTIONAL(String) }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
+                ScriptEngine* scriptEngine = ScriptEngine::Get();
                 const std::string vmName = std::string(inputs[0].AsStringView());
 
-                const auto& it = ScriptEngine::VMs.find(vmName);
-                if (it == ScriptEngine::VMs.end())
+                const auto& it = scriptEngine->VMs.find(vmName);
+                if (it == scriptEngine->VMs.end())
                     RAISE_RT("Invalid VM '{}'", vmName);
 
-                const ScriptEngine::LuauVM& vm = it->second;
+                const ScriptEngine::LuauVM& vm = *it->second;
 
                 const std::string code = std::string(inputs[1].AsStringView());
-	            const std::string chname = inputs.size() > 2 ? std::string(inputs[2].AsStringView()) : code;
+                const std::string chname = inputs.size() > 2 ? std::string(inputs[2].AsStringView()) : code;
                 Logging::ScopedContext sc = Logging::Context{ .ContextExtraTags = std::format("SourceChunkName:{}", chname) };
 
-                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(vm.MainThread);
+                ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(vm.MainThread);
                 vmud->LastResumed = GetRunningTime(); // should do this before `luaL_sandboxthread` because that can trigger GC
 
-	            lua_State* ML = lua_newthread(vm.MainThread);
+                lua_State* ML = lua_newthread(vm.MainThread);
                 luaL_sandboxthread(ML);
 
                 if (ScriptEngine::CompileAndLoad(ML, code, chname) == 0)
                 {
-                    int result = ScriptEngine::L::Resume(ML, ML, 0);
+                    int result = ScriptEngine::Resume(ML, ML, 0);
                     const char* err = nullptr;
 
                     if (result == LUA_ERRERR || result == LUA_ERRRUN || result == LUA_ERRMEM)
@@ -87,8 +90,8 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
                     lua_pop(vm.MainThread, 1); // pop off ML
 
                     return { result == LUA_OK, message };
-	            }
-	            else
+                }
+                else
                 {
                     std::string message = lua_tostring(ML, -1);
                     lua_pop(vm.MainThread, 1); // pop off ML
@@ -120,59 +123,60 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
+                ScriptEngine* scriptEngine = ScriptEngine::Get();
                 const std::string_view& vmName = inputs[0].AsStringView();
 
-                const auto& vmit = ScriptEngine::VMs.find(std::string(vmName));
+                const auto& vmit = scriptEngine->VMs.find(std::string(vmName));
                 ScriptEngine::LuauVM* lvm = nullptr;
 
-                if (vmit == ScriptEngine::VMs.end())
+                if (vmit == scriptEngine->VMs.end())
                 {
-                    const auto& pvmit = std::find_if(ScriptEngine::ParallelVMs.begin(), ScriptEngine::ParallelVMs.end(), [vmName](const ScriptEngine::ParallelVM* pvm)
+                    const auto& pvmit = std::find_if(scriptEngine->ParallelVMs.begin(), scriptEngine->ParallelVMs.end(), [vmName](const ScriptEngine::ParallelVM* pvm)
                     {
                         return pvm->Name == vmName;
                     });
 
-                    if (pvmit != ScriptEngine::ParallelVMs.end())
+                    if (pvmit != scriptEngine->ParallelVMs.end())
                         lvm = *pvmit;
                     else
                         RAISE_RT("Invalid VM '{}'", vmName);
                 }
                 else
-                    lvm = &vmit->second;
+                    lvm = vmit->second;
 
-                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lvm->MainThread);
+                ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lvm->MainThread);
                 vmud->AllowedExecutionTime = inputs[1].AsDouble();
                 return {};
             }
         } },
-
 
         { "DetachDebuggerFromVM", Reflection::MethodDescriptor{
             REFLECTION_SPAN({ Reflection::ValueType::String }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
+                ScriptEngine* scriptEngine = ScriptEngine::Get();
                 const std::string& vmName = inputs[0].AsString();
 
-                const auto& vmit = ScriptEngine::VMs.find(vmName);
+                const auto& vmit = scriptEngine->VMs.find(vmName);
                 ScriptEngine::LuauVM* lvm = nullptr;
 
-                if (vmit == ScriptEngine::VMs.end())
+                if (vmit == scriptEngine->VMs.end())
                 {
-                    const auto& pvmit = std::find_if(ScriptEngine::ParallelVMs.begin(), ScriptEngine::ParallelVMs.end(), [vmName](const ScriptEngine::ParallelVM* pvm)
+                    const auto& pvmit = std::find_if(scriptEngine->ParallelVMs.begin(), scriptEngine->ParallelVMs.end(), [vmName](const ScriptEngine::ParallelVM* pvm)
                     {
                         return pvm->Name == vmName;
                     });
 
-                    if (pvmit != ScriptEngine::ParallelVMs.end())
+                    if (pvmit != scriptEngine->ParallelVMs.end())
                         lvm = *pvmit;
                     else
                         RAISE_RT("Invalid VM '{}'", vmName);
                 }
                 else
-                    lvm = &vmit->second;
+                    lvm = vmit->second;
 
-                ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lvm->MainThread);
+                ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lvm->MainThread);
                 vmud->DebuggerAttached = false;
 
                 lua_Callbacks* cb = lua_callbacks(lvm->MainThread);
@@ -189,7 +193,8 @@ const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
             REFLECTION_SPAN({ Reflection::ValueType::Integer }),
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
-                int lineApplied = ScriptEngine::SetScriptBreakpoint(
+                ScriptEngine* scriptEngine = ScriptEngine::Get();
+                int lineApplied = scriptEngine->SetScriptBreakpoint(
                     inputs[0].AsString(),
                     inputs[1].AsString(),
                     (int)inputs[2].AsInteger(),

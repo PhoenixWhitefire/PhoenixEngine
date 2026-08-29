@@ -14,8 +14,9 @@
 
 #include "datatype/GameObject.hpp"
 #include "datatype/Components.hpp"
-
 #include "datatype/Event.hpp"
+
+#include "script/ScriptEngine.hpp"
 #include "geometry/Physics.hpp"
 
 // TODO: cleanup structure of public vs private
@@ -53,6 +54,7 @@ public:
 
     GameObjectManager ObjectManager;
     AllComponentManagers ComponentManagers;
+    ScriptEngine ScriptManager;
 
     ObjectHandle ForegroundDataModel; // rendered
     ObjectHandle PrimaryDataModel;

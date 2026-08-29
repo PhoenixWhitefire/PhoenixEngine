@@ -14,30 +14,32 @@
 static void createParallelVMs()
 {
     ThreadManager* threadManager = ThreadManager::Get();
-    ScriptEngine::ParallelVMs.reserve(threadManager->Concurrency);
+    ScriptEngine* scriptEngine = ScriptEngine::Get();
+    scriptEngine->ParallelVMs.reserve(threadManager->Concurrency);
 
     for (int i = 0; i < threadManager->Concurrency; i++)
-        ScriptEngine::CreateParallelVM();
+        scriptEngine->CreateParallelVM();
 
     if (threadManager->Concurrency == 0)
-        ScriptEngine::CreateParallelVM(); // at least one
+        scriptEngine->CreateParallelVM(); // at least one
 }
 
 static int parallel_spawn(lua_State* L)
 {
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
 
-    if (vmud->PVM && vmud->PVM->Desynchronized)
+    if (ud->PVM && ud->PVM->Desynchronized)
         luaL_error(L, "Cannot spawn parallel threads while desynchronized");
 
+    ScriptEngine* scriptEngine = ScriptEngine::Get();
     const char* path = luaL_checkstring(L, 1);
 
-    if (ScriptEngine::ParallelVMs.empty())
+    if (scriptEngine->ParallelVMs.empty())
         createParallelVMs();
 
     ScriptEngine::ParallelVM* bestVM = nullptr;
 
-    for (ScriptEngine::ParallelVM* parallelVM : ScriptEngine::ParallelVMs)
+    for (ScriptEngine::ParallelVM* parallelVM : scriptEngine->ParallelVMs)
     {
         if (!bestVM || parallelVM->ParallelAllocated < bestVM->ParallelAllocated)
             bestVM = parallelVM;
@@ -50,7 +52,7 @@ static int parallel_spawn(lua_State* L)
     arguments.reserve(lua_gettop(L) - 1);
 
     for (int i = 2; i <= lua_gettop(L); i++)
-        arguments.push_back(ScriptEngine::L::ToGeneric(L, i));
+        arguments.push_back(ScriptEngine::ToGeneric(L, i));
 
     std::unique_lock<std::mutex> lock = std::unique_lock<std::mutex>(bestVM->ParallelSpawnRequestsMutex);
     bestVM->ParallelSpawnRequests.emplace_back(path, arguments);
@@ -59,51 +61,51 @@ static int parallel_spawn(lua_State* L)
     return 0;
 }
 
-static bool isVMSynchronized(ScriptEngine::L::StateUserdata* vmud)
+static bool isVMSynchronized(ScriptEngine::StateUserdata* vmud)
 {
     return !vmud->PVM || !vmud->PVM->Desynchronized;
 }
 
 static int parallel_synchronized(lua_State* L)
 {
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-    lua_pushboolean(L, isVMSynchronized(vmud));
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
+    lua_pushboolean(L, isVMSynchronized(ud));
 
     return 1;
 }
 
 static int parallel_synchronize(lua_State* L)
 {
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
 
-    if (!vmud->PVM)
+    if (!ud->PVM)
         luaL_error(L, "Tried to synchronize a non-parallel VM");
 
-    if (isVMSynchronized(vmud))
+    if (isVMSynchronized(ud))
         return 0;
 
-    return ScriptEngine::L::Yield(
+    return ScriptEngine::Yield(
         L,
         0,
         [](ScriptEngine::YieldedCoroutine& yc)
         {
             yc.Mode = ScriptEngine::YieldedCoroutine::ResumptionMode::Deferred;
         },
-        &vmud->PVM->YieldedCoroutinesSync
+        &ud->PVM->YieldedCoroutinesSync
     );
 }
 
 static int parallel_desynchronize(lua_State* L)
 {
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
 
-    if (!vmud->PVM)
+    if (!ud->PVM)
         luaL_error(L, "Tried to desynchronize a non-parallel VM");
 
-    if (!isVMSynchronized(vmud))
+    if (!isVMSynchronized(ud))
         return 0;
 
-    return ScriptEngine::L::Yield(
+    return ScriptEngine::Yield(
         L,
         0,
         [](ScriptEngine::YieldedCoroutine& yc)
@@ -182,17 +184,12 @@ static uint32_t checkSizeArgument(lua_State* L, int Index, const char* Arg, bool
         luaL_typeerror(L, Index, "number or integer");
 }
 
-static ScriptEngine::LuauVM* getLuauVMFromVMUD(ScriptEngine::L::StateUserdata* vmud)
-{
-    return vmud->PVM ? vmud->PVM : &ScriptEngine::VMs.at(vmud->VM);
-}
-
 static int parallelmutex_namecall(lua_State* L)
 {
     ZoneScoped;
 
-    ScriptEngine::L::StateUserdata* vmud = (ScriptEngine::L::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
-    ScriptEngine::LuauVM* lvm = getLuauVMFromVMUD(vmud);
+    ScriptEngine::StateUserdata* ud = (ScriptEngine::StateUserdata*)lua_getthreaddata(L);
+    ScriptEngine::LuauVM* lvm = ud->VM;
 
     SharedMutex** sharedMutexp = (SharedMutex**)lua_touserdatatagged(L, 1, UserdataTag::Mutex);
     if (!sharedMutexp)

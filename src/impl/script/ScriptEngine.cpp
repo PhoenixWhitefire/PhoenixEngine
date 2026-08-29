@@ -90,6 +90,24 @@ static int luauAssertHandler(const char* expression, const char* file, int line,
     RAISE_RT("Luau assertion failed:\n\tExpression: {}\n\tIn: {}:{} in {}", expression, file, line, function);
 }
 
+static ScriptEngine* Instance = nullptr;
+
+ScriptEngine::ScriptEngine()
+{
+    assert(!Instance);
+}
+
+ScriptEngine::~ScriptEngine()
+{
+    assert(!Instance);
+}
+
+ScriptEngine* ScriptEngine::Get()
+{
+    assert(Instance);
+    return Instance;
+}
+
 void ScriptEngine::Initialize()
 {
     FFlag::LuauManagedDebugNames.value = true;
@@ -98,6 +116,9 @@ void ScriptEngine::Initialize()
 
     // changing a reference to a static function variable
     Luau::assertHandler() = luauAssertHandler;
+
+    assert(!Instance);
+    Instance = this;
 }
 
 void ScriptEngine::Shutdown()

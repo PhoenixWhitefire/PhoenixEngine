@@ -184,7 +184,7 @@ static void doApiDump()
 
     nlohmann::json apiDump;
     apiDump["GameObject"] = GameObject::DumpApiToJson();
-    apiDump["ScriptEnv"] = ScriptEngine::DumpApiToJson();
+    apiDump["ScriptEnv"] = ScriptEngine::Get()->DumpApiToJson();
 
     PHX_CHECK(FileRW::WriteFile("./apidump.json", apiDump.dump(2)));
     Log.Info("API dump finished");

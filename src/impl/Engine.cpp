@@ -155,7 +155,7 @@ void Engine::LoadConfiguration()
         );
     }
 
-    ScriptEngine::DefaultVMAllowedExecutionTime = readFromConfiguration(Config, "DefaultVMAllowedExecutionTime", 10.0);
+    ScriptManager.DefaultVMAllowedExecutionTime = readFromConfiguration(Config, "DefaultVMAllowedExecutionTime", 10.0);
 
     if (ConfigLoadSucceeded)
         Log.Info("Configuration loaded");
@@ -1030,7 +1030,7 @@ static void dispatchParallelVMs(Engine* engine)
 {
     ZoneScoped;
 
-    for (ScriptEngine::ParallelVM* vm : ScriptEngine::ParallelVMs)
+    for (ScriptEngine::ParallelVM* vm : engine->ScriptManager.ParallelVMs)
     {
         if (vm->YieldedCoroutines.size() == 0 && vm->ParallelSpawnRequests.size() == 0)
             continue;
@@ -1044,20 +1044,20 @@ static void dispatchParallelVMs(Engine* engine)
                 ZoneScoped;
                 ZoneText(vm->Name.data(), vm->Name.size());
 
-                ScriptEngine::ParallelVMsExecuting++;
+                engine->ScriptManager.ParallelVMsExecuting++;
                 vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Parallel);
-                ScriptEngine::ParallelVMsExecuting--;
+                engine->ScriptManager.ParallelVMsExecuting--;
             },
             true
         );
     }
 }
 
-static void waitForParallelVMs()
+static void waitForParallelVMs(Engine* engine)
 {
     ZoneScoped;
 
-    while (ScriptEngine::ParallelVMsExecuting != 0)
+    while (engine->ScriptManager.ParallelVMsExecuting != 0)
         std::this_thread::sleep_for(std::chrono::microseconds(100));
 }
 
@@ -1074,7 +1074,7 @@ void Engine::Start()
 
     Log.Info("Final initializations...");
 
-    ScriptEngine::Initialize(); // can only do this after datamodel is bound
+    ScriptManager.Initialize(); // can only do this after datamodel is bound
     ComponentManagers.Sound.IsHeadless = IsHeadlessMode;
 
     double RunningTime = GetRunningTime();
@@ -1270,8 +1270,8 @@ void Engine::Start()
         for (const ObjectHandle& bound : BoundDataModels)
             Reflection::SignalEvent(bound->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
-        waitForParallelVMs();      // tsan ??
-        ScriptEngine::StepVMs();   // serial phase
+        waitForParallelVMs(this);   // tsan ??
+        ScriptManager.StepVMs();    // serial phase
         dispatchParallelVMs(this);
 
         // fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
@@ -1421,7 +1421,7 @@ void Engine::Start()
             RendererContext.SwapBuffers();
         }
 
-        waitForParallelVMs();
+        waitForParallelVMs(this);
 
         // End of frame
         RunningTime = GetRunningTime();
@@ -1457,7 +1457,7 @@ void Engine::Shutdown()
 
     Log.Info("Destroying DataModel...");
     ComponentManagers.DataModel.NotifyAllOfShutdown();
-    ScriptEngine::StepVMs(); // step event callbacks
+    ScriptManager.StepVMs(); // step event callbacks
 
     ForegroundDataModel->Destroy();
     ForegroundDataModel.Clear();
@@ -1468,7 +1468,7 @@ void Engine::Shutdown()
     DeveloperTools::Shutdown();
 
     Log.Info("Shutting down script engine...");
-    ScriptEngine::Shutdown();
+    ScriptManager.Shutdown();
 
     // Do this after script engine shutdown, as we may have event connections
     for (GameObjectManager::Collection& collection : ObjectManager.Collections)

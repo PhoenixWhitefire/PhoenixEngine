@@ -23,10 +23,12 @@ struct SharedMutex;
 class ScriptEngine
 {
 public:
+    static ScriptEngine* Get();
+    ScriptEngine();
+    ~ScriptEngine();
+
     void Initialize();
     void Shutdown();
-
-    static ScriptEngine* Get();
 
     static std::string CompileBytecode(const std::string_view&, int OptimizationLevel = -1, int DebugLevel = -1);
     static int LoadBytecode(lua_State*, const std::string_view& Bytecode, const std::string& ChunkName);
@@ -187,8 +189,8 @@ public:
 
     struct StateUserdata
     {
-        ScriptEngine::LuauVM* VM = nullptr;
-        ScriptEngine::ParallelVM* PVM = nullptr;
+        LuauVM* VM = nullptr;
+        ParallelVM* PVM = nullptr;
         std::string SpawnTrace;
         std::vector<EventConnectionData*> EventConnections;
         std::vector<lua_State*> Coroutines; // Only populated for the main thread
@@ -199,6 +201,7 @@ public:
         bool DebuggerAttached = false;
         bool BeingDebugged = false;
     };
+
 private:
     void m_ProcessParallelEvents();
     static void s_InitRequireConfig(struct luarequire_Configuration*);

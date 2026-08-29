@@ -136,7 +136,7 @@ static Reflection::GenericValue serialize_(lua_State* L, int Index, int Depth, s
         }
     }
     default:
-        return ScriptEngine::L::ToGeneric(L, Index);
+        return ScriptEngine::ToGeneric(L, Index);
     }
 }
 
