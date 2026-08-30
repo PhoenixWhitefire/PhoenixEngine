@@ -317,7 +317,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
     end
 
     local gizmoHit = if tryingToInteract
-                        then Workspace:Raycast(camPos, mouseVector, { GizmoContainer }, false)
+                        then Workspace:Raycast(camPos, mouseVector, { if GizmoMode == 1 then MoveGizmo else ScaleGizmo }, false)
                         else nil
 
     if tryingToInteract and not IsGizmoDragging and not gizmoHit then
@@ -416,9 +416,9 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
                     mesh.Transparency = if ShadowMeshes[mesh] then 0.5 else 0
                 end
             end
-        end
 
-        IsGizmoDragging = false
+            IsGizmoDragging = false
+        end
 
         if BeganGizmoDragAction then
             History:FinishAction(BeganGizmoDragAction)
