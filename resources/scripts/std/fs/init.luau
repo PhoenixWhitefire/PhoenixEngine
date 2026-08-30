@@ -3,7 +3,7 @@
 -- stdlib for `@lute/fs`
 -- Provides file system utility functions that handles file paths as path types instead of strings
 
-local deque = require("@batteries/collections/deque")
+local deque = require("@self/deque")
 local pathlib = require("@std/path")
 local sys = require("@std/system")
 local win32paths = require("@std/path/win32")
