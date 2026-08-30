@@ -315,7 +315,3 @@ if loadProjectIndex then
         IsSessionJustPlaytest = true
     end
 end
-
-if Engine.IsHeadless then
-    EditorFrameConnection:Disconnect()
-end

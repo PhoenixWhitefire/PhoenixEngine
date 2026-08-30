@@ -613,7 +613,7 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
             const Reflection::PropertyDescriptor* prop = newObject->FindProperty(propName);
             bool isSizeCompat = false;
 
-            if (propName != "LocalSize" && propName != "Size")
+            if (Version > 2.15f || (propName != "LocalSize" && propName != "Size"))
             {
                 if (!prop)
                 {
@@ -1002,7 +1002,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
                             + std::to_string((int32_t)ymd.year());
 
     std::string contents = std::string("PHOENIXF\n")
-                            + "#Version 2.15\n"
+                            + "#Version 2.16\n"
                             + "#Asset Scene\n"
                             + "#Date " + dateStr + "\n"
                             + "#SceneName " + SceneName + "\n"
