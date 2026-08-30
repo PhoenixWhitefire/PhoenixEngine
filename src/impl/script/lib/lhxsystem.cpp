@@ -14,7 +14,7 @@
 static int system_hostname(lua_State* L)
 {
 #ifdef _WIN32
-    const char* envVar = "COMPUTERNAME"
+    const char* envVar = "COMPUTERNAME";
 #else
     const char* envVar = "HOSTNAME";
 #endif
