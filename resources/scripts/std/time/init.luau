@@ -2,7 +2,7 @@
 -- @std/time
 -- Provides utility functions for time
 
-local luteTime = require("@lute/time")
+local luteTime = require("@self/time")
 local duration = require("@self/duration")
 
 local time = {}

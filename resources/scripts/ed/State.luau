@@ -337,6 +337,24 @@ local function handleStdAliasMigration(config: any)
     fs.write("scripts/.config.luau", configContents)
 end
 
+local function handleLuteAliasMigration(config: any)
+    if isFileEditorBuildAtLeast(config, 8) or not fs.isfile("scripts/.config.luau") then
+        return
+    end
+
+    local stdPath = fs.resolvepathabsolute(Configuration.StdPath)
+    local lutePath = fs.resolvepathabsolute(Configuration.LuteImplsPath)
+
+    local configContents = assert(fs.read("scripts/.config.luau"))
+    local substitutions = 0
+
+    configContents, substitutions = string.gsub(
+        configContents,
+        `std = "{ stdPath }"\n        }`,
+        `std = "{ stdPath }"\n            lute = "{ lutePath }" -- Dependency of @std\n        }`
+    )
+end
+
 local function openProject_(State: StateType, ManualPath: string?)
     local path = ManualPath
     local selecting = not path

@@ -3,23 +3,29 @@
 -- stdlib for `@lute/io`
 -- Provides standard input, output, and other I/O utility functions
 
-local io = require("@lute/io")
-
 local iolib = {}
 
 --- Writes one or more strings to standard output without a trailing newline.
 function iolib.write(...: string): ()
-	io.write(...)
+	for i = 1, select("#", ...) do
+		appendlog(select(i, ...) .. "&&")
+	end
+end
+
+-- @lute/io.read stub
+local function io_read()
+	warn(`Trying to read from IO will always return an empty string`)
+	return ""
 end
 
 --- Reads a line from standard input. If `prompt` is provided, it is written to stdout before waiting for input.
 --- User input can be provided via command line stdin, piped input, or redirection from a file. See `examples/user_input.luau`.
 function iolib.input(prompt: string?): string
 	if prompt then
-		io.write(prompt)
+		iolib.write(prompt)
 	end
 
-	local line = io.read()
+	local line = io_read()
 
 	-- Strip a single trailing line terminator ("\r\n", "\n", or "\r"), leaving any
 	-- interior or leading whitespace intact.

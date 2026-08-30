@@ -4,10 +4,11 @@
 -- Provides file system utility functions that handles file paths as path types instead of strings
 
 local deque = require("@batteries/collections/deque")
-local fs = require("@lute/fs")
 local pathlib = require("@std/path")
 local sys = require("@std/system")
 local win32paths = require("@std/path/win32")
+
+local time = require("@std/time")
 
 local fslib = {}
 
@@ -20,9 +21,12 @@ local fslib = {}
 --- - `"w+"`: Open for reading and writing; creates the file if absent, truncates it if present.
 --- - `"x+"`: Open for reading and exclusive creation. Fails if the file already exists.
 --- - `"a+"`: Open for reading and appending; creates the file if absent, writes go to the end.
-export type HandleMode = fs.HandleMode
+export type HandleMode = "r" | "w" | "x" | "a" | "r+" | "w+" | "x+" | "a+"
 --- An open file handle.
-export type File = fs.FileHandle
+export type File = {
+    fd: number,
+    err: number,
+}
 --- The type of a filesystem entry:
 --- - `"file"`: A regular file.
 --- - `"dir"`: A directory.
@@ -32,15 +36,30 @@ export type File = fs.FileHandle
 --- - `"char"`: A character device.
 --- - `"block"`: A block device.
 --- - `"unknown"`: An entry whose type could not be determined.
-export type FileType = fs.FileType
+export type FileType = "file" | "dir" | "link" | "fifo" | "socket" | "char" | "block" | "unknown"
 --- Metadata about a filesystem entry, such as size, type, and timestamps.
-export type FileMetadata = fs.FileMetadata
+export type FileMetadata = {
+    type: FileType,
+    permissions: { readonly: boolean },
+    size: number,
+    created: time.Duration,
+    accessed: time.Duration,
+    modified: time.Duration,
+}
 --- A single entry returned by `listDirectory`, containing the entry's name and type.
-export type DirectoryEntry = fs.DirectoryEntry
+export type DirectoryEntry = {
+    name: string,
+    type: FileType,
+}
 --- A handle to an active filesystem watcher, returned by `watch`.
-export type WatchHandle = fs.WatchHandle
+export type WatchHandle = {
+    close: (self: WatchHandle) -> (),
+}
 --- A filesystem change event, yielded by a `Watcher`.
-export type WatchEvent = fs.WatchEvent
+export type WatchEvent = {
+    change: boolean,
+    rename: boolean,
+}
 
 type Pathlike = pathlib.Pathlike
 type Path = pathlib.Path
@@ -69,24 +88,31 @@ type Watcher = {
     close: (self: Watcher) -> (),
 }
 
+local handles: { string } = {}
+
 --- Opens the file at `path` in the given `mode` (defaults to `"r"`). Returns a file handle.
 function fslib.open(path: Pathlike, mode: HandleMode?): File
-    return fs.open(pathlib.format(path), mode)
+    table.insert(handles, pathlib.format(path))
+
+    return {
+        fd = #handles,
+        err = 0
+    }
 end
 
 --- Reads the full contents of `file` and returns them as a string.
 function fslib.read(file: File): string
-    return fs.read(file)
+    return phoenix.fs.read(handles[file.fd]) or ""
 end
 
 --- Writes `contents` to `file`.
 function fslib.write(file: File, contents: string): ()
-    return fs.write(file, contents)
+    return phoenix.fs.write(handles[file.fd], contents)
 end
 
 --- Closes `file`, flushing any pending writes.
 function fslib.close(file: File): ()
-    return fs.close(file)
+    handles[file.fd] = nil
 end
 
 --- Reads up to `numBytes` bytes from `file` at `fileOffset` into `buf` starting at `bufferOffset`.
@@ -98,32 +124,54 @@ function fslib.readIntoBuffer(
     numBytes: number,
     bufferOffset: number?
 ): number
-    return fs.readIntoBuffer(file, buf, fileOffset, numBytes, bufferOffset)
+    local contents, err = phoenix.fs.read(handles[file.fd])
+    assert(contents, err)
+
+    local toCopyStr = string.sub(contents, fileOffset, numBytes)
+    local toCopy =  buffer.fromstring(toCopyStr)
+
+    buffer.copy(buf, bufferOffset or 0, toCopy, fileOffset, #toCopyStr)
+    return math.min(numBytes, #toCopyStr)
 end
 
 --- Removes the file at `path`.
 function fslib.remove(path: Pathlike): ()
-    return fs.remove(pathlib.format(path))
+    return phoenix.fs.remove(pathlib.format(path))
 end
 
 --- Returns metadata for the file or directory at `path`.
 function fslib.metadata(path: Pathlike): FileMetadata
-    return fs.stat(pathlib.format(path))
+    local pathStr = pathlib.format(path)
+    local modified = phoenix.fs.lastwritten(pathStr)
+
+    return {
+        type = fslib.type(pathStr),
+        permissions = { readonly = false },
+        size = 0,
+        created = time.duration.seconds(0),
+        accessed = time.duration.seconds(0),
+        modified = time.duration.seconds(modified),
+    }
 end
 
 --- Returns the `FileType` of the entry at `path` (e.g. `"file"`, `"dir"`, `"symlink"`).
 function fslib.type(path: Pathlike): FileType
-    return fs.type(pathlib.format(path))
+    local pathStr = pathlib.format(path)
+
+    return if phoenix.fs.isfile(pathStr) then "file"
+        else if phoenix.fs.isdirectory(pathStr) then "dir"
+        else if phoenix.fs.issymlink(pathStr) then "link"
+        else "unknown"
 end
 
 --- Creates a hard link at `dest` pointing to `src`.
 function fslib.link(src: Pathlike, dest: Pathlike): ()
-    return fs.link(pathlib.format(src), pathlib.format(dest))
+    return phoenix.fs.symlink(pathlib.format(dest), pathlib.format(src))
 end
 
 --- Creates a symbolic link at `dest` pointing to `src`.
 function fslib.symbolicLink(src: Pathlike, dest: Pathlike): ()
-    return fs.symlink(pathlib.format(src), pathlib.format(dest))
+    return phoenix.fs.symlink(pathlib.format(dest), pathlib.format(src))
 end
 
 --- Watches `path` for filesystem changes. Returns a `Watcher` with a `next` method that returns the next
@@ -135,8 +183,13 @@ function fslib.watch(path: Pathlike): Watcher
     --
     --	deque.new<<{ filename: path, event: watchevent }>>()
     local deq = deque.new(nil :: { filename: Path, event: WatchEvent }?)
-    local handle = fs.watch(pathlib.format(path), function(filename, event)
-        deq:pushback({ filename = pathlib.parse(filename), event = event })
+    local watching = pathlib.format(path)
+
+    local close = phoenix.fs.watch(watching, function(newPath, event)
+        deq:pushback({ filename = pathlib.parse(newPath), event = {
+            change = event == Enum.FileSystemEvent.Modified,
+            rename = phoenix.fs.resolvepathabsolute(newPath) ~= phoenix.fs.resolvepathabsolute(watching)
+        } })
     end)
 
     return {
@@ -149,8 +202,8 @@ function fslib.watch(path: Pathlike): Watcher
             return item.event
         end,
         close = function(_self: Watcher): ()
-            if handle then
-                handle:close()
+            if close then
+                close()
             end
         end,
     }
@@ -158,24 +211,32 @@ end
 
 --- Returns `true` if a file or directory exists at `path`.
 function fslib.exists(path: Pathlike): boolean
-    return fs.exists(pathlib.format(path))
+    return phoenix.fs.exists(pathlib.format(path))
 end
 
 --- Copies the file at `src` to `dest`.
 function fslib.copy(src: Pathlike, dest: Pathlike): ()
-    return fs.copy(pathlib.format(src), pathlib.format(dest))
+    return phoenix.fs.copy(pathlib.format(src), pathlib.format(dest))
 end
 
 --- Moves the file or directory at `src` to `dest`.
 --- Falls back to a copy-then-remove if `src` and `dest` are on different filesystems.
 function fslib.move(src: Pathlike, dest: Pathlike): ()
-    return fs.move(pathlib.format(src), pathlib.format(dest))
+    return phoenix.fs.move(pathlib.format(src), pathlib.format(dest))
 end
 
 --- Returns an array of `DirectoryEntry` values for the immediate children of the directory at `path`.
 function fslib.listDirectory(path: Pathlike): { DirectoryEntry }
     path = phoenix.fs.resolvepath(pathlib.format(path))
-    local entries = fs.listdir(path)
+    local entries: { DirectoryEntry } = {}
+
+    for p, t in phoenix.fs.listdir(path) do
+        table.insert(entries, {
+            name = p,
+            -- TODO luau cast
+            type = (if t == "d" then "dir" else if t == "f" then "file" else "unknown") :: FileType
+        })
+    end
 
     for _, entry in entries do
         entry.name = string.gsub(entry.name, path .. "/", "")
@@ -185,17 +246,12 @@ end
 
 --- Returns the entire contents of the file at `filepath` as a string.
 function fslib.readFileToString(filepath: Pathlike): string
-    local f = fs.open(pathlib.format(filepath), "r")
-    local contents = fs.read(f)
-    fs.close(f)
-    return contents
+    return assert(phoenix.fs.read(pathlib.format(filepath)))
 end
 
 --- Writes `contents` to the file at `filepath`, replacing any existing contents.
 function fslib.writeStringToFile(filepath: Pathlike, contents: string): ()
-    local f = fs.open(pathlib.format(filepath), "w+")
-    fs.write(f, contents)
-    fs.close(f)
+    phoenix.fs.write(pathlib.format(filepath), contents)
 end
 
 --- Creates a directory at `path`. If `options.makeParents` is `true`, creates any missing parent directories as well.
@@ -218,11 +274,11 @@ function fslib.createDirectory(path: Pathlike, options: CreateDirectoryOptions?)
         for _, part in parts do
             subdir = pathlib.join(subdir, part)
             if not fslib.exists(subdir) then
-                fs.mkdir(pathlib.format(subdir))
+                phoenix.fs.mkdir(pathlib.format(subdir))
             end
         end
     else
-        fs.mkdir(pathlib.format(path))
+        phoenix.fs.mkdir(pathlib.format(path))
     end
 end
 
@@ -240,10 +296,16 @@ function fslib.removeDirectory(path: Pathlike, options: RemoveDirectoryOptions?)
                     fslib.remove(entryPath)
                 end
             end
-            fs.rmdir(pathlib.format(path))
+            phoenix.fs.remove(pathlib.format(path))
         end
     else
-        fs.rmdir(pathlib.format(path))
+        local pathStr = pathlib.format(path)
+
+        if phoenix.fs.isdirectory(pathStr) then
+            phoenix.fs.remove(pathlib.format(path))
+        else
+            error(`Path '{ pathStr }' does not refer to a directory`)
+        end
     end
 end
 

@@ -1,8 +1,8 @@
-local system = require("@lute/system")
+local Engine = game:GetService("Engine")
 
-local osName = string.lower(system.os)
+local osName = string.lower(Engine.TargetPlatform)
 
-local win32 = osName == "windows_nt"
+local win32 = osName == "windows_nt" or osName == "windows"
 local linux = osName == "linux"
 local macos = osName == "darwin"
 local unix = macos or linux or osName == "unix" or osName == "posix"
