@@ -146,7 +146,6 @@ local function createNewProject_(State: StateType)
     fs.mkdir("@_projres/scripts")
     fs.mkdir("@_projres/textures")
 
-    fs.mkdir("@_projres/scripts/modules")
     fs.write("@_projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
 
     stubCoreAssets()

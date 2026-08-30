@@ -1,4 +1,3 @@
-local process = require("@lute/process")
 local win32types = require("@self/types")
 local pathinterface = require("./pathinterface")
 
@@ -290,7 +289,7 @@ end
 function win32.resolve(...: Pathlike): Path
 	local parts = { ... }
 	if #parts == 0 then
-		return win32.parse(process.cwd())
+		return win32.parse(phoenix.fs.cwd())
 	end
 
 	local path = win32.parse(parts[#parts])
@@ -311,7 +310,7 @@ function win32.resolve(...: Pathlike): Path
 	end
 
 	if not win32.isAbsolute(path) then
-		local cwd = win32.parse(process.cwd())
+		local cwd = win32.parse(phoenix.fs.cwd())
 		joinHelper(cwd, path)
 		path = cwd
 	end

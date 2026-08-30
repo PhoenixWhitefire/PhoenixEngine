@@ -1,4 +1,3 @@
-local process = require("@lute/process")
 local posixtypes = require("@self/types")
 local pathinterface = require("./pathinterface")
 
@@ -181,7 +180,7 @@ end
 function posix.resolve(...: Pathlike): Path
 	local parts = { ... }
 	if #parts == 0 then
-		return posix.parse(process.cwd())
+		return posix.parse(phoenix.fs.cwd())
 	end
 
 	local path = posix.parse(parts[#parts])
@@ -202,7 +201,7 @@ function posix.resolve(...: Pathlike): Path
 	end
 
 	if not posix.isAbsolute(path) then
-		local cwd = posix.parse(process.cwd())
+		local cwd = posix.parse(phoenix.fs.cwd())
 		joinHelper(cwd, path)
 		path = cwd
 	end

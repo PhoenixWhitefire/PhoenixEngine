@@ -1,7 +1,7 @@
 --!strict
 -- Submodule of @std/time that provides utility functions for time durations
 
-local time = require("@lute/time")
+local time = require("./time")
 
 --- A span of time.
 export type Duration = time.Duration

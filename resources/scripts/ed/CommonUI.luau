@@ -701,7 +701,8 @@ local function exportProject()
     fs.remove(`{ exportTo }/.vscode`)
 
     if not fs.exists(`{ exportTo }/resources/scripts/std`) then
-        local configFile = fs.readFileToString(`{ exportTo }/resources/scripts/.config.luau`)
+        local configPath = `{ exportTo }/resources/scripts/.config.luau`
+        local configFile = fs.readFileToString(configPath)
         local substitutions = 0
         configFile, substitutions = string.gsub(configFile, phoenix.fs.resolvepathabsolute(Configuration.StdPath), "./std")
 
@@ -709,6 +710,7 @@ local function exportProject()
             Engine:ShowMessageBox("Potential error", "@std was not linked, no possible substitutions were found in the resources/scripts/.config.luau file")
         end
 
+        fs.writeStringToFile(configPath, configFile)
         fs.copy(Configuration.StdPath, `{ exportTo }/resources/scripts/std`)
     end
 

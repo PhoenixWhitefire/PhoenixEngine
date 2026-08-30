@@ -10,6 +10,8 @@ function iolib.write(...: string): ()
 	for i = 1, select("#", ...) do
 		appendlog(select(i, ...) .. "&&")
 	end
+
+	appendlog("")
 end
 
 -- @lute/io.read stub

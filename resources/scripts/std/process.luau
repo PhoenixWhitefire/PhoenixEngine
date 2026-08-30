@@ -3,7 +3,6 @@
 -- stdlib for `@lute/process`
 -- Provides process-related utility functions that handles file paths as path types instead of strings
 
--- local process = require("@lute/process")
 local pathlib = require("@std/path")
 
 local processlib = {}
