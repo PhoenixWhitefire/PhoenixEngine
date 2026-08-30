@@ -2,9 +2,7 @@ return {
     luau = {
         languagemode = "strict",
         aliases = {
-            scripts = "./",
-            modules = "./modules/",
-            std = "__LUTE_STANDARD__"
+            std = "__STANDARD__"
         }
     }
 }

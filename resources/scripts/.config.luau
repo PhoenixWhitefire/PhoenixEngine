@@ -5,8 +5,8 @@ return {
       scripts = "./",
       modules = "./modules/",
       ed = "./ed/",
+      std = "./std",
       lute = "./ed/LuteStd/Lute",
-      std = "./ed/LuteStd/Std",
       batteries = "./ed/LuteStd/Batteries"
     }
   }

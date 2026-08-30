@@ -703,13 +703,13 @@ local function exportProject()
     if not fs.exists(`{ exportTo }/resources/scripts/std`) then
         local configFile = fs.readFileToString(`{ exportTo }/resources/scripts/.config.luau`)
         local substitutions = 0
-        configFile, substitutions = string.gsub(configFile, phoenix.fs.resolvepathabsolute(Configuration.EditorLuteStdPath), "./std")
+        configFile, substitutions = string.gsub(configFile, phoenix.fs.resolvepathabsolute(Configuration.StdPath), "./std")
 
         if substitutions == 0 then
             Engine:ShowMessageBox("Potential error", "@std was not linked, no possible substitutions were found in the resources/scripts/.config.luau file")
         end
 
-        fs.copy(Configuration.EditorLuteStdPath, `{ exportTo }/resources/scripts/std`)
+        fs.copy(Configuration.StdPath, `{ exportTo }/resources/scripts/std`)
     end
 
     fs.copy(enginePath, `{exportTo}/{State.Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)

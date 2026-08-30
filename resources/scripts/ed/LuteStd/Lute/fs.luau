@@ -169,7 +169,7 @@ end
 
 --- Returns `true` if a file or directory exists at `path`.
 function fs.exists(path: string): boolean
-    return fs.exists(path)
+    return phoenix.fs.exists(path)
 end
 
 --- Copies the file at `src` to `dest`.

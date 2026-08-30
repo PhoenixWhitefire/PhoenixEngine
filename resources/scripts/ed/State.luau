@@ -161,7 +161,7 @@ local function createNewProject_(State: StateType)
 
     local configFile = assert(fs.read("@_editres/scripts/defaultconfig.luau"))
     local substitutions = 0
-    configFile, substitutions = string.gsub(configFile, "__LUTE_STANDARD__", fs.resolvepathabsolute(Configuration.EditorLuteStdPath))
+    configFile, substitutions = string.gsub(configFile, "__STANDARD__", fs.resolvepathabsolute(Configuration.StdPath))
 
     if substitutions == 0 then
         warn(`Failed to link Lute's @std`)
@@ -191,26 +191,30 @@ local function createNewProject_(State: StateType)
     State.SavedProjectsCache = nil
 end
 
-local function handleCoreAssetAliasMigration(config)
-    local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
-    assert(typeof(editorconf) == "table")
+local function isFileEditorBuildAtLeast(config: { read Saved: { read EditorBuild: unknown } }, build)
+    local lastSavedData = config.Saved
+
+    if lastSavedData then
+        assert(typeof(lastSavedData) == "table")
+
+        if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= build then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function handleCoreAssetAliasMigration(config: any)
+    if isFileEditorBuildAtLeast(config, 5) then
+        return
+    end
 
     local SymlinkMigrationChoices = {
         Migrated = 1,
         RemindLater = 2,
         DoNotMigrate = 3
     }
-
-    local lastSavedData = editorconf.Saved
-
-    if lastSavedData then
-        assert(typeof(lastSavedData) == "table")
-        lastSavedData = lastSavedData
-
-        if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 5 then
-            return
-        end
-    end
 
     if not Engine.IsHeadless then
         imgui.openpopup("Migrate core assets to alias")
@@ -229,16 +233,16 @@ local function handleCoreAssetAliasMigration(config)
                     assert(connection)
                     connection:Disconnect()
 
-                    editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
+                    config = json.parse(assert(fs.read("@project/phoenix.conf"))) :: any
 
-                    assert(typeof(editorconf) == "table");
-                    editorconf.CoreAssetsSymlinkMigrationChoice = choiceIndex;
+                    assert(typeof(config) == "table");
+                    config.CoreAssetsSymlinkMigrationChoice = choiceIndex;
 
-                    assert(typeof(editorconf.Saved) == "table")
-                    editorconf.Saved.EditorBuild = Configuration.EditorBuild
+                    assert(typeof(config.Saved) == "table")
+                    config.Saved.EditorBuild = Configuration.EditorBuild
 
                     -- TODO luau cast
-                    fs.write("@project/phoenix.conf", json.encode(editorconf :: JsonEncodable))
+                    fs.write("@project/phoenix.conf", json.encode(config :: JsonEncodable))
 
                     if choiceIndex == SymlinkMigrationChoices.Migrated then
                         task.defer(stubCoreAssets)
@@ -299,24 +303,38 @@ local function migrateMaterialsRecursive(start)
     return migrated
 end
 
-local function handleMaterialMigration(config)
-    local editorconf = json.parse(assert(fs.read("@project/phoenix.conf")))
-    assert(typeof(editorconf) == "table")
-
-    local lastSavedData = editorconf.Saved
-
-    if lastSavedData then
-        assert(typeof(lastSavedData) == "table")
-        lastSavedData = lastSavedData
-
-        if typeof(lastSavedData.EditorBuild) == "number" and lastSavedData.EditorBuild >= 6 then
-            return
-        end
+local function handleMaterialMigration(config: any)
+    if isFileEditorBuildAtLeast(config, 6) then
+        return
     end
 
     warn("Migrating materials...")
     local migrated = migrateMaterialsRecursive("materials/")
     print(`Successfully migrated { migrated } materials`)
+end
+
+local function handleStdAliasMigration(config: any)
+    if not isFileEditorBuildAtLeast(config, 6) or isFileEditorBuildAtLeast(config, 7) or not fs.isfile("scripts/.config.luau") then
+        return
+    end
+
+    local oldStdPath = fs.resolvepathabsolute("@_editres/scripts/ed/LuteStd/Std")
+    local newStdPath = fs.resolvepathabsolute(Configuration.StdPath)
+
+    local configContents = assert(fs.read("scripts/.config.luau"))
+    local substitutions = 0
+    configContents, substitutions = string.gsub(configContents, oldStdPath, newStdPath)
+
+    if substitutions > 0 then
+        print("Successfully migrated @std alias path")
+
+    elseif string.find(configContents, "std = \"") == nil then
+        print("No migration made for @std alias path because it was not present")
+    else
+        warn(`Failed to migrate @std alias path: No substitutions made for "{ oldStdPath }" -> "{ newStdPath }"`)
+    end
+
+    fs.write("scripts/.config.luau", configContents)
 end
 
 local function openProject_(State: StateType, ManualPath: string?)
@@ -416,6 +434,7 @@ local function openProject_(State: StateType, ManualPath: string?)
 
     handleCoreAssetAliasMigration(config)
     handleMaterialMigration(config)
+    handleStdAliasMigration(config)
 
     local objects, error = AssetManager:LoadScene("@_projres/scenes/root.world")
 
