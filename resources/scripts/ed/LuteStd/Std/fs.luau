@@ -174,7 +174,7 @@ end
 
 --- Returns an array of `DirectoryEntry` values for the immediate children of the directory at `path`.
 function fslib.listDirectory(path: Pathlike): { DirectoryEntry }
-    local path = phoenix.fs.resolvepath(pathlib.format(path))
+    path = phoenix.fs.resolvepath(pathlib.format(path))
     local entries = fs.listdir(path)
 
     for _, entry in entries do

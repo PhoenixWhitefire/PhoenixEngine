@@ -1224,12 +1224,20 @@ definitionsFile ..= "\n\n"
 
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
 
-fs.writeStringToFile(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv, true)
-fs.writeStringToFile(WIKI_PATH .. "/API-‐-Components.md", components, true)
-fs.writeStringToFile(WIKI_PATH .. "/API-‐-Enums.md", enums, true)
+if not fs.exists(WIKI_PATH) then
+    fs.createDirectory(WIKI_PATH, { makeParents = true })
+end
 
-fs.writeStringToFile("./lsp/phoenix.d.luau", definitionsFile, true)
-fs.writeStringToFile("./lsp/phoenix.json", json.encode(documentationData), true)
+fs.writeStringToFile(WIKI_PATH .. "/API-‐-Script-Environment.md", scriptenv)
+fs.writeStringToFile(WIKI_PATH .. "/API-‐-Components.md", components)
+fs.writeStringToFile(WIKI_PATH .. "/API-‐-Enums.md", enums)
+
+if not fs.exists("./lsp") then
+    fs.createDirectory("./lsp")
+end
+
+fs.writeStringToFile("./lsp/phoenix.d.luau", definitionsFile)
+fs.writeStringToFile("./lsp/phoenix.json", json.encode(documentationData))
 
 print("Docs CI finish\n\n\n\n\n")
 
