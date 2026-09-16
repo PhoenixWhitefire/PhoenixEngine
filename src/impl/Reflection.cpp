@@ -399,10 +399,7 @@ std::string Reflection::GenericValue::ToString() const
     }
 
     default:
-    {
-        assert(false);
         return TypeAsString(Type);
-    }
     }
 }
 
