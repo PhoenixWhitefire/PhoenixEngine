@@ -4620,7 +4620,7 @@ static void renderProperties()
 
                     glm::mat4 mat = curVal.AsMatrix();
 
-                    if (Selections[0]->ObjectId != prevObject || history->GetCurrentWaypoint() != curWaypoint)
+                    if (Selections[0]->ObjectId != prevObject || history->GetCurrentWaypoint() != curWaypoint || !ImGui::IsAnyItemActive())
                     {
                         DecomposeTRS(mat, &trans, &rotquat, &scale);
 
@@ -4657,7 +4657,14 @@ static void renderProperties()
                     ImGui::SetNextItemWidth(halfWidth);
 
                     ImGui::InputFloat3("##S", glm::value_ptr(scale));
+                    deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
+
                     ImGui::Unindent();
+
+                    if (deactivatedAfterEdit)
+                        prevObject = PHX_GAMEOBJECT_NULL_ID;
+                    else
+                        canChangeValue = false;
 
                     rotquat = glm::quat(glm::vec3(glm::radians(rotdegs[0]), glm::radians(rotdegs[1]), glm::radians(rotdegs[2])));
                     mat = glm::translate(glm::mat4(1.f), glm::make_vec3(trans)) * glm::mat4_cast(rotquat) * glm::scale(glm::mat4(1.f), scale);
@@ -4675,12 +4682,11 @@ static void renderProperties()
 
             default:
             {
-                int typeId = static_cast<int>(curVal.Type);
                 std::string typeName = Reflection::TypeAsString(curVal.Type);
 
                 ImGui::Text(
-                    "%s: <Editing of ID:%i ('%s') types not supported>",
-                    propName.data(), typeId, typeName.c_str()
+                    "<%s>",
+                    typeName.c_str()
                 );
 
                 break;

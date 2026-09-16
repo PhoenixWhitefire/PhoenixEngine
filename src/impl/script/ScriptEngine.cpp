@@ -37,8 +37,6 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-LUAU_FASTFLAG(LuauManagedDebugNames)
-
 struct LuauType
 {
     LuauType(lua_Type BaseType)
@@ -64,8 +62,8 @@ static const LuauType s_ValueTypeToLuauType[] = {
     LUA_TBUFFER,
 
     { LUA_TUSERDATA, UserdataTag::Color      },
-    { LUA_TVECTOR,   UserdataTag::invalid  }, // Vector2
-    { LUA_TVECTOR,   UserdataTag::invalid  }, // Vector3
+    { LUA_TVECTOR,   UserdataTag::invalid    }, // Vector2
+    { LUA_TVECTOR,   UserdataTag::invalid    }, // Vector3
     { LUA_TUSERDATA, UserdataTag::Matrix     },
     { LUA_TUSERDATA, UserdataTag::GameObject },
 
@@ -112,8 +110,6 @@ void ScriptEngine::Initialize()
 {
     assert(!Instance);
     Instance = this;
-
-    FFlag::LuauManagedDebugNames.value = true;
 
     RegisterNewVM(ROOT_LVM_NAME);
 
