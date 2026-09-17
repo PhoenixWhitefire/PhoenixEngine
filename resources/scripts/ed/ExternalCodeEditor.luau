@@ -30,7 +30,7 @@ function ExternalCodeEditor.Open(ProjectName: string)
         ExternalCodeEditor.RequestOpenSettingsMenuToConfigure = false
 
         if Preferences.CodeEditorPath == "code" or Preferences.CodeEditorPath == "codium" then
-            local folderPath = `@project/.vs{ Preferences.CodeEditorPath }`
+            local folderPath = `@project/.vscode`
 
             if fs.type(folderPath) ~= "dir" then
                 local lsp = phoenix.fs.resolvepathabsolute("./lsp")
