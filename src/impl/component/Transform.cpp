@@ -26,7 +26,7 @@ static void recomputeChildrenWorldTransformsRecursive(const ObjectHandle& Object
 
     Object->ForEachChild([Object, pct](const ObjectHandle& Child) -> bool
     {
-        if (EcTransform* ct = Child->FindComponent<EcTransform>())
+        if (EcTransform* ct = Child->FindComponent<EcTransform>(); ct && pct) // TODO: pct null?
             ct->Transform = pct->Transform * ct->LocalTransform;
 
         recomputeChildrenWorldTransformsRecursive(Child);
