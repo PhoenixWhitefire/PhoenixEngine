@@ -1,6 +1,7 @@
 assert(plugin)
 
 local Types = require("@ed/Types.luau")
+local task = require("@std/task")
 
 local TestPlugin: Types.Plugin = {
     Name = "Niko Plugin",

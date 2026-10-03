@@ -768,299 +768,310 @@ type Creatables = {
 }
 
 declare extern type EnumCollisionType extends EnumItem with end
-declare extern type EnumCollisionType_INTERNAL extends Enum with
-  read Cube: EnumCollisionType
-  read Sphere: EnumCollisionType
-  read Hulls: EnumCollisionType
-  read MeshComponent: EnumCollisionType
-end
+export type EnumListCollisionType = {
+  read Cube: EnumCollisionType,
+  read Sphere: EnumCollisionType,
+  read Hulls: EnumCollisionType,
+  read MeshComponent: EnumCollisionType,
+  read [ | "Cube" | "Sphere" | "Hulls" | "MeshComponent"]: EnumCollisionType
+}
 
 declare extern type EnumCursor extends EnumItem with end
-declare extern type EnumCursor_INTERNAL extends Enum with
-  read Arrow: EnumCursor
-  read TextInput: EnumCursor
-  read Crosshair: EnumCursor
-  read PointingHand: EnumCursor
-  read ResizeHorizontal: EnumCursor
-  read ResizeVertical: EnumCursor
-  read ResizeNWSE: EnumCursor
-  read ResizeNESW: EnumCursor
-  read ResizeAll: EnumCursor
-  read NotAllowed: EnumCursor
-end
+export type EnumListCursor = {
+  read Arrow: EnumCursor,
+  read TextInput: EnumCursor,
+  read Crosshair: EnumCursor,
+  read PointingHand: EnumCursor,
+  read ResizeHorizontal: EnumCursor,
+  read ResizeVertical: EnumCursor,
+  read ResizeNWSE: EnumCursor,
+  read ResizeNESW: EnumCursor,
+  read ResizeAll: EnumCursor,
+  read NotAllowed: EnumCursor,
+  read [ | "Arrow" | "TextInput" | "Crosshair" | "PointingHand" | "ResizeHorizontal" | "ResizeVertical" | "ResizeNWSE" | "ResizeNESW" | "ResizeAll" | "NotAllowed"]: EnumCursor
+}
 
 declare extern type EnumCursorMode extends EnumItem with end
-declare extern type EnumCursorMode_INTERNAL extends Enum with
-  read Normal: EnumCursorMode
-  read Hidden: EnumCursorMode
-  read Disabled: EnumCursorMode
-  read Captured: EnumCursorMode
-end
+export type EnumListCursorMode = {
+  read Normal: EnumCursorMode,
+  read Hidden: EnumCursorMode,
+  read Disabled: EnumCursorMode,
+  read Captured: EnumCursorMode,
+  read [ | "Normal" | "Hidden" | "Disabled" | "Captured"]: EnumCursorMode
+}
 
 declare extern type EnumFaceCulling extends EnumItem with end
-declare extern type EnumFaceCulling_INTERNAL extends Enum with
-  read None: EnumFaceCulling
-  read Back: EnumFaceCulling
-  read Front: EnumFaceCulling
-end
+export type EnumListFaceCulling = {
+  read None: EnumFaceCulling,
+  read Back: EnumFaceCulling,
+  read Front: EnumFaceCulling,
+  read [ | "None" | "Back" | "Front"]: EnumFaceCulling
+}
 
 declare extern type EnumFileSystemEvent extends EnumItem with end
-declare extern type EnumFileSystemEvent_INTERNAL extends Enum with
-  read Added: EnumFileSystemEvent
-  read Removed: EnumFileSystemEvent
-  read Modified: EnumFileSystemEvent
-  read Renamed_Old: EnumFileSystemEvent
-  read Renamed_New: EnumFileSystemEvent
-end
+export type EnumListFileSystemEvent = {
+  read Added: EnumFileSystemEvent,
+  read Removed: EnumFileSystemEvent,
+  read Modified: EnumFileSystemEvent,
+  read Renamed_Old: EnumFileSystemEvent,
+  read Renamed_New: EnumFileSystemEvent,
+  read [ | "Added" | "Removed" | "Modified" | "Renamed_Old" | "Renamed_New"]: EnumFileSystemEvent
+}
 
 declare extern type EnumImGuiColor extends EnumItem with end
-declare extern type EnumImGuiColor_INTERNAL extends Enum with
-  read Text: EnumImGuiColor
-  read TextDisabled: EnumImGuiColor
-  read WindowBg: EnumImGuiColor
-  read ChildBg: EnumImGuiColor
-  read PopupBg: EnumImGuiColor
-  read Border: EnumImGuiColor
-  read BorderShadow: EnumImGuiColor
-  read FrameBg: EnumImGuiColor
-  read FrameBgHovered: EnumImGuiColor
-  read FrameBgActive: EnumImGuiColor
-  read TitleBg: EnumImGuiColor
-  read TitleBgActive: EnumImGuiColor
-  read TitleBgCollapsed: EnumImGuiColor
-  read MenuBarBg: EnumImGuiColor
-  read ScrollbarBg: EnumImGuiColor
-  read ScrollbarGrab: EnumImGuiColor
-  read ScrollbarGrabHovered: EnumImGuiColor
-  read ScrollbarGrabActive: EnumImGuiColor
-  read CheckMark: EnumImGuiColor
-  read CheckboxSelectedBg: EnumImGuiColor
-  read SliderGrab: EnumImGuiColor
-  read SliderGrabActive: EnumImGuiColor
-  read Button: EnumImGuiColor
-  read ButtonHovered: EnumImGuiColor
-  read ButtonActive: EnumImGuiColor
-  read Header: EnumImGuiColor
-  read HeaderHovered: EnumImGuiColor
-  read HeaderActive: EnumImGuiColor
-  read Separator: EnumImGuiColor
-  read SeparatorHovered: EnumImGuiColor
-  read SeparatorActive: EnumImGuiColor
-  read ResizeGrip: EnumImGuiColor
-  read ResizeGripHovered: EnumImGuiColor
-  read ResizeGripActive: EnumImGuiColor
-  read InputTextCursor: EnumImGuiColor
-  read TabHovered: EnumImGuiColor
-  read Tab: EnumImGuiColor
-  read TabSelected: EnumImGuiColor
-  read TabSelectedOverline: EnumImGuiColor
-  read TabDimmed: EnumImGuiColor
-  read TabDimmedSelected: EnumImGuiColor
-  read TabDimmedSelectedOverline: EnumImGuiColor
-  read DockingPreview: EnumImGuiColor
-  read DockingEmptyBg: EnumImGuiColor
-  read PlotLines: EnumImGuiColor
-  read PlotLinesHovered: EnumImGuiColor
-  read PlotHistogram: EnumImGuiColor
-  read PlotHistogramHovered: EnumImGuiColor
-  read TableHeaderBg: EnumImGuiColor
-  read TableBorderStrong: EnumImGuiColor
-  read TableBorderLight: EnumImGuiColor
-  read TableRowBg: EnumImGuiColor
-  read TableRowBgAlt: EnumImGuiColor
-  read TextLink: EnumImGuiColor
-  read TextSelectedBg: EnumImGuiColor
-  read TreeLines: EnumImGuiColor
-  read DragDropTarget: EnumImGuiColor
-  read DragDropTargetBg: EnumImGuiColor
-  read UnsavedMarker: EnumImGuiColor
-  read NavCursor: EnumImGuiColor
-  read NavWindowingHighlight: EnumImGuiColor
-  read NavWindowingDimBg: EnumImGuiColor
-  read ModalWindowDimBg: EnumImGuiColor
-end
+export type EnumListImGuiColor = {
+  read Text: EnumImGuiColor,
+  read TextDisabled: EnumImGuiColor,
+  read WindowBg: EnumImGuiColor,
+  read ChildBg: EnumImGuiColor,
+  read PopupBg: EnumImGuiColor,
+  read Border: EnumImGuiColor,
+  read BorderShadow: EnumImGuiColor,
+  read FrameBg: EnumImGuiColor,
+  read FrameBgHovered: EnumImGuiColor,
+  read FrameBgActive: EnumImGuiColor,
+  read TitleBg: EnumImGuiColor,
+  read TitleBgActive: EnumImGuiColor,
+  read TitleBgCollapsed: EnumImGuiColor,
+  read MenuBarBg: EnumImGuiColor,
+  read ScrollbarBg: EnumImGuiColor,
+  read ScrollbarGrab: EnumImGuiColor,
+  read ScrollbarGrabHovered: EnumImGuiColor,
+  read ScrollbarGrabActive: EnumImGuiColor,
+  read CheckMark: EnumImGuiColor,
+  read CheckboxSelectedBg: EnumImGuiColor,
+  read SliderGrab: EnumImGuiColor,
+  read SliderGrabActive: EnumImGuiColor,
+  read Button: EnumImGuiColor,
+  read ButtonHovered: EnumImGuiColor,
+  read ButtonActive: EnumImGuiColor,
+  read Header: EnumImGuiColor,
+  read HeaderHovered: EnumImGuiColor,
+  read HeaderActive: EnumImGuiColor,
+  read Separator: EnumImGuiColor,
+  read SeparatorHovered: EnumImGuiColor,
+  read SeparatorActive: EnumImGuiColor,
+  read ResizeGrip: EnumImGuiColor,
+  read ResizeGripHovered: EnumImGuiColor,
+  read ResizeGripActive: EnumImGuiColor,
+  read InputTextCursor: EnumImGuiColor,
+  read TabHovered: EnumImGuiColor,
+  read Tab: EnumImGuiColor,
+  read TabSelected: EnumImGuiColor,
+  read TabSelectedOverline: EnumImGuiColor,
+  read TabDimmed: EnumImGuiColor,
+  read TabDimmedSelected: EnumImGuiColor,
+  read TabDimmedSelectedOverline: EnumImGuiColor,
+  read DockingPreview: EnumImGuiColor,
+  read DockingEmptyBg: EnumImGuiColor,
+  read PlotLines: EnumImGuiColor,
+  read PlotLinesHovered: EnumImGuiColor,
+  read PlotHistogram: EnumImGuiColor,
+  read PlotHistogramHovered: EnumImGuiColor,
+  read TableHeaderBg: EnumImGuiColor,
+  read TableBorderStrong: EnumImGuiColor,
+  read TableBorderLight: EnumImGuiColor,
+  read TableRowBg: EnumImGuiColor,
+  read TableRowBgAlt: EnumImGuiColor,
+  read TextLink: EnumImGuiColor,
+  read TextSelectedBg: EnumImGuiColor,
+  read TreeLines: EnumImGuiColor,
+  read DragDropTarget: EnumImGuiColor,
+  read DragDropTargetBg: EnumImGuiColor,
+  read UnsavedMarker: EnumImGuiColor,
+  read NavCursor: EnumImGuiColor,
+  read NavWindowingHighlight: EnumImGuiColor,
+  read NavWindowingDimBg: EnumImGuiColor,
+  read ModalWindowDimBg: EnumImGuiColor,
+  read [ | "Text" | "TextDisabled" | "WindowBg" | "ChildBg" | "PopupBg" | "Border" | "BorderShadow" | "FrameBg" | "FrameBgHovered" | "FrameBgActive" | "TitleBg" | "TitleBgActive" | "TitleBgCollapsed" | "MenuBarBg" | "ScrollbarBg" | "ScrollbarGrab" | "ScrollbarGrabHovered" | "ScrollbarGrabActive" | "CheckMark" | "CheckboxSelectedBg" | "SliderGrab" | "SliderGrabActive" | "Button" | "ButtonHovered" | "ButtonActive" | "Header" | "HeaderHovered" | "HeaderActive" | "Separator" | "SeparatorHovered" | "SeparatorActive" | "ResizeGrip" | "ResizeGripHovered" | "ResizeGripActive" | "InputTextCursor" | "TabHovered" | "Tab" | "TabSelected" | "TabSelectedOverline" | "TabDimmed" | "TabDimmedSelected" | "TabDimmedSelectedOverline" | "DockingPreview" | "DockingEmptyBg" | "PlotLines" | "PlotLinesHovered" | "PlotHistogram" | "PlotHistogramHovered" | "TableHeaderBg" | "TableBorderStrong" | "TableBorderLight" | "TableRowBg" | "TableRowBgAlt" | "TextLink" | "TextSelectedBg" | "TreeLines" | "DragDropTarget" | "DragDropTargetBg" | "UnsavedMarker" | "NavCursor" | "NavWindowingHighlight" | "NavWindowingDimBg" | "ModalWindowDimBg"]: EnumImGuiColor
+}
 
 declare extern type EnumInputAction extends EnumItem with end
-declare extern type EnumInputAction_INTERNAL extends Enum with
-  read Released: EnumInputAction
-  read Pressed: EnumInputAction
-  read Repeated: EnumInputAction
-end
+export type EnumListInputAction = {
+  read Released: EnumInputAction,
+  read Pressed: EnumInputAction,
+  read Repeated: EnumInputAction,
+  read [ | "Released" | "Pressed" | "Repeated"]: EnumInputAction
+}
 
 declare extern type EnumKey extends EnumItem with end
-declare extern type EnumKey_INTERNAL extends Enum with
-  read Space: EnumKey
-  read Apostrophe: EnumKey
-  read Comma: EnumKey
-  read Minus: EnumKey
-  read Period: EnumKey
-  read Slash: EnumKey
-  read Zero: EnumKey
-  read One: EnumKey
-  read Two: EnumKey
-  read Three: EnumKey
-  read Four: EnumKey
-  read Five: EnumKey
-  read Six: EnumKey
-  read Seven: EnumKey
-  read Eight: EnumKey
-  read Nine: EnumKey
-  read Semicolon: EnumKey
-  read Equal: EnumKey
-  read A: EnumKey
-  read B: EnumKey
-  read C: EnumKey
-  read D: EnumKey
-  read E: EnumKey
-  read F: EnumKey
-  read G: EnumKey
-  read H: EnumKey
-  read I: EnumKey
-  read J: EnumKey
-  read K: EnumKey
-  read L: EnumKey
-  read M: EnumKey
-  read N: EnumKey
-  read O: EnumKey
-  read P: EnumKey
-  read Q: EnumKey
-  read R: EnumKey
-  read S: EnumKey
-  read T: EnumKey
-  read U: EnumKey
-  read V: EnumKey
-  read W: EnumKey
-  read X: EnumKey
-  read Y: EnumKey
-  read Z: EnumKey
-  read LeftBracket: EnumKey
-  read Backslash: EnumKey
-  read RightBracket: EnumKey
-  read GraveAccent: EnumKey
-  read World1: EnumKey
-  read World2: EnumKey
-  read Escape: EnumKey
-  read Enter: EnumKey
-  read Tab: EnumKey
-  read Backspace: EnumKey
-  read Insert: EnumKey
-  read Delete: EnumKey
-  read Right: EnumKey
-  read Left: EnumKey
-  read Down: EnumKey
-  read Up: EnumKey
-  read PageUp: EnumKey
-  read PageDown: EnumKey
-  read Home: EnumKey
-  read End: EnumKey
-  read CapsLock: EnumKey
-  read ScrollLock: EnumKey
-  read NumLock: EnumKey
-  read PrintScreen: EnumKey
-  read Pause: EnumKey
-  read F1: EnumKey
-  read F2: EnumKey
-  read F3: EnumKey
-  read F4: EnumKey
-  read F5: EnumKey
-  read F6: EnumKey
-  read F7: EnumKey
-  read F8: EnumKey
-  read F9: EnumKey
-  read F10: EnumKey
-  read F11: EnumKey
-  read F12: EnumKey
-  read F13: EnumKey
-  read F14: EnumKey
-  read F15: EnumKey
-  read F16: EnumKey
-  read F17: EnumKey
-  read F18: EnumKey
-  read F19: EnumKey
-  read F20: EnumKey
-  read F21: EnumKey
-  read F22: EnumKey
-  read F23: EnumKey
-  read F24: EnumKey
-  read F25: EnumKey
-  read Numpad0: EnumKey
-  read Numpad1: EnumKey
-  read Numpad2: EnumKey
-  read Numpad3: EnumKey
-  read Numpad4: EnumKey
-  read Numpad5: EnumKey
-  read Numpad6: EnumKey
-  read Numpad7: EnumKey
-  read Numpad8: EnumKey
-  read Numpad9: EnumKey
-  read NumpadDecimal: EnumKey
-  read NumpadDivide: EnumKey
-  read NumpadMultiply: EnumKey
-  read NumpadSubtract: EnumKey
-  read NumpadAdd: EnumKey
-  read NumpadEnter: EnumKey
-  read NumpadEqual: EnumKey
-  read LeftShift: EnumKey
-  read LeftControl: EnumKey
-  read LeftAlt: EnumKey
-  read LeftSuper: EnumKey
-  read RightShift: EnumKey
-  read RightControl: EnumKey
-  read RightAlt: EnumKey
-  read RightSuper: EnumKey
-end
+export type EnumListKey = {
+  read Space: EnumKey,
+  read Apostrophe: EnumKey,
+  read Comma: EnumKey,
+  read Minus: EnumKey,
+  read Period: EnumKey,
+  read Slash: EnumKey,
+  read Zero: EnumKey,
+  read One: EnumKey,
+  read Two: EnumKey,
+  read Three: EnumKey,
+  read Four: EnumKey,
+  read Five: EnumKey,
+  read Six: EnumKey,
+  read Seven: EnumKey,
+  read Eight: EnumKey,
+  read Nine: EnumKey,
+  read Semicolon: EnumKey,
+  read Equal: EnumKey,
+  read A: EnumKey,
+  read B: EnumKey,
+  read C: EnumKey,
+  read D: EnumKey,
+  read E: EnumKey,
+  read F: EnumKey,
+  read G: EnumKey,
+  read H: EnumKey,
+  read I: EnumKey,
+  read J: EnumKey,
+  read K: EnumKey,
+  read L: EnumKey,
+  read M: EnumKey,
+  read N: EnumKey,
+  read O: EnumKey,
+  read P: EnumKey,
+  read Q: EnumKey,
+  read R: EnumKey,
+  read S: EnumKey,
+  read T: EnumKey,
+  read U: EnumKey,
+  read V: EnumKey,
+  read W: EnumKey,
+  read X: EnumKey,
+  read Y: EnumKey,
+  read Z: EnumKey,
+  read LeftBracket: EnumKey,
+  read Backslash: EnumKey,
+  read RightBracket: EnumKey,
+  read GraveAccent: EnumKey,
+  read World1: EnumKey,
+  read World2: EnumKey,
+  read Escape: EnumKey,
+  read Enter: EnumKey,
+  read Tab: EnumKey,
+  read Backspace: EnumKey,
+  read Insert: EnumKey,
+  read Delete: EnumKey,
+  read Right: EnumKey,
+  read Left: EnumKey,
+  read Down: EnumKey,
+  read Up: EnumKey,
+  read PageUp: EnumKey,
+  read PageDown: EnumKey,
+  read Home: EnumKey,
+  read End: EnumKey,
+  read CapsLock: EnumKey,
+  read ScrollLock: EnumKey,
+  read NumLock: EnumKey,
+  read PrintScreen: EnumKey,
+  read Pause: EnumKey,
+  read F1: EnumKey,
+  read F2: EnumKey,
+  read F3: EnumKey,
+  read F4: EnumKey,
+  read F5: EnumKey,
+  read F6: EnumKey,
+  read F7: EnumKey,
+  read F8: EnumKey,
+  read F9: EnumKey,
+  read F10: EnumKey,
+  read F11: EnumKey,
+  read F12: EnumKey,
+  read F13: EnumKey,
+  read F14: EnumKey,
+  read F15: EnumKey,
+  read F16: EnumKey,
+  read F17: EnumKey,
+  read F18: EnumKey,
+  read F19: EnumKey,
+  read F20: EnumKey,
+  read F21: EnumKey,
+  read F22: EnumKey,
+  read F23: EnumKey,
+  read F24: EnumKey,
+  read F25: EnumKey,
+  read Numpad0: EnumKey,
+  read Numpad1: EnumKey,
+  read Numpad2: EnumKey,
+  read Numpad3: EnumKey,
+  read Numpad4: EnumKey,
+  read Numpad5: EnumKey,
+  read Numpad6: EnumKey,
+  read Numpad7: EnumKey,
+  read Numpad8: EnumKey,
+  read Numpad9: EnumKey,
+  read NumpadDecimal: EnumKey,
+  read NumpadDivide: EnumKey,
+  read NumpadMultiply: EnumKey,
+  read NumpadSubtract: EnumKey,
+  read NumpadAdd: EnumKey,
+  read NumpadEnter: EnumKey,
+  read NumpadEqual: EnumKey,
+  read LeftShift: EnumKey,
+  read LeftControl: EnumKey,
+  read LeftAlt: EnumKey,
+  read LeftSuper: EnumKey,
+  read RightShift: EnumKey,
+  read RightControl: EnumKey,
+  read RightAlt: EnumKey,
+  read RightSuper: EnumKey,
+  read [ | "Space" | "Apostrophe" | "Comma" | "Minus" | "Period" | "Slash" | "Zero" | "One" | "Two" | "Three" | "Four" | "Five" | "Six" | "Seven" | "Eight" | "Nine" | "Semicolon" | "Equal" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "LeftBracket" | "Backslash" | "RightBracket" | "GraveAccent" | "World1" | "World2" | "Escape" | "Enter" | "Tab" | "Backspace" | "Insert" | "Delete" | "Right" | "Left" | "Down" | "Up" | "PageUp" | "PageDown" | "Home" | "End" | "CapsLock" | "ScrollLock" | "NumLock" | "PrintScreen" | "Pause" | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12" | "F13" | "F14" | "F15" | "F16" | "F17" | "F18" | "F19" | "F20" | "F21" | "F22" | "F23" | "F24" | "F25" | "Numpad0" | "Numpad1" | "Numpad2" | "Numpad3" | "Numpad4" | "Numpad5" | "Numpad6" | "Numpad7" | "Numpad8" | "Numpad9" | "NumpadDecimal" | "NumpadDivide" | "NumpadMultiply" | "NumpadSubtract" | "NumpadAdd" | "NumpadEnter" | "NumpadEqual" | "LeftShift" | "LeftControl" | "LeftAlt" | "LeftSuper" | "RightShift" | "RightControl" | "RightAlt" | "RightSuper"]: EnumKey
+}
 
 declare extern type EnumLogType extends EnumItem with end
-declare extern type EnumLogType_INTERNAL extends Enum with
-  read None: EnumLogType
-  read Info: EnumLogType
-  read Warning: EnumLogType
-  read Error: EnumLogType
-end
+export type EnumListLogType = {
+  read None: EnumLogType,
+  read Info: EnumLogType,
+  read Warning: EnumLogType,
+  read Error: EnumLogType,
+  read [ | "None" | "Info" | "Warning" | "Error"]: EnumLogType
+}
 
 declare extern type EnumMouseButton extends EnumItem with end
-declare extern type EnumMouseButton_INTERNAL extends Enum with
-  read Left: EnumMouseButton
-  read Right: EnumMouseButton
-  read Middle: EnumMouseButton
-end
+export type EnumListMouseButton = {
+  read Left: EnumMouseButton,
+  read Right: EnumMouseButton,
+  read Middle: EnumMouseButton,
+  read [ | "Left" | "Right" | "Middle"]: EnumMouseButton
+}
 
 declare extern type EnumValueType extends EnumItem with end
-declare extern type EnumValueType_INTERNAL extends Enum with
-  read Boolean: EnumValueType
-  read Integer: EnumValueType
-  read Double: EnumValueType
-  read String: EnumValueType
-  read Buffer: EnumValueType
-  read Color: EnumValueType
-  read Vector2: EnumValueType
-  read Vector3: EnumValueType
-  read Matrix: EnumValueType
-  read GameObject: EnumValueType
-  read Function: EnumValueType
-  read Array: EnumValueType
-  read Map: EnumValueType
-  read EventSignal: EnumValueType
-  read InputEvent: EnumValueType
-  read NumberGradient: EnumValueType
-  read VectorGradient: EnumValueType
-  read ColorGradient: EnumValueType
-  read Null: EnumValueType
-  read Any: EnumValueType
-end
+export type EnumListValueType = {
+  read Boolean: EnumValueType,
+  read Integer: EnumValueType,
+  read Double: EnumValueType,
+  read String: EnumValueType,
+  read Buffer: EnumValueType,
+  read Color: EnumValueType,
+  read Vector2: EnumValueType,
+  read Vector3: EnumValueType,
+  read Matrix: EnumValueType,
+  read GameObject: EnumValueType,
+  read Function: EnumValueType,
+  read Array: EnumValueType,
+  read Map: EnumValueType,
+  read EventSignal: EnumValueType,
+  read InputEvent: EnumValueType,
+  read NumberGradient: EnumValueType,
+  read VectorGradient: EnumValueType,
+  read ColorGradient: EnumValueType,
+  read Null: EnumValueType,
+  read Any: EnumValueType,
+  read [ | "Boolean" | "Integer" | "Double" | "String" | "Buffer" | "Color" | "Vector2" | "Vector3" | "Matrix" | "GameObject" | "Function" | "Array" | "Map" | "EventSignal" | "InputEvent" | "NumberGradient" | "VectorGradient" | "ColorGradient" | "Null" | "Any"]: EnumValueType
+}
 declare Enum: {
-  CollisionType: EnumCollisionType_INTERNAL,
-  Cursor: EnumCursor_INTERNAL,
-  CursorMode: EnumCursorMode_INTERNAL,
-  FaceCulling: EnumFaceCulling_INTERNAL,
-  FileSystemEvent: EnumFileSystemEvent_INTERNAL,
-  ImGuiColor: EnumImGuiColor_INTERNAL,
-  InputAction: EnumInputAction_INTERNAL,
-  Key: EnumKey_INTERNAL,
-  LogType: EnumLogType_INTERNAL,
-  MouseButton: EnumMouseButton_INTERNAL,
-  ValueType: EnumValueType_INTERNAL,
-  [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "FileSystemEvent" | "ImGuiColor" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumCollisionType_INTERNAL | EnumCursor_INTERNAL | EnumCursorMode_INTERNAL | EnumFaceCulling_INTERNAL | EnumFileSystemEvent_INTERNAL | EnumImGuiColor_INTERNAL | EnumInputAction_INTERNAL | EnumKey_INTERNAL | EnumLogType_INTERNAL | EnumMouseButton_INTERNAL | EnumValueType_INTERNAL
+  CollisionType: EnumListCollisionType,
+  Cursor: EnumListCursor,
+  CursorMode: EnumListCursorMode,
+  FaceCulling: EnumListFaceCulling,
+  FileSystemEvent: EnumListFileSystemEvent,
+  ImGuiColor: EnumListImGuiColor,
+  InputAction: EnumListInputAction,
+  Key: EnumListKey,
+  LogType: EnumListLogType,
+  MouseButton: EnumListMouseButton,
+  ValueType: EnumListValueType,
+  [ | "CollisionType" | "Cursor" | "CursorMode" | "FaceCulling" | "FileSystemEvent" | "ImGuiColor" | "InputAction" | "Key" | "LogType" | "MouseButton" | "ValueType"]:  | EnumListCollisionType | EnumListCursor | EnumListCursorMode | EnumListFaceCulling | EnumListFileSystemEvent | EnumListImGuiColor | EnumListInputAction | EnumListKey | EnumListLogType | EnumListMouseButton | EnumListValueType
 }
 
 

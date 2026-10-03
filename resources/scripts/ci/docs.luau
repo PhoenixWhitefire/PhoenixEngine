@@ -1090,9 +1090,9 @@ local function documentLibrary(name, definitionsFile: string, isPhoenix: boolean
 
             definitionsFile ..= "\n"
             definitionsFile ..= `declare extern type Enum{e} extends EnumItem with end\n`
-            definitionsFile ..= `declare extern type Enum{e}_INTERNAL extends Enum with\n`
+            definitionsFile ..= `export type EnumList{e} = \{\n`
             namesUnion ..= ` | "{e}"`
-            typesUnion ..= ` | Enum{e}_INTERNAL`
+            typesUnion ..= ` | EnumList{e}`
 
             if not members[e] then
                 docWarn(`Enum.{e} has no documentation`)
@@ -1135,8 +1135,12 @@ local function documentLibrary(name, definitionsFile: string, isPhoenix: boolean
                 return a.Value < b.Value
             end)
 
+            local itemNamesUnion = ""
+
             for _, item in orderedItems do
-                definitionsFile ..= `  read {item.Name}: Enum{e}\n`
+                definitionsFile ..= `  read {item.Name}: Enum{e},\n`
+                itemNamesUnion ..= ` | "{ item.Name }"`
+
                 if members[e].Items and not members[e].Items[item.Name] then
                     docWarn(`Enum.{e}.{item.Name} has no documentation`)
                 end
@@ -1148,8 +1152,9 @@ local function documentLibrary(name, definitionsFile: string, isPhoenix: boolean
                 enums ..= `|{item.Name}|{(members[e].Items or {})[item.Name] or ""}|{item.Value}|\n`
             end
 
-            definitionsFile ..= "end\n"
-            enumList ..= `  {e}: Enum{e}_INTERNAL,\n`
+            definitionsFile ..= `  read [{ itemNamesUnion }]: Enum{e}\n`
+            definitionsFile ..= "}\n"
+            enumList ..= `  {e}: EnumList{e},\n`
             enums ..= "\n\n"
         end
 
