@@ -172,6 +172,11 @@ declare extern type EnumItem with
 end
 
 type function findComponentsFromUnionRecursive(un: type): { type }
+    -- TODO luau
+    if not EngineComponents then
+        return {}
+    end
+
     local results = {}
 
     for _, t in un:components() do
@@ -183,7 +188,7 @@ type function findComponentsFromUnionRecursive(un: type): { type }
             local found = false
 
             -- Note: can't do direct index check because types won't be rawequal
-            for i, c in Components:properties() do
+            for i, c in EngineComponents:properties() do
                 if i:value() == t:value() then
                     table.insert(results, c.read)
                     found = true
@@ -192,7 +197,7 @@ type function findComponentsFromUnionRecursive(un: type): { type }
             end
 
             if not found and t:value() ~= "" then
-                error(`invalid component '{t:value()}'`)
+                error(`Invalid component '{t:value()}'`)
             end
         end
     end
@@ -202,7 +207,7 @@ end
 
 type function IntersectComponents(ty: type)
     if ty:is("singleton") then
-        for i, c in Components:properties() do
+        for i, c in EngineComponents:properties() do
             if i:value() == ty:value() then
                 return c.read
             end
@@ -273,6 +278,9 @@ export type DebugBreakpointInfo = {
 
 type LoggingLogValue = { String: string, Value: unknown }
 
+declare extern type ComponentDefinition with
+end
+
 -- Finish intro --
 ]]
 
@@ -289,8 +297,9 @@ local documentationData = {}
 
 local GameObjectOverrides = {
     -- TODO luau should really be `read T & keyof<Components>` but that's resulting in `never` (?)
-    new = "(<T>(Components: { read T | \"\" }, Custom: { read [string]: unknown }?) -> GameObject & IntersectComponents<T>) & () -> GameObject",
+    new = "(<T, C>(Components: { read T | \"\" }, Custom: { read [C & ComponentDefinition]: C }?) -> GameObject & IntersectComponents<T> & C) & () -> GameObject",
     fromTemplate = "(<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>)",
+    defineComponent = "<C>({ read Name: string }) -> ComponentDefinition & C",
     --FindChildWithComponent = "<T>(self, ComponentName: keyof<Components> & T) -> (GameObject & index<Components, T>)?",
 }
 
@@ -305,7 +314,7 @@ local function dumpCreatables()
         RigidBody = " & EcTransform"
     }
 
-    definitionsFile ..= "\ntype Components = {\n"
+    definitionsFile ..= "\ntype EngineComponents = {\n"
 
     for _, v in GameObject.validComponents do
         definitionsFile ..= `  {v}: Ec{v},\n`
@@ -637,6 +646,7 @@ local function dumpReflectionApi(t, d, cn, externType)
 
                 if not close then
                     docWarn(`{cn}.{n} improper formatting of type, missing ') :'. Got {subst}`)
+                    continue
                 end
 
                 if string.sub(subst, 1, 1) == ")" then -- ") : ([...])" when no inputs

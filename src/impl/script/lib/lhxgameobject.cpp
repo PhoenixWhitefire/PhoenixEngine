@@ -69,7 +69,7 @@ static void addBuiltinComponents(lua_State* L, ObjectHandle& newObject)
 {
     luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table for argument 1, or 0 or 2 arguments");
 
-    for (int iter = 0; (iter = lua_rawiter(L, 1, iter) != -1);)
+    for (int iter = 0; (iter = lua_rawiter(L, 1, iter)) != -1;)
     {
         if (lua_type(L, -1) != LUA_TSTRING)
         {
@@ -182,10 +182,35 @@ static int gameobject_defineComponent(lua_State* L)
     return 1; // return name
 }
 
+static int gameobject_clearAllComponentDefinitions(lua_State* L)
+{
+    for (auto& [ _, vm ] : ScriptEngine::Get()->VMs)
+    {
+        if (lua_getfield(vm->MainThread, LUA_REGISTRYINDEX, "LDC") != LUA_TNIL)
+        {
+            for (int iter = 0; (iter = lua_rawiter(vm->MainThread, -1, iter)) != -1;)
+            {
+                GameObject* object = luhx_checkgameobject(vm->MainThread, -1);
+
+                if (object->FindComponent<EcLuauData>())
+                    object->RemoveComponent(EntityComponent::LuauData);
+
+                lua_pop(vm->MainThread, 2);
+            }
+        }
+
+        lua_pop(vm->MainThread, 1);
+    }
+
+    static_cast<LuauDataComponentManager*>(LuauDataComponentManager::Get())->LuauComponentNames.clear();
+    return 0;
+}
+
 static const luaL_Reg gameobject_funcs[] = {
     { "new", gameobject_new },
     { "fromTemplate", gameobject_fromTemplate },
     { "defineComponent", gameobject_defineComponent },
+    { "clearAllComponentDefinitions", gameobject_clearAllComponentDefinitions },
 
     { NULL, NULL }
 };
@@ -276,6 +301,30 @@ static int obj_index(lua_State* L)
     else if (const Reflection::MethodDescriptor* method = obj->FindMethod(key, &ref))
         pushMethod(L, key, method, ref);
 
+    else if (const EcLuauData* el = obj->FindComponent<EcLuauData>())
+    {
+        for (const EcLuauData::LuauComponent& lc : el->ComponentData)
+        {
+            lua_getref(lc.VM, lc.Id);
+
+            if (lua_getfield(lc.VM, -1, keyCstr) != LUA_TNIL && lua_mainthread(L) == lc.VM)
+            {
+                lua_xmove(lc.VM, L, 1);
+                lua_pop(lc.VM, 1);
+
+                return 1;
+            }
+            else
+            {
+                lua_pop(lc.VM, 2);
+            }
+        }
+
+        // Optional fields.
+        lua_pushnil(L);
+        return 1;
+    }
+
     else
     {
         GameObject* child = obj->FindChild(key);
@@ -338,6 +387,28 @@ static int obj_newindex(lua_State* L)
         {
             luaL_error(L, "Error while setting property '%s' of %s: %s", key.data(), obj->GetFullName().c_str(), err.what());
         }
+    }
+    else if (const EcLuauData* el = obj->FindComponent<EcLuauData>())
+    {
+        for (const EcLuauData::LuauComponent& lc : el->ComponentData)
+        {
+            lua_getref(lc.VM, lc.Id);
+
+            if (lua_getfield(lc.VM, -1, keyCstr) != LUA_TNIL && lua_mainthread(L) == lc.VM)
+            {
+                lua_pop(lc.VM, 1);
+                lua_xmove(L, lc.VM, 1);
+                lua_setfield(lc.VM, -2, keyCstr);
+
+                return 0;
+            }
+            else
+            {
+                lua_pop(lc.VM, 2);
+            }
+        }
+
+        luaL_error(L, "Cannot assign to '%s' of %s: It was neither a property, nor a field present in the value of any custom components", keyCstr, obj->GetFullName().c_str());
     }
     else
     {

@@ -892,7 +892,7 @@ uint32_t GameObject::AddComponent(EntityComponent Type)
     assert(Type != EntityComponent::None);
 
     if (FindComponentByType(Type))
-        RAISE_RT("Already have that component");
+        RAISE_RT("{} already has component {}", GetFullName(), s_EntityComponentNames[Type]);
 
     IComponentManager* manager = GetComponentManagerByComponentType(Type);
     Components.emplace_back(manager->CreateComponent(this), Type);

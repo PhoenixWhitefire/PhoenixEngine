@@ -69,6 +69,8 @@ function ProjectPlaying.Enter(_prev)
     ScriptEngine:CreateVM(Configuration.PlaytestVMName)
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
 
+    GameObject.clearAllComponentDefinitions()
+
     Physics:SetSimulationForcePaused(false)
 
     if Preferences.DebuggerEnabled then

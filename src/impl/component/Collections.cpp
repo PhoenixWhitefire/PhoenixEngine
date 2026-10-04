@@ -1,5 +1,6 @@
 // Collections service - tagging objects, 31/01/2026
 #include "component/Collections.hpp"
+#include "component/LuauData.hpp"
 #include "datatype/GameObject.hpp"
 #include "Utilities.hpp"
 
@@ -110,6 +111,45 @@ const Reflection::StaticMethodMap& CollectionsComponentManager::GetMethods()
                 {
                     if (component->Object->OwningDataModel == datamodel)
                         ret.push_back(component->Object->ToGenericValue());
+
+                    return true;
+                });
+
+                return { Reflection::GenericValue(ret) };
+            }
+        } },
+
+        { "Query", Reflection::MethodDescriptor{
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
+            REFLECTION_SPAN({ Reflection::ValueType::Array }),
+            [](void* p, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
+            {
+                const std::span<Reflection::GenericValue> namesGv = inputs[0].AsArray();
+                std::vector<Reflection::GenericValue> ret;
+
+                GetComponentManagerByComponentType(EntityComponent::LuauData)->ForEachComponent([&ret, namesGv](BaseComponent* component) -> bool
+                {
+                    EcLuauData* el = static_cast<EcLuauData*>(component);
+                    bool hasAll = true;
+
+                    for (const Reflection::GenericValue& name : namesGv)
+                    {
+                        if (std::find_if(
+                            el->ComponentData.begin(),
+                            el->ComponentData.end(),
+                            [&](const EcLuauData::LuauComponent& c)
+                            {
+                                return c.Name == name.AsStringView();
+                            }) == el->ComponentData.end()
+                        )
+                        {
+                            hasAll = false;
+                            break;
+                        }
+                    }
+
+                    if (hasAll)
+                        ret.push_back(component->Object);
 
                     return true;
                 });

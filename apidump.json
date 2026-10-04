@@ -86,7 +86,8 @@
           "GetObjectsWithComponent": "(String, GameObject?) -> (Array)",
           "GetTagAddedSignal": "(String) -> (EventSignal)",
           "GetTagRemovedSignal": "(String) -> (EventSignal)",
-          "GetTagged": "(String) -> (Array)"
+          "GetTagged": "(String) -> (Array)",
+          "Query": "(Array) -> (Array)"
         }
       },
       "DataModel": {
@@ -443,6 +444,7 @@
       "EventSignal": {},
       "GameObject": {
         "Library": {
+          "clearAllComponentDefinitions": "function",
           "defineComponent": "function",
           "fromTemplate": "function",
           "new": "function",
