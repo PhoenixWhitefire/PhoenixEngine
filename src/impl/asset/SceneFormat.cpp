@@ -15,6 +15,7 @@
 #include "component/RigidBody.hpp"
 #include "component/Light.hpp"
 #include "component/Mesh.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 

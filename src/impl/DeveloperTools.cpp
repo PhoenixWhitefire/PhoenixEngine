@@ -4076,6 +4076,8 @@ static bool isInternalTagName(const std::string_view& name)
     return name.find("Phoenix_") == 0;
 }
 
+static bool debugVariable(lua_State* L, bool CanEdit = true);
+
 static void renderProperties()
 {
     ZoneScoped;
@@ -4277,6 +4279,26 @@ static void renderProperties()
         float halfWidth = cavailX / 2.f;
 
         ImGui::Separator();
+
+        if (EcLuauData* el = Selections[0]->FindComponent<EcLuauData>(); Selections.size() == 1 && el)
+        {
+            for (EcLuauData::LuauComponent& component : el->ComponentData)
+            {
+                if (ImGui::CollapsingHeader(component.Name.c_str()))
+                {
+                    lua_pushliteral(component.VM, "");
+                    lua_getref(component.VM, component.Id);
+
+                    if (debugVariable(component.VM))
+                    {
+                        lua_rawseti(component.VM, LUA_REGISTRYINDEX, component.Id);
+                        lua_pop(component.VM, 1);
+                    }
+                    else
+                        lua_pop(component.VM, 2);
+                }
+            }
+        }
 
         for (size_t propIndex = 0; propIndex < propsOrdered.size(); propIndex++)
         {
@@ -5678,7 +5700,7 @@ const LuauCoroutineStatusDisplayInfo LuauCoroutineStatuses[] = {
     { "ERR",   "ERR\nFinished with error",                       ImVec4(1.f, 0.f, 0.f, 1.f) }
 };
 
-static bool debugVariable(lua_State* L, bool CanEdit = true)
+static bool debugVariable(lua_State* L, bool CanEdit)
 {
     ZoneScoped;
     luaL_checkstack(L, 2, "debugVariable");

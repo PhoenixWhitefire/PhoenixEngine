@@ -15,6 +15,7 @@
 #include "component/Interface.hpp"
 #include "component/Light.hpp"
 #include "component/LoggingService.hpp"
+#include "component/LuauData.hpp"
 #include "component/Mesh.hpp"
 #include "component/Model.hpp"
 #include "component/NetworkService.hpp"
@@ -52,6 +53,7 @@ struct AllComponentManagers
     DirectionalLightComponentManager DirectionalLight;
     SpotLightComponentManager SpotLight;
     LoggingComponentManager LoggingService;
+    LuauDataComponentManager LuauData;
     MeshComponentManager Mesh;
     ModelComponentManager Model;
     NetworkComponentManager NetworkService;

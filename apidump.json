@@ -219,6 +219,7 @@
           "Write": "(String, Integer, String?) -> ()"
         }
       },
+      "LuauData": {},
       "Mesh": {
         "Properties": {
           "CastsShadows": "Boolean",
@@ -442,7 +443,7 @@
       "EventSignal": {},
       "GameObject": {
         "Library": {
-          "fromId": "function",
+          "defineComponent": "function",
           "fromTemplate": "function",
           "new": "function",
           "validComponents": "table"

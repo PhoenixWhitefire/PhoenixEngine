@@ -11,7 +11,6 @@
 #include <nljson.hpp>
 
 #include "Reflection.hpp"
-#include "Utilities.hpp"
 #include "Stl.hpp"
 
 #include "datatype/EntityComponent.hpp"

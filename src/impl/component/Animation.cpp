@@ -8,6 +8,7 @@
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 #include "asset/Binary.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 
 const Reflection::StaticPropertyMap& AnimationComponentManager::GetProperties()

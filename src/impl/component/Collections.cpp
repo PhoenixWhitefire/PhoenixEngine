@@ -1,6 +1,7 @@
 // Collections service - tagging objects, 31/01/2026
 #include "component/Collections.hpp"
 #include "datatype/GameObject.hpp"
+#include "Utilities.hpp"
 
 uint32_t CollectionsComponentManager::CreateComponent(GameObject* Object)
 {

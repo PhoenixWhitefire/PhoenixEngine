@@ -1,6 +1,7 @@
 // Ref.cpp, Compile times are too long
 #include "datatype/Ref.hpp"
 #include "datatype/GameObject.hpp"
+#include "Utilities.hpp"
 
 ObjectRef::ObjectRef(const GameObject* Object)
 {

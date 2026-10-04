@@ -6,6 +6,7 @@
 #include "script/luhx.hpp"
 #include "script/UserdataTags.hpp"
 #include "script/LightUserdataTags.hpp"
+#include "component/LuauData.hpp"
 
 #define OBJECT_REG "OBJECT"
 
@@ -64,33 +65,79 @@ GameObject* luhx_checkgameobject(lua_State* L, int StackIndex)
     return GameObjectManager::Get()->FindById(*idptr);
 }
 
+static void addBuiltinComponents(lua_State* L, ObjectHandle& newObject)
+{
+    luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table for argument 1, or 0 or 2 arguments");
+
+    for (int iter = 0; (iter = lua_rawiter(L, 1, iter) != -1);)
+    {
+        if (lua_type(L, -1) != LUA_TSTRING)
+        {
+            const char* vtn = luaL_typename(L, -1);
+            luaL_error(L, "Non-string '%s' (%s) in Components table", luaL_tolstring(L, -1, nullptr), vtn);
+        }
+
+        const char* n = luaL_checkstring(L, -1);
+        EntityComponent ec = FindComponentTypeByName(n);
+
+        if (ec == EntityComponent::None)
+            luaL_error(L, "Invalid component '%s'", n);
+        newObject->AddComponent(ec);
+
+        lua_pop(L, 2);
+    }
+}
+
 static int gameobject_new(lua_State* L)
 {
     ObjectHandle newObject = GameObjectManager::Get()->Create();
 
     if (lua_gettop(L) == 1)
     {
-        luaL_argcheck(L, lua_type(L, 1) == LUA_TTABLE, 1, "expected table for argument 1, or 0 arguments");
+        addBuiltinComponents(L, newObject);
+    }
+    else if (lua_gettop(L) == 2)
+    {
+        addBuiltinComponents(L, newObject);
+        newObject->AddComponent(EntityComponent::LuauData);
+        EcLuauData* el = newObject->FindComponent<EcLuauData>();
+        assert(el);
 
-        lua_pushnil(L);
-        while (lua_next(L, -2))
+        if (lua_getfield(L, LUA_REGISTRYINDEX, "LDC") == LUA_TNIL)
         {
-            if (lua_type(L, -1) != LUA_TSTRING)
-            {
-                const char* vtn = luaL_typename(L, -1);
-                luaL_error(L, "Non-string '%s' (%s) in Components table", luaL_tolstring(L, -1, nullptr), vtn);
-            }
+            lua_newtable(L);
 
-            const char* n = luaL_checkstring(L, -1);
-            EntityComponent ec = FindComponentTypeByName(n);
+            lua_createtable(L, 0, 1);
+            lua_pushliteral(L, "v");
+            lua_setfield(L, -2, "__mode");
 
-            if (ec == EntityComponent::None)
-                luaL_error(L, "Invalid component '%s'", n);
-            newObject->AddComponent(ec);
+            lua_setmetatable(L, -2);
 
-            lua_pop(L, 1);
+            lua_pushvalue(L, -1);
+            lua_setfield(L, LUA_REGISTRYINDEX, "LDC");
+        }
+
+        lua_pushinteger(L, lua_objlen(L, -1));
+        luhx_pushgameobject(L, newObject.Dereference());
+        lua_settable(L, -3);
+        lua_pop(L, 1);
+
+        for (int iter = 0; (iter = lua_rawiter(L, 2, iter)) != -1;)
+        {
+            if (lua_type(L, -2) != LUA_TSTRING)
+                luaL_error(L, "Expected key to be of type string, got a %s instead", luaL_typename(L, -2));
+
+            el->ComponentData.push_back(EcLuauData::LuauComponent{
+                .Name = lua_tostring(L, -2),
+                .VM = lua_mainthread(L),
+                .Id = lua_ref(L, -1)
+            });
+
+            lua_pop(L, 2);
         }
     }
+    else if (lua_gettop(L) != 0)
+        luaL_error(L, "Expected 0, 1, or 2 arguments, got %d instead", lua_gettop(L));
 
     luhx_pushgameobject(L, newObject.Dereference());
     return 1;
@@ -115,18 +162,31 @@ static int gameobject_fromTemplate(lua_State* L)
     return 1;
 }
 
-static int gameobject_fromId(lua_State* L)
+static int gameobject_defineComponent(lua_State* L)
 {
-    int oid = luaL_checkinteger(L, 1);
+    luaL_checktype(L, 1, LUA_TTABLE);
 
-    luhx_pushgameobject(L, GameObjectManager::Get()->FindById((uint32_t)oid));
-    return 1;
+    lua_getfield(L, 1, "Name");
+    if (!lua_isstring(L, -1))
+        luaL_error(L, "Expected a string field 'Name'");
+
+    size_t nameLength = 0;
+    const char* name = lua_tolstring(L, -1, &nameLength);
+
+    LuauDataComponentManager* ldcm = (LuauDataComponentManager*)LuauDataComponentManager::Get();
+
+    if (FindComponentTypeByName(std::string_view(name, nameLength)) != EntityComponent::None || ldcm->LuauComponentNames.contains(std::string(name, nameLength)))
+        luaL_error(L, "A component with the name '%s' is already defined", name);
+
+    ldcm->LuauComponentNames.insert(std::string(name, nameLength));
+    return 1; // return name
 }
 
 static const luaL_Reg gameobject_funcs[] = {
     { "new", gameobject_new },
-    { "fromId", gameobject_fromId },
     { "fromTemplate", gameobject_fromTemplate },
+    { "defineComponent", gameobject_defineComponent },
+
     { NULL, NULL }
 };
 

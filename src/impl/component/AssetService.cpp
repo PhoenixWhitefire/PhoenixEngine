@@ -6,6 +6,7 @@
 #include "asset/MeshProvider.hpp"
 #include "asset/SceneFormat.hpp"
 #include "asset/Binary.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 
 static void loadMeshDataFromMap(const std::vector<Reflection::GenericValue>& inputs, Mesh& mesh)

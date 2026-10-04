@@ -248,9 +248,8 @@ end
 
 
 declare GameObject: {
-  fromId: (( Id: number ) -> (GameObject?)),
   fromTemplate: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
-  new: (<T>(Components: { read T | "" }) -> GameObject & IntersectComponents<T>) & () -> GameObject,
+  new: (<T>(Components: { read T | "" }, Custom: { read [string]: unknown }?) -> GameObject & IntersectComponents<T>) & () -> GameObject,
   validComponents: { string }
 }
 declare extern type InputEvent with
@@ -517,6 +516,9 @@ export type EcLogging = {
   OnMessaged: EventSignal<(Time: number, Type: EnumLogType, Message: string, ExtraTags: string, Values: { LoggingLogValue }) -> (), number, EnumLogType, string, string, { LoggingLogValue }>,
 }
 
+export type EcLuauData = {
+}
+
 export type EcMesh = {
   CastsShadows: boolean,
   FaceCulling: EnumFaceCulling,
@@ -729,6 +731,7 @@ type Components = {
   Animator: EcAnimator,
   Animation: EcAnimation,
   ScriptEngine: EcScriptEngine,
+  LuauData: EcLuauData,
 }
 type Creatables = {
   Transform: EcTransform,
@@ -765,6 +768,7 @@ type Creatables = {
   Animator: EcAnimator,
   Animation: EcAnimation,
   ScriptEngine: EcScriptEngine,
+  LuauData: EcLuauData,
 }
 
 declare extern type EnumCollisionType extends EnumItem with end

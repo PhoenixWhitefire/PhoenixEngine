@@ -1,6 +1,8 @@
 // History.hpp, 17/12/2025 - Undo-Redo backend
 
 #include "History.hpp"
+#include "Utilities.hpp"
+#include "Log.hpp"
 
 static History* Instance = nullptr;
 

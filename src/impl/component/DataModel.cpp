@@ -9,6 +9,7 @@
 #include "component/TreeLink.hpp"
 #include "script/ScriptEngine.hpp"
 #include "datatype/Services.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 

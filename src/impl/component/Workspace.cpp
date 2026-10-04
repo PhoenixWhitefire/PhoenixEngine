@@ -8,6 +8,7 @@
 #include "component/Sound.hpp"
 #include "geometry/IntersectionLib.hpp"
 #include "geometry/DecomposeTRS.hpp"
+#include "Utilities.hpp"
 #include "Engine.hpp"
 
 static ObjectHandle s_FallbackCamera;

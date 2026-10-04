@@ -3,6 +3,7 @@
 
 #include "Engine.hpp"
 #include "component/RendererService.hpp"
+#include "Utilities.hpp"
 
 const Reflection::StaticPropertyMap& RendererComponentManager::GetProperties()
 {

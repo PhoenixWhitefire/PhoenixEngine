@@ -3,6 +3,7 @@
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
+#include "Utilities.hpp"
 
 static void disconnect(EventConnectionData* ec)
 {

@@ -13,6 +13,7 @@ struct LightUserdataTag_
         SharedBufferRawEquality = 5,
         AtomicIntegerRawEquality = 6,
         EventConnectionData = 7,
+        ComponentDefinition = 8,
 
         count,
         tagLimit = 127,
@@ -31,6 +32,7 @@ const std::string_view LightUserdataTagNames[] = {
     "SharedBufferRawEquality",
     "AtomicIntegerRawEquality",
     "EventConnectionData",
+    "ComponentDefinition",
 };
 
 static_assert(std::size(LightUserdataTagNames) == LightUserdataTag::count);

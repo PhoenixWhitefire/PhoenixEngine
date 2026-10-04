@@ -10,6 +10,7 @@
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 #include "asset/MeshProvider.hpp"
+#include "Utilities.hpp"
 
 static glm::vec3 findFurthestPoint_Mesh(const EcRigidBody* Rb, glm::vec3 Direction, const Mesh& mesh, float* maxDistance, glm::vec3 maxPoint, const glm::mat4& submeshTrans = glm::mat4(1.f))
 {

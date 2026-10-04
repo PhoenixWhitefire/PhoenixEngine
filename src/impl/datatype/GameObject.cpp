@@ -6,6 +6,7 @@
 #include "component/DataModel.hpp"
 #include "component/Workspace.hpp"
 #include "component/Sound.hpp"
+#include "Utilities.hpp"
 #include "History.hpp"
 #include "Log.hpp"
 

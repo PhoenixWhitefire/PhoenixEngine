@@ -292,12 +292,6 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
         roots.push_back(dm);
     }
 
-    /*
-    std::vector<GameObject, Memory::Allocator<GameObject>> memalloctest;
-    memalloctest.reserve(5000);
-    memalloctest.shrink_to_fit();
-    */
-
     PHX_ENSURE_MSG(worldLoadSuccess, "World failed to load: " + SceneFormat::GetLastErrorString());
 
     if (roots.size() > 1)
@@ -336,7 +330,7 @@ static bool checkBoolArgument(const char* v, const char* arg, bool defaultVal)
 
     if (vlen < alen + 2)
     {
-        Log.ErrorF("Missing Y/N after '{}' (matching '{}')", v, arg);
+        Log.ErrorF("Missing Y/N after '{}' (matching '{}')", v, arg); // y/n & ceo <3
         return defaultVal;
     }
 
@@ -378,7 +372,7 @@ static void processCliArgs(EngineInitConfig& InitConfig, int argc, char** argv)
                 i++;
             }
             else
-                RAISE_RT("'--threads' argument from command-line was not followed by the desired Thread Count");
+                RAISE_RT("'--threads' argument from command line was not followed by the desired thread count");
         }
         else if (strcmp(v, "--tracy") == 0)
         {
@@ -402,7 +396,7 @@ static void processCliArgs(EngineInitConfig& InitConfig, int argc, char** argv)
                 i++;
             }
             else
-                RAISE_RT("'--loadmap' argument from command-line was not followed by the desired File");
+                RAISE_RT("'--loadmap' argument from command line was not followed by the path to the desired file");
         }
         else if (strcmp(v, "--tool") == 0)
         {
@@ -418,7 +412,7 @@ static void processCliArgs(EngineInitConfig& InitConfig, int argc, char** argv)
                 i++;
             }
             else
-                RAISE_RT("'--tool' argument from command-line was not followed by the desired File");
+                RAISE_RT("'--tool' argument from command line was not followed by the path to the desired file");
         }
         else if (isBoolArgument(v, "--headless"))
         {
@@ -450,7 +444,7 @@ static void processCliArgs(EngineInitConfig& InitConfig, int argc, char** argv)
 extern "C" void handleCrashSignal(int sig);
 extern "C" void handleCrashSignal(int sig)
 {
-    // create a basic trace back in case the system won't generate a coredump
+    // create a basic trace back in case the system doesn't generate a coredump
     void* frames[64];
     int n = backtrace(frames, 64);
 

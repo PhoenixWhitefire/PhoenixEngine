@@ -7,7 +7,7 @@
 #include "component/Camera.hpp"
 #include "component/Transform.hpp"
 #include "datatype/GameObject.hpp"
-#include "UserInput.hpp"
+#include "Utilities.hpp"
 
 uint32_t CameraComponentManager::CreateComponent(GameObject* Object)
 {

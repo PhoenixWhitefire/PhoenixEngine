@@ -6,6 +6,7 @@
 #include "script/UserdataTags.hpp"
 #include "script/LightUserdataTags.hpp"
 #include "datatype/ComponentBase.hpp"
+#include "Utilities.hpp"
 
 void luhx_pushsignal(
     lua_State* L,

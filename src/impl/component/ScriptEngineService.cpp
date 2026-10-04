@@ -3,6 +3,7 @@
 
 #include "component/ScriptEngineService.hpp"
 #include "script/ScriptEngine.hpp"
+#include "Utilities.hpp"
 
 const Reflection::StaticMethodMap& ScriptEngineComponentManager::GetMethods()
 {

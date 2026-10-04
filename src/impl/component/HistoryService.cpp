@@ -2,6 +2,7 @@
 
 #include "component/HistoryService.hpp"
 #include "History.hpp"
+#include "Utilities.hpp"
 
 static Reflection::GenericValue dumpActionData(const History::Action& action)
 {

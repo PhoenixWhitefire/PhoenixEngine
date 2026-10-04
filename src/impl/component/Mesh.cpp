@@ -7,6 +7,7 @@
 #include "component/Animation.hpp"
 #include "component/Bone.hpp"
 #include "datatype/GameObject.hpp"
+#include "Log.hpp"
 
 static void tryMarkFreeSkinnedMeshPseudoAsset(EcMesh& mesh)
 {

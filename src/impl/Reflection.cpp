@@ -8,6 +8,7 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/Color.hpp"
 #include "Memory.hpp"
+#include "Utilities.hpp"
 
 static_assert(REFLECTION_GV_SSO > 12);
 

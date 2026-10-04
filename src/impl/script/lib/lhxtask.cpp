@@ -3,6 +3,7 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 
 static int task_wait(lua_State* L)

@@ -44,6 +44,7 @@ enum EC : uint8_t
 	Animator,
 	Animation,
 	ScriptEngine,
+	LuauData,
 
 	count
 };
@@ -87,6 +88,7 @@ static inline const std::string_view s_EntityComponentNames[] = {
 	"Animator",
 	"Animation",
 	"ScriptEngine",
+	"LuauData",
 };
 
 static_assert(std::size(s_EntityComponentNames) == (size_t)EntityComponent::count);

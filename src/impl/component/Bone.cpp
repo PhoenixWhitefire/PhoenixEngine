@@ -6,6 +6,7 @@
 #include "component/Mesh.hpp"
 #include "datatype/GameObject.hpp"
 #include "asset/MeshProvider.hpp"
+#include "Log.hpp"
 
 static EcMesh* getTargetMesh(EcBone* Bone)
 {

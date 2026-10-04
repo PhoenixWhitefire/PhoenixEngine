@@ -289,7 +289,7 @@ local documentationData = {}
 
 local GameObjectOverrides = {
     -- TODO luau should really be `read T & keyof<Components>` but that's resulting in `never` (?)
-    new = "(<T>(Components: { read T | \"\" }) -> GameObject & IntersectComponents<T>) & () -> GameObject",
+    new = "(<T>(Components: { read T | \"\" }, Custom: { read [string]: unknown }?) -> GameObject & IntersectComponents<T>) & () -> GameObject",
     fromTemplate = "(<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>)",
     --FindChildWithComponent = "<T>(self, ComponentName: keyof<Components> & T) -> (GameObject & index<Components, T>)?",
 }
@@ -1012,7 +1012,7 @@ for _, k in orderedComponents do
 
     if not vd then
         docWarn(`No docs for Component '{ k }'`)
-        definitionsFile ..= "end\n"
+        definitionsFile ..= if isExternType then "end\n\n" else "}\n\n"
         continue
     end
 

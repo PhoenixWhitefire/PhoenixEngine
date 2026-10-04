@@ -4,6 +4,7 @@
 #include "component/Sound.hpp"
 #include "component/Transform.hpp"
 #include "datatype/GameObject.hpp"
+#include "Utilities.hpp"
 #include "Memory.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"

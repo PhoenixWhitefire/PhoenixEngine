@@ -33,7 +33,9 @@
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 #include "component/ScriptEngineService.hpp"
+#include "component/LuauData.hpp"
 #include "DeveloperTools.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
@@ -1953,6 +1955,21 @@ lua_State* ScriptEngine::LuauVM::CreateMainThread()
 void ScriptEngine::LuauVM::Close()
 {
     lua_State* L = MainThread;
+
+    if (lua_getfield(L, LUA_REGISTRYINDEX, "LDC") != LUA_TNIL)
+    {
+        for (int iter = 0; (iter = lua_rawiter(L, -1, iter)) != -1;)
+        {
+            GameObject* object = luhx_checkgameobject(L, -1);
+
+            if (object->FindComponent<EcLuauData>())
+                object->RemoveComponent(EntityComponent::LuauData);
+
+            lua_pop(L, 2);
+        }
+    }
+
+    lua_pop(L, 1);
 
     lua_rawgeti(L, LUA_ENVIRONINDEX, 67);
 

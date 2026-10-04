@@ -7,6 +7,7 @@
 #include "component/RigidBody.hpp"
 #include "component/Workspace.hpp"
 #include "asset/MeshProvider.hpp"
+#include "Utilities.hpp"
 #include "FileRW.hpp"
 
 static float roundNToGrid(float x)
