@@ -1039,7 +1039,8 @@
             "Description": [
               "Defines a custom component",
               "Throws an error if one with this name was already defined"
-            ]
+            ],
+            "Type": "<C>({ read Name: string }) -> ComponentDefinition & C"
           },
           "fromId": {
             "Description": "Finds an Object by its internal ID. Do not rely on the ID",
