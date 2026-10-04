@@ -31,7 +31,7 @@
         },
         "AsComponent": {
           "Description": "Returns `nil` if the component does not exist on the object, and, in Luau, a narrowed type if it does",
-          "Type": "<T>(self, Component: T & keyof<EngineComponents>) : (GameObject & index<EngineComponents, T>)?"
+          "Type": "<T>(self, Component: T & keyof<Components>) : (GameObject & index<Components, T>)?"
         },
         "Destroy": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it",
         "Duplicate": {
@@ -44,7 +44,7 @@
         },
         "FindChildWithComponent": {
           "Description": "Returns a child Object which has the given component, or `nil` if one doesn't exist",
-          "Type": "<T>(self, T & keyof<EngineComponents>) : GameObject & index<EngineComponents, T>"
+          "Type": "<T>(self, T & keyof<Components>) : GameObject & index<Components, T>"
         },
         "ForEachChild": {
           "Description": "For all children of the Object, invokes the callback. If the callback explicitly returns `false`, iteration ends early. Callback cannot yield",
@@ -221,15 +221,15 @@
           },
           "GetComponentCreatedSignal": {
             "Description": "Returns a signal that fires when a given component is created from the world",
-            "Type": "<T>(self, Component: T & keyof<EngineComponents>, DataModel: (GameObject & EcDataModel)?) : EventSignal<(Object: GameObject & index<EngineComponents, T>) -> (), GameObject & index<EngineComponents, T>>"
+            "Type": "<T>(self, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) : EventSignal<(Object: GameObject & index<Components, T>) -> (), GameObject & index<Components, T>>"
           },
           "GetComponentDeletedSignal": {
             "Description": "Returns a signal that fires when a given component is deleted from the world",
-            "Type": "(self, Component: keyof<EngineComponents>, DataModel: (GameObject & EcDataModel)?) : EventSignal<(Object: GameObject) -> (), GameObject>"
+            "Type": "(self, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) : EventSignal<(Object: GameObject) -> (), GameObject>"
           },
           "GetObjectsWithComponent": {
             "Description": "Returns a list of all objects with the given component",
-            "Type": "<T>(self, Component: T & keyof<EngineComponents>, DataModel: (GameObject & EcDataModel)?) : GameObject & index<EngineComponents, T>"
+            "Type": "<T>(self, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) : GameObject & index<Components, T>"
           },
           "GetTagAddedSignal": {
             "Description": "Returns a signal that fires when the given tag is added to any Objects",
@@ -1035,8 +1035,11 @@
             "Description": "Clears all previously defined component data",
             "Type": "() -> ()"
           },
-          "defineComponent": {
-            "Description": "Defines a custom component"
+          "component": {
+            "Description": [
+              "Defines a custom component",
+              "Throws an error if one with this name was already defined"
+            ]
           },
           "fromId": {
             "Description": "Finds an Object by its internal ID. Do not rely on the ID",

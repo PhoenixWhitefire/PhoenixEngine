@@ -162,7 +162,7 @@ static int gameobject_fromTemplate(lua_State* L)
     return 1;
 }
 
-static int gameobject_defineComponent(lua_State* L)
+static int gameobject_component(lua_State* L)
 {
     luaL_checktype(L, 1, LUA_TTABLE);
 
@@ -209,7 +209,7 @@ static int gameobject_clearAllComponentDefinitions(lua_State* L)
 static const luaL_Reg gameobject_funcs[] = {
     { "new", gameobject_new },
     { "fromTemplate", gameobject_fromTemplate },
-    { "defineComponent", gameobject_defineComponent },
+    { "component", gameobject_component },
     { "clearAllComponentDefinitions", gameobject_clearAllComponentDefinitions },
 
     { NULL, NULL }

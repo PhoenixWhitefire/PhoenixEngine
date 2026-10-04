@@ -103,7 +103,7 @@ end
 
 type function findComponentsFromUnionRecursive(un: type): { type }
     -- TODO luau
-    if not EngineComponents then
+    if not Components then
         return {}
     end
 
@@ -118,7 +118,7 @@ type function findComponentsFromUnionRecursive(un: type): { type }
             local found = false
 
             -- Note: can't do direct index check because types won't be rawequal
-            for i, c in EngineComponents:properties() do
+            for i, c in Components:properties() do
                 if i:value() == t:value() then
                     table.insert(results, c.read)
                     found = true
@@ -137,7 +137,7 @@ end
 
 type function IntersectComponents(ty: type)
     if ty:is("singleton") then
-        for i, c in EngineComponents:properties() do
+        for i, c in Components:properties() do
             if i:value() == ty:value() then
                 return c.read
             end
@@ -257,7 +257,7 @@ end
 
 declare GameObject: {
   clearAllComponentDefinitions: () -> (),
-  defineComponent: <C>({ read Name: string }) -> ComponentDefinition & C,
+  component: <C>({ read Name: string }) -> ComponentDefinition & C,
   fromTemplate: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
   new: (<T, C>(Components: { read T | "" }, Custom: { read [C & ComponentDefinition]: C }?) -> GameObject & IntersectComponents<T> & C) & () -> GameObject,
   validComponents: { string }
@@ -336,11 +336,11 @@ export type GameObject = {
 
   AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
   AddTag: (self: GameObject, Tag: string) -> (),
-  AsComponent: <T>(self: GameObject, Component: T & keyof<EngineComponents>) -> (GameObject & index<EngineComponents, T>)?,
+  AsComponent: <T>(self: GameObject, Component: T & keyof<Components>) -> (GameObject & index<Components, T>)?,
   Destroy: (self: GameObject) -> (),
   Duplicate: <T>(self: GameObject & T) -> GameObject & T,
   FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
-  FindChildWithComponent: <T>(self: GameObject, T & keyof<EngineComponents>) -> GameObject & index<EngineComponents, T>,
+  FindChildWithComponent: <T>(self: GameObject, T & keyof<Components>) -> GameObject & index<Components, T>,
   GetChildren: (self: GameObject) -> { GameObject },
   GetComponents: (self: GameObject) -> { keyof<Creatables> },
   GetDescendants: (self: GameObject) -> { GameObject },
@@ -399,9 +399,9 @@ export type EcCamera = {
 export type EcCollections = {
 
   GetCollections: (self: EcCollections) -> { string },
-  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<EngineComponents>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject & index<EngineComponents, T>) -> (), GameObject & index<EngineComponents, T>>,
-  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<EngineComponents>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject) -> (), GameObject>,
-  GetObjectsWithComponent: <T>(self: EcCollections, Component: T & keyof<EngineComponents>, DataModel: (GameObject & EcDataModel)?) -> GameObject & index<EngineComponents, T>,
+  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject & index<Components, T>) -> (), GameObject & index<Components, T>>,
+  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject) -> (), GameObject>,
+  GetObjectsWithComponent: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> GameObject & index<Components, T>,
   GetTagAddedSignal: (self: EcCollections, Tag: string) -> EventSignal<(Object: GameObject) -> (), GameObject>,
   GetTagRemovedSignal: (self: EcCollections, Tag: string) -> EventSignal<(Object: GameObject) -> (), GameObject>,
   GetTagged: (self: EcCollections, Tag: string) -> { GameObject },
@@ -707,7 +707,7 @@ export type EcWorkspace = {
 
 
 
-type EngineComponents = {
+type Components = {
   Transform: EcTransform,
   Mesh: EcMesh,
   ParticleEmitter: EcParticleEmitter,

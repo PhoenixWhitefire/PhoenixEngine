@@ -445,7 +445,7 @@
       "GameObject": {
         "Library": {
           "clearAllComponentDefinitions": "function",
-          "defineComponent": "function",
+          "component": "function",
           "fromTemplate": "function",
           "new": "function",
           "validComponents": "table"

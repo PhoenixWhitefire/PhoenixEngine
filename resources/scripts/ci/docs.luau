@@ -173,7 +173,7 @@ end
 
 type function findComponentsFromUnionRecursive(un: type): { type }
     -- TODO luau
-    if not EngineComponents then
+    if not Components then
         return {}
     end
 
@@ -188,7 +188,7 @@ type function findComponentsFromUnionRecursive(un: type): { type }
             local found = false
 
             -- Note: can't do direct index check because types won't be rawequal
-            for i, c in EngineComponents:properties() do
+            for i, c in Components:properties() do
                 if i:value() == t:value() then
                     table.insert(results, c.read)
                     found = true
@@ -207,7 +207,7 @@ end
 
 type function IntersectComponents(ty: type)
     if ty:is("singleton") then
-        for i, c in EngineComponents:properties() do
+        for i, c in Components:properties() do
             if i:value() == ty:value() then
                 return c.read
             end
@@ -299,7 +299,7 @@ local GameObjectOverrides = {
     -- TODO luau should really be `read T & keyof<Components>` but that's resulting in `never` (?)
     new = "(<T, C>(Components: { read T | \"\" }, Custom: { read [C & ComponentDefinition]: C }?) -> GameObject & IntersectComponents<T> & C) & () -> GameObject",
     fromTemplate = "(<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>)",
-    defineComponent = "<C>({ read Name: string }) -> ComponentDefinition & C",
+    component = "<C>({ read Name: string }) -> ComponentDefinition & C",
     --FindChildWithComponent = "<T>(self, ComponentName: keyof<Components> & T) -> (GameObject & index<Components, T>)?",
 }
 
@@ -314,7 +314,7 @@ local function dumpCreatables()
         RigidBody = " & EcTransform"
     }
 
-    definitionsFile ..= "\ntype EngineComponents = {\n"
+    definitionsFile ..= "\ntype Components = {\n"
 
     for _, v in GameObject.validComponents do
         definitionsFile ..= `  {v}: Ec{v},\n`
@@ -852,14 +852,13 @@ local function documentDatatype(name)
 
     datatypes ..= `### \`{ name }\`\n\n`
 
-    local totalcomment = ""
-    for _, d in (if typeof(dt.Description) == "table" then dt.Description else { dt.Description }) do
-        totalcomment ..= `* { d }\n`
-    end
-    totalcomment = totalcomment:sub(1, #totalcomment - 1)
+    local totalcomment = if typeof(dt.Description) == "table" then "* " .. table.concat(dt.Description, "\n* ") else dt.Description
 
     datatypes ..= totalcomment
     documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
+        documentation = totalcomment
+    }
+    documentationData[`@{DOCS_PREFIX}/globaltype/{name}`] = {
         documentation = totalcomment
     }
 
@@ -1027,11 +1026,13 @@ for _, k in orderedComponents do
     end
 
     if vd.Description then
-        for _, d in (if typeof(vd.Description) == "table" then vd.Description else { vd.Description }) do
-            components ..= `* { d }\n`
-        end
+        local desc = if typeof(vd.Description) == "table" then "* " .. table.concat(vd.Description, "\n* ") else vd.Description
+        components ..= desc
 
-        components ..= "\n"
+        documentationData[`@phoenix/globaltype/Ec{ k }`] = {
+            documentation = desc
+        }
+        components ..= "\n\n"
     end
 
     components ..= dumpReflectionApi(v, vd, k, isExternType)
