@@ -48,7 +48,7 @@ Otherwise, you may follow these instructions.
     * `ReleaseAUSan`: Release with Address and Undefined-behaviour sanitizer
 5. Run it in the root directory with a command such as `build/Release/PhoenixEngine` (Linux Bash), `. "build/Release/PhoenixEngine"` (Windows Terminal), or `"build/Release/PhoenixEngine"` (Windows Command Prompt)
 
-6. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with either `shell/buildprofiler.sh`, or with the following equivalent commands:
+6. (Optional) I have not configured the Tracy Profiler standalone application to build along with the rest of the Engine, you will need to build it manually. The "Start Profiling" button in the Info widget, as well as the `-tracyim` launch argument, all assume you have built the Profiler yourself and that it is in the expected directory. You can do this with either `shell/profilerbuild.sh`, or with the following equivalent commands:
     * `cd Vendor/tracy/profiler`
     * `cmake -B build -G Ninja` (You can omit `-G Ninja` if you're OK with it using Make or whatever CMake decides is appropriate by default)
     * `cmake --build build --config Release -j7`
