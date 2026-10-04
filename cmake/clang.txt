@@ -1,4 +1,4 @@
-# settings formatted for G++
+# settings formatted for Clang
 
 set(PHX_TRACY_LIB_PATH Vendor/tracy/${PHX_BUILD_TYPE}/TracyClient)
 
