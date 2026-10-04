@@ -1934,6 +1934,9 @@ lua_State* ScriptEngine::LuauVM::CreateMainThread()
 
     cb->interrupt = [](lua_State* L, int GcState)
         {
+            if (L == lua_mainthread(L))
+                return;
+
             StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 
             if (vmud->AllowedExecutionTime != 0.f && GetRunningTime() - vmud->LastResumed > vmud->AllowedExecutionTime)

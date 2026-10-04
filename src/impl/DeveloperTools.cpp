@@ -5728,7 +5728,10 @@ static bool debugVariable(lua_State* L, bool CanEdit)
     }
 
     const char* vtn = luaL_typename(L, -1);
-    constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DrawLinesFull;
+    constexpr ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_SpanAvailWidth
+                                                | ImGuiTreeNodeFlags_AllowOverlap
+                                                | ImGuiTreeNodeFlags_DrawLinesFull;
+    ImGui::AlignTextToFramePadding();
     bool changed = false;
 
     switch (lua_type(L, -1))
@@ -6518,10 +6521,12 @@ void renderDebugger()
 }
 
 static int DebuggingCoroRef = LUA_NOREF;
+static int PreviousCursorMode = GLFW_CURSOR_NORMAL;
 
 void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason Reason)
 {
     ZoneScoped;
+    PreviousCursorMode = glfwGetInputMode(glfwGetCurrentContext(), GLFW_CURSOR);
 
     if (lua_stackdepth(L) == 0)
     {
@@ -6530,6 +6535,8 @@ void DeveloperTools::OnDebugBreak(lua_State* L, lua_Debug* ar, DebugBreakReason 
     }
 
     resetScriptTimeouts();
+    glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
 
     if (Reason == DebugBreakReason::Interrupt)
     {
@@ -6652,4 +6659,9 @@ void DeveloperTools::LeaveDebugger()
 
     lua_singlestep(debuggerL, false);
     debuggerL = nullptr;
+
+    glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, PreviousCursorMode);
+
+    if (PreviousCursorMode == GLFW_CURSOR_DISABLED)
+        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
 }
