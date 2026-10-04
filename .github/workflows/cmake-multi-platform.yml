@@ -87,7 +87,7 @@ jobs:
 
     - name: Configure CMake (Linux)
       if: runner.os == 'Linux'
-      run: cmake --preset clang-linux -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_C_COMPILER=clang-19
+      run: cmake --preset clang-linux -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
