@@ -437,6 +437,8 @@ void Engine::Initialize(int ThreadCount, bool Headless)
         ZoneScopedN("Load core shaders and sun shadowmap");
 
         PostFxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/postprocessing.shp"));
+        BloomExtractShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/bloomextract.shp"));
+        BloomSeparatedShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/bloomseparated.shp"));
         SkyboxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/skybox.shp"));
 
         glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Framebuffer);
@@ -445,10 +447,18 @@ void Engine::Initialize(int ThreadCount, bool Headless)
         glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
         RendererContext.PostProcessBuffer.BindTexture();
 
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::BloomSourceBuffer);
+        RendererContext.BloomSourceBuffer.BindTexture();
+
+        glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::BloomResultBuffer);
+        RendererContext.BloomResultBuffer.BindTexture();
+
         PostFxShader.SetUniform("Phoenix_PostProcessBuffer", ReservedTextureSlot::PostProcessFramebuffer);
+        PostFxShader.SetUniform("Phoenix_BloomResult", ReservedTextureSlot::BloomResultBuffer);
+        BloomExtractShader.SetUniform("Phoenix_PostProcessBuffer", ReservedTextureSlot::PostProcessFramebuffer);
+        BloomSeparatedShader.SetUniform("Phoenix_BloomSource", ReservedTextureSlot::BloomSourceBuffer);
         SkyboxShader.SetUniform("Phoenix_SkyboxEquirectangular", ReservedTextureSlot::SkyboxEquirectangular);
         SkyboxShader.SetUniform("Phoenix_SkyboxCubemap", ReservedTextureSlot::SkyboxCubemap);
-        //PostFxShader.SetUniform("Phoenix_BloomTexture", 3);
 
         SunShadowMap.Initialize(
             SunShadowMapResolutionSq, SunShadowMapResolutionSq,
@@ -899,13 +909,18 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     {
         ZoneScopedN("ApplyPostFxSettings");
 
-        PostFxShader.SetUniform("Phoenix_PostFxEnabled", 1);
+        PostFxShader.SetUniform("Phoenix_PostFxEnabled", true);
+        PostFxShader.SetUniform("Phoenix_BloomEnabled", env->BloomEnabled);
         PostFxShader.SetUniform("Phoenix_Time", GetRunningTime());
 
         PostFxShader.SetUniform(
             "Phoenix_Gamma",
             env->GammaCorrection
         );
+
+        BloomExtractShader.SetUniform("Phoenix_BloomThreshold", env->BloomThreshold);
+        BloomSeparatedShader.SetUniform("Phoenix_BloomScale", env->BloomScale);
+        BloomSeparatedShader.SetUniform("Phoenix_BloomStdDeviation", env->BloomStdDeviation);
 
         SkyboxShader.SetUniform(
             "Phoenix_HdrEnabled",
@@ -931,7 +946,72 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     glDisable(GL_FRAMEBUFFER_SRGB);
 
     {
-        ZoneScopedN("MainPostProcessing");
+        ZoneScopedN("PostProcessing");
+
+        if (env->BloomEnabled)
+        {
+            ZoneScopedN("Bloom");
+            PostFxShader.SetUniform("Phoenix_PostFxEnabled", false);
+            PostFxShader.SetUniform("Phoenix_Gamma", 1.f);
+
+            // PostProcess currently has our scene.
+            // Extract bright pixels.
+
+            RendererContext.BloomSourceBuffer.Bind();
+            RendererContext.DrawMesh(
+                quadMesh,
+                BloomExtractShader,
+                glm::mat4(1.f),
+                FaceCullingMode::None,
+                0
+            );
+
+            // BloomSourceBuffer has our bright pixels.
+            // Blur horizontally first.
+
+            BloomSeparatedShader.SetUniform("Phoenix_BlurHorizontal", true);
+            RendererContext.BloomResultBuffer.Bind();
+            RendererContext.DrawMesh(
+                quadMesh,
+                BloomSeparatedShader,
+                glm::mat4(1.f),
+                FaceCullingMode::None,
+                0
+            );
+
+            // BloomResultBuffer has our horizontal blur. Copy it back into BloomSource.
+            // TODO: blit?
+
+            glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
+            RendererContext.BloomResultBuffer.BindTexture();
+
+            RendererContext.BloomSourceBuffer.Bind();
+            RendererContext.DrawMesh(quadMesh, PostFxShader);
+
+            PostFxShader.SetUniform("Phoenix_PostFxEnabled", env->PostProcess);
+
+            // BloomSourceBuffer has our horizontal blur.
+            // Blur vertically now.
+
+            RendererContext.BloomResultBuffer.Bind();
+            BloomSeparatedShader.SetUniform("Phoenix_BlurHorizontal", false);
+            RendererContext.DrawMesh(
+                quadMesh,
+                BloomSeparatedShader,
+                glm::mat4(1.f),
+                FaceCullingMode::None,
+                0
+            );
+
+            // BloomResultBuffer now has our fully blurred bloom pixels.
+            // PostFxShader consumes it.
+
+            PostFxShader.SetUniform("Phoenix_PostFxEnabled", env->PostProcess);
+            PostFxShader.SetUniform("Phoenix_Gamma", env->GammaCorrection);
+
+            glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
+            RendererContext.PostProcessBuffer.BindTexture();
+        }
 
         // Post-process buffer is input, Framebuffer is output
         RendererContext.Framebuffer.Bind();

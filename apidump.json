@@ -180,6 +180,10 @@
       "Environment": {
         "Properties": {
           "AmbientLight": "Color",
+          "BloomEnabled": "Boolean",
+          "BloomScale": "Double",
+          "BloomStdDeviation": "Double",
+          "BloomThreshold": "Double",
           "Fog": "Boolean",
           "FogColor": "Color",
           "GammaCorrection": "Double",

@@ -488,6 +488,10 @@ export type EcEngine = {
 
 export type EcEnvironment = {
   AmbientLight: Color,
+  BloomEnabled: boolean,
+  BloomScale: number,
+  BloomStdDeviation: number,
+  BloomThreshold: number,
   Fog: boolean,
   FogColor: Color,
   GammaCorrection: number,

@@ -1939,6 +1939,18 @@
   "@phoenix/globaltype/Environment.AmbientLight": {
     "documentation": "Base environment ambient light color (Uniform: `Phoenix_LightAmbient`)"
   },
+  "@phoenix/globaltype/Environment.BloomEnabled": {
+    "documentation": "Whether bloom is enabled"
+  },
+  "@phoenix/globaltype/Environment.BloomScale": {
+    "documentation": "The sample size for the bloom relative to the screen"
+  },
+  "@phoenix/globaltype/Environment.BloomStdDeviation": {
+    "documentation": "The standard deviation for the gaussian function used for the bloom, affecting the \"width\""
+  },
+  "@phoenix/globaltype/Environment.BloomThreshold": {
+    "documentation": "The threshold luminance at which pixels should bloom"
+  },
   "@phoenix/globaltype/Environment.Fog": {
     "documentation": "Fog enablement (Uniform: `Phoenix_Fog`)"
   },

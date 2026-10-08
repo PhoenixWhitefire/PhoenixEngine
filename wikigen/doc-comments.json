@@ -444,6 +444,10 @@
         "Description": "World lighting and ambiance",
         "Properties": {
           "AmbientLight": "Base environment ambient light color (Uniform: `Phoenix_LightAmbient`)",
+          "BloomEnabled": "Whether bloom is enabled",
+          "BloomScale": "The sample size for the bloom relative to the screen",
+          "BloomStdDeviation": "The standard deviation for the gaussian function used for the bloom, affecting the \"width\"",
+          "BloomThreshold": "The threshold luminance at which pixels should bloom",
           "Fog": "Fog enablement (Uniform: `Phoenix_Fog`)",
           "FogColor": "Color of the fog (Uniform: `Phoenix_FogColor`)",
           "GammaCorrection": "Post-processor gamma correction amount (Uniform: `Phoenix_Gamma`)",

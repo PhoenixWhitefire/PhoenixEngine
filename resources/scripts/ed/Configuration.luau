@@ -27,7 +27,7 @@ end
 return table.freeze({
     RecentProjectsPath = "./editor/recent-projects.json",
     ReimportableModelTag = "Phoenix_ReimportableModel",
-    EditorBuild = 7,
+    EditorBuild = 8,
     StdPath = "@_editres/scripts/std",
     GitHubUrl = "https://github.com/PhoenixWhitefire/PhoenixEngine",
     GameEditingVMName = "GameEditingVM",
@@ -58,9 +58,11 @@ return table.freeze({
         "shaders/postprocessing.frag",
         "shaders/boxframe.shp",
         "shaders/boxframe.frag",
+        "shaders/bloomextract.frag",
+        "shaders/bloomextract.shp",
+        "shaders/bloomseparated.frag",
+        "shaders/bloomseparated.shp",
         "shaders/include/worldCommon.frag",
-        "materials/Smooth.mtl",
-        "materials/Checkered.mtl",
     },
 
     GetLogo = getLogo

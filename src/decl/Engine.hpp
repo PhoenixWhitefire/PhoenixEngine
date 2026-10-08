@@ -78,7 +78,8 @@ public:
 
     ShaderProgram PostFxShader;
     ShaderProgram SkyboxShader;
-    ShaderProgram SeparableBlurShader;
+    ShaderProgram BloomExtractShader;
+    ShaderProgram BloomSeparatedShader;
     GpuFrameBuffer SunShadowMap;
 
     ImVec2 OverrideViewportDockSpacePosition = { -1.f, -1.f };

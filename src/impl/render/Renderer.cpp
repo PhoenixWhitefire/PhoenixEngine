@@ -198,8 +198,10 @@ void Renderer::Initialize(uint32_t OurWidth, uint32_t OurHeight, GLFWwindow* Mai
     m_VertexArray.LinkAttrib(m_VertexBuffer, 2, 4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, Paint));
     m_VertexArray.LinkAttrib(m_VertexBuffer, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, TextureUV));
 
-    this->Framebuffer.Initialize(Width, Height, m_MsaaSamples);
-    this->PostProcessBuffer.Initialize(Width, Height, m_MsaaSamples);
+    Framebuffer.Initialize(Width, Height, m_MsaaSamples);
+    PostProcessBuffer.Initialize(Width, Height, m_MsaaSamples);
+    BloomSourceBuffer.Initialize(Width, Height, m_MsaaSamples);
+    BloomResultBuffer.Initialize(Width, Height, m_MsaaSamples);
 
     glGenBuffers(1, &InstancingBuffer);
 
@@ -261,6 +263,8 @@ void Renderer::Shutdown()
     m_VertexBuffer.Delete();
     Framebuffer.Delete();
     PostProcessBuffer.Delete();
+    BloomSourceBuffer.Delete();
+    BloomResultBuffer.Delete();
 
     Window = nullptr;
 }
@@ -283,6 +287,8 @@ void Renderer::ChangeResolution(uint32_t NewWidth, uint32_t NewHeight)
 
     Framebuffer.ChangeResolution(Width, Height);
     PostProcessBuffer.ChangeResolution(Width, Height);
+    BloomSourceBuffer.ChangeResolution(Width, Height);
+    BloomResultBuffer.ChangeResolution(Width, Height);
 }
 
 void Renderer::DrawScene(

@@ -58,6 +58,8 @@ public:
 
     GpuFrameBuffer Framebuffer;
     GpuFrameBuffer PostProcessBuffer;
+    GpuFrameBuffer BloomSourceBuffer;
+    GpuFrameBuffer BloomResultBuffer;
 
     GLFWwindow* Window = nullptr;
     uint32_t Width = 0, Height = 0;

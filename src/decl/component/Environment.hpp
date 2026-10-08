@@ -11,13 +11,17 @@ struct EcEnvironmentService : public Component<EntityComponent::Environment>
     Color AmbientLight = { .3f, .3f, .3f };
     Color FogColor = { 0.85f, 0.85f, 0.90f };
     float GammaCorrection = 1.f;
+    float BloomThreshold = 1.5f;
+    float BloomScale = 1.f;
+    float BloomStdDeviation = 8.f;
 
     std::vector<uint32_t> SkyboxFacesBeingLoaded;
     std::string Skybox = "textures/Sky1";
     uint32_t SkyboxTextureGpuId = UINT32_MAX;
     bool SkyboxIsEquirectangularImage = true;
 
-    bool PostProcess = false;
+    bool PostProcess = true;
+    bool BloomEnabled = true;
     bool Fog = false;
 
     bool Valid = true;

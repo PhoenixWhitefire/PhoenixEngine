@@ -10,22 +10,14 @@ in vec2 Frag_UV;
 out vec4 FragColor;
 
 uniform sampler2D Phoenix_PostProcessBuffer;
+uniform sampler2D Phoenix_BloomResult;
 
 uniform bool Phoenix_PostFxEnabled = false;
-// uniform sampler2D Phoenix_DistortionTexture;
-//uniform sampler2D Phoenix_BloomTexture;
+uniform bool Phoenix_BloomEnabled = false;
 uniform bool Phoenix_ScreenEdgeBlurEnabled = false;
-// uniform bool Phoenix_DistortionEnabled = false;
-
-uniform float BlurVignetteStrength = 2.f;
-uniform float BlurVignetteDistMul = 2.5f;
-uniform float BlurVignetteDistExp = 16.f;
-uniform int BlurVignetteSampleRadius = 4;
 
 uniform float Phoenix_Gamma = 1.f;
 uniform float Phoenix_Time = 0.f;
-const vec2 Center = vec2(0.5f, 0.5f);
-const vec3 White = vec3(1.0f, 1.0f, 1.0f);
 
 float roundTo(float n, float to)
 {
@@ -65,36 +57,9 @@ void main()
 	vec2 actualSamplePixel = ivec2(sampleUV * TextureSize);
 	vec3 Color = texture(Phoenix_PostProcessBuffer, sampleUV).xyz;
 
-	//Color += texture(BloomTexture, sampleUV).xyz;
-
-	if (Phoenix_ScreenEdgeBlurEnabled)
+	if (Phoenix_BloomEnabled)
 	{
-		vec3 BlurredColor;
-
-		// Multiply to create wider region of blur,
-		// then exponent to widen the 0% and make the 
-		// transition steeper
-		float RadialBlurWeight = clamp(pow(length(Frag_UV - Center), BlurVignetteDistExp) * BlurVignetteDistMul, 0.f, 1.f);
-
-		int BlurSampleRadius = BlurVignetteSampleRadius;
-
-		float BlurSampleBaseWeight = 1.f/(BlurSampleRadius * BlurSampleRadius);
-
-		for (int x = -BlurSampleRadius; x < BlurSampleRadius; x++)
-		{
-			for (int y = -BlurSampleRadius; y < BlurSampleRadius; y++)
-			{
-				float Dist = length(vec2(x, y) * BlurVignetteStrength) / (BlurSampleRadius * BlurVignetteStrength);
-
-				float DistFactor = 1.f - Dist;
-				float SampleWeight = pow(DistFactor * 1.f, 1.f) * BlurSampleBaseWeight;
-
-				vec3 SampleCol = texture(Phoenix_PostProcessBuffer, Frag_UV + (vec2(x, y) * PixelScale) + UVOffset).xyz;
-				BlurredColor += SampleCol * SampleWeight;
-			}
-		}
-		
-		Color = mix(Color, BlurredColor, RadialBlurWeight);
+		Color += texture(Phoenix_BloomResult, sampleUV).xyz;
 	}
 
 	// Reinhardt extended

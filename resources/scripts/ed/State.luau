@@ -205,7 +205,7 @@ local function isFileEditorBuildAtLeast(config: { read Saved: { read EditorBuild
 end
 
 local function handleCoreAssetAliasMigration(config: any)
-    if isFileEditorBuildAtLeast(config, 5) then
+    if isFileEditorBuildAtLeast(config, 8) then
         return
     end
 
@@ -336,6 +336,27 @@ local function handleStdAliasMigration(config: any)
     fs.write("scripts/.config.luau", configContents)
 end
 
+local function handleCheckeredAndSmoothMigration(config: any)
+    if isFileEditorBuildAtLeast(config, 8) then
+        return
+    end
+
+    local checkered = "materials/Checkered.mtl"
+    local smooth = "materials/Smooth.mtl"
+
+    if fs.isfile(checkered) then
+        fs.remove(checkered)
+        fs.copy("@base/" .. checkered, checkered)
+        print("Migrated the 'Checkered' material.")
+    end
+
+    if fs.isfile(smooth) then
+        fs.remove(smooth)
+        fs.copy("@base/" .. smooth, smooth)
+        print("Migrated the 'Smooth' material.")
+    end
+end
+
 local function openProject_(State: StateType, ManualPath: string?)
     local path = ManualPath
     local selecting = not path
@@ -434,6 +455,7 @@ local function openProject_(State: StateType, ManualPath: string?)
     handleCoreAssetAliasMigration(config)
     handleMaterialMigration(config)
     handleStdAliasMigration(config)
+    handleCheckeredAndSmoothMigration(config)
 
     local objects, error = AssetManager:LoadScene("@_projres/scenes/root.world")
 

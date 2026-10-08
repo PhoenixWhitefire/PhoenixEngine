@@ -1,0 +1,6 @@
+{
+  "Fragment": "@base/shaders/bloomseparated.frag",
+  "Geometry": "<NOT_SPECIFIED>",
+  "InheritUniformsOf": "",
+  "Vertex": "@base/shaders/postprocessing.vert"
+}

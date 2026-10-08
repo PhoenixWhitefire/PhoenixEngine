@@ -152,6 +152,10 @@ const Reflection::StaticPropertyMap& EnvironmentComponentManager::GetProperties(
         REFLECTION_PROPERTY_SIMPLE(EcEnvironmentService, Fog, Boolean),
         REFLECTION_PROPERTY_SIMPLE_NGV(EcEnvironmentService, FogColor, Color),
         REFLECTION_PROPERTY_SIMPLE(EcEnvironmentService, PostProcess, Boolean),
+        REFLECTION_PROPERTY_SIMPLE(EcEnvironmentService, BloomEnabled, Boolean),
+        REFLECTION_PROPERTY_SIMPLE(EcEnvironmentService, BloomThreshold, Double),
+        REFLECTION_PROPERTY_SIMPLE(EcEnvironmentService, BloomScale, Double),
+        REFLECTION_PROPERTY_SIMPLE(EcEnvironmentService, BloomStdDeviation, Double),
         REFLECTION_PROPERTY_SIMPLE(EcEnvironmentService, GammaCorrection, Double),
 
         REFLECTION_PROPERTY(
