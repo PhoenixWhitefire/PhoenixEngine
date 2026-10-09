@@ -159,7 +159,7 @@
       },
       "Engine": {
         "Methods": {
-          "BindDataModel": "(GameObject, Boolean) -> ()",
+          "BindDataModel": "(GameObject, Map) -> ()",
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
           "SetForegroundDataModel": "(GameObject) -> ()",

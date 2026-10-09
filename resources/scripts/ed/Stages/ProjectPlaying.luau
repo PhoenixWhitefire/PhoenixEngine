@@ -4,11 +4,11 @@ local ProjectPlaying = {}
 local DeveloperTools = game:GetService("DeveloperTools")
 local ScriptEngine = game:GetService("ScriptEngine")
 local PlayerInput = game:GetService("PlayerInput")
-local Physics = game:GetService("Physics")
 local Engine = game:GetService("Engine")
 
 local Configuration = require("@ed/Configuration")
 local Preferences = require("@ed/Preferences")
+local CoreTools = require("@ed/CoreTools")
 local CommonUI = require("@ed/CommonUI")
 local State = require("@ed/State")
 
@@ -56,6 +56,7 @@ function ProjectPlaying.Enter(_prev)
     State.PlaytestRestoreState = State.Project.DataModel
 
     assert(State.Project.DataModel)
+    Engine:BindDataModel(State.Project.DataModel, { Rendered = false, Simulated = false })
     -- TODO luau
     State.Project.DataModel = assert(State.Project.DataModel :: any):Duplicate()
 
@@ -63,15 +64,13 @@ function ProjectPlaying.Enter(_prev)
     DeveloperTools:SetExplorerSelections({})
 
     State.Project.DataModel.VM = Configuration.PlaytestVMName
-    Engine:BindDataModel(State.Project.DataModel, true)
+    Engine:BindDataModel(State.Project.DataModel, { Rendered = true, Simulated = true })
     Engine:SetForegroundDataModel(State.Project.DataModel)
 
     ScriptEngine:CreateVM(Configuration.PlaytestVMName)
     ScriptEngine:SetVMAllowedExecutionTime(Configuration.PlaytestVMName, Preferences.ScriptAllowedExecutionTime)
 
     GameObject.clearAllComponentDefinitions()
-
-    Physics:SetSimulationForcePaused(false)
 
     if Preferences.DebuggerEnabled then
         for scriptPath, breakpointsForScript in ProjectEditing.Breakpoints do
@@ -133,7 +132,6 @@ function ProjectPlaying.Leave(_new)
     DeveloperTools:SetExplorerRoot(State.Project.DataModel)
 
     ScriptEngine:CloseVM(Configuration.PlaytestVMName)
-    Physics:SetSimulationForcePaused(true)
 
     PlayerInput.CursorMode = Enum.CursorMode.Normal
 end
@@ -143,6 +141,7 @@ function ProjectPlaying.Render(DeltaTime: number)
 
     CommonUI.RenderMainMenuBar(DeltaTime)
     CommonUI.RenderViewport(DeltaTime)
+    CoreTools.Update(State.Project, { KeepGizmoInView = false }, State.ViewportRenderPosition, State.ViewportRenderSize, DeltaTime)
 
     debug.zoneend()
 end

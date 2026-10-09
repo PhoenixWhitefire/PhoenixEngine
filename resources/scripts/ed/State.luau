@@ -4,7 +4,6 @@ local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
 local Workspace = game:GetService("Workspace")
 local History = game:GetService("History")
-local Physics = game:GetService("Physics")
 local Engine = game:GetService("Engine")
 
 local ExternalCodeEditor = require("@ed/ExternalCodeEditor")
@@ -44,8 +43,6 @@ type StateType = {
 local EditorCam = assert(Workspace.SceneCamera)
 
 EditorCam.UseSimpleController = true
-Physics.Simulating = false
-Physics:SetSimulationForcePaused(true)
 ScriptEngine:SetVMAllowedExecutionTime(_VMNAME, 0)
 ScriptEngine:DetachDebuggerFromVM(_VMNAME)
 
@@ -487,7 +484,7 @@ local function openProject_(State: StateType, ManualPath: string?)
     local module = State.Project.DataModel.LiveScripts
     State.Project.DataModel.LiveScripts = ""
 
-    Engine:BindDataModel(State.Project.DataModel, true)
+    Engine:BindDataModel(State.Project.DataModel, { Rendered = true, Simulated = false })
     Engine:SetForegroundDataModel(State.Project.DataModel)
 
     ScriptEngine:CreateVM(Configuration.GameEditingVMName)

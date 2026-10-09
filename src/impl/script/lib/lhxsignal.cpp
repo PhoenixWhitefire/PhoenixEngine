@@ -115,6 +115,16 @@ static void queueEvent(
     else
         yieldedCoros = &vmud->VM->YieldedCoroutines;
 
+    if (ev->RestrictDataModel != UINT32_MAX && FromDataModel != UINT32_MAX)
+    {
+        GameObjectManager* objectManager = GameObjectManager::Get();
+        GameObject* restr = objectManager->FindById(ev->RestrictDataModel);
+        GameObject* owner = objectManager->FindById(FromDataModel);
+
+        restr->IncrementHardRefs();
+        owner->IncrementHardRefs();
+    }
+
     yieldedCoros->push_back(ScriptEngine::YieldedCoroutine{
         .DebugString = "DeferredEventResumption",
         .Coroutine = co,
@@ -131,8 +141,13 @@ static void queueEvent(
                 if (ev->RestrictDataModel != UINT32_MAX && FromDataModel != UINT32_MAX)
                 {
                     GameObjectManager* objectManager = GameObjectManager::Get();
-                    if (objectManager->FindById(ev->RestrictDataModel)->OwningDataModel != objectManager->FindById(FromDataModel)->OwningDataModel)
+                    GameObject* restr = objectManager->FindById(ev->RestrictDataModel);
+                    GameObject* owner = objectManager->FindById(FromDataModel);
+                    if (restr->OwningDataModel != owner->OwningDataModel)
                         return -1; // not our target dm
+
+                    restr->DecrementHardRefs();
+                    owner->DecrementHardRefs();
                 }
 
                 lua_resetthread(L);

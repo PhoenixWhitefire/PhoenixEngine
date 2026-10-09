@@ -501,9 +501,9 @@ static void traverseHierarchy(
 
         if (rb)
         {
-            if (rb->PhysicsDynamics)
+            if (rb->PhysicsDynamics && AddToPhysicsWorld)
                 PhysicsWorld.Dynamics.emplace_back(object);
-            else if (rb->PhysicsCollisions)
+            else if (rb->PhysicsCollisions && AddToPhysicsWorld)
                 PhysicsWorld.Statics.emplace_back(object);
 
             if (DebugCollisionAabbs && rb->PhysicsCollisions)
@@ -1084,7 +1084,7 @@ void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
     Foreground->FindComponent<EcDataModel>()->BindServices();
 }
 
-void Engine::BindDataModel(const ObjectHandle& DataModel, bool Rendered)
+void Engine::BindDataModel(const ObjectHandle& DataModel, bool Rendered, bool Simulated)
 {
     if (const auto& it = std::find_if(
             BoundDataModels.begin(),
@@ -1096,9 +1096,12 @@ void Engine::BindDataModel(const ObjectHandle& DataModel, bool Rendered)
         );
         it != BoundDataModels.end()
     )
+    {
         it->Rendered = Rendered;
+        it->Simulated = Simulated;
+    }
     else
-        BoundDataModels.emplace_back(DataModel, Rendered);
+        BoundDataModels.emplace_back(DataModel, Rendered, Simulated);
 }
 
 void Engine::UnbindDataModel(const ObjectHandle& DataModel)
@@ -1409,8 +1412,11 @@ void Engine::Start()
 
             for (const BoundDataModel& bound : BoundDataModels)
             {
-                if (bound.Rendered && bound.Object != ForegroundDataModel)
+                EcDataModel* dm = bound.Object->FindComponent<EcDataModel>();
+
+                if (bound.Rendered && bound.Object != ForegroundDataModel && dm)
                 {
+                    dm->BindServices();
                     const ObjectHandle& werk = bound.Object->FindChildWithComponent(EntityComponent::Workspace);
 
                     if (werk)
@@ -1424,8 +1430,7 @@ void Engine::Start()
                             deltaTime,
                             &sun,
                             PhysicsInstance.DebugCollisionAabbs,
-                            // Only the foreground datamodel will have its physics stepped.
-                            false
+                            bound.Simulated
                         );
                     }
                 }

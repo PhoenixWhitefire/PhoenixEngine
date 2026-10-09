@@ -6,7 +6,6 @@ local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local Collections = game:GetService("Collections")
 local Workspace = game:GetService("Workspace")
-local Physics = game:GetService("Physics")
 local History = game:GetService("History")
 local Engine = game:GetService("Engine")
 
@@ -132,10 +131,25 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
 
     DeveloperTools:SetExplorerRoot(State.Project.DataModel)
     DeveloperTools:SetExplorerSelections({})
-    Engine:BindDataModel(State.Project.DataModel, true)
-    Physics.Simulating = false
+    Engine:BindDataModel(State.Project.DataModel, { Rendered = true, Simulated = false })
     CoreTools.VisualizationsContainer.Enabled = true
     History.RecordingEnabled = true
+
+    for vis, _ in CoreTools.VisualizationTargets do
+        vis:Destroy()
+    end
+
+    for _, conns in VisualizationsChangedConnections do
+        if conns.WorkspaceChanged then
+            conns.WorkspaceChanged:Disconnect()
+        end
+
+        if conns.Moved then
+            conns.Moved:Disconnect()
+        end
+    end
+
+    table.clear(CoreTools.VisualizationTargets)
 
     if PreviousStage == "SelectProject" then
         EditorCameraTransform.Load(EditorCam)

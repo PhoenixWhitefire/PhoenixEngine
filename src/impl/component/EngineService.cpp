@@ -103,12 +103,23 @@ const Reflection::StaticMethodMap& EngineComponentManager::GetMethods()
         } },
 
         { "BindDataModel", Reflection::MethodDescriptor{
-            REFLECTION_SPAN({ Reflection::ValueType::GameObject, Reflection::ValueType::Boolean }),
+            REFLECTION_SPAN({ Reflection::ValueType::GameObject, Reflection::ValueType::Map }),
             {},
             [](void*, const std::vector<Reflection::GenericValue>& inputs) -> std::vector<Reflection::GenericValue>
             {
+                bool rendered = false;
+                bool simulated = false;
+
+                inputs[1].ForEachMapPair([&](const Reflection::GenericValue& k, const Reflection::GenericValue& v)
+                {
+                    if (k.AsStringView() == "Rendered")
+                        rendered = v.AsBoolean();
+                    else if (k.AsStringView() == "Simulated")
+                        simulated = v.AsBoolean();
+                });
+
                 Engine* engine = Engine::Get();
-                engine->BindDataModel(GameObjectManager::Get()->FromGenericValue(inputs[0]), inputs[1].AsBoolean());
+                engine->BindDataModel(GameObjectManager::Get()->FromGenericValue(inputs[0]), rendered, simulated);
 
                 return {};
             }

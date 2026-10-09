@@ -302,7 +302,7 @@ static void init(Engine* engine, const EngineInitConfig& InitConfig)
     const ObjectHandle& root = roots[0];
     PHX_ENSURE_MSG(root->FindComponent<EcDataModel>(), "Root Object was not a DataModel!");
 
-    engine->BindDataModel(root, true);
+    engine->BindDataModel(root, true, true);
     engine->SetForegroundDataModel(root);
     engine->PrimaryDataModel = root;
 }

@@ -477,7 +477,7 @@ export type EcEngine = {
   read TargetPlatform: string,
   read Version: string,
 
-  BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel, Rendered: boolean) -> (),
+  BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel, State: { read Rendered: boolean, read Simulated: boolean }) -> (),
   GetCliArguments: (self: EcEngine) -> { string },
   GetConfigValue: (self: EcEngine, Key: string) -> JsonDecodable,
   SetForegroundDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),

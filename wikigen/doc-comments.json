@@ -402,7 +402,7 @@
         "Methods": {
           "BindDataModel": {
             "Description": "Binds the datamodel provided. Bound datamodels fire their `OnFrameBegin` events",
-            "Type": "(self, DataModel: GameObject & EcDataModel, Rendered: boolean) : ()"
+            "Type": "(self, DataModel: GameObject & EcDataModel, State: { read Rendered: boolean, read Simulated: boolean }) : ()"
           },
           "GetCliArguments": {
             "Description": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable",

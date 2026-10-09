@@ -45,7 +45,7 @@ public:
     void Close();
 
     void SetForegroundDataModel(const ObjectHandle&);
-    void BindDataModel(const ObjectHandle&, bool Rendered);
+    void BindDataModel(const ObjectHandle&, bool Rendered, bool Simulated);
     void UnbindDataModel(const ObjectHandle&);
     bool IsDataModelBound(const ObjectHandle&);
 
@@ -65,6 +65,7 @@ public:
     {
         ObjectHandle Object;
         bool Rendered = false;
+        bool Simulated = false;
     };
     std::vector<BoundDataModel> BoundDataModels;
 

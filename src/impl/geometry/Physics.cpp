@@ -148,9 +148,15 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
 {
     ZoneScopedC(tracy::Color::AntiqueWhite);
 
+    GameObjectManager* objectManager = GameObjectManager::Get();
     hx::vector<Collision, MEMCAT(Physics)> collisions;
 
-    EcWorkspace* workspace = GameObjectManager::Get()->FindById(World.Dynamics[0]->OwningWorkspace)->FindComponent<EcWorkspace>();
+    GameObject* werk = objectManager->FindById(World.Dynamics[0]->OwningWorkspace);
+
+    if (!werk)
+        return; // TODO
+
+    EcWorkspace* workspace = werk->FindComponent<EcWorkspace>();
 
     for (size_t aid = 0; aid < World.Dynamics.size(); aid++)
     {
@@ -176,7 +182,7 @@ static void resolveCollisions(Physics::World& World, float DeltaTime, Physics* p
                 if (oid == a->ObjectId)
                     continue;
 
-                GameObject* b = GameObjectManager::Get()->FindById(oid);
+                GameObject* b = objectManager->FindById(oid);
                 EcRigidBody* brb = b ? b->FindComponent<EcRigidBody>() : nullptr;
 
                 if (!brb || !brb->PhysicsCollisions)
