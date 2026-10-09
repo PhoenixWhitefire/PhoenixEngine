@@ -1,4 +1,4 @@
 {
-    "Vertex": "@base/shaders/particle.vert",
-    "Fragment": "@base/shaders/particle.frag"
+    "Vertex": "phoenix://shaders/particle.vert",
+    "Fragment": "phoenix://shaders/particle.frag"
 }

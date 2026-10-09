@@ -81,20 +81,6 @@ local function saveToRecents(State: StateType, Path: string)
     saveRecents(State)
 end
 
-local function stubCoreAssets()
-    if not fs.isdirectory("shaders/include") then
-        fs.mkdir("shaders/include")
-    end
-
-    for _, a in Configuration.CoreAssets do
-        if fs.isfile(a) then
-            fs.remove(a)
-        end
-
-        fs.write(a, "")
-    end
-end
-
 local function createNewProject_(State: StateType)
     if not fs.isdirectory(Preferences.ProjectsDirectory) then
         fs.mkdir(Preferences.ProjectsDirectory)
@@ -147,8 +133,6 @@ local function createNewProject_(State: StateType)
     fs.mkdir("@_projres/textures")
 
     fs.write("@_projres/scripts/Main.luau", "print(\"Hello, World!\")\n")
-
-    stubCoreAssets()
 
     for _, v in { "Smooth", "Checkered", "error" } do
         fs.copy(`@_editres/materials/{v}.mtl`, `@_projres/materials/{v}.mtl`)
@@ -204,59 +188,6 @@ local function isFileEditorBuildAtLeast(config: { read Saved: { read EditorBuild
     return false
 end
 
-local function handleCoreAssetAliasMigration(config: any)
-    if isFileEditorBuildAtLeast(config, 8) then
-        return
-    end
-
-    local SymlinkMigrationChoices = {
-        Migrated = 1,
-        RemindLater = 2,
-        DoNotMigrate = 3
-    }
-
-    if not Engine.IsHeadless then
-        imgui.openpopup("Migrate core assets to alias")
-        local choiceIndex = 1
-
-        local connection; connection = game.OnFrameBegin:Connect(function()
-            if imgui.beginpopupmodal("Migrate core assets to alias") then
-                imgui.text("It looks like some core engine assets (UI shaders, `worldUber`, etc) are not currently referred by aliases.")
-                imgui.text("This can cause incompatibilities with future versions of the Editor.")
-                imgui.text("It is recommended that you migrate these to use the `@base` alias.")
-
-                choiceIndex = imgui.combo("Choice", { "Migrate and alias", "Ignore until next time", "Do not migrate" }, choiceIndex)
-
-                imgui.setnextitemwidth(imgui.contentregionavail().x)
-                if imgui.button("Continue") then
-                    assert(connection)
-                    connection:Disconnect()
-
-                    config = json.parse(assert(fs.read("@project/phoenix.conf"))) :: any
-
-                    assert(typeof(config) == "table");
-                    config.CoreAssetsSymlinkMigrationChoice = choiceIndex;
-
-                    assert(typeof(config.Saved) == "table")
-                    config.Saved.EditorBuild = Configuration.EditorBuild
-
-                    -- TODO luau cast
-                    fs.write("@project/phoenix.conf", json.encode(config :: JsonEncodable))
-
-                    if choiceIndex == SymlinkMigrationChoices.Migrated then
-                        task.defer(stubCoreAssets)
-                    end
-                end
-
-                imgui.endpopup()
-            else
-                assert(connection)
-                connection:Disconnect()
-            end
-        end)
-    end
-end
-
 local function migrateMaterialsRecursive(start)
     local migrated = 0
 
@@ -272,16 +203,16 @@ local function migrateMaterialsRecursive(start)
             local subs = 0
             local didMigrate = false
 
-            contents, subs = string.gsub(contents, `\"shaders/worldUber\"`, `\"@base/shaders/worldUber.shp\"`)
+            contents, subs = string.gsub(contents, `\"shaders/worldUber\"`, `\"phoenix://shaders/worldUber.shp\"`)
             didMigrate = didMigrate or subs > 0
 
-            contents, subs = string.gsub(contents, `\"shaders/worldUberTriProjected\"`, `\"@base/shaders/worldUberTriProjected.shp\"`)
+            contents, subs = string.gsub(contents, `\"shaders/worldUberTriProjected\"`, `\"phoenix://shaders/worldUberTriProjected.shp\"`)
             didMigrate = didMigrate or subs > 0
 
-            contents, subs = string.gsub(contents, `\"worldUber\"`, `\"@base/shaders/worldUber.shp\"`)
+            contents, subs = string.gsub(contents, `\"worldUber\"`, `\"phoenix://shaders/worldUber.shp\"`)
             didMigrate = didMigrate or subs > 0
 
-            contents, subs = string.gsub(contents, `\"worldUberTriProjected\"`, `\"@base/shaders/worldUberTriProjected.shp\"`)
+            contents, subs = string.gsub(contents, `\"worldUberTriProjected\"`, `\"phoenix://shaders/worldUberTriProjected.shp\"`)
             didMigrate = didMigrate or subs > 0
 
             if didMigrate then
@@ -346,14 +277,62 @@ local function handleCheckeredAndSmoothMigration(config: any)
 
     if fs.isfile(checkered) then
         fs.remove(checkered)
-        fs.copy("@base/" .. checkered, checkered)
+        fs.copy("phoenix://" .. checkered, checkered)
         print("Migrated the 'Checkered' material.")
     end
 
     if fs.isfile(smooth) then
         fs.remove(smooth)
-        fs.copy("@base/" .. smooth, smooth)
+        fs.copy("phoenix://" .. smooth, smooth)
         print("Migrated the 'Smooth' material.")
+    end
+end
+
+local function handleEmbeddedFilesMigration(config: any)
+    if isFileEditorBuildAtLeast(config, 9) then
+        return
+    end
+
+    local embeddedFiles = {
+        "shaders/error.shp",
+        "shaders/error.frag",
+        "shaders/ui.shp",
+        "shaders/ui.vert",
+        "shaders/ui.frag",
+        "shaders/worldUber.shp",
+        "shaders/worldUber.vert",
+        "shaders/worldUber.frag",
+        "shaders/worldUber.geom",
+        "shaders/worldUberSkinned.shp",
+        "shaders/worldUberSkinned.vert",
+        "shaders/worldUberTriProjected.shp",
+        "shaders/skybox.shp",
+        "shaders/skybox.vert",
+        "shaders/skybox.frag",
+        "shaders/particle.shp",
+        "shaders/particle.vert",
+        "shaders/particle.frag",
+        "shaders/postprocessing.shp",
+        "shaders/postprocessing.vert",
+        "shaders/postprocessing.frag",
+        "shaders/boxframe.shp",
+        "shaders/boxframe.frag",
+        "shaders/bloomextract.frag",
+        "shaders/bloomextract.shp",
+        "shaders/bloomseparated.frag",
+        "shaders/bloomseparated.shp",
+        "shaders/include/worldCommon.frag",
+        "materials/Checkered.mtl",
+        "materials/Smooth.mtl",
+    }
+
+    for _, file in embeddedFiles do
+        local content = fs.read(file)
+
+        if content and #content == 0 then
+            fs.remove(file)
+            print(`Removed stub '{ file }'`)
+        end
     end
 end
 
@@ -452,10 +431,10 @@ local function openProject_(State: StateType, ManualPath: string?)
     local config = json.parse(assert(fs.read("@project/phoenix.conf")))
     assert(typeof(config) == "table", "Configuration file is corrupt")
 
-    handleCoreAssetAliasMigration(config)
     handleMaterialMigration(config)
     handleStdAliasMigration(config)
     handleCheckeredAndSmoothMigration(config)
+    handleEmbeddedFilesMigration(config)
 
     local objects, error = AssetManager:LoadScene("@_projres/scenes/root.world")
 

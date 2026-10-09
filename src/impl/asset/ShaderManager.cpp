@@ -9,14 +9,15 @@
 #include "asset/TextureManager.hpp"
 #include "render/TextureSlots.hpp"
 #include "datatype/Color.hpp"
+#include "EmbeddedFiles.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-#define SP_TRYFALLBACK() { if (this->Name == "error")               \
-	RAISE_RT("Fallback Shader failed to load");                     \
-else                                                                \
-	GpuId = ShaderManager::Get()->GetShaderResource(0).GpuId; } \
+#define SP_TRYFALLBACK() { if (this->Name == "phoenix://shaders/error.shp") \
+	RAISE_RT("Fallback Shader failed to load");                             \
+else                                                                        \
+	GpuId = ShaderManager::Get()->GetShaderResource(0).GpuId; }             \
 
 #define SP_LOADERROR(str) { Log.Error(str); SP_TRYFALLBACK(); return; }
 
@@ -32,7 +33,7 @@ void ShaderProgram::Activate()
 	if (!glIsProgram(GpuId))
 	{
 		ShaderManager* shdManager = ShaderManager::Get();
-		GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("error")).GpuId;
+		GpuId = shdManager->GetShaderResource(shdManager->LoadFromPath("phoenix://shaders/error.shp")).GpuId;
 
 		if (!glIsProgram(GpuId))
 		{
@@ -199,8 +200,8 @@ void ShaderProgram::Reload()
 
 	if (!shpExists)
 	{
-		if (this->Name == "error")
-			RAISE_RT("Cannot load the fallback Shader Program ('error.shp'), giving up.");
+		if (this->Name == "phoenix://shaders/error.shp")
+			RAISE_RT("Cannot load the fallback Shader Program, giving up.");
 
 		Log.ErrorF(
 			"Shader program '{}' does not exist! Geometry will appear magenta",
@@ -479,7 +480,7 @@ uint32_t ShaderProgram::SetTextureUniform(const std::string_view& UniformName, u
 	};
 
 	static TextureManager* texManager = TextureManager::Get();
-	static uint32_t WhiteTextureId = texManager->LoadFromPath("!White");
+	static uint32_t WhiteTextureId = texManager->LoadFromPath("phoenix://textures/White");
 
 	if (TextureId == 0)
 		TextureId = WhiteTextureId;
@@ -519,8 +520,8 @@ bool ShaderProgram::m_CheckForErrors(uint32_t Object, const char* Type)
 				Type, this->Name, infoLog
 			);
 
-			if (this->Name == "error")
-				RAISE_RT("Failed to compile the required `error` Shader Pipeline");
+			if (this->Name == "phoenix://shaders/error.shp")
+				RAISE_RT("Failed to compile the required 'error' Shader Pipeline");
 
 			glDeleteProgram(GpuId);
 			GpuId = UINT32_MAX;
@@ -584,7 +585,8 @@ static void addIncludes(std::filesystem::path Path)
 			else
 				Log.WarningF("Bad shader include path '{}'", it.path().string());
 
-			glNamedStringARB(GL_SHADER_INCLUDE_ARB, -1, name.c_str(), -1, FileRW::ReadFile(it.path().string()).c_str());
+			std::string content = FileRW::ReadFile(it.path().string());
+			glNamedStringARB(GL_SHADER_INCLUDE_ARB, name.size(), name.data(), content.size(), content.data());
 		}
 	}
 }
@@ -598,8 +600,17 @@ void ShaderManager::Initialize(bool InitIsHeadless)
 
 	if (!IsHeadless)
 	{
+		for (const auto& [ vfsPath, content ] : EmbeddedFiles)
+		{
+			if (vfsPath.starts_with("phoenix://shaders/include"))
+			{
+				std::string_view name = vfsPath.substr(strlen("phoenix://shaders"));
+				glNamedStringARB(GL_SHADER_INCLUDE_ARB, name.size(), name.data(), content.size(), content.data());
+			}
+		}
+
 		addIncludes(FileRW::ResolvePathNormalized("shaders/include"));
-		LoadFromPath("error");
+		LoadFromPath("phoenix://shaders/error.shp");
 	}
 }
 

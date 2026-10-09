@@ -1,9 +1,0 @@
-{
-  "albedo": "models/stylized_sushi/textures/Rice_metallicRoughness.png",
-  "roughnessFactor": 1.0,
-  "specExponent": 16.0,
-  "specMultiply": 1.0,
-  "specular": "models/stylized_sushi/textures/Rice_metallicRoughness.png",
-  "translucency": false,
-  "uniforms": {}
-}

@@ -327,6 +327,7 @@ function ProjectEditing.Leave(NextStage: Types.Stage)
 
     DeveloperTools:SetExplorerRoot(game)
     DeveloperTools:SetExplorerSelections({})
+    CommonUI.SaveSettings()
 
     assert(State.Project.DataModel)
     if not Preferences.ClosingProjectSaveRequiresConfirmation

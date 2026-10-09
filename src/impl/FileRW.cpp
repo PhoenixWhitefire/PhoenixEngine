@@ -7,6 +7,7 @@
 #include <tracy/public/tracy/Tracy.hpp>
 
 #include "FileRW.hpp"
+#include "EmbeddedFiles.hpp"
 #include "Utilities.hpp"
 #include "Log.hpp"
 
@@ -36,6 +37,20 @@ static bool createDirectoryRecursive(const std::string_view& dirName, std::error
 std::string FileRW::ReadFile(const std::string& ShortPath, bool* Success)
 {
     ZoneScoped;
+
+    if (ShortPath.starts_with("phoenix://"))
+    {
+        if (const auto& embedded = EmbeddedFiles.find(ShortPath); embedded != EmbeddedFiles.end())
+        {
+            *Success = true;
+            return std::string(embedded->second);
+        }
+        else
+        {
+            *Success = false;
+            return "Invalid embedded file";
+        }
+    }
 
     const std::string actualPath = FileRW::ResolvePathNormalized(ShortPath);
     ZoneText(ShortPath.data(), ShortPath.size());
@@ -195,9 +210,10 @@ static bool isQualified(const std::string& Path)
     return Path[0] == '.' || Path[0] == '/' || Path[0] == '~' || (Path.size() >= 2 && Path[1] == ':');
 }
 
-std::string FileRW::ResolvePathNormalized(std::string PathToNormalize)
+std::string FileRW::ResolvePathNormalized(std::string Path)
 {
-    std::string Path = PathToNormalize;
+    if (Path.starts_with("phoenix://"))
+        return Path;
 
     if (Path.size() == 0)
     {

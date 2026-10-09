@@ -10,7 +10,7 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-static const std::string MissingTexPath = "!Missing";
+static const std::string MissingTexPath = "phoenix://textures/Missing";
 
 static std::string getFilePath(const std::string& Material)
 {
@@ -53,7 +53,7 @@ void RenderMaterial::Reload()
     }
     else
     {
-        this->ShaderId = shdManager->LoadFromPath("error");
+        this->ShaderId = shdManager->LoadFromPath("phoenix://shaders/error.shp");
 
         Log.Error("Unknown material: '" + this->Name + "'");
 
@@ -62,7 +62,7 @@ void RenderMaterial::Reload()
 
     TextureManager* texManager = TextureManager::Get();
 
-    std::string desiredShp = jsonMaterialData.value("Shader", jsonMaterialData.value("shaderprogram", "worldUber"));
+    std::string desiredShp = jsonMaterialData.value("Shader", jsonMaterialData.value("shaderprogram", "phoenix://shaders/worldUber.shp"));
     this->ShaderId = shdManager->LoadFromPath(desiredShp);
 
     nlohmann::json uniforms = jsonMaterialData.value("Uniforms", jsonMaterialData.value("uniforms", nlohmann::json::object()));
@@ -127,7 +127,7 @@ void RenderMaterial::Reload()
     if (metallicRoughnessPath != "")
         this->MetallicRoughnessMap = texManager->LoadFromPath(metallicRoughnessPath, true);
     else
-        this->MetallicRoughnessMap = texManager->LoadFromPath("!White", true);
+        this->MetallicRoughnessMap = texManager->LoadFromPath("phoenix://textures/White", true);
 
     if (normalPath != "")
         this->NormalMap = texManager->LoadFromPath(normalPath, true);
@@ -179,7 +179,6 @@ MaterialManager::~MaterialManager()
 void MaterialManager::Initialize()
 {
     ZoneScoped;
-
     s_Instance = this;
 }
 
@@ -206,7 +205,7 @@ uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
             uint32_t resourceId = static_cast<uint32_t>(m_Materials.size());
             m_StringToMaterialId.emplace(Name, resourceId);
 
-            RenderMaterial& material = m_Materials.emplace_back(std::string(Name));
+            RenderMaterial& material = m_Materials.emplace_back(namedyn);
             material.Name = Name;
             material.Reload();
 
@@ -214,12 +213,12 @@ uint32_t MaterialManager::LoadFromPath(const std::string_view& Name)
         }
         else
         {
-            Log.Error("Failed to load material '" + fullPath + "'");
+            Log.ErrorF("Failed to load material '{}': {}", fullPath, fileData);
 
-            if (Name == "error")
+            if (Name == "phoenix://materials/error.mtl")
                 RAISE_RT("Failed to load the 'error' material. It is required due to technical reasons (I'm lazy)");
 
-            uint32_t id = LoadFromPath("error");
+            uint32_t id = LoadFromPath("phoenix://materials/error.mtl");
             m_StringToMaterialId.emplace(Name, id);
 
             return id;

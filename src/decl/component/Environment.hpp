@@ -13,7 +13,7 @@ struct EcEnvironmentService : public Component<EntityComponent::Environment>
     float GammaCorrection = 1.f;
     float BloomThreshold = 1.5f;
     float BloomScale = 1.f;
-    float BloomStdDeviation = 8.f;
+    float BloomStdDeviation = 3.f;
 
     std::vector<uint32_t> SkyboxFacesBeingLoaded;
     std::string Skybox = "textures/Sky1";

@@ -110,7 +110,7 @@ static const std::array AddableInterfaceComponents = {
 };
 
 static nlohmann::json DefaultNewMaterial = {
-    { "ColorMap", "!Checkered" },
+    { "ColorMap", "phoenix://materials/Checkered.mtl" },
     { "specExponent", 32.f },
     { "specMultiply", 0.5f }
 };
@@ -1582,7 +1582,7 @@ static void renderMaterialEditor()
     MeshProvider* meshProvider = MeshProvider::Get();
 
     if (MtlPreviewScene.RenderList[0].RenderMeshId == 0)
-        MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath("!Cube");
+        MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath("phoenix://meshes/Cube");
 
     if (ImGui::IsItemActivated())
         ImGui::OpenPopup("SelectPreviewShape");
@@ -1593,7 +1593,7 @@ static void renderMaterialEditor()
         {
             if (ImGui::MenuItem(shapeName))
             {
-                std::string shapeId = "!" + std::string(shapeName);
+                std::string shapeId = "phoenix://meshes/" + std::string(shapeName);
                 MtlPreviewScene.RenderList[0].RenderMeshId = meshProvider->LoadFromPath(shapeId);
             }
         }
@@ -3931,12 +3931,12 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
         History::ScopedAction action = { "AssetSelector_Mesh" };
 
         constexpr std::string_view BuiltinPrimitives[] = {
-            "!Quad",
-            "!Cube",
-            "!Sphere",
-            "!Cylinder",
-            "!Cone",
-            "!Pyramid",
+            "Quad",
+            "Cube",
+            "Sphere",
+            "Cylinder",
+            "Cone",
+            "Pyramid",
         };
 
         for (const std::string_view& builtin : BuiltinPrimitives)
@@ -3956,7 +3956,7 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
 
             if (shown && ImGui::MenuItem(builtin.data()))
             {
-                setProperties(PropertyName, builtin);
+                setProperties(PropertyName, std::format("phoenix://meshes/{}", builtin));
                 didSet = true;
             }
         }
@@ -3974,7 +3974,7 @@ static bool propertyAssetSelectorList(const std::string_view& PropertyName, floa
 
             std::string_view displayedName = material.Name.c_str();
 
-            constexpr std::string_view BasePrefix = "@base/";
+            constexpr std::string_view BasePrefix = "phoenix://";
             constexpr size_t BasePrefixLen = BasePrefix.size();
 
             if (displayedName.starts_with(BasePrefix))

@@ -187,8 +187,8 @@ void EcParticleEmitter::Render(const glm::mat4& RenderMatrix)
     ShaderManager* shdManager = ShaderManager::Get();
     Renderer* renderer = Renderer::Get();
 
-    static uint32_t QuadMeshId = meshProvider->LoadFromPath("!Quad");
-    static uint32_t ShaderId = shdManager->LoadFromPath("@base/shaders/particle.shp");
+    static uint32_t QuadMeshId = meshProvider->LoadFromPath("phoenix://meshes/Quad");
+    static uint32_t ShaderId = shdManager->LoadFromPath("phoenix://shaders/particle.shp");
 
     ShaderProgram& particleShader = shdManager->GetShaderResource(ShaderId);
     const Mesh& quadMesh = meshProvider->GetMeshResource(QuadMeshId);

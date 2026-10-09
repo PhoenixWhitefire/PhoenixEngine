@@ -74,13 +74,13 @@ vec3 CalculateLight(int Index, vec3 Normal, vec3 Outgoing, float SpecMapValue)
 	vec3 LightColor = Light.Color;
 
 	int LightType = Light.Type;
-	
+
 	if (LightType == 0)
 	{
 		vec3 Incoming = normalize(LightPosition);
-		
+
 		float shadow = 0.f;
-		
+
 		if (Light.Shadows)
 		{
 			vec3 lightCoords = Frag_RelativeToDirecLight.xyz / Frag_RelativeToDirecLight.w;
@@ -233,7 +233,7 @@ void main()
 		//vec2 uvXAxis = Frag_ModelPosition.zy * vec2(1.f, -1.f) * MaterialProjectionFactor;
 		//vec2 uvYAxis = Frag_ModelPosition.xz * vec2(-1.f, 1.f) * MaterialProjectionFactor;
 		//vec2 uvZAxis = -Frag_ModelPosition.xy * MaterialProjectionFactor;
-		
+
 		vec4 xAxis = textureLod(Phoenix_Material.ColorMap, Frag_ModelPosition.yz, mipLevel);
 		vec4 yAxis = textureLod(Phoenix_Material.ColorMap, Frag_ModelPosition.xz, mipLevel);
 		vec4 zAxis = textureLod(Phoenix_Material.ColorMap, Frag_ModelPosition.xy, mipLevel);
@@ -265,19 +265,19 @@ void main()
 			EmissionSample = emissionXAxis * blending.x + emissionYAxis * blending.y + emissionZAxis * blending.z;
 		}
 	}
-	
+
 	vec3 Normal = normalize(NormalMatrix * vertexNormal);
 	//vec3 Normal = NormalSample * 2.f - 1.f;
 	//Normal = normalize(Frag_TBN * Normal);
 	//Normal = normalize(Normal + (NormalSample * 2.f - 1.f));
-	
+
 	Albedo.w -= Frag_Transparency;
-	
+
 	Albedo = vec4(Albedo.xyz * Frag_Paint.xyz, Albedo.w * Frag_Paint.w);
 
 	if (Albedo.a < Phoenix_Material.AlphaCutoff)
 		discard;
-	
+
 	if (Phoenix_DebugOverdraw)
 	{
 		// accumulate a red color with overdraw
@@ -286,9 +286,9 @@ void main()
 		if (prevValue > 0.f)
 			FragColor = vec4(1.f, 0.f, 0.f, 1.f);
 		//gl_FragDepth = 0.f;
-		
+
 		//FragColor = vec4(prevValue, 0.f, 0.f, 1.f);
-		
+
 		return;
 	}
 
@@ -302,7 +302,7 @@ void main()
 	//Albedo = vec4(Albedo.xyz * Frag_ColorTint + ReflectedTint * MetallicRoughnessSample.y, Albedo.w);
 
 	//Albedo = vec4(mix(ReflectedTint, Albedo.xyz * Frag_ColorTint, MetallicRoughnessSample.y * RoughnessFactor), Albedo.w);
-	
+
 	if (Phoenix_Material.EmissionStrength <= 0)
 		for (int LightIndex = 0; LightIndex < Phoenix_NumLights; LightIndex++)
 			LightInfluence += CalculateLight(
@@ -313,7 +313,7 @@ void main()
 			);
 	else
 		LightInfluence = EmissionSample * Phoenix_Material.EmissionStrength + Phoenix_LightAmbient;
-	
+
 	if (!Phoenix_DebugLightInfluence)
 		LightInfluence += Phoenix_LightAmbient;
 	vec3 FragCol3 = (LightInfluence/* + textureLod(SkyboxCubemap, reflectDir, 11).xyz*/);
@@ -334,7 +334,7 @@ void main()
 		float FogFactor = clamp((FogEnd - Distance) / (FogEnd - FogStart), 0.0, 1.0); //Linear fog
 
 		//float FogFactor = pow(2.0f, -pow(Distance * FogDensity, 2));
-		
+
 		FragCol3 = Phoenix_FogColor + (FragCol3 - Phoenix_FogColor) * FogFactor;
 	}
 

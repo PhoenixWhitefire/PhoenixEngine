@@ -58,7 +58,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -126,7 +126,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -194,7 +194,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -262,7 +262,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -330,7 +330,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -398,7 +398,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -466,7 +466,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -711,7 +711,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,
@@ -778,7 +778,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "Density": 1.0,
       "Enabled": true,

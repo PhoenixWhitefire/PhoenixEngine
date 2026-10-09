@@ -305,9 +305,9 @@ ModelLoader::ModelLoader(const std::string& AssetPath, uint32_t Parent)
             nlohmann::json materialJson;
 
             if (m_HasSkinning)
-                materialJson["Shader"] = "@base/shaders/worldUberSkinned.shp";
+                materialJson["Shader"] = "phoenix://shaders/worldUberSkinned.shp";
             else
-                materialJson["Shader"] = "@base/shaders/worldUber.shp";
+                materialJson["Shader"] = "phoenix://shaders/worldUber.shp";
 
             const ModelLoader::MeshMaterial& material = node.Material;
 
@@ -1096,7 +1096,7 @@ ModelLoader::MeshMaterial ModelLoader::m_GetMaterial(const nlohmann::json& Primi
     TextureManager* texManager = TextureManager::Get();
 
     ModelLoader::MeshMaterial material;
-    material.BaseColorTexture = texManager->LoadFromPath("!White");
+    material.BaseColorTexture = texManager->LoadFromPath("phoenix://textures/White");
 
     auto materialIdIt = Primitive.find("material");
 

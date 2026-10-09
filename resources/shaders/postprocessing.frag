@@ -24,12 +24,6 @@ float roundTo(float n, float to)
 	return floor((n / to) + 0.5f) * to;
 }
 
-// https://stackoverflow.com/a/14081377/16875161
-float log10(float x)
-{
-	return (1 / log(10)) * log(x);
-}
-
 void main()
 {
 	if (!Phoenix_PostFxEnabled)

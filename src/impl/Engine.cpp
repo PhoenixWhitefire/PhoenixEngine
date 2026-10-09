@@ -436,10 +436,10 @@ void Engine::Initialize(int ThreadCount, bool Headless)
 
         ZoneScopedN("Load core shaders and sun shadowmap");
 
-        PostFxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/postprocessing.shp"));
-        BloomExtractShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/bloomextract.shp"));
-        BloomSeparatedShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/bloomseparated.shp"));
-        SkyboxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("@base/shaders/skybox.shp"));
+        PostFxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("phoenix://shaders/postprocessing.shp"));
+        BloomExtractShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("phoenix://shaders/bloomextract.shp"));
+        BloomSeparatedShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("phoenix://shaders/bloomseparated.shp"));
+        SkyboxShader = ShaderManagerInstance.GetShaderResource(ShaderManagerInstance.LoadFromPath("phoenix://shaders/skybox.shp"));
 
         glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::Framebuffer);
         RendererContext.Framebuffer.BindTexture();
@@ -484,7 +484,7 @@ static void traverseHierarchy(
     ZoneScopedC(tracy::Color::LightGoldenrod);
 
     static uint32_t boxframeMaterial = UINT32_MAX;
-    static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("!Cube");
+    static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("phoenix://meshes/Cube");
 
     Root->ForEachChild([&](const ObjectHandle& object) -> bool
     {
@@ -509,7 +509,7 @@ static void traverseHierarchy(
             if (DebugCollisionAabbs && rb->PhysicsCollisions)
             {
                 if (boxframeMaterial == UINT32_MAX)
-                    boxframeMaterial = MaterialManager::Get()->LoadFromPath("@base/materials/boxframe.mtl");
+                    boxframeMaterial = MaterialManager::Get()->LoadFromPath("phoenix://materials/boxframe.mtl");
 
                 RendererScene.RenderList.push_back(RenderItem{
                     .RenderMeshId = cubeMesh,
@@ -709,7 +709,7 @@ static void traverseAndRenderUIHierarchy(
             gltEndDraw();
 
             static MeshProvider* MeshProvider = MeshProvider::Get();
-            static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
+            static uint32_t quadMeshId = MeshProvider->LoadFromPath("phoenix://meshes/Quad");
 
             const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
             const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
@@ -789,7 +789,7 @@ static void renderUIElements(Engine* EngineObject, GameObject* Root, Renderer& r
 
     static MeshProvider* MeshProvider = MeshProvider::Get();
     static ShaderManager* shdManager = ShaderManager::Get();
-    static uint32_t quadMeshId = MeshProvider->LoadFromPath("!Quad");
+    static uint32_t quadMeshId = MeshProvider->LoadFromPath("phoenix://meshes/Quad");
 
     const Mesh& quadMesh = MeshProvider->GetMeshResource(quadMeshId);
     const MeshProvider::GpuMesh& gpuMesh = MeshProvider->GetGpuMesh(quadMesh.GpuId);
@@ -797,7 +797,7 @@ static void renderUIElements(Engine* EngineObject, GameObject* Root, Renderer& r
     gpuMesh.VertexBuffer.Bind();
     gpuMesh.ElementBuffer.Bind();
 
-    static const uint32_t shaderId = shdManager->LoadFromPath("@base/shaders/ui.shp");
+    static const uint32_t shaderId = shdManager->LoadFromPath("phoenix://shaders/ui.shp");
     ShaderProgram& shader = shdManager->GetShaderResource(shaderId);
 
     ImVec2 viewportSize = EngineObject->GetViewportInputRectSize();
@@ -817,8 +817,8 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
 {
     ZoneScoped;
 
-    static const Mesh cubeMesh = MeshProviderInstance.GetMeshResource(MeshProviderInstance.LoadFromPath("!Cube"));
-    static const Mesh quadMesh = MeshProviderInstance.GetMeshResource(MeshProviderInstance.LoadFromPath("!Quad"));
+    static const Mesh cubeMesh = MeshProviderInstance.GetMeshResource(MeshProviderInstance.LoadFromPath("phoenix://meshes/Cube"));
+    static const Mesh quadMesh = MeshProviderInstance.GetMeshResource(MeshProviderInstance.LoadFromPath("phoenix://meshes/Quad"));
 
     if (VSync)
         glfwSwapInterval(1);
@@ -1164,12 +1164,12 @@ void Engine::Start()
     ComponentManagers.Environment.GetService()->ChangeSkybox(ComponentManagers.Environment.GetService()->Skybox);
 
     m_FboResourceId = TextureManagerInstance.Assign({
-        .ImagePath = "!Framebuffer:Main",
+        .ImagePath = "phoenix://framebuffer/main",
         .ResourceId = UINT32_MAX,
         .GpuId = RendererContext.Framebuffer.GpuTextureId,
         .Width = WindowSizeX, .Height = WindowSizeY,
         .NumColorChannels = 3
-    }, "!Framebuffer:Main");
+    }, "phoenix://framebuffer/main");
 
     Physics::World physWorld;
     std::vector<EcParticleEmitter*> particleEmittersRenderList;
@@ -1384,7 +1384,7 @@ void Engine::Start()
             if (CurrentScene.RenderList.size() == 0)
                 CurrentScene.RenderList.push_back(RenderItem{
                     .RenderMeshId = 1,
-                    .MaterialId = MaterialManagerInstance.LoadFromPath("@base/materials/Smooth.mtl"),
+                    .MaterialId = MaterialManagerInstance.LoadFromPath("phoenix://materials/Smooth.mtl"),
                     .Transparency = 1.f
                 });
 
@@ -1401,7 +1401,7 @@ void Engine::Start()
                     CurrentScene.RenderList.push_back(RenderItem{
                         .RenderMeshId = 0,
                         .Transform = glm::translate(glm::scale(glm::mat4(1.f), glm::vec3(SPATIAL_HASH_GRID_SIZE)), (glm::vec3)it.first),
-                        .MaterialId = MaterialManagerInstance.LoadFromPath("@base/materials/neon.mtl"),
+                        .MaterialId = MaterialManagerInstance.LoadFromPath("phoenix://materials/neon.mtl"),
                         .TintColor = glm::vec3(1.f, 0.f, 0.f),
                         .Transparency = std::clamp(1.f - ((float)(it.second.size() + 5) / 64.f), 0.2f, 1.f),
                         .FaceCulling = FaceCullingMode::None
@@ -1423,7 +1423,7 @@ void Engine::Start()
                 CurrentScene.UsedShaders.insert(MaterialManagerInstance.GetMaterialResource(ri.MaterialId).ShaderId);
 
             if (particleEmittersRenderList.size() > 0)
-                CurrentScene.UsedShaders.insert(ShaderManagerInstance.LoadFromPath("@base/shaders/particle.shp"));
+                CurrentScene.UsedShaders.insert(ShaderManagerInstance.LoadFromPath("phoenix://shaders/particle.shp"));
         }
 
         if (!IsHeadlessMode && sun)

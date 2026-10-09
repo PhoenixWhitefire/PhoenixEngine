@@ -75,7 +75,7 @@ PHNXENGI
         0.0,
         0.0
       ],
-      "Asset": "!Cube",
+      "Asset": "phoenix://meshes/Cube",
       "CastsShadows": true,
       "CollisionFidelity": 0,
       "Density": 1.0,

@@ -111,7 +111,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/unlit.mtl",
+      "Material": "@_editres/materials/unlit.mtl",
       "MeshAsset": "./resources/meshes/arrow/Cone.hxmesh",
       "Name": "Cone",
       "Parent": 1,
@@ -155,7 +155,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/unlit.mtl",
+      "Material": "@_editres/materials/unlit.mtl",
       "MeshAsset": "./resources/meshes/arrow/Cylinder.hxmesh",
       "Name": "Cylinder",
       "Parent": 1,
@@ -272,7 +272,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/unlit.mtl",
+      "Material": "@_editres/materials/unlit.mtl",
       "MeshAsset": "./resources/meshes/arrow/Cone.hxmesh",
       "Name": "Cone",
       "Parent": 5,
@@ -316,7 +316,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/unlit.mtl",
+      "Material": "@_editres/materials/unlit.mtl",
       "MeshAsset": "./resources/meshes/arrow/Cylinder.hxmesh",
       "Name": "Cylinder",
       "Parent": 5,
@@ -433,7 +433,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/unlit.mtl",
+      "Material": "@_editres/materials/unlit.mtl",
       "MeshAsset": "./resources/meshes/arrow/Cone.hxmesh",
       "Name": "Cone",
       "Parent": 9,
@@ -477,7 +477,7 @@ PHOENIXF
           1.0
         ]
       ],
-      "Material": "@base/materials/unlit.mtl",
+      "Material": "@_editres/materials/unlit.mtl",
       "MeshAsset": "./resources/meshes/arrow/Cylinder.hxmesh",
       "Name": "Cylinder",
       "Parent": 9,

@@ -1,6 +1,6 @@
 {
-  "Fragment": "@base/shaders/bloomextract.frag",
+  "Fragment": "phoenix://shaders/bloomextract.frag",
   "Geometry": "<NOT_SPECIFIED>",
   "InheritUniformsOf": "",
-  "Vertex": "@base/shaders/postprocessing.vert"
+  "Vertex": "phoenix://shaders/postprocessing.vert"
 }

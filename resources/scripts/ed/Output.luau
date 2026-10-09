@@ -453,13 +453,17 @@ Logging.OnMessaged:Connect(function(Time, Type, Message, ExtraTags, Values)
 
     if prev then
         if #prev.Components == #Values + 1 and prev.Components[1].String == Message then
-            local isDuplicate = true
+            local isDuplicate = false
 
-            for i = 2, #prev.Components do
-                -- TODO luau cast
-                if prev.Components[i].String ~= Values[i - 1].String or not equivalent(Values[i - 1] :: any, prev.Components[i].Value :: any) then
-                    isDuplicate = false
-                    break
+            if prev.Type == Type then
+                isDuplicate = true
+
+                for i = 2, #prev.Components do
+                    -- TODO luau cast
+                    if prev.Components[i].String ~= Values[i - 1].String or not equivalent(Values[i - 1] :: any, prev.Components[i].Value :: any) then
+                        isDuplicate = false
+                        break
+                    end
                 end
             end
 

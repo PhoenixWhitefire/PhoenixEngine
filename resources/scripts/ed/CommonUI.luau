@@ -716,14 +716,6 @@ local function exportProject()
 
     fs.copy(enginePath, `{exportTo}/{State.Project.Name}{if enginePath:find(".exe") then ".exe" else ""}`)
 
-    for _, a in Configuration.CoreAssets do
-        local path = `{ exportTo }/resources/{ a }`
-        if fs.type(path) == "file" then
-            fs.remove(path)
-            fs.copy(`./resources/{ a }`, path)
-        end
-    end
-
     if keepOnlyScriptBytecode then
         compileScriptBytecodeRecursive(exportTo .. "/resources/scripts")
     end
@@ -1489,7 +1481,7 @@ function CommonUI.RenderViewport(DeltaTime: number)
 
     imgui.setcursorposition(0, ws.y - ews.y)
 
-    imgui.image("!Framebuffer:Main", nil, true)
+    imgui.image("phoenix://framebuffer/main", nil, true)
 
     imgui.endw()
     debug.zoneend()

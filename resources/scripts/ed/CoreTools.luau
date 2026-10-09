@@ -269,7 +269,7 @@ local function update(Project: Types.Project, EditorPreferences, ViewportRenderP
         for _, g in camObj:GetChildren() do
             if g:HasComponent("Mesh") then
                 local m = g :: EcMesh
-                m.Material = "@base/materials/unlit.mtl"
+                m.Material = "@_editres/materials/unlit.mtl"
                 m.Tint = Color.new(1, 1, 1)
 
                 if hidden then

@@ -1,5 +1,5 @@
 {
-  "albedo": "!White",
+  "albedo": "phoenix://textures/White",
   "shaderprogram": "@_editres/shaders/unlit.shp",
   "translucency": false
 }

@@ -3,11 +3,11 @@ PHOENIXF
 #Date 13-5-2026
 
 {
-  "ColorMap": "!White",
+  "ColorMap": "phoenix://textures/White",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "!White",
+  "MetallicRoughnessMap": "phoenix://textures/White",
   "PolygonMode": 0,
-  "Shader": "@base/shaders/worldUber.shp",
+  "Shader": "phoenix://shaders/worldUber.shp",
   "specExponent": 4.0,
   "specMultiply": 0.25
 }

@@ -2,8 +2,8 @@
   "Definitions": {
     "USE_TRI_PLANAR_PROJECTION": "true"
   },
-  "Fragment": "@base/shaders/worldUber.frag",
-  "Geometry": "@base/shaders/worldUber.geom",
-  "InheritUniformsOf": "@base/shaders/worldUber.shp",
-  "Vertex": "@base/shaders/worldUber.vert"
+  "Fragment": "phoenix://shaders/worldUber.frag",
+  "Geometry": "phoenix://shaders/worldUber.geom",
+  "InheritUniformsOf": "phoenix://shaders/worldUber.shp",
+  "Vertex": "phoenix://shaders/worldUber.vert"
 }

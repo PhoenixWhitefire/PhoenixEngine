@@ -3,9 +3,9 @@ PHNXENGI
 #Date 11-1-2025
 
 {
-  "ColorMap": "!Missing",
+  "ColorMap": "phoenix://textures/Missing",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "!Black",
+  "MetallicRoughnessMap": "phoenix://textures/Black",
   "Shader": "worldUber",
   "Uniforms": {
     "EmissionStrength": 1.0

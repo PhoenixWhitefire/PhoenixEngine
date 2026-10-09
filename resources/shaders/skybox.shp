@@ -1,6 +1,6 @@
 {
-  "Fragment": "@base/shaders/skybox.frag",
+  "Fragment": "phoenix://shaders/skybox.frag",
   "Geometry": "<NOT_SPECIFIED>",
   "InheritUniformsOf": "",
-  "Vertex": "@base/shaders/skybox.vert"
+  "Vertex": "phoenix://shaders/skybox.vert"
 }

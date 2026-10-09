@@ -1,5 +1,5 @@
 {
-    "Vertex": "@base/shaders/worldUber.vert",
-    "Fragment": "@base/shaders/error.frag"
+    "Vertex": "phoenix://shaders/worldUber.vert",
+    "Fragment": "phoenix://shaders/error.frag"
     //"InheritUniformsOf": "worldUber"
 }

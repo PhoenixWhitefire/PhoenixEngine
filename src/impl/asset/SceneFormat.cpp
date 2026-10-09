@@ -653,6 +653,19 @@ static std::vector<ObjectHandle> loadSceneVersion2(const std::string& Contents, 
             else
             {
                 Reflection::GenericValue assignment = castJsonToGeneric(propName, propType, memberValue);
+
+                if (Version < 2.17f && assignment.Type == Reflection::ValueType::String)
+                {
+                    std::string_view str = assignment.AsStringView();
+                    if (str.starts_with("!"))
+                    {
+                        if (propName == "MeshAsset")
+                            assignment = std::format("phoenix://meshes/{}", str.substr(1));
+                        else if (propName == "Material")
+                            assignment = std::format("phoenix://materials/{}", str.substr(1));
+                    }
+                }
+
                 glm::vec3 size = { 1.f, 1.f, 1.f };
                 // older files might use the world-space ones
                 bool isLocal = propName == "LocalTransform";
@@ -1003,7 +1016,7 @@ std::string SceneFormat::Serialize(std::vector<GameObject*> Objects, const std::
                             + std::to_string((int32_t)ymd.year());
 
     std::string contents = std::string("PHOENIXF\n")
-                            + "#Version 2.16\n"
+                            + "#Version 2.17\n"
                             + "#Asset Scene\n"
                             + "#Date " + dateStr + "\n"
                             + "#SceneName " + SceneName + "\n"

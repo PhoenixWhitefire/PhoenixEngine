@@ -3,11 +3,11 @@ PHOENIXF
 #Date 13-5-2026
 
 {
-  "ColorMap": "!Checkered",
+  "ColorMap": "phoenix://textures/Checkered",
   "HasTranslucency": false,
-  "MetallicRoughnessMap": "!White",
+  "MetallicRoughnessMap": "phoenix://textures/White",
   "PolygonMode": 0,
-  "Shader": "@base/shaders/worldUberTriProjected.shp",
+  "Shader": "phoenix://shaders/worldUberTriProjected.shp",
   "Uniforms": {
     "MaterialProjectionFactor": 0.05000000074505806
   },

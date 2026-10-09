@@ -11,7 +11,7 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
-static const std::string MissingTexPath = "!Missing";
+static const std::string MissingTexPath = "phoenix://textures/Missing";
 
 typedef std::function<uint8_t* (const char*, int*, int*, int*)> ImageLoader_t;
 typedef std::function<Texture*(ImageLoader_t, Texture*, std::string, uint32_t)> AsyncTexLoader_t;
@@ -74,7 +74,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
                 texture.ImagePath, texture.FailureReason
             );
         else
-            fallbackPath = "!Missing";
+            fallbackPath = MissingTexPath;
 
         uint32_t texId = texture.ResourceId;
         uint32_t replacementId = this->LoadFromPath(
@@ -149,7 +149,7 @@ void TextureManager::m_UploadTextureToGpu(Texture& texture)
     // little hack to `free` textures `Engine.cpp` doesn't
     // manage (most of them)
     // 11/05/2026: Check is mirrored in `EcEnvironmentService::ChangeSkybox`
-    if (texture.ImagePath.find("Sky") == std::string::npos && texture.ImagePath[0] != '!')
+    if (texture.ImagePath.find("Sky") == std::string::npos && !texture.ImagePath.starts_with("phoenix://"))
     {
         Memory::Free(texture.TMP_ImageByteData);
         texture.TMP_ImageByteData = nullptr;
@@ -210,10 +210,10 @@ void TextureManager::Initialize(bool IsHeadless)
     // ID 0 means no texture
     m_Textures.emplace_back();
 
-    createAndUploadTextureData("!Missing", const_cast<uint8_t*>(MissingTextureBytes), 2, 2);
-    createAndUploadTextureData("!White", const_cast<uint8_t*>((const uint8_t*)&WhiteTextureBytes), 1, 1);
-    createAndUploadTextureData("!Black", const_cast<uint8_t*>((const uint8_t*)&BlackTextureBytes), 1, 1);
-    createAndUploadTextureData("!Checkered", const_cast<uint8_t*>(CheckeredTextureBytes), 2, 2);
+    createAndUploadTextureData("phoenix://textures/Missing", const_cast<uint8_t*>(MissingTextureBytes), 2, 2);
+    createAndUploadTextureData("phoenix://textures/White", const_cast<uint8_t*>((const uint8_t*)&WhiteTextureBytes), 1, 1);
+    createAndUploadTextureData("phoenix://textures/Black", const_cast<uint8_t*>((const uint8_t*)&BlackTextureBytes), 1, 1);
+    createAndUploadTextureData("phoenix://textures/Checkered", const_cast<uint8_t*>(CheckeredTextureBytes), 2, 2);
 
     glGenSamplers(1, &m_NearestNeighbourTextureSampler);
     glGenSamplers(1, &m_LinearTextureSampler);
@@ -307,24 +307,21 @@ static void emloadTexture(
     }
     else
     {
-        if (ActualPath == "!White")
+        if (ActualPath == "phoenix://textures/White")
             data = const_cast<uint8_t*>((const uint8_t*)&WhiteTextureBytes);
-        else if (ActualPath == "!Black")
+        else if (ActualPath == "phoenix://textures/Black")
             data = const_cast<uint8_t*>((const uint8_t*)&BlackTextureBytes);
-        else
-        {
-            if (ActualPath != "!Missing")
-                Log.ErrorF("Invalid built-in texture in async texture load '{}'", ActualPath);
-
+        else if (ActualPath == "phoenix://textures/Missing")
             data = const_cast<uint8_t*>(MissingTextureBytes);
-        }
+        else
+            Log.ErrorF("Invalid built-in texture in async texture load '{}'", ActualPath);
     }
 
     AsyncTexture->Status = data ? Texture::LoadStatus::Succeeded : Texture::LoadStatus::Failed;
     AsyncTexture->TMP_ImageByteData = data;
 
-    if (!data)
-        AsyncTexture->FailureReason = stbi_failure_reason();
+    if (const char* reason = stbi_failure_reason(); !data && reason)
+        AsyncTexture->FailureReason = reason;
 }
 
 uint32_t TextureManager::Assign(const Texture& texture, const std::string& name)
@@ -379,7 +376,7 @@ uint32_t TextureManager::LoadFromPath(const std::string& Path, bool ShouldLoadAs
 
         if (texture.Status != Texture::LoadStatus::Unloaded)
         {
-            if (texture.IsLinearSpace != LoadInLinearSpace && ActualPath != "!Framebuffer:Main")
+            if (texture.IsLinearSpace != LoadInLinearSpace && ActualPath != "phoenix://framebuffer/main")
             {
                 assignName += (LoadInLinearSpace ? "L" : "S");
                 const auto& vit = m_StringToTextureId.find(assignName);
