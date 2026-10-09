@@ -1873,9 +1873,6 @@
   "@phoenix/globaltype/EcTransform": {
     "documentation": "Gives a physical position and size to an Object"
   },
-  "@phoenix/globaltype/EcTreeLink": {
-    "documentation": "* The Engine, for rendering and physics, will pretend the children of this Object's `Target` are the children of the node\n* This is *not* intended to act like a transparent proxy"
-  },
   "@phoenix/globaltype/EcUIButton": {
     "documentation": "Button behaviour"
   },
@@ -2496,9 +2493,6 @@
   },
   "@phoenix/globaltype/Transform.Transform": {
     "documentation": "The Object's world-space transformation"
-  },
-  "@phoenix/globaltype/TreeLink.Target": {
-    "documentation": "The target to link"
   },
   "@phoenix/globaltype/UIButton.ClickChanged": {
     "documentation": "Fires when the button click state changes"

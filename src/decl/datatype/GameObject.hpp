@@ -109,7 +109,6 @@ public:
     std::vector<Reflection::EventConnection> OnWorkspaceChangedCallbacks;
 
     uint16_t HardRefCount = 0;
-    // How much of HardRefCount is from Luau
     uint16_t HardRefCountFromLuau = 0;
 
     bool TreeEnabled = true;

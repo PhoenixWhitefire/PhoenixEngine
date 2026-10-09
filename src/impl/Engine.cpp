@@ -27,7 +27,6 @@
 #include "component/RigidBody.hpp"
 #include "component/Interface.hpp"
 #include "component/Animation.hpp"
-#include "component/TreeLink.hpp"
 #include "component/Camera.hpp"
 #include "component/Sound.hpp"
 #include "component/Light.hpp"
@@ -478,7 +477,8 @@ static void traverseHierarchy(
     EcCamera* SceneCamera,
     double DeltaTime,
     EcDirectionalLight** Sun,
-    bool DebugCollisionAabbs
+    bool DebugCollisionAabbs,
+    bool AddToPhysicsWorld
 )
 {
     ZoneScopedC(tracy::Color::LightGoldenrod);
@@ -545,18 +545,6 @@ static void traverseHierarchy(
             );
         }
 
-        if (EcTreeLink* link = object->FindComponent<EcTreeLink>(); link && link->Target.IsValid())
-            traverseHierarchy(
-                RendererScene,
-                PhysicsWorld,
-                ParticleEmitters,
-                link->Target,
-                SceneCamera,
-                DeltaTime,
-                Sun,
-                DebugCollisionAabbs
-            );
-
         EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
         EcPointLight* point = object->FindComponent<EcPointLight>();
         EcSpotLight* spot = object->FindComponent<EcSpotLight>();
@@ -601,6 +589,7 @@ static void traverseHierarchy(
             animator->Step(DeltaTime);
 
         if (!object->Children.empty())
+        {
             traverseHierarchy(
                 RendererScene,
                 PhysicsWorld,
@@ -609,8 +598,10 @@ static void traverseHierarchy(
                 SceneCamera,
                 DeltaTime,
                 Sun,
-                DebugCollisionAabbs
+                DebugCollisionAabbs,
+                AddToPhysicsWorld
             );
+        }
 
         if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())
         {
@@ -639,14 +630,6 @@ static void traverseAndRenderUIHierarchy(
     {
         if (!child->GetEnabled())
             return true;
-
-        EcTreeLink* et = child->FindComponent<EcTreeLink>();
-        if (GameObject* targetInterface = (et ? et->Target.Referred() : nullptr); targetInterface && targetInterface->OwningDataModel != PHX_GAMEOBJECT_NULL_ID)
-        {
-            traverseAndRenderUIHierarchy(targetInterface, renderer, ViewportSize, shader, gpuMesh, Position, Size, Rotation);
-
-            return true; // continue
-        }
 
         glm::vec2 currentPosition = Position;
         glm::vec2 currentSize = Size;
@@ -900,6 +883,17 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     if (GameObject* interface = ForegroundDataModel->FindChildWithComponent(EntityComponent::Interface))
         renderUIElements(this, interface, RendererContext);
 
+    for (const BoundDataModel& bound : BoundDataModels)
+    {
+        if (bound.Rendered && bound.Object != ForegroundDataModel)
+        {
+            const ObjectHandle& inter = bound.Object->FindChildWithComponent(EntityComponent::Interface);
+
+            if (inter)
+                renderUIElements(this, inter.Dereference(), RendererContext);
+        }
+    }
+
     //Do framebuffer stuff after everything is drawn
 
     glActiveTexture(GL_TEXTURE0 + ReservedTextureSlot::PostProcessFramebuffer);
@@ -1073,7 +1067,7 @@ void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
     ZoneScoped;
     ensureDataModelValid(Foreground);
 
-    if (std::find(BoundDataModels.begin(), BoundDataModels.end(), Foreground) == BoundDataModels.end())
+    if (!IsDataModelBound(Foreground))
         RAISE_RT("Tried to make an unbound datamodel the foreground datamodel");
 
     if (ForegroundDataModel)
@@ -1090,20 +1084,52 @@ void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
     Foreground->FindComponent<EcDataModel>()->BindServices();
 }
 
-void Engine::BindDataModel(const ObjectHandle& DataModel)
+void Engine::BindDataModel(const ObjectHandle& DataModel, bool Rendered)
 {
-    if (std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel) == BoundDataModels.end())
-        BoundDataModels.push_back(DataModel);
+    if (const auto& it = std::find_if(
+            BoundDataModels.begin(),
+            BoundDataModels.end(),
+            [&](const BoundDataModel& bd)
+            {
+                return bd.Object == DataModel;
+            }
+        );
+        it != BoundDataModels.end()
+    )
+        it->Rendered = Rendered;
     else
-        Log.WarningF("{} was already a bound datamodel", DataModel->Name);
+        BoundDataModels.emplace_back(DataModel, Rendered);
 }
 
 void Engine::UnbindDataModel(const ObjectHandle& DataModel)
 {
-    if (const auto& it = std::find(BoundDataModels.begin(), BoundDataModels.end(), DataModel); it != BoundDataModels.end())
+    if (const auto& it = std::find_if(
+            BoundDataModels.begin(),
+            BoundDataModels.end(),
+            [&](const BoundDataModel& bd)
+            {
+                return bd.Object == DataModel;
+            }
+        );
+        it != BoundDataModels.end()
+    )
+    {
         BoundDataModels.erase(it);
+    }
     else
         RAISE_RT("{} was not a bound datamodel", DataModel->Name);
+}
+
+bool Engine::IsDataModelBound(const ObjectHandle& DataModel)
+{
+    return std::find_if(
+        BoundDataModels.begin(),
+        BoundDataModels.end(),
+        [&](const BoundDataModel& bd)
+        {
+            return bd.Object == DataModel;
+        }
+    ) != BoundDataModels.end();
 }
 
 static void dispatchParallelVMs(Engine* engine)
@@ -1338,17 +1364,17 @@ void Engine::Start()
 
         for (size_t i = 0; i < BoundDataModels.size();)
         {
-            if (!BoundDataModels[i]->FindComponent<EcDataModel>())
+            if (!BoundDataModels[i].Object->FindComponent<EcDataModel>())
             {
-                Log.WarningF("Bound datamodel {} lost its datamodel component", BoundDataModels[i]->Name);
+                Log.WarningF("Bound datamodel {} lost its datamodel component", BoundDataModels[i].Object->GetFullName());
                 BoundDataModels.erase(BoundDataModels.begin() + i);
             }
             else
                 i++;
         }
 
-        for (const ObjectHandle& bound : BoundDataModels)
-            Reflection::SignalEvent(bound->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
+        for (const BoundDataModel& bound : BoundDataModels)
+            Reflection::SignalEvent(bound.Object->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
         waitForParallelVMs(this);   // tsan ??
         ScriptManager.StepVMs();    // serial phase
@@ -1377,8 +1403,33 @@ void Engine::Start()
                 sceneCamera,
                 deltaTime,
                 &sun,
-                PhysicsInstance.DebugCollisionAabbs
+                PhysicsInstance.DebugCollisionAabbs,
+                true
             );
+
+            for (const BoundDataModel& bound : BoundDataModels)
+            {
+                if (bound.Rendered && bound.Object != ForegroundDataModel)
+                {
+                    const ObjectHandle& werk = bound.Object->FindChildWithComponent(EntityComponent::Workspace);
+
+                    if (werk)
+                    {
+                        traverseHierarchy(
+                            CurrentScene,
+                            physWorld,
+                            particleEmittersRenderList,
+                            werk.Dereference(),
+                            sceneCamera,
+                            deltaTime,
+                            &sun,
+                            PhysicsInstance.DebugCollisionAabbs,
+                            // Only the foreground datamodel will have its physics stepped.
+                            false
+                        );
+                    }
+                }
+            }
 
             // TODO weird skybox graphical corruption if we don't draw anything
             if (CurrentScene.RenderList.size() == 0)

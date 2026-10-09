@@ -45,8 +45,9 @@ public:
     void Close();
 
     void SetForegroundDataModel(const ObjectHandle&);
-    void BindDataModel(const ObjectHandle&);
+    void BindDataModel(const ObjectHandle&, bool Rendered);
     void UnbindDataModel(const ObjectHandle&);
+    bool IsDataModelBound(const ObjectHandle&);
 
     ImVec2 GetViewportInputRectSize() const;
 
@@ -58,7 +59,14 @@ public:
 
     ObjectHandle ForegroundDataModel; // rendered
     ObjectHandle PrimaryDataModel;
-    std::vector<ObjectHandle> BoundDataModels; // OnFrameBegin fires
+
+    // `OnFrameBegin` fires.
+    struct BoundDataModel
+    {
+        ObjectHandle Object;
+        bool Rendered = false;
+    };
+    std::vector<BoundDataModel> BoundDataModels;
 
     Renderer RendererContext;
     GLFWwindow* Window = nullptr;

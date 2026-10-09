@@ -159,7 +159,7 @@
       },
       "Engine": {
         "Methods": {
-          "BindDataModel": "(GameObject) -> ()",
+          "BindDataModel": "(GameObject, Boolean) -> ()",
           "GetCliArguments": "() -> (Array)",
           "GetConfigValue": "(String) -> (Any)",
           "SetForegroundDataModel": "(GameObject) -> ()",
@@ -370,11 +370,6 @@
         "Properties": {
           "LocalTransform": "Matrix",
           "Transform": "Matrix RUNTIMEONLY"
-        }
-      },
-      "TreeLink": {
-        "Properties": {
-          "Target": "GameObject?"
         }
       },
       "UIButton": {

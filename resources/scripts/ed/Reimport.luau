@@ -61,6 +61,40 @@ local function onReimportableTagRemoved(Object: GameObject)
     end
 end
 
+local function doReimport(path, watcher, actionName)
+    local success, importedOrError = pcall(function()
+        return AssetManager:ImportModel(path)
+    end)
+
+    if not success then
+        Logging:Write(`Re-import failed: { importedOrError }`, Enum.LogType.Error)
+        return
+    end
+
+    print(`Re-importing { path }`)
+
+    assert(typeof(importedOrError) == "GameObject")
+    local action = History:TryBeginAction(actionName)
+
+    for _, model in watcher.Models :: { GameObject & EcModel } do
+        -- preserve tags, name, parent, object ID
+
+        for _, child in model:GetChildren() do
+            child.Parent = nil -- Allow undo
+        end
+
+        for _, newChild in importedOrError:GetChildren() do
+            newChild:Duplicate().Parent = model
+        end
+    end
+
+    if action then
+        History:FinishAction(action)
+    end
+
+    Reimport.ModelModifiedTimes[path] = fs.metadata(path).modified:toSeconds()
+end
+
 local function wrapReimportWatcher(reimportable, watcher: Watcher)
     local function reimportWatcher(_, EventType)
         if EventType ~= Enum.FileSystemEvent.Modified then
@@ -71,39 +105,7 @@ local function wrapReimportWatcher(reimportable, watcher: Watcher)
             return
         end
 
-        assert(watcher)
-        print(`Re-importing { reimportable.ImportPath }`)
-
-        local success, importedOrError = pcall(function()
-            return AssetManager:ImportModel(reimportable.ImportPath)
-        end)
-
-        if not success then
-            Logging:Write(`Re-import failed: { importedOrError }`, Enum.LogType.Error)
-            return
-        end
-
-        assert(typeof(importedOrError) == "GameObject")
-
-        local action = History:TryBeginAction("Auto re-import during session")
-
-        for _, model in watcher.Models :: { GameObject & EcModel } do
-            -- preserve tags, name, parent, object ID, treelinks
-
-            for _, child in model:GetChildren() do
-                child.Parent = nil -- Allow undo
-            end
-
-            for _, newChild in importedOrError:GetChildren() do
-                newChild:Duplicate().Parent = model
-            end
-        end
-
-        if action then
-            History:FinishAction(action)
-        end
-
-        Reimport.ModelModifiedTimes[reimportable.ImportPath] = fs.metadata(reimportable.ImportPath).modified:toSeconds()
+        doReimport(reimportable.ImportPath, watcher, "Auto re-import during session")
     end
 
     return reimportWatcher
@@ -143,37 +145,7 @@ function Reimport.CheckAll()
         assert(watcher)
 
         if Reimport.ModelModifiedTimes[path] and Reimport.ModelModifiedTimes[path] < fs.metadata(path).modified:toSeconds() then
-            print(`Re-importing { path }`)
-
-            local success, importedOrError = pcall(function()
-                return AssetManager:ImportModel(path)
-            end)
-
-            if not success then
-                Logging:Write(`Re-import failed on Project open: { importedOrError }`, Enum.LogType.Error)
-                continue
-            end
-
-            assert(typeof(importedOrError) == "GameObject")
-            local action = History:TryBeginAction("Auto re-import on Project open")
-
-            for _, model in watcher.Models :: { GameObject & EcModel } do
-                -- preserve tags, name, parent, object ID, treelinks
-
-                for _, child in model:GetChildren() do
-                    child.Parent = nil -- Allow undo
-                end
-
-                for _, newChild in importedOrError:GetChildren() do
-                    newChild:Duplicate().Parent = model
-                end
-            end
-
-            if action then
-                History:FinishAction(action)
-            end
-
-            Reimport.ModelModifiedTimes[path] = fs.metadata(path).modified:toSeconds()
+            doReimport(path, watcher, "Auto re-import on Project open")
         end
     end
 end

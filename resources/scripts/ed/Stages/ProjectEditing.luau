@@ -132,6 +132,7 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
 
     DeveloperTools:SetExplorerRoot(State.Project.DataModel)
     DeveloperTools:SetExplorerSelections({})
+    Engine:BindDataModel(State.Project.DataModel, true)
     Physics.Simulating = false
     CoreTools.VisualizationsContainer.Enabled = true
     History.RecordingEnabled = true

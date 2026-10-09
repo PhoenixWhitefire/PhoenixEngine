@@ -3,7 +3,6 @@ local ScriptEngine = game:GetService("ScriptEngine")
 local AssetManager = game:GetService("AssetManager")
 local PlayerInput = game:GetService("PlayerInput")
 local Workspace = game:GetService("Workspace")
-local Interface = game:GetService("Interface")
 local History = game:GetService("History")
 local Physics = game:GetService("Physics")
 local Engine = game:GetService("Engine")
@@ -14,7 +13,6 @@ local Preferences = require("@ed/Preferences")
 local Types = require("@ed/Types")
 
 local imgui = phoenix.imgui
-local task = phoenix.task
 local json = phoenix.json
 local fs = phoenix.fs
 
@@ -44,16 +42,8 @@ type StateType = {
 }
 
 local EditorCam = assert(Workspace.SceneCamera)
-local WorkspaceLink = GameObject.fromTemplate("TreeLink")
-local InterfaceLink = GameObject.fromTemplate("TreeLink")
-local ServicesLink = GameObject.fromTemplate("TreeLink")
-WorkspaceLink.Name = "WorkspaceLink"
-InterfaceLink.Name = "InterfaceLink"
-ServicesLink.Name = "ServicesLink"
 
 EditorCam.UseSimpleController = true
-WorkspaceLink.Parent = Workspace
-InterfaceLink.Parent = Interface
 Physics.Simulating = false
 Physics:SetSimulationForcePaused(true)
 ScriptEngine:SetVMAllowedExecutionTime(_VMNAME, 0)
@@ -487,11 +477,6 @@ local function openProject_(State: StateType, ManualPath: string?)
         warn("Re-created camera")
     end
 
-    WorkspaceLink.Target = State.Project.Workspace
-    InterfaceLink.Target = State.Project.DataModel:GetService("Interface")
-    ServicesLink.Target = State.Project.DataModel
-    ServicesLink.Parent = game
-
     State.Project.DataModel:GetService("Environment")
 
     History:ClearHistory()
@@ -502,7 +487,7 @@ local function openProject_(State: StateType, ManualPath: string?)
     local module = State.Project.DataModel.LiveScripts
     State.Project.DataModel.LiveScripts = ""
 
-    Engine:BindDataModel(State.Project.DataModel)
+    Engine:BindDataModel(State.Project.DataModel, true)
     Engine:SetForegroundDataModel(State.Project.DataModel)
 
     ScriptEngine:CreateVM(Configuration.GameEditingVMName)

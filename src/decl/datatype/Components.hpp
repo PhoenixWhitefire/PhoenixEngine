@@ -25,7 +25,6 @@
 #include "component/RigidBody.hpp"
 #include "component/Sound.hpp"
 #include "component/Transform.hpp"
-#include "component/TreeLink.hpp"
 #include "component/Workspace.hpp"
 #include "component/ScriptEngineService.hpp"
 
@@ -63,7 +62,6 @@ struct AllComponentManagers
     RigidBodyComponentManager RigidBody;
     SoundComponentManager Sound;
     TransformComponentManager Transform;
-    TreeLinkComponentManager TreeLink;
     WorkspaceComponentManager Workspace;
     ScriptEngineComponentManager ScriptEngine;
 };

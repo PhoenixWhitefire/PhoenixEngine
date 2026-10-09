@@ -63,7 +63,7 @@ function ProjectPlaying.Enter(_prev)
     DeveloperTools:SetExplorerSelections({})
 
     State.Project.DataModel.VM = Configuration.PlaytestVMName
-    Engine:BindDataModel(State.Project.DataModel)
+    Engine:BindDataModel(State.Project.DataModel, true)
     Engine:SetForegroundDataModel(State.Project.DataModel)
 
     ScriptEngine:CreateVM(Configuration.PlaytestVMName)

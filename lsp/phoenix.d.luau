@@ -477,7 +477,7 @@ export type EcEngine = {
   read TargetPlatform: string,
   read Version: string,
 
-  BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
+  BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel, Rendered: boolean) -> (),
   GetCliArguments: (self: EcEngine) -> { string },
   GetConfigValue: (self: EcEngine, Key: string) -> JsonDecodable,
   SetForegroundDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
@@ -663,10 +663,6 @@ export type EcTransform = {
   OnScriptMoved: EventSignal<(Previous: Matrix, Current: Matrix) -> (), Matrix, Matrix>,
 }
 
-export type EcTreeLink = {
-  Target: GameObject?,
-}
-
 export type EcUIButton = {
   IsClicking: boolean,
   IsHovering: boolean,
@@ -724,7 +720,6 @@ type Components = {
   Camera: EcCamera,
   Model: EcModel,
   Bone: EcBone,
-  TreeLink: EcTreeLink,
   Engine: EcEngine,
   PlayerInput: EcPlayerInput,
   AssetManager: EcAssetManager,
@@ -761,7 +756,6 @@ type Creatables = {
   Camera: EcCamera & EcTransform,
   Model: EcModel & EcTransform,
   Bone: EcBone,
-  TreeLink: EcTreeLink,
   Engine: EcEngine,
   PlayerInput: EcPlayerInput,
   AssetManager: EcAssetManager,
