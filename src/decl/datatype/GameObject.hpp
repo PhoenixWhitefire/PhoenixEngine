@@ -10,29 +10,13 @@
 #include <vector>
 #include <nljson.hpp>
 
+#include "EntityComponent.hpp"
 #include "Reflection.hpp"
 #include "Stl.hpp"
-
-#include "datatype/EntityComponent.hpp"
-#include "datatype/ComponentBase.hpp"
 
 class GameObject
 {
 public:
-    template <class T>
-    T* FindComponent() const
-    {
-        EntityComponent type = T::Type;
-        for (const ReflectorRef& ref : Components)
-            if (ref.Type == type)
-                return static_cast<T*>(GetComponentManagerByComponentType(type)->GetComponent(ref.Id));
-
-        return nullptr;
-    }
-    uint32_t AddComponent(EntityComponent Type);
-    void RemoveComponent(EntityComponent Type);
-    void* FindComponentByType(EntityComponent) const;
-
     void AddTag(const std::string&);
     void RemoveTag(const std::string&);
     bool HasTag(const std::string&) const;
@@ -46,10 +30,6 @@ public:
     Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) const;
 
     std::vector<Reflection::GenericValue> CallMethod(const std::string_view&, const std::vector<Reflection::GenericValue>&);
-
-    Reflection::PropertyMap GetProperties() const;
-    Reflection::MethodMap GetMethods() const;
-    Reflection::EventMap GetEvents() const;
 
     // the engine will NEED some objects to continue existing without being
     // de-alloc'd, if only for a loop (`updateScripts`)
@@ -67,9 +47,13 @@ public:
     std::vector<ObjectHandle> GetChildren() const;
     std::vector<ObjectHandle> GetDescendants() const;
 
+    std::vector<EntityComponent> GetComponents() const;
+    std::optional<uint32_t> GetAttachedIdForComponent(EntityComponent) const;
+    bool HasComponent(EntityComponent) const;
+    struct BaseComponent* FindComponent(EntityComponent) const;
+
     GameObject* GetParent() const;
     GameObject* FindChild(const std::string_view&) const;
-    GameObject* FindChildWithComponent(EntityComponent) const;
 
     bool IsDescendantOf(const GameObject*) const;
 
@@ -99,9 +83,6 @@ public:
     uint32_t NextFreeId = UINT32_MAX;
 
     std::vector<uint32_t> Children;
-    std::vector<ReflectorRef> Components;
-    Reflection::Api ComponentApis;
-    std::unordered_map<std::string_view, ReflectorRef> MemberToComponentMap;
     std::vector<uint16_t> Tags;
     std::vector<Reflection::EventConnection> OnTagAddedCallbacks;
     std::vector<Reflection::EventConnection> OnTagRemovedCallbacks;
@@ -147,7 +128,7 @@ public:
     GameObject* FromGenericValue(const Reflection::GenericValue&);
 
     hx::vector<GameObject, MEMCAT(GameObject)> WorldArray;
-    std::array<IComponentManager*, (size_t)EntityComponent::count> ComponentManagers{};
+    std::array<class IComponentManager*, (size_t)EntityComponent::count> ComponentManagers{};
     uint32_t DataModel = PHX_GAMEOBJECT_NULL_ID;
     uint32_t NextFreeId = UINT32_MAX;
 
