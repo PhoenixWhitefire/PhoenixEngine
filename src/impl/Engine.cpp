@@ -469,11 +469,18 @@ void Engine::Initialize(int ThreadCount, bool Headless)
     Log.Info("Engine initialized");
 }
 
-static void traverseHierarchy(
+// TODO: Maybe worlds should be datamodels? Or datamodels should be worlds?
+// Either way, something to remove this datamodel check.
+static bool isActive(BaseComponent* c, uint32_t DataModel)
+{
+    return c->Object->TreeEnabled && c->Object->OwningDataModel == DataModel;
+}
+
+static void accumulate(
     Scene& RendererScene,
     Physics::World& PhysicsWorld,
     std::vector<EcParticleEmitter*>& ParticleEmitters,
-    GameObject* Root,
+    uint32_t DataModel,
     EcCamera* SceneCamera,
     double DeltaTime,
     EcDirectionalLight** Sun,
@@ -482,32 +489,41 @@ static void traverseHierarchy(
 )
 {
     ZoneScopedC(tracy::Color::LightGoldenrod);
+    GameObjectManager* objectManager = GameObjectManager::Get();
+    const std::span<IComponentManager*> managers = objectManager->ComponentManagers;
 
-    static uint32_t boxframeMaterial = UINT32_MAX;
-    static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("phoenix://meshes/Cube");
-
-    Root->ForEachChild([&](const ObjectHandle& object) -> bool
+    managers[EntityComponent::Sound]->ForEachComponent([&](BaseComponent* c)
     {
-        if (EcSound* sound = object->FindComponent<EcSound>(); sound && !Engine::Get()->IsHeadlessMode)
-            sound->Update(DeltaTime);
-
-        if (!object->GetEnabled())
-            return true; // continue
-
-        EcTransform* ct = object->FindComponent<EcTransform>();
-        // both useless without a Transform
-        EcMesh* cm = ct ? object->FindComponent<EcMesh>() : nullptr;
-        EcRigidBody* rb = ct ? object->FindComponent<EcRigidBody>() : nullptr;
-
-        if (rb)
+        if (c->Object->OwningDataModel == DataModel)
         {
-            if (rb->PhysicsDynamics && AddToPhysicsWorld)
-                PhysicsWorld.Dynamics.emplace_back(object);
-            else if (rb->PhysicsCollisions && AddToPhysicsWorld)
-                PhysicsWorld.Statics.emplace_back(object);
+            EcSound* sound = (EcSound*)c;
+            // TODO: Currently we always update Sounds, regardless of if their Object is disabled,
+            // so that they can pause themselves.
+            sound->Update(DeltaTime);
+        }
+
+        return true;
+    });
+
+    managers[EntityComponent::RigidBody]->ForEachComponent([&](BaseComponent* c)
+    {
+        if (isActive(c, DataModel))
+        {
+            EcRigidBody* rb = (EcRigidBody*)c;
+
+            if (AddToPhysicsWorld)
+            {
+                if (rb->PhysicsDynamics)
+                    PhysicsWorld.Dynamics.emplace_back(c->Object);
+                else if (rb->PhysicsCollisions)
+                    PhysicsWorld.Statics.emplace_back(c->Object);
+            }
 
             if (DebugCollisionAabbs && rb->PhysicsCollisions)
             {
+                static uint32_t boxframeMaterial = UINT32_MAX;
+                static uint32_t cubeMesh = MeshProvider::Get()->LoadFromPath("phoenix://meshes/Cube");
+
                 if (boxframeMaterial == UINT32_MAX)
                     boxframeMaterial = MaterialManager::Get()->LoadFromPath("phoenix://materials/boxframe.mtl");
 
@@ -525,32 +541,45 @@ static void traverseHierarchy(
             }
         }
 
-        if (cm)
+        return true;
+    });
+
+    IComponentManager* ctm = objectManager->ComponentManagers[EntityComponent::Transform];
+
+    managers[EntityComponent::Mesh]->ForEachComponent([&](BaseComponent* c)
+    {
+        EcMesh* cm = (EcMesh*)c;
+
+        if (isActive(c, DataModel) && cm->Transparency <= 0.95f && !Engine::Get()->IsHeadlessMode)
         {
-            if (cm->Transparency > .95f || Engine::Get()->IsHeadlessMode)
-                return true; // continue
+            if (std::optional<uint32_t> ctid = ctm->GetAttachedId(c->Object))
+            {
+                EcTransform* ct = (EcTransform*)ctm->GetComponent(ctid.value());
 
-            // TODO: frustum culling
-
-            RendererScene.RenderList.emplace_back(
-                cm->RenderMeshId,
-                ct->Transform,
-                cm->MaterialId,
-                cm->Tint,
-                cm->Transparency,
-                cm->MetalnessFactor,
-                cm->RoughnessFactor,
-                cm->FaceCulling,
-                cm->CastsShadows
-            );
+                // TODO: frustum culling
+                RendererScene.RenderList.emplace_back(
+                    cm->RenderMeshId,
+                    ct->Transform,
+                    cm->MaterialId,
+                    cm->Tint,
+                    cm->Transparency,
+                    cm->MetalnessFactor,
+                    cm->RoughnessFactor,
+                    cm->FaceCulling,
+                    cm->CastsShadows
+                );
+            }
         }
 
-        EcDirectionalLight* directional = object->FindComponent<EcDirectionalLight>();
-        EcPointLight* point = object->FindComponent<EcPointLight>();
-        EcSpotLight* spot = object->FindComponent<EcSpotLight>();
+        return true;
+    });
 
-        if (directional)
+    managers[EntityComponent::DirectionalLight]->ForEachComponent([&](BaseComponent* c)
+    {
+        if (isActive(c, DataModel))
         {
+            EcDirectionalLight* directional = (EcDirectionalLight*)c;
+
             RendererScene.LightingList.push_back(LightItem{
                 .Position = directional->Direction,
                 .LightColor = directional->LightColor * directional->Brightness,
@@ -562,9 +591,19 @@ static void traverseHierarchy(
                 *Sun = directional;
         }
 
-        if (ct)
+        return true;
+    });
+
+    // TODO: Needs queries!
+    managers[EntityComponent::PointLight]->ForEachComponent([&](BaseComponent* c)
+    {
+        if (isActive(c, DataModel))
         {
-            if (point)
+            EcPointLight* point = (EcPointLight*)c;
+            EcTransform* ct = (EcTransform*)c->Object->FindComponent(EntityComponent::Transform);
+
+            if (ct)
+            {
                 RendererScene.LightingList.push_back(LightItem{
                     .Position = (glm::vec3)ct->Transform[3],
                     .LightColor = point->LightColor * point->Brightness,
@@ -572,8 +611,22 @@ static void traverseHierarchy(
                     .Type = LightType::Point,
                     .Shadows = false, /* point->Shadows, */
                 });
+            }
+        }
 
-            if (spot)
+        return true;
+    });
+
+    // TODO: Needs queries!
+    managers[EntityComponent::SpotLight]->ForEachComponent([&](BaseComponent* c)
+    {
+        if (isActive(c, DataModel))
+        {
+            EcSpotLight* spot = (EcSpotLight*)c;
+            EcTransform* ct = (EcTransform*)c->Object->FindComponent(EntityComponent::Transform);
+
+            if (ct)
+            {
                 RendererScene.LightingList.push_back(LightItem{
                     .Position = (glm::vec3)ct->Transform[3],
                     .LightColor = spot->LightColor * spot->Brightness,
@@ -583,33 +636,33 @@ static void traverseHierarchy(
                     .Type = LightType::Spot,
                     .Shadows = false, /* spot->Shadows, */
                 });
+            }
         }
 
-        if (EcAnimator* animator = object->FindComponent<EcAnimator>(); animator && animator->Animating)
+        return true;
+    });
+
+    managers[EntityComponent::Animator]->ForEachComponent([&](BaseComponent* c)
+    {
+        if (isActive(c, DataModel))
+        {
+            EcAnimator* animator = (EcAnimator*)c;
             animator->Step(DeltaTime);
-
-        if (!object->Children.empty())
-        {
-            traverseHierarchy(
-                RendererScene,
-                PhysicsWorld,
-                ParticleEmitters,
-                object.Dereference(),
-                SceneCamera,
-                DeltaTime,
-                Sun,
-                DebugCollisionAabbs,
-                AddToPhysicsWorld
-            );
         }
 
-        if (EcParticleEmitter* emitter = object->FindComponent<EcParticleEmitter>())
+        return true;
+    });
+
+    managers[EntityComponent::ParticleEmitter]->ForEachComponent([&](BaseComponent* c)
+    {
+        if (isActive(c, DataModel))
         {
+            EcParticleEmitter* emitter = (EcParticleEmitter*)c;
             emitter->Update(DeltaTime);
             ParticleEmitters.push_back(emitter);
         }
 
-        return true; // continue
+        return true;
     });
 }
 
@@ -635,7 +688,7 @@ static void traverseAndRenderUIHierarchy(
         glm::vec2 currentSize = Size;
         float currentRotation = Rotation;
 
-        EcUITransform* uit = child->FindComponent<EcUITransform>();
+        EcUITransform* uit = (EcUITransform*)child->FindComponent(EntityComponent::UITransform);
 
         if (uit)
         {
@@ -648,7 +701,7 @@ static void traverseAndRenderUIHierarchy(
         shader.SetUniform("Phoenix_Size", currentSize);
         shader.SetUniform("Phoenix_Rotation", currentRotation);
 
-        if (EcUIFrame* uf = child->FindComponent<EcUIFrame>())
+        if (EcUIFrame* uf = (EcUIFrame*)child->FindComponent(EntityComponent::UIFrame))
         {
             shader.SetUniform("Phoenix_BackgroundColor", uf->BackgroundColor.ToGenericValue());
             shader.SetUniform("Phoenix_BackgroundTransparency", uf->BackgroundTransparency);
@@ -660,7 +713,7 @@ static void traverseAndRenderUIHierarchy(
             renderer.AccumulatedDrawCallCount++;
         }
 
-        if (EcUIImage* uimg = child->FindComponent<EcUIImage>())
+        if (EcUIImage* uimg = (EcUIImage*)child->FindComponent(EntityComponent::UIImage))
         {
             TextureManager* TextureManager = TextureManager::Get();
 
@@ -675,7 +728,7 @@ static void traverseAndRenderUIHierarchy(
             renderer.AccumulatedDrawCallCount++;
         }
 
-        if (EcUIText* uti = child->FindComponent<EcUIText>(); uti && uti->Data)
+        if (EcUIText* uti = (EcUIText*)child->FindComponent(EntityComponent::UIText); uti && uti->Data)
         {
             gltBeginDraw();
 
@@ -701,7 +754,7 @@ static void traverseAndRenderUIHierarchy(
             gpuMesh.ElementBuffer.Bind();
         }
 
-        if (EcUIButton* ubtn = child->FindComponent<EcUIButton>())
+        if (EcUIButton* ubtn = (EcUIButton*)child->FindComponent(EntityComponent::UIButton))
         {
             Engine* engine = Engine::Get();
 
@@ -811,8 +864,8 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     ImVec2 viewportSize = GetViewportInputRectSize();
     float aspectRatio = viewportSize.x / viewportSize.y;
 
-    const ObjectHandle& sceneCamObject = m_Workspace->FindComponent<EcWorkspace>()->GetSceneCamera();
-    EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+    const ObjectHandle& sceneCamObject = ((EcWorkspace*)m_Workspace->FindComponent(EntityComponent::Workspace))->GetSceneCamera();
+    EcCamera* sceneCamera = (EcCamera*)sceneCamObject->FindComponent(EntityComponent::Camera);
 
     // we do this AFTER  `traverseHierarchy` in case any Scripts
     // update the camera transform
@@ -880,19 +933,21 @@ void Engine::m_Render(double deltaTime, const std::vector<EcParticleEmitter*>& p
     glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
 
-    if (GameObject* interface = ForegroundDataModel->FindChildWithComponent(EntityComponent::Interface))
-        renderUIElements(this, interface, RendererContext);
-
-    for (const BoundDataModel& bound : BoundDataModels)
+    ObjectManager.ComponentManagers[EntityComponent::Interface]->ForEachComponent([&](BaseComponent* c)
     {
-        if (bound.Rendered && bound.Object != ForegroundDataModel)
+        if (c->Object->TreeEnabled)
         {
-            const ObjectHandle& inter = bound.Object->FindChildWithComponent(EntityComponent::Interface);
-
-            if (inter)
-                renderUIElements(this, inter.Dereference(), RendererContext);
+            for (const BoundDataModel& bound : BoundDataModels)
+            {
+                if (bound.Rendered && c->Object->OwningDataModel == bound.Object->ObjectId)
+                {
+                    renderUIElements(this, c->Object, RendererContext);
+                }
+            }
         }
-    }
+
+        return true;
+    });
 
     //Do framebuffer stuff after everything is drawn
 
@@ -1057,9 +1112,7 @@ static void ensureDataModelValid(const ObjectHandle& DataModel)
     ZoneScoped;
     PHX_ENSURE_MSG(DataModel, "DataModel is NULL!");
 
-    GameObject* workspace = DataModel->FindChildWithComponent(EntityComponent::Workspace);
-    PHX_ENSURE_MSG(workspace, "DataModel has no Workspace!");
-    PHX_ENSURE_MSG(DataModel->FindComponent<EcDataModel>(), "DataModel has no DataModel component!");
+    PHX_ENSURE_MSG(DataModel->HasComponent(EntityComponent::DataModel), "DataModel has no DataModel component!");
 }
 
 void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
@@ -1072,7 +1125,7 @@ void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
 
     if (ForegroundDataModel)
     {
-        EcDataModel* dm = ForegroundDataModel->FindComponent<EcDataModel>();
+        EcDataModel* dm = (EcDataModel*)ForegroundDataModel->HasComponent(EntityComponent::DataModel);
         PHX_ENSURE(dm);
 
         dm->UnbindServices();
@@ -1081,7 +1134,7 @@ void Engine::SetForegroundDataModel(const ObjectHandle& Foreground)
     ForegroundDataModel = Foreground;
 
     ObjectManager.DataModel = Foreground->ObjectId;
-    Foreground->FindComponent<EcDataModel>()->BindServices();
+    ((EcDataModel*)Foreground->FindComponent(EntityComponent::DataModel))->BindServices();
 }
 
 void Engine::BindDataModel(const ObjectHandle& DataModel, bool Rendered, bool Simulated)
@@ -1219,12 +1272,12 @@ void Engine::Start()
             break;
         }
 
-        m_Workspace = ForegroundDataModel->FindChildWithComponent(EntityComponent::Workspace);
+        m_Workspace = ForegroundDataModel->FindChild("Workspace");
 
         if (!m_Workspace)
             RAISE_RT("Workspace was removed");
 
-        if (EcDataModel* dm = PrimaryDataModel->FindComponent<EcDataModel>())
+        if (EcDataModel* dm = (EcDataModel*)PrimaryDataModel->FindComponent(EntityComponent::DataModel))
         {
             if (dm->Closed)
             {
@@ -1267,7 +1320,7 @@ void Engine::Start()
         firstFrame = false;
         Timing::ScopedTimer framwWorkTimerScope(FrameWorkTimer.TimerId);
 
-        if (EcDataModel* dm = ForegroundDataModel->FindComponent<EcDataModel>())
+        if (EcDataModel* dm = (EcDataModel*)ForegroundDataModel->FindComponent(EntityComponent::DataModel))
             dm->Bind();
         else
             RAISE_RT("Foreground datamodel lost datamodel component");
@@ -1358,9 +1411,9 @@ void Engine::Start()
             }
         }
 
-        EcWorkspace* workspaceComponent = m_Workspace->FindComponent<EcWorkspace>();
+        EcWorkspace* workspaceComponent = (EcWorkspace*)m_Workspace->FindComponent(EntityComponent::Workspace);
         ObjectHandle sceneCamObject = workspaceComponent->GetSceneCamera();
-        EcCamera* sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+        EcCamera* sceneCamera = (EcCamera*)sceneCamObject->FindComponent(EntityComponent::Camera);
 
         if (!IsHeadlessMode)
             workspaceComponent->UpdateSoundListener();
@@ -1377,7 +1430,7 @@ void Engine::Start()
         }
 
         for (const BoundDataModel& bound : BoundDataModels)
-            Reflection::SignalEvent(bound.Object->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
+            Reflection::SignalEvent(((EcDataModel*)bound.Object->FindComponent(EntityComponent::DataModel))->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
         waitForParallelVMs(this);   // tsan ??
         ScriptManager.StepVMs();    // serial phase
@@ -1385,7 +1438,7 @@ void Engine::Start()
 
         // fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
         // (really need a generic `Ref` system)
-        sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+        sceneCamera = (EcCamera*)sceneCamObject->FindComponent(EntityComponent::Camera);
 
         EcDirectionalLight* sun = nullptr;
         {
@@ -1398,11 +1451,11 @@ void Engine::Start()
             particleEmittersRenderList.clear();
 
             // Aggregate mesh and light data into lists
-            traverseHierarchy(
+            accumulate(
                 CurrentScene,
                 physWorld,
                 particleEmittersRenderList,
-                m_Workspace.Referred(),
+                ForegroundDataModel->ObjectId,
                 sceneCamera,
                 deltaTime,
                 &sun,
@@ -1412,27 +1465,22 @@ void Engine::Start()
 
             for (const BoundDataModel& bound : BoundDataModels)
             {
-                EcDataModel* dm = bound.Object->FindComponent<EcDataModel>();
+                EcDataModel* dm = (EcDataModel*)bound.Object->FindComponent(EntityComponent::DataModel);
 
                 if (bound.Rendered && bound.Object != ForegroundDataModel && dm)
                 {
                     dm->BindServices();
-                    const ObjectHandle& werk = bound.Object->FindChildWithComponent(EntityComponent::Workspace);
-
-                    if (werk)
-                    {
-                        traverseHierarchy(
-                            CurrentScene,
-                            physWorld,
-                            particleEmittersRenderList,
-                            werk.Dereference(),
-                            sceneCamera,
-                            deltaTime,
-                            &sun,
-                            PhysicsInstance.DebugCollisionAabbs,
-                            bound.Simulated
-                        );
-                    }
+                    accumulate(
+                        CurrentScene,
+                        physWorld,
+                        particleEmittersRenderList,
+                        bound.Object->ObjectId,
+                        sceneCamera,
+                        deltaTime,
+                        &sun,
+                        PhysicsInstance.DebugCollisionAabbs,
+                        bound.Simulated
+                    );
                 }
             }
 
@@ -1446,7 +1494,7 @@ void Engine::Start()
 
             if (PhysicsInstance.DebugSpatialHeat)
             {
-                workspaceComponent = m_Workspace->FindComponent<EcWorkspace>();
+                workspaceComponent = (EcWorkspace*)m_Workspace->FindComponent(EntityComponent::Workspace);
                 assert(workspaceComponent);
 
                 for (const auto& it : workspaceComponent->SpatialHash)
@@ -1465,7 +1513,7 @@ void Engine::Start()
                 }
             }
 
-            sceneCamera = sceneCamObject->FindComponent<EcCamera>();
+            sceneCamera = (EcCamera*)sceneCamObject->FindComponent(EntityComponent::Camera);
         }
 
         if (PhysicsInstance.Simulating && !PhysicsInstance.SimulatingForcePaused && physWorld.Dynamics.size() > 0)
