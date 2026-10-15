@@ -6,6 +6,7 @@ return {
       modules = "./modules/",
       ed = "./ed/",
       std = "./std",
+      phoenix = "./phoenix"
     }
   }
 }

@@ -29,6 +29,7 @@ return table.freeze({
     ReimportableModelTag = "Phoenix_ReimportableModel",
     EditorBuild = 9,
     StdPath = "@_editres/scripts/std",
+    PhoenixPath = "@_editres/scripts/phoenix",
     GitHubUrl = "https://github.com/PhoenixWhitefire/PhoenixEngine",
     GameEditingVMName = "GameEditingVM",
     PlaytestVMName = "Playtest",

@@ -14,6 +14,7 @@ struct LightUserdataTag_
         AtomicIntegerRawEquality = 6,
         EventConnectionData = 7,
         ComponentDefinition = 8,
+        Id = 9,
 
         count,
         tagLimit = 127,
@@ -33,6 +34,7 @@ const std::string_view LightUserdataTagNames[] = {
     "AtomicIntegerRawEquality",
     "EventConnectionData",
     "ComponentDefinition",
+    "Id",
 };
 
 static_assert(std::size(LightUserdataTagNames) == LightUserdataTag::count);

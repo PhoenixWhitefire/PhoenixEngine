@@ -134,7 +134,13 @@ local function createNewProject_(State: StateType)
     configFile, substitutions = string.gsub(configFile, "__STANDARD__", fs.resolvepathabsolute(Configuration.StdPath))
 
     if substitutions == 0 then
-        warn(`Failed to link Lute's @std`)
+        warn(`Failed to link @std`)
+    end
+
+    configFile, substitutions = string.gsub(configFile, "__PHOENIX__", fs.resolvepathabsolute(Configuration.PhoenixPath))
+
+    if substitutions == 0 then
+        warn(`Failed to link @phoenix`)
     end
 
     fs.write("@_projres/scripts/.config.luau", configFile)

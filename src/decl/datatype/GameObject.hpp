@@ -52,17 +52,6 @@ public:
     bool HasComponent(EntityComponent) const;
     struct BaseComponent* FindComponent(EntityComponent) const;
 
-    GameObject* GetParent() const;
-    GameObject* FindChild(const std::string_view&) const;
-
-    bool IsDescendantOf(const GameObject*) const;
-
-    std::string GetFullName() const;
-
-    void SetParent(const ObjectHandle&);
-    void AddChild(const ObjectHandle&);
-    void RemoveChild(uint32_t);
-
     void EvaluateOwners();
 
     bool GetEnabled() const;
@@ -74,15 +63,11 @@ public:
     static Reflection::GenericValue s_ToGenericValue(GameObject*);
     Reflection::GenericValue ToGenericValue();
 
-    std::string Name = "GameObject";
-
     uint32_t ObjectId = PHX_GAMEOBJECT_NULL_ID;
-    uint32_t Parent = PHX_GAMEOBJECT_NULL_ID;
     uint32_t OwningDataModel = PHX_GAMEOBJECT_NULL_ID;
     uint32_t OwningWorkspace = PHX_GAMEOBJECT_NULL_ID;
     uint32_t NextFreeId = UINT32_MAX;
 
-    std::vector<uint32_t> Children;
     std::vector<uint16_t> Tags;
     std::vector<Reflection::EventConnection> OnTagAddedCallbacks;
     std::vector<Reflection::EventConnection> OnTagRemovedCallbacks;

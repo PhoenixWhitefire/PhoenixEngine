@@ -32,6 +32,7 @@
 #include "script/TracyLuau.hpp"
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
+#include "datatype/Ecs.hpp"
 #include "component/ScriptEngineService.hpp"
 #include "component/LuauData.hpp"
 #include "DeveloperTools.hpp"
@@ -1600,6 +1601,71 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
         return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
+static int openEcs(lua_State* L)
+{
+    lua_createtable(L, 0, 8);
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            uint64_t predicate = (uint64_t)lua_tolightuserdatatagged(L, 1, LightUserdataTag::Id);
+            uint64_t target = (uint64_t)lua_tolightuserdatatagged(L, 2, LightUserdataTag::Id);
+
+            luaL_argcheck(L, predicate != 0, 1, "Expected predicate to be an ID");
+            luaL_argcheck(L, target != 0, 2, "Expected target to be an ID");
+
+            lua_pushlightuserdatatagged(L, (void*)pair(predicate, target), LightUserdataTag::Id);
+            return 1;
+        },
+        "pair"
+    );
+    lua_setfield(L, -2, "pair");
+
+    return 1;
+}
+
+static int openWorld(lua_State* L)
+{
+    lua_createtable(L, 0, 8);
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+
+            lua_pushlightuserdatatagged(L, (void*)world->entity(), LightUserdataTag::Id);
+            return 1;
+        },
+        "entity"
+    );
+    lua_setfield(L, -2, "entity");
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+
+            LuauComponentRecord* lcr = new LuauComponentRecord;
+            lcr->owner = lua_mainthread(L);
+
+            lua_pushlightuserdatatagged(L, (void*)world->component(lcr), LightUserdataTag::Id);
+            return 1;
+        },
+        "component"
+    );
+    lua_setfield(L, -2, "component");
+
+    return 1;
+}
+
+static const std::unordered_map<std::string_view, lua_CFunction> BuiltinModules = {
+    { "phoenix://builtin/ecs", openEcs },
+    { "phoenix://builtin/world", openWorld },
+};
+
 void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
 {
     config->is_require_allowed = [](lua_State*, void*, const char*)
@@ -1685,7 +1751,8 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
             return std::filesystem::is_regular_file(*curpath)
                     || std::filesystem::is_regular_file(curpath->string() + "c") // `.luauc`
                     || std::filesystem::is_regular_file(*curpath / "init.luau")
-                    || std::filesystem::is_regular_file(*curpath / "init.luauc");
+                    || std::filesystem::is_regular_file(*curpath / "init.luauc")
+                    || BuiltinModules.find(curpath->string()) != BuiltinModules.end();
         };
     config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
         {
@@ -1738,6 +1805,10 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
     config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)
         {
             std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+
+            if (const auto& it = BuiltinModules.find(curpath->string()); it != BuiltinModules.end())
+                return it->second(L);
+
             std::string modulePath;
 
             if (std::filesystem::is_regular_file(*curpath))
@@ -1962,19 +2033,6 @@ void ScriptEngine::LuauVM::Close()
 {
     lua_State* L = MainThread;
 
-    if (lua_getfield(L, LUA_REGISTRYINDEX, "LDC") != LUA_TNIL)
-    {
-        for (int iter = 0; (iter = lua_rawiter(L, -1, iter)) != -1;)
-        {
-            GameObject* object = luhx_checkgameobject(L, -1);
-
-            if (object->FindComponent<EcLuauData>())
-                object->RemoveComponent(EntityComponent::LuauData);
-
-            lua_pop(L, 2);
-        }
-    }
-
     lua_pop(L, 1);
 
     lua_rawgeti(L, LUA_ENVIRONINDEX, 67);
@@ -2084,11 +2142,6 @@ lua_Status ScriptEngine::ProtectedCall(lua_State* L, int narg, int nret, int err
 
 nlohmann::json ScriptEngine::DumpApiToJson()
 {
-    ObjectHandle tempdm = GameObjectManager::s_Create("DataModel");
-    ObjectHandle tempwp = GameObjectManager::s_Create("Workspace");
-    tempwp->SetParent(tempdm);
-    GameObjectManager::Get()->DataModel = tempdm->ObjectId;
-
     lua_State* base = lua_newstate(l_alloc, nullptr);
     // don't have to worry about re-allocs here
     LuauVM& luhxVM = RegisterNewVM("ApiDump");
@@ -2239,9 +2292,6 @@ nlohmann::json ScriptEngine::DumpApiToJson()
     lua_close(base);
     luhxVM.Close();
     delete &luhxVM;
-
-    GameObjectManager::Get()->DataModel = PHX_GAMEOBJECT_NULL_ID;
-    tempdm->Destroy();
 
     return json;
 }
