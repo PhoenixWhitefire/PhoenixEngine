@@ -3,10 +3,12 @@
 
 #include <unordered_map>
 #include <functional>
+#include <stdexcept>
 #include <optional>
 #include <cstdint>
 #include <cassert>
 #include <vector>
+#include <format>
 #include <span>
 
 // See JECS.
@@ -18,6 +20,7 @@ using Pair = Id;
 
 constexpr uint64_t EcsEntityMask = 1ull << 24;
 constexpr uint64_t EcsPairOffset = 1ull << 48;
+constexpr uint64_t EcsComponentMax = 256;
 
 inline Pair pair(Id predicate, Id object)
 {
@@ -37,8 +40,15 @@ inline uint64_t pairSecond(Pair pair)
     return (pair - EcsPairOffset) % EcsEntityMask;
 }
 
+inline bool isPair(Id c)
+{
+    return c > EcsPairOffset;
+}
+
 struct ComponentRecordBase
 {
+    virtual ~ComponentRecordBase();
+
     std::optional<Component> getIndex(Entity e)
     {
         assert(e != 0);
@@ -52,6 +62,8 @@ struct ComponentRecordBase
         return std::nullopt;
     }
 
+    virtual void insertData() = 0;
+
     Component insert(Entity e)
     {
         assert(e != 0);
@@ -62,6 +74,7 @@ struct ComponentRecordBase
         uint64_t c = dense.size();
         dense.push_back(e);
         sparse.insert({ e, c });
+        insertData();
 
         return c;
     }
@@ -69,7 +82,6 @@ struct ComponentRecordBase
     void remove(Entity e)
     {
         assert(e != 0);
-
         sparse.erase(e);
     }
 
@@ -80,11 +92,27 @@ struct ComponentRecordBase
 template <typename T>
 struct ComponentRecord : public ComponentRecordBase
 {
+    void insertData() override
+    {
+        data.emplace_back();
+    }
+
     std::vector<T> data;
+};
+
+struct PairRecord : public ComponentRecordBase
+{
+    void insertData() override
+    {
+    }
 };
 
 struct LuauComponentRecord : ComponentRecordBase
 {
+    void insertData() override
+    {
+    }
+
     struct lua_State* owner = nullptr;
     std::vector<int> data;
 };
@@ -93,26 +121,62 @@ struct World
 {
     Entity entity()
     {
-        return ++EntityCount;
+        return ++EntityCount + EcsComponentMax;
     }
 
     Component component(ComponentRecordBase* cr)
     {
         uint64_t c = Components.size();
-        Components.push_back(cr);
+        if (c >= EcsComponentMax)
+            throw std::runtime_error("Too many components!");
 
+        Components.insert({ c, cr });
         return c;
     }
 
-    void query(const std::span<Component>& predicates, const std::function<bool(Entity)>& keepGoing)
+    void add(Entity e, Component c)
     {
+        if (isPair(c))
+        {
+            PairRecord* pr = new PairRecord;
+            pr->insert(e);
+
+            if (const auto& it = Components.find(c); it != Components.end())
+                delete it->second;
+
+            Components[c] = pr;
+        }
+        else
+        {
+            const auto& it = Components.find(c);
+            if (it == Components.end())
+                throw std::runtime_error(std::format("Cannot add invalid predicate '{}' to entity {} (expected component or pair ID)", c, e));
+
+            it->second->insert(e);
+        }
+    }
+
+    void query(const std::span<Id>& predicates, const std::function<bool(Entity)>& keepGoing)
+    {
+        std::vector<ComponentRecordBase*> crs;
+        crs.reserve(predicates.size());
+
+        for (Id pred : predicates)
+        {
+            const auto& it = Components.find(pred);
+            if (it == Components.end())
+                throw std::runtime_error(std::format("Invalid query predicate '{}' (expected component or pair ID)", pred));
+
+            crs.push_back(it->second);
+        }
+
         for (Entity e = 0; e < EntityCount; e++)
         {
             bool hasAll = true;
 
-            for (Component c : predicates)
+            for (ComponentRecordBase* cr : crs)
             {
-                if (!Components[c]->getIndex(e))
+                if (!cr->getIndex(e))
                 {
                     hasAll = false;
                     break;
@@ -124,6 +188,18 @@ struct World
         }
     }
 
-    std::vector<ComponentRecordBase*> Components;
+    void shutdown()
+    {
+        for (auto [ c, cr ] : Components)
+        {
+            if (isPair(c))
+                delete cr;
+        }
+
+        Components.clear();
+        EntityCount = 0;
+    }
+
+    std::unordered_map<Id, ComponentRecordBase*> Components;
     uint64_t EntityCount = 0;
 };
