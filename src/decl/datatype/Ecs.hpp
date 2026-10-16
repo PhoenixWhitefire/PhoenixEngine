@@ -111,6 +111,7 @@ struct LuauComponentRecord : ComponentRecordBase
 {
     void insertData() override
     {
+        data.push_back(0);
     }
 
     struct lua_State* owner = nullptr;
@@ -154,6 +155,15 @@ struct World
 
             it->second->insert(e);
         }
+    }
+
+    void remove(Entity e, Component c)
+    {
+        const auto& it = Components.find(c);
+        if (it == Components.end())
+            throw std::runtime_error(std::format("Cannot remove invalid predicate '{}' from entity {} (expected component or pair ID)", c, e));
+
+        it->second->remove(e);
     }
 
     void query(const std::span<Id>& predicates, const std::function<bool(Entity)>& keepGoing)
