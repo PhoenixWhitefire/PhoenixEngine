@@ -2358,11 +2358,13 @@ nlohmann::json ScriptEngine::DumpApiToJson()
 
                     GameObject* obj = GameObjectManager::Get()->FromGenericValue(ToGeneric(luhx, -1));
 
+                    /*
                     for (const ReflectorRef& ref : obj->Components)
                     {
                         type.append(" & Ec");
                         type.append(s_EntityComponentNames[(uint8_t)ref.Type]);
                     }
+                    */
 
                     json["Globals"][k] = type;
                 }
