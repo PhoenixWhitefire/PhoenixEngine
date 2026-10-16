@@ -15,6 +15,7 @@
 #include "datatype/GameObject.hpp"
 #include "datatype/Components.hpp"
 #include "datatype/Event.hpp"
+#include "datatype/Ecs.hpp"
 
 #include "script/ScriptEngine.hpp"
 #include "geometry/Physics.hpp"
@@ -68,6 +69,8 @@ public:
         bool Simulated = false;
     };
     std::vector<BoundDataModel> BoundDataModels;
+
+    World world;
 
     Renderer RendererContext;
     GLFWwindow* Window = nullptr;

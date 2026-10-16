@@ -33,11 +33,12 @@
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 #include "datatype/Ecs.hpp"
-#include "component/ScriptEngineService.hpp"
-#include "component/LuauData.hpp"
-#include "DeveloperTools.hpp"
+// #include "component/ScriptEngineService.hpp"
+// #include "DeveloperTools.hpp"
 #include "Utilities.hpp"
+#include "Memory.hpp"
 #include "FileRW.hpp"
+#include "Engine.hpp"
 #include "Log.hpp"
 
 LUAU_FASTFLAG(LuauEnumMoreEdges)
@@ -373,6 +374,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
         if (yc->Dead)
             continue;
 
+        /*
         // make sure the datamodel still exists
         GameObject* dm = yc->DataModel.Referred();
         if (!dm || dm->IsDestructionPending || !dm->FindComponentByType(EntityComponent::DataModel) || lua_status(yc->Coroutine) == LUA_ERRRUN)
@@ -380,6 +382,7 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
             yc->Dead = true;
             continue;
         }
+        */
 
         lua_State* coroutine = yc->Coroutine;
         StateUserdata* corUd = (StateUserdata*)lua_getthreaddata(coroutine);
@@ -763,8 +766,8 @@ std::string ScriptEngine::CompileBytecode(const std::string_view& SourceCode, in
     };
 
     Luau::CompileOptions compileOptions;
-    compileOptions.optimizationLevel = OptimizationLevel != -1 ? OptimizationLevel : (DeveloperTools::Initialized ? 1 : 2);
-    compileOptions.debugLevel = DebugLevel != -1 ? DebugLevel : (DeveloperTools::Initialized ? 2 : 1);
+    // compileOptions.optimizationLevel = OptimizationLevel != -1 ? OptimizationLevel : (DeveloperTools::Initialized ? 1 : 2);
+    // compileOptions.debugLevel = DebugLevel != -1 ? DebugLevel : (DeveloperTools::Initialized ? 2 : 1);
     compileOptions.mutableGlobals = mutableGlobals;
 
     std::string bytecode = Luau::compile(std::string(SourceCode), compileOptions);
@@ -850,6 +853,7 @@ int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, c
 
                 if (const auto& it = QueuedScriptBreakpoints.find(path); it != QueuedScriptBreakpoints.end())
                 {
+                    /*
                     for (const auto& [ line, enabled ] : it->second)
                     {
                         int actualLine = lua_breakpoint(L, chunk, line, (int)enabled);
@@ -857,6 +861,7 @@ int ScriptEngine::LoadBytecode(lua_State* L, const std::string_view& Bytecode, c
                         if (actualLine != line)
                             EcScriptEngineService::SignalBreakpointMoved({ path, line, actualLine });
                     }
+                    */
 
                     QueuedScriptBreakpoints.erase(it);
                 }
@@ -958,11 +963,13 @@ static Reflection::GenericValue toGenericValue(lua_State* L, int StackIndex, int
             Reflection::GenericValue gv = *id;
             gv.Type = Reflection::ValueType::GameObject;
 
+            /*
             if (*id != PHX_GAMEOBJECT_NULL_ID)
             {
                 // TODO GVOBJECT decremented in destructor of GenericValue
                 GameObjectManager::Get()->FindById(*id)->IncrementHardRefs();
             }
+            */
 
             return gv;
         }
@@ -1198,7 +1205,8 @@ void ScriptEngine::PushGenericValue(lua_State* L, const Reflection::GenericValue
     }
     case Reflection::ValueType::GameObject:
     {
-        luhx_pushgameobject(L, GameObjectManager::Get()->FromGenericValue(gv));
+        //luhx_pushgameobject(L, GameObjectManager::Get()->FromGenericValue(gv));
+        lua_pushnil(L);
         break;
     }
     case Reflection::ValueType::Array:
@@ -1473,8 +1481,8 @@ int ScriptEngine::LuauVM::Yield(lua_State* L, int NumResults, std::function<void
     // TODO a kind of hack to get what datamodel we're in
     lua_getglobal(L, "game");
     Reflection::GenericValue datamodelVal = ScriptEngine::ToGeneric(L, -1);
-    GameObject* dmObject = GameObjectManager::Get()->FromGenericValue(datamodelVal);
-    assert(dmObject);
+    // GameObject* dmObject = GameObjectManager::Get()->FromGenericValue(datamodelVal);
+    // assert(dmObject);
     // need to do that before `lua_yield` because of thread chicanery idk how it works
 
     int yieldResult = lua_yield(L, NumResults);
@@ -1487,7 +1495,7 @@ int ScriptEngine::LuauVM::Yield(lua_State* L, int NumResults, std::function<void
         .DebugString = currar.name ? currar.name : "<unknown>",
         .Coroutine = L,
         .CoroutineReference = lua_ref(L, -1),
-        .DataModel = dmObject,
+        //.DataModel = dmObject,
         .Mode = YieldedCoroutine::ResumptionMode::INVALID,
     };
     DumpStacktrace(L, &yc.DebugString);
@@ -1601,33 +1609,34 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
         return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
-static uint64_t checkEcsId(lua_State* L, int idx)
+static Id checkEcsId(lua_State* L, int idx)
 {
     void* ud = lua_tolightuserdatatagged(L, idx, LightUserdataTag::Id);
-    luaL_argcheck(L, ud, idx, "Expected ECS ID");
+    if (!ud)
+        luaL_typeerror(L, idx, "Id");
 
-    return (uint64_t)ud;
+    return (Id)ud;
+}
+
+static void pushComponentData(lua_State* L, const World::ComponentData& cd)
+{
+    if (cd.cr->isLuau && ((LuauComponentRecord*)cd.cr)->owner == lua_mainthread(L))
+    {
+        LuauComponentRecord* lcr = (LuauComponentRecord*)cd.cr;
+        lua_getref(L, lcr->data[cd.index]);
+    }
+    else
+    {
+        ScriptEngine::PushGenericValue(L, cd.cr->getData(cd.index));
+    }
 }
 
 template <bool AllowNonPresent>
-static int findComponentData(lua_State* L)
+static int findComponentData(lua_State* L, World* world, Id e, Id c)
 {
-    World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-    uint64_t e = checkEcsId(L, 2);
-    uint64_t c = checkEcsId(L, 3);
-
     if (std::optional<World::ComponentData> cd = world->find(e, c))
     {
-        if (cd->cr->isLuau && ((LuauComponentRecord*)cd->cr)->owner == lua_mainthread(L))
-        {
-            LuauComponentRecord* lcr = (LuauComponentRecord*)cd->cr;
-            lua_getref(lcr->owner, lcr->data[cd->index]);
-            lua_xmove(lcr->owner, L, 1);
-        }
-        else
-        {
-            ScriptEngine::PushGenericValue(L, cd->cr->getData(cd->index));
-        }
+        pushComponentData(L, *cd);
     }
     else if (AllowNonPresent)
     {
@@ -1641,6 +1650,18 @@ static int findComponentData(lua_State* L)
     return 1;
 }
 
+static void pushEcsId(lua_State* L, Id id)
+{
+    lua_pushlightuserdatatagged(L, (void*)id, LightUserdataTag::Id);
+}
+
+struct QueryData
+{
+    World* world = nullptr;
+    Id predicates[16] = {};
+    int numPredicates = 0;
+};
+
 static void registerWorldUserdata(lua_State* L)
 {
     lua_createtable(L, 0, 8);
@@ -1648,13 +1669,16 @@ static void registerWorldUserdata(lua_State* L)
     lua_pushliteral(L, "World");
     lua_setfield(L, -2, "__type");
 
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
+
     lua_pushcfunction(
         L,
         [](lua_State* L)
         {
             World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
 
-            lua_pushlightuserdatatagged(L, (void*)world->entity(), LightUserdataTag::Id);
+            pushEcsId(L, world->entity());
             return 1;
         },
         "entity"
@@ -1670,7 +1694,7 @@ static void registerWorldUserdata(lua_State* L)
             LuauComponentRecord* lcr = new LuauComponentRecord;
             lcr->owner = lua_mainthread(L);
 
-            lua_pushlightuserdatatagged(L, (void*)world->component(lcr), LightUserdataTag::Id);
+            pushEcsId(L, world->component(lcr));
             return 1;
         },
         "component"
@@ -1711,7 +1735,11 @@ static void registerWorldUserdata(lua_State* L)
         L,
         [](lua_State* L)
         {
-            return findComponentData<true>(L);
+            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+            Id e = checkEcsId(L, 2);
+            Id c = checkEcsId(L, 3);
+
+            return findComponentData<true>(L, world, e, c);
         },
         "find"
     );
@@ -1721,7 +1749,11 @@ static void registerWorldUserdata(lua_State* L)
         L,
         [](lua_State* L)
         {
-            return findComponentData<false>(L);
+            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+            Id e = checkEcsId(L, 2);
+            Id c = checkEcsId(L, 3);
+
+            return findComponentData<false>(L, world, e, c);
         },
         "get"
     );
@@ -1734,7 +1766,7 @@ static void registerWorldUserdata(lua_State* L)
             World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
             uint64_t e = checkEcsId(L, 2);
             uint64_t c = checkEcsId(L, 3);
-            luaL_checkany(L, 3);
+            luaL_checkany(L, 4);
 
             World::ComponentData cd = {};
             if (std::optional<World::ComponentData> cdOpt = world->find(e, c))
@@ -1756,9 +1788,12 @@ static void registerWorldUserdata(lua_State* L)
                 if (lcr->owner != lua_mainthread(L))
                     luaL_error(L, "Luau component data cannot be modified outside of the VM it was created in");
 
-                int ref = lcr->data[cd.index];
-                // Takes off the top of the stack (our value).
-                lua_rawseti(L, LUA_REGISTRYINDEX, ref);
+                int ref = lua_ref(L, 4);
+
+                if (int oldRef = lcr->data[cd.index]; oldRef != 0)
+                    lua_unref(L, oldRef);
+
+                lcr->data[cd.index] = ref;
             }
             else
             {
@@ -1772,7 +1807,76 @@ static void registerWorldUserdata(lua_State* L)
     );
     lua_setfield(L, -2, "set");
 
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            QueryData qd = {};
+            qd.world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+
+            for (int i = 2; i <= lua_gettop(L); i++)
+            {
+                if (i > 15)
+                    luaL_error(L, "Too many query predicates!");
+
+                qd.predicates[i - 2] = checkEcsId(L, i);
+                qd.numPredicates++;
+            }
+
+            QueryData* qdptr = (QueryData*)lua_newuserdatataggedwithmetatable(L, sizeof(QueryData), UserdataTag::Query);
+            memcpy(qdptr, &qd, sizeof(QueryData));
+
+            return 1;
+        },
+        "query"
+    );
+    lua_setfield(L, -2, "query");
+
     lua_setuserdatametatable(L, UserdataTag::World);
+
+    lua_createtable(L, 0, 8);
+
+    lua_pushliteral(L, "Query");
+    lua_setfield(L, -2, "__type");
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            lua_pushcfunction(
+                L,
+                [](lua_State* L)
+                {
+                    QueryData* qd = (QueryData*)luaL_checkudatatagged(L, 1, UserdataTag::Query);
+                    Id currentEntity = checkEcsId(L, 2);
+
+                    bool done = qd->world->query(std::span(qd->predicates, (size_t)qd->numPredicates), [&](Id e, const std::vector<World::ComponentData>& datas)
+                    {
+                        pushEcsId(L, e);
+                        for (const World::ComponentData& cd : datas)
+                            pushComponentData(L, cd);
+
+                        currentEntity = e;
+                        return false;
+                    }, currentEntity + 1);
+
+                    if (done)
+                        return 0;
+
+                    return 1 + qd->numPredicates;
+                },
+                "QueryIterator"
+            );
+
+            lua_pushvalue(L, 1);      // Iterator data (query object).
+            pushEcsId(L, UINT64_MAX); // Iterator state (UINT64_MAX = at the beginning).
+            return 3;
+        },
+        "Query.__iter"
+    );
+    lua_setfield(L, -2, "__iter");
+
+    lua_setuserdatametatable(L, UserdataTag::Query);
 }
 
 static int openEcs(lua_State* L)
@@ -1783,35 +1887,34 @@ static int openEcs(lua_State* L)
         L,
         [](lua_State* L)
         {
-            uint64_t predicate = checkEcsId(L, 1);
-            uint64_t target = checkEcsId(L, 2);
+            Id predicate = checkEcsId(L, 1);
+            Id target = checkEcsId(L, 2);
 
-            luaL_argcheck(L, predicate != 0, 1, "Expected predicate to be an ID");
-            luaL_argcheck(L, target != 0, 2, "Expected target to be an ID");
-
-            lua_pushlightuserdatatagged(L, (void*)pair(predicate, target), LightUserdataTag::Id);
+            pushEcsId(L, pair(predicate, target));
             return 1;
         },
         "pair"
     );
     lua_setfield(L, -2, "pair");
 
-    registerWorldUserdata(L);
     return 1;
 }
 
 static int openWorld(lua_State* L)
 {
-    // TODO: Needs the current world.
-    // Actually, maybe this shouldn't exist... if we allow
+    // Maybe this shouldn't exist... if we allow
     // worlds to be re-bound then the behavior can be unexpected.
-    luaL_error(L, "Not implemented!");
-    return 0;
+
+    Engine* engine = Engine::Get();
+    World** p = (World**)lua_newuserdatataggedwithmetatable(L, sizeof(World*), UserdataTag::World);
+    *p = &engine->world;
+
+    return 1;
 }
 
 static const std::unordered_map<std::string_view, lua_CFunction> BuiltinModules = {
-    { "phoenix://builtin/ecs", openEcs },
-    { "phoenix://builtin/world", openWorld },
+    { "phoenix://ecs", openEcs },
+    { "phoenix://world", openWorld },
 };
 
 void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
@@ -1896,6 +1999,15 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
                 }
             }
 
+            if (size_t bi = curpath->string().find("/phoenix/"); bi != std::string::npos)
+            {
+                std::string path = curpath->string();
+                std::string_view builtin = std::string_view(path.begin() + bi, path.end());
+
+                if (BuiltinModules.find(builtin) != BuiltinModules.end())
+                    return true;
+            }
+
             return std::filesystem::is_regular_file(*curpath)
                     || std::filesystem::is_regular_file(curpath->string() + "c") // `.luauc`
                     || std::filesystem::is_regular_file(*curpath / "init.luau")
@@ -1950,11 +2062,12 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
             memcpy(buffer, contents.data(), contents.size());
             return success ? WRITE_SUCCESS : WRITE_FAILURE;
         };
-    config->load = [](lua_State* L, void* ctx, const char* /* path */, const char* chname, const char* ldname)
+    config->load = [](lua_State* L, void* ctx, const char* pathCStr, const char* chname, const char* ldname) -> int
         {
             std::filesystem::path* curpath = (std::filesystem::path*)ctx;
+            const std::string path = FileRW::ResolvePathNormalized(pathCStr);
 
-            if (const auto& it = BuiltinModules.find(curpath->string()); it != BuiltinModules.end())
+            if (const auto& it = BuiltinModules.find(path); it != BuiltinModules.end())
                 return it->second(L);
 
             std::string modulePath;
@@ -2064,6 +2177,7 @@ lua_State* ScriptEngine::LuauVM::CreateMainThread()
     luaL_openlibs(state);
     // Load runtime-specific libraries
     luhx_openlibs(state);
+    registerWorldUserdata(state);
 
     lua_createtable(state, 0, 8);
     lua_setfield(state, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);
@@ -2081,17 +2195,13 @@ lua_State* ScriptEngine::LuauVM::CreateMainThread()
     for (uint8_t i = LightUserdataTag::start; i < LightUserdataTag::count; i++)
         lua_setlightuserdataname(state, i, LightUserdataTagNames[i].data());
 
-    GameObjectManager* ObjectManager = GameObjectManager::Get();
-
-    luhx_pushgameobject(state, ObjectManager->FindById(ObjectManager->DataModel));
-    lua_setglobal(state, "game");
-
     lua_pushlstring(state, Name.data(), Name.size());
     lua_setglobal(state, "_VMNAME");
 
     StateUserdata* vmud = new StateUserdata;
     lua_Callbacks* cb = lua_callbacks(state);
 
+    /*
     if (DeveloperTools::Initialized)
     {
         cb->debugbreak = [](lua_State* L, lua_Debug* ar)
@@ -2121,6 +2231,7 @@ lua_State* ScriptEngine::LuauVM::CreateMainThread()
 
         vmud->DebuggerAttached = true;
     }
+    */
 
     cb->userthread = [](lua_State* LP, lua_State* L)
         {
@@ -2198,8 +2309,8 @@ void ScriptEngine::LuauVM::Close()
 
     StateUserdata* vmud = (StateUserdata*)lua_getthreaddata(L);
 
-    if (vmud->BeingDebugged)
-        DeveloperTools::LeaveDebugger();
+    // if (vmud->BeingDebugged)
+    //     DeveloperTools::LeaveDebugger();
 
     for (lua_State* co : vmud->Coroutines)
     {
@@ -2222,6 +2333,7 @@ void ScriptEngine::LuauVM::Close()
     ScriptEngine::Get()->VMs.erase(Name);
 }
 
+/*
 static void breakHere(lua_State* L, DebugBreakReason Reason)
 {
     ScriptEngine::StateUserdata* vmud = (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
@@ -2261,6 +2373,7 @@ static lua_Status finishCoroutine(lua_State* L, int status)
 
     return (lua_Status)status;
 }
+*/
 
 lua_Status ScriptEngine::Resume(lua_State* L, lua_State* from, int narg)
 {
@@ -2276,7 +2389,7 @@ lua_Status ScriptEngine::Resume(lua_State* L, lua_State* from, int narg)
     vmud->LastResumed = GetRunningTime();
 
     int status = lua_resume(L, from, narg);
-    return finishCoroutine(L, status);
+    return (lua_Status)status; //finishCoroutine(L, status);
 }
 
 lua_Status ScriptEngine::ProtectedCall(lua_State* L, int narg, int nret, int errfunc)
@@ -2285,7 +2398,7 @@ lua_Status ScriptEngine::ProtectedCall(lua_State* L, int narg, int nret, int err
     vmud->LastResumed = GetRunningTime();
 
     int status = lua_pcall(L, narg, nret, errfunc);
-    return finishCoroutine(L, status);
+    return (lua_Status)status; //finishCoroutine(L, status);
 }
 
 nlohmann::json ScriptEngine::DumpApiToJson()
@@ -2356,9 +2469,9 @@ nlohmann::json ScriptEngine::DumpApiToJson()
                 {
                     std::string type = tn;
 
+                    /*
                     GameObject* obj = GameObjectManager::Get()->FromGenericValue(ToGeneric(luhx, -1));
 
-                    /*
                     for (const ReflectorRef& ref : obj->Components)
                     {
                         type.append(" & Ec");

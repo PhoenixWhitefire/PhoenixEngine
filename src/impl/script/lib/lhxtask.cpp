@@ -3,6 +3,7 @@
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
+#include "datatype/GameObject.hpp"
 #include "Utilities.hpp"
 #include "FileRW.hpp"
 

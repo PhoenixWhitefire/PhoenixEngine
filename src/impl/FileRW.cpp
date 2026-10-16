@@ -212,9 +212,6 @@ static bool isQualified(const std::string& Path)
 
 std::string FileRW::ResolvePathNormalized(std::string Path)
 {
-    if (Path.starts_with("phoenix://"))
-        return Path;
-
     if (Path.size() == 0)
     {
         Log.Warning("`ResolvePathNormalized` given a path 0 bytes in length!");
@@ -226,6 +223,9 @@ std::string FileRW::ResolvePathNormalized(std::string Path)
 
     if (Path[0] == '@')
         Path = resolveAliasRecursive(Path);
+
+    if (Path.starts_with("phoenix://"))
+        return Path;
 
     const std::string_view resdir = "resources/";
 

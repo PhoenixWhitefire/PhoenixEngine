@@ -8,8 +8,9 @@
 #include <deque>
 #include <stack>
 #include <lua.h>
+#include <nljson.hpp>
 
-#include "datatype/GameObject.hpp"
+#include "Reflection.hpp"
 
 #define ROOT_LVM_NAME "RootLVM"
 

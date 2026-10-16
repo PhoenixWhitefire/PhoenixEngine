@@ -2,6 +2,7 @@
 #include <lualib.h>
 
 #include "datatype/ComponentDependencies.hpp"
+#include "datatype/GameObject.hpp"
 #include "script/ScriptEngine.hpp"
 #include "script/luhx.hpp"
 #include "script/UserdataTags.hpp"

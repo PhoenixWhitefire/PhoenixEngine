@@ -4,6 +4,7 @@
 #pragma once
 
 #include "script/ScriptEngine.hpp"
+#include "datatype/GameObject.hpp"
 
 struct lua_State;
 

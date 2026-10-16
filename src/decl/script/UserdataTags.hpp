@@ -19,6 +19,7 @@ struct UserdataTag_
         VectorGradient = 11,
         ColorGradient = 12,
         World = 13,
+        Query = 14,
 
         count,
         tagLimit = 127,
@@ -43,6 +44,7 @@ const std::string_view UserdataTagNames[] = {
     "VectorGradient",
     "ColorGradient",
     "World",
+    "Query",
 };
 
 static_assert(std::size(UserdataTagNames) == UserdataTag::count);

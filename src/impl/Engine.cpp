@@ -406,6 +406,7 @@ void Engine::Initialize(int ThreadCount, bool Headless)
     FileRW::DefineAlias("home", GetUserHomeDirectoryPath());
     FileRW::DefineAlias("base", "resources");
     FileRW::DefineAlias("project", ".");
+    FileRW::DefineAlias("phoenix", "phoenix:/");
 
     Log.Info("Initializing managers...");
 

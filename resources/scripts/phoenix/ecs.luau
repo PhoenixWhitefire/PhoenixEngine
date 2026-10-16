@@ -11,6 +11,24 @@ export type Component<T = unknown> = Id<T>
 --- A pair identifier.
 export type Pair = Id<nil>
 
+--[[
+type function quererTy(fnTy: type)
+    assert(fnTy:is("function"))
+    local head = assert(fnTy:parameters().head)
+    local tys = {}
+    tys[1] = head[1]
+
+    local field = types.singleton("_T")
+
+    for i = 2, #head do
+        tys[i] = head[i]:readproperty(field)
+    end
+
+    return types.newfunction({ head = { head[1] } }, { head = tys })
+end
+]]--
+
+--type QueryIteratorMeta<T...> = { read __iter: (QueryIterator<T...>) -> (quererTy<(Entity, T...) -> ()>, Entity) }
 type QueryIteratorMeta<T...> = { read __iter: (QueryIterator<T...>) -> ((Entity) -> (Entity, T...), Entity) }
 type QueryIterator<T...> = setmetatable<{}, QueryIteratorMeta<T...>>
 
