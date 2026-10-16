@@ -1,19 +1,50 @@
 -- ecs.luau, 15/10/2026
-export type Id<T = unknown> = { read _T: unknown }
+--- An identifier for something in the ECS world.
+export type Id<T = unknown> = {
+    --- This is phantom, type system-only data, and does not exist at runtime.
+    read _T: T
+}
+--- An entity identifier.
+export type Entity = Id<nil>
+--- A component identifier.
+export type Component<T = unknown> = Id<T>
+--- A pair identifier.
+export type Pair = Id<nil>
 
-type QueryIteratorMeta<T...> = { read __iter: (QueryIterator<T...>) -> ((nil, Id) -> (Id, T...), nil, Id) }
+type QueryIteratorMeta<T...> = { read __iter: (QueryIterator<T...>) -> ((Entity) -> (Entity, T...), Entity) }
 type QueryIterator<T...> = setmetatable<{}, QueryIteratorMeta<T...>>
 
-local p = pairs
-
+--- The ECS world.
 export type World = {
-    read entity: (World) -> Id,
-    read component: (World) -> Id,
+    --- Creates a new entity and returns its ID.
+    read entity: (self: World) -> Entity,
+    --- Creates a new component and returns its ID.
+    read component: <T>(self: World) -> Component<T>,
+
+    --- Adds a component or pair (relationship) to an entity.
+    read add: (self: World, e: Entity, p: Component | Pair) -> (),
+    --- Removes a component or pair (relationship) from an entity.
+    read remove: (self: World, e: Entity, p: Component | Pair) -> (),
+
+    --- Gets component data on an entity. This will error if the component is not present.
+    --- Use `find` if you do not want this behavior instead.
+    read get: <T>(self: World, e: Entity, c: Component<T>) -> T,
+
+    --- Finds component data on an entity. Returns `nil` if the component is not present.
+    read find: <T>(self: World, e: Entity, c:Component<T>) -> T?,
+
+    --- Sets component data on an entity. This will add the component if it is not present on `e`.
+    read set: <T>(self: World, e: Entity, c: Component<T>, data: T) -> (),
+
+    --- Queries the world for all entities matching the given predicates.
+    --- Predicates are component or pair IDs, where pairs represent relationships.
     read query: <T...>(World, T...) -> QueryIterator<T...>
 }
 
+--- The ECS library.
 local ecs = {}
 
+--- Provides a pair identifier between two ECS identifiers.
 function ecs.pair(predicate: Id, target: Id): Id
     error(`Unreachable.`)
 end
