@@ -2,7 +2,6 @@
 #pragma once
 
 #include "datatype/EntityComponent.hpp"
-#include "datatype/GameObject.hpp"
 #include "datatype/Ref.hpp"
 #include "Reflection.hpp"
 
@@ -13,7 +12,6 @@ class IComponentManager
 {
 public:
     virtual uint32_t CreateComponent(GameObject* Object) = 0;
-    virtual uint32_t DuplicateComponent(uint32_t Id, GameObject* Object) = 0;
     virtual std::vector<BaseComponent*> GetComponents() = 0;
     virtual void ForEachComponent(const std::function<bool(BaseComponent*)>) = 0;
     virtual BaseComponent* GetComponent(uint32_t) = 0;
@@ -28,12 +26,6 @@ public:
     virtual const Reflection::StaticEventMap& GetEvents() = 0;
     virtual Reflection::GenericValue GetDefaultPropertyValue(const std::string_view&) = 0;
     virtual Reflection::GenericValue GetDefaultPropertyValue(const Reflection::PropertyDescriptor*) = 0;
-
-    virtual Reflection::GenericValue GetPropertyValue(uint32_t) = 0;
-    virtual void SetPropertyValue(uint32_t, const Reflection::GenericValue&) = 0;
-    virtual std::vector<Reflection::GenericValue> CallMethod(uint32_t, const std::vector<Reflection::GenericValue>&) = 0;
-
-    virtual std::optional<uint32_t> GetAttachedId(const GameObject*) = 0;
 
     std::vector<Reflection::EventConnection> ComponentCreatedCallbacks;
     std::vector<Reflection::EventConnection> ComponentDeletedCallbacks;
@@ -84,27 +76,21 @@ public:
 
     virtual uint32_t CreateComponent(GameObject* Object) override
     {
-        // TODO: Finish.
         uint32_t id = UINT32_MAX; //NextFreeId;
         ObjectRef ref = Object;
 
-        if (const auto& it = Sparse.find(Object->ObjectId); it != Sparse.end())
-            id = it->second;
-
         if (id == UINT32_MAX)
         {
-            id = static_cast<uint32_t>(Data.size());
+            id = static_cast<uint32_t>(Components.size());
 
-            T& component = Data.emplace_back();
+            T& component = Components.emplace_back();
             component.Object = ref;
             component.Valid = true;
-
-            Sparse[Object->ObjectId] = ref;
-            Dense.emplace_back(Object->ObjectId);
+            assert(component.Valid);
         }
         else
         {
-            T& component = Data[id];
+            T& component = Components[id];
             NextFreeId = component.NextFreeId;
             component = T();
         }
@@ -113,27 +99,18 @@ public:
         return id;
     }
 
-    virtual uint32_t DuplicateComponent(uint32_t Id, GameObject* Object)
-    {
-        uint32_t cid = CreateComponent(Object);
-        Data[cid] = Data[Id];
-        Data[cid].Object = Object;
-
-        return cid;
-    }
-
     virtual BaseComponent* GetComponent(uint32_t Id) override
     {
-        T& component = Data.at(Id);
+        T& component = Components.at(Id);
         return component.Valid ? (BaseComponent*)&component : nullptr;
     }
 
     virtual std::vector<BaseComponent*> GetComponents() override
     {
         std::vector<BaseComponent*> v;
-        v.reserve(Data.size());
+        v.reserve(Components.size());
 
-        for (T& component : Data)
+        for (T& component : Components)
         {
             if (component.Valid)
                 v.push_back((BaseComponent*)&component);
@@ -144,37 +121,22 @@ public:
 
     virtual void ForEachComponent(const std::function<bool(BaseComponent*)> Continue) override
     {
-        for (T& component : Data)
-        {
+        for (T& component : Components)
             if (component.Valid && !Continue((BaseComponent*)&component))
                 break;
-        }
     }
 
     virtual void DeleteComponent(uint32_t Id) override
     {
-        T& component = Data.at(Id);
+        T& component = Components.at(Id);
         for (auto& [ _, event ] : GetEvents())
             event.Cleanup((void*)&component);
 
         component.NextFreeId = NextFreeId;
         NextFreeId = Id;
 
-        Sparse.erase(Dense[Id]);
-        Dense[Id] = UINT32_MAX;
         component.Valid = false;
         Reflection::SignalRestrictedEvent(component.Object.TargetId, ComponentDeletedCallbacks, { Reflection::GenericValue(component.Object) }, "ComponentDeletedSignal");
-    }
-
-    std::optional<uint32_t> GetAttachedId(const GameObject* Object) override
-    {
-        if (const auto& it = Sparse.find(Object->ObjectId); it != Sparse.end())
-        {
-            if (Dense[it->second] == Object->ObjectId)
-                return it->second;
-        }
-
-        return std::nullopt;
     }
 
     virtual void BindService(uint32_t) override
@@ -187,9 +149,7 @@ public:
 
     virtual void Shutdown() override
     {
-        Sparse.clear();
-        Dense.clear();
-        Data.clear();
+        Components.clear();
     }
 
     virtual const Reflection::StaticPropertyMap& GetProperties() override
@@ -226,12 +186,7 @@ public:
         RegisterComponentManager(T::Type, this);
     }
 
-    using Entity = uint32_t;
-
-    std::unordered_map<Entity, uint32_t> Sparse;
-    std::vector<Entity> Dense;
-    std::vector<T> Data;
-
+    std::vector<T> Components;
     uint32_t NextFreeId = UINT32_MAX;
 };
 
