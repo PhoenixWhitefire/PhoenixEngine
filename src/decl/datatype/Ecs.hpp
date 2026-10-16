@@ -11,6 +11,8 @@
 #include <format>
 #include <span>
 
+#include "Reflection.hpp"
+
 // See JECS.
 
 using Id = uint64_t;
@@ -49,7 +51,7 @@ struct ComponentRecordBase
 {
     virtual ~ComponentRecordBase();
 
-    std::optional<Component> getIndex(Entity e)
+    std::optional<Component> findIndex(Entity e)
     {
         assert(e != 0);
 
@@ -68,7 +70,7 @@ struct ComponentRecordBase
     {
         assert(e != 0);
 
-        if (std::optional<Component> c = getIndex(e))
+        if (std::optional<Component> c = findIndex(e))
             return c.value();
 
         uint64_t c = dense.size();
@@ -85,8 +87,12 @@ struct ComponentRecordBase
         sparse.erase(e);
     }
 
+    // TODO: Should be some specific type instead of just "Map".
+    virtual Reflection::GenericValue getData(uint64_t index) = 0;
+
     std::unordered_map<Entity, Component> sparse;
     std::vector<Entity> dense;
+    bool isLuau = false;
 };
 
 template <typename T>
@@ -105,13 +111,29 @@ struct PairRecord : public ComponentRecordBase
     void insertData() override
     {
     }
+
+    Reflection::GenericValue getData(uint64_t index) override
+    {
+        throw std::runtime_error("Pairs do not have any associated data");
+    }
 };
 
 struct LuauComponentRecord : ComponentRecordBase
 {
+    LuauComponentRecord()
+    {
+        isLuau = true;
+    }
+
     void insertData() override
     {
         data.push_back(0);
+    }
+
+    Reflection::GenericValue getData(uint64_t index) override
+    {
+        // This case is where we want to *serialize* the data instead of sharing it directly.
+        throw std::runtime_error("Not implemented!");
     }
 
     struct lua_State* owner = nullptr;
@@ -135,7 +157,14 @@ struct World
         return c;
     }
 
-    void add(Entity e, Component c)
+    struct ComponentData
+    {
+        ComponentRecordBase* cr = nullptr;
+        uint64_t index = UINT64_MAX;
+    };
+
+
+    ComponentData add(Entity e, Component c)
     {
         if (isPair(c))
         {
@@ -146,6 +175,7 @@ struct World
                 delete it->second;
 
             Components[c] = pr;
+            return { .cr = pr, .index = 0 };
         }
         else
         {
@@ -153,7 +183,7 @@ struct World
             if (it == Components.end())
                 throw std::runtime_error(std::format("Cannot add invalid predicate '{}' to entity {} (expected component or pair ID)", c, e));
 
-            it->second->insert(e);
+            return { .cr = it->second, .index = it->second->insert(e) };
         }
     }
 
@@ -164,6 +194,17 @@ struct World
             throw std::runtime_error(std::format("Cannot remove invalid predicate '{}' from entity {} (expected component or pair ID)", c, e));
 
         it->second->remove(e);
+    }
+
+    std::optional<ComponentData> find(Entity e, Component c)
+    {
+        if (const auto& it = Components.find(c); it != Components.end())
+        {
+            if (std::optional<uint64_t> index = it->second->findIndex(e))
+                return ComponentData{ .cr = it->second, .index = index.value() };
+        }
+
+        return std::nullopt;
     }
 
     void query(const std::span<Id>& predicates, const std::function<bool(Entity)>& keepGoing)
@@ -186,7 +227,7 @@ struct World
 
             for (ComponentRecordBase* cr : crs)
             {
-                if (!cr->getIndex(e))
+                if (!cr->findIndex(e))
                 {
                     hasAll = false;
                     break;

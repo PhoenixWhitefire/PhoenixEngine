@@ -26,12 +26,13 @@ export type World = {
     --- Removes a component or pair (relationship) from an entity.
     read remove: (self: World, e: Entity, p: Component | Pair) -> (),
 
-    --- Gets component data on an entity. This will error if the component is not present.
-    --- Use `find` if you do not want this behavior instead.
-    read get: <T>(self: World, e: Entity, c: Component<T>) -> T,
-
     --- Finds component data on an entity. Returns `nil` if the component is not present.
+    --- Use `get` if you do not want this behavior.
     read find: <T>(self: World, e: Entity, c:Component<T>) -> T?,
+
+    --- Gets component data on an entity. This will error if the component is not present.
+    --- Use `find` if you do not want this behavior.
+    read get: <T>(self: World, e: Entity, c: Component<T>) -> T,
 
     --- Sets component data on an entity. This will add the component if it is not present on `e`.
     read set: <T>(self: World, e: Entity, c: Component<T>, data: T) -> (),

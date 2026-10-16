@@ -1601,33 +1601,52 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
         return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
-static int openEcs(lua_State* L)
+static uint64_t checkEcsId(lua_State* L, int idx)
 {
-    lua_createtable(L, 0, 8);
+    void* ud = lua_tolightuserdatatagged(L, idx, LightUserdataTag::Id);
+    luaL_argcheck(L, ud, idx, "Expected ECS ID");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
+    return (uint64_t)ud;
+}
+
+template <bool AllowNonPresent>
+static int findComponentData(lua_State* L)
+{
+    World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+    uint64_t e = checkEcsId(L, 2);
+    uint64_t c = checkEcsId(L, 3);
+
+    if (std::optional<World::ComponentData> cd = world->find(e, c))
+    {
+        if (cd->cr->isLuau && ((LuauComponentRecord*)cd->cr)->owner == lua_mainthread(L))
         {
-            uint64_t predicate = (uint64_t)lua_tolightuserdatatagged(L, 1, LightUserdataTag::Id);
-            uint64_t target = (uint64_t)lua_tolightuserdatatagged(L, 2, LightUserdataTag::Id);
-
-            luaL_argcheck(L, predicate != 0, 1, "Expected predicate to be an ID");
-            luaL_argcheck(L, target != 0, 2, "Expected target to be an ID");
-
-            lua_pushlightuserdatatagged(L, (void*)pair(predicate, target), LightUserdataTag::Id);
-            return 1;
-        },
-        "pair"
-    );
-    lua_setfield(L, -2, "pair");
+            LuauComponentRecord* lcr = (LuauComponentRecord*)cd->cr;
+            lua_getref(lcr->owner, lcr->data[cd->index]);
+            lua_xmove(lcr->owner, L, 1);
+        }
+        else
+        {
+            ScriptEngine::PushGenericValue(L, cd->cr->getData(cd->index));
+        }
+    }
+    else if (AllowNonPresent)
+    {
+        lua_pushnil(L);
+    }
+    else
+    {
+        luaL_error(L, "Component '%zu' is not present on entity %zu", c, e);
+    }
 
     return 1;
 }
 
-static int openWorld(lua_State* L)
+static void registerWorldUserdata(lua_State* L)
 {
     lua_createtable(L, 0, 8);
+
+    lua_pushliteral(L, "World");
+    lua_setfield(L, -2, "__type");
 
     lua_pushcfunction(
         L,
@@ -1658,7 +1677,136 @@ static int openWorld(lua_State* L)
     );
     lua_setfield(L, -2, "component");
 
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+            uint64_t e = checkEcsId(L, 2);
+            uint64_t p = checkEcsId(L, 3);
+
+            world->add(e, p);
+            return 1;
+        },
+        "add"
+    );
+    lua_setfield(L, -2, "add");
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+            uint64_t e = checkEcsId(L, 2);
+            uint64_t p = checkEcsId(L, 3);
+
+            world->remove(e, p);
+            return 1;
+        },
+        "remove"
+    );
+    lua_setfield(L, -2, "remove");
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            return findComponentData<true>(L);
+        },
+        "find"
+    );
+    lua_setfield(L, -2, "find");
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            return findComponentData<false>(L);
+        },
+        "get"
+    );
+    lua_setfield(L, -2, "get");
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
+            uint64_t e = checkEcsId(L, 2);
+            uint64_t c = checkEcsId(L, 3);
+            luaL_checkany(L, 3);
+
+            World::ComponentData cd = {};
+            if (std::optional<World::ComponentData> cdOpt = world->find(e, c))
+            {
+                cd = cdOpt.value();
+            }
+            else
+            {
+                cd = world->add(e, c);
+            }
+
+            if (cd.cr->isLuau)
+            {
+                LuauComponentRecord* lcr = (LuauComponentRecord*)cd.cr;
+
+                // We want Luau to be the source-of-truth for Luau component data.
+                // If we let other threads change it, then the data stops being related.
+                // (e.g. in the case of table data)
+                if (lcr->owner != lua_mainthread(L))
+                    luaL_error(L, "Luau component data cannot be modified outside of the VM it was created in");
+
+                int ref = lcr->data[cd.index];
+                // Takes off the top of the stack (our value).
+                lua_rawseti(L, LUA_REGISTRYINDEX, ref);
+            }
+            else
+            {
+                // TODO: Requires deserialization.
+                luaL_error(L, "Not implemented!");
+            }
+
+            return 0;
+        },
+        "set"
+    );
+    lua_setfield(L, -2, "set");
+
+    lua_setuserdatametatable(L, UserdataTag::World);
+}
+
+static int openEcs(lua_State* L)
+{
+    lua_createtable(L, 0, 8);
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* L)
+        {
+            uint64_t predicate = checkEcsId(L, 1);
+            uint64_t target = checkEcsId(L, 2);
+
+            luaL_argcheck(L, predicate != 0, 1, "Expected predicate to be an ID");
+            luaL_argcheck(L, target != 0, 2, "Expected target to be an ID");
+
+            lua_pushlightuserdatatagged(L, (void*)pair(predicate, target), LightUserdataTag::Id);
+            return 1;
+        },
+        "pair"
+    );
+    lua_setfield(L, -2, "pair");
+
+    registerWorldUserdata(L);
     return 1;
+}
+
+static int openWorld(lua_State* L)
+{
+    // TODO: Needs the current world.
+    // Actually, maybe this shouldn't exist... if we allow
+    // worlds to be re-bound then the behavior can be unexpected.
+    luaL_error(L, "Not implemented!");
+    return 0;
 }
 
 static const std::unordered_map<std::string_view, lua_CFunction> BuiltinModules = {
