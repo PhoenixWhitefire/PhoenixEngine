@@ -98,7 +98,7 @@ struct World
     bool query(
         const std::span<Id>& predicates,
         const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing,
-        Id start = UINT64_MAX
+        Id start = 0
     );
 
     void shutdown();

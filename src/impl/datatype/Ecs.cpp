@@ -139,7 +139,7 @@ bool World::query(const std::span<Id>& predicates, const std::function<bool(Id, 
 
     std::vector<ComponentData> datas(predicates.size());
 
-    Id e = start == UINT64_MAX ? 0 : start;
+    Id e = start;
 
     for (; e < EntityCount; e++)
     {

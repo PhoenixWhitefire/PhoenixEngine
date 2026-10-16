@@ -1,3 +1,4 @@
+-- ecstest.luau, 16/10/2026
 local world = require("@phoenix/world")
 local ecs = require("@phoenix/ecs")
 

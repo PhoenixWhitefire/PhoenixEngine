@@ -1706,8 +1706,8 @@ static void registerWorldUserdata(lua_State* L)
         [](lua_State* L)
         {
             World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            uint64_t e = checkEcsId(L, 2);
-            uint64_t p = checkEcsId(L, 3);
+            Id e = checkEcsId(L, 2);
+            Id p = checkEcsId(L, 3);
 
             world->add(e, p);
             return 1;
@@ -1721,8 +1721,8 @@ static void registerWorldUserdata(lua_State* L)
         [](lua_State* L)
         {
             World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            uint64_t e = checkEcsId(L, 2);
-            uint64_t p = checkEcsId(L, 3);
+            Id e = checkEcsId(L, 2);
+            Id p = checkEcsId(L, 3);
 
             world->remove(e, p);
             return 1;
@@ -1764,8 +1764,8 @@ static void registerWorldUserdata(lua_State* L)
         [](lua_State* L)
         {
             World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            uint64_t e = checkEcsId(L, 2);
-            uint64_t c = checkEcsId(L, 3);
+            Id e = checkEcsId(L, 2);
+            Id c = checkEcsId(L, 3);
             luaL_checkany(L, 4);
 
             World::ComponentData cd = {};
@@ -1868,8 +1868,8 @@ static void registerWorldUserdata(lua_State* L)
                 "QueryIterator"
             );
 
-            lua_pushvalue(L, 1);      // Iterator data (query object).
-            pushEcsId(L, UINT64_MAX); // Iterator state (UINT64_MAX = at the beginning).
+            lua_pushvalue(L, 1); // Iterator data (query object).
+            pushEcsId(L, 0);     // Iterator state (0 = at the beginning).
             return 3;
         },
         "Query.__iter"
