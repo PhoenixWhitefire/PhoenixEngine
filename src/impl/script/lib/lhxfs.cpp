@@ -790,7 +790,5 @@ static const luaL_Reg fs_funcs[] = {
 
 int luhxopen_fs(lua_State* L)
 {
-    luaL_register(L, LUHX_FSLIBNAME, fs_funcs);
-
-    return 1;
+    return luhx_makemodule(L, fs_funcs);
 }

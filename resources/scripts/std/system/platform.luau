@@ -1,6 +1,4 @@
-local Engine = game:GetService("Engine")
-
-local osName = string.lower(Engine.TargetPlatform)
+local osName =  "unknown" -- string.lower(Engine.TargetPlatform)
 
 local win32 = osName == "windows_nt" or osName == "windows"
 local linux = osName == "linux"

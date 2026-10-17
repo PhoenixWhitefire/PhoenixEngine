@@ -1609,19 +1609,6 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
         return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
-static World* checkEcsWorld(lua_State* L, int idx)
-{
-    return *(World**)luaL_checkudatatagged(L, idx, UserdataTag::World);
-}
-
-static Id checkEcsId(lua_State* L, int idx)
-{
-    if (lua_lightuserdatatag(L, idx) != LightUserdataTag::Id)
-        luaL_typeerror(L, idx, "Id");
-
-    return (Id)lua_tolightuserdatatagged(L, idx, LightUserdataTag::Id);
-}
-
 static void pushComponentData(lua_State* L, const World::ComponentData& cd)
 {
     if (LuauComponentRecord* lcr = (LuauComponentRecord*)cd.cr; cd.cr->isLuau && (!lcr->owner || lcr->owner == lua_mainthread(L)))
@@ -1656,11 +1643,6 @@ static int findComponentData(lua_State* L, World* world, Id e, Id c)
     return 1;
 }
 
-static void pushEcsId(lua_State* L, Id id)
-{
-    lua_pushlightuserdatatagged(L, (void*)id, LightUserdataTag::Id);
-}
-
 struct QueryData
 {
     World* world = nullptr;
@@ -1670,28 +1652,28 @@ struct QueryData
 
 static int world_entity(lua_State* L)
 {
-    World* world = checkEcsWorld(L, 1);
-    pushEcsId(L, world->entity());
+    World* world = luhx_checkworld(L, 1);
+    luhx_pushid(L, world->entity());
 
     return 1;
 }
 
 static int world_component(lua_State* L)
 {
-    World* world = checkEcsWorld(L, 1);
+    World* world = luhx_checkworld(L, 1);
 
     LuauComponentRecord* lcr = new LuauComponentRecord;
     lcr->owner = lua_mainthread(L);
 
-    pushEcsId(L, world->component(lcr));
+    luhx_pushid(L, world->component(lcr));
     return 1;
 }
 
 static int world_add(lua_State* L)
 {
-    World* world = checkEcsWorld(L, 1);
-    Id e = checkEcsId(L, 2);
-    Id p = checkEcsId(L, 3);
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id p = luhx_checkid(L, 3);
 
     world->add(e, p);
     return 1;
@@ -1699,9 +1681,9 @@ static int world_add(lua_State* L)
 
 static int world_remove(lua_State* L)
 {
-    World* world = checkEcsWorld(L, 1);
-    Id e = checkEcsId(L, 2);
-    Id p = checkEcsId(L, 3);
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id p = luhx_checkid(L, 3);
 
     world->remove(e, p);
     return 1;
@@ -1709,27 +1691,27 @@ static int world_remove(lua_State* L)
 
 static int world_find(lua_State* L)
 {
-    World* world = checkEcsWorld(L, 1);
-    Id e = checkEcsId(L, 2);
-    Id c = checkEcsId(L, 3);
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id c = luhx_checkid(L, 3);
 
     return findComponentData<true>(L, world, e, c);
 }
 
 static int world_get(lua_State* L)
 {
-    World* world = checkEcsWorld(L, 1);
-    Id e = checkEcsId(L, 2);
-    Id c = checkEcsId(L, 3);
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id c = luhx_checkid(L, 3);
 
     return findComponentData<false>(L, world, e, c);
 }
 
 static int world_set(lua_State* L)
 {
-    World* world = checkEcsWorld(L, 1);
-    Id e = checkEcsId(L, 2);
-    Id c = checkEcsId(L, 3);
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id c = luhx_checkid(L, 3);
     luaL_checkany(L, 4);
 
     World::ComponentData cd = {};
@@ -1774,14 +1756,14 @@ static int world_set(lua_State* L)
 static int world_query(lua_State* L)
 {
     QueryData qd = {};
-    qd.world = checkEcsWorld(L, 1);
+    qd.world = luhx_checkworld(L, 1);
 
     for (int i = 2; i <= lua_gettop(L); i++)
     {
         if (i > 15)
             luaL_error(L, "Too many query predicates!");
 
-        qd.predicates[i - 2] = checkEcsId(L, i);
+        qd.predicates[i - 2] = luhx_checkid(L, i);
         qd.numPredicates++;
     }
 
@@ -1794,11 +1776,11 @@ static int world_query(lua_State* L)
 static int queryNext(lua_State* L)
 {
     QueryData* qd = (QueryData*)luaL_checkudatatagged(L, 1, UserdataTag::Query);
-    Id currentEntity = checkEcsId(L, 2);
+    Id currentEntity = luhx_checkid(L, 2);
 
     bool done = qd->world->query(std::span(qd->predicates, (size_t)qd->numPredicates), [&](Id e, const std::vector<World::ComponentData>& datas)
     {
-        pushEcsId(L, e + 1); // Progress 1 step.
+        luhx_pushid(L, e + 1); // Progress 1 step.
         for (const World::ComponentData& cd : datas)
             pushComponentData(L, cd);
 
@@ -1817,7 +1799,7 @@ static int querymeta_iter(lua_State* L)
 
     lua_pushcfunction(L, queryNext, "QueryNext");
     lua_pushvalue(L, 1); // Iterator data (query object).
-    pushEcsId(L, 0);     // Iterator state (0 = at the beginning).
+    luhx_pushid(L, 0);     // Iterator state (0 = at the beginning).
     return 3;
 }
 
@@ -1867,44 +1849,6 @@ static void registerWorldUserdata(lua_State* L)
 
     lua_setuserdatametatable(L, UserdataTag::Query);
 }
-
-static int openEcs(lua_State* L)
-{
-    lua_createtable(L, 0, 8);
-
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            Id predicate = checkEcsId(L, 1);
-            Id target = checkEcsId(L, 2);
-
-            pushEcsId(L, pair(predicate, target));
-            return 1;
-        },
-        "pair"
-    );
-    lua_setfield(L, -2, "pair");
-
-    return 1;
-}
-
-static int openWorld(lua_State* L)
-{
-    // Maybe this shouldn't exist... if we allow
-    // worlds to be re-bound then the behavior can be unexpected.
-
-    Engine* engine = Engine::Get();
-    World** p = (World**)lua_newuserdatataggedwithmetatable(L, sizeof(World*), UserdataTag::World);
-    *p = &engine->world;
-
-    return 1;
-}
-
-static const std::unordered_map<std::string_view, lua_CFunction> BuiltinModules = {
-    { "phoenix://ecs", openEcs },
-    { "phoenix://world", openWorld },
-};
 
 void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
 {
@@ -1993,7 +1937,7 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
                 std::string path = curpath->string();
                 std::string_view builtin = std::string_view(path.begin() + bi, path.end());
 
-                if (BuiltinModules.find(builtin) != BuiltinModules.end())
+                if (BuiltinLibraries.find(builtin) != BuiltinLibraries.end())
                     return true;
             }
 
@@ -2001,7 +1945,7 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
                     || std::filesystem::is_regular_file(curpath->string() + "c") // `.luauc`
                     || std::filesystem::is_regular_file(*curpath / "init.luau")
                     || std::filesystem::is_regular_file(*curpath / "init.luauc")
-                    || BuiltinModules.find(curpath->string()) != BuiltinModules.end();
+                    || BuiltinLibraries.find(curpath->string()) != BuiltinLibraries.end();
         };
     config->get_chunkname = [](lua_State*, void* ctx, char* buffer, size_t bufferSize, size_t* outSize)
         {
@@ -2054,10 +1998,17 @@ void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
     config->load = [](lua_State* L, void* ctx, const char* pathCStr, const char* chname, const char* ldname) -> int
         {
             std::filesystem::path* curpath = (std::filesystem::path*)ctx;
-            const std::string path = FileRW::ResolvePathNormalized(pathCStr);
+            const std::string path = pathCStr;
 
-            if (const auto& it = BuiltinModules.find(path); it != BuiltinModules.end())
-                return it->second(L);
+            if (path.starts_with("@phoenix/"))
+            {
+                std::string_view name = std::string_view(path.begin() + strlen("@phoenix/"), path.end());
+
+                if (const auto& it = BuiltinLibraries.find(name); it != BuiltinLibraries.end())
+                    return it->second(L);
+                else
+                    luaL_error(L, "Invalid built-in module '%s'", name.data());
+            }
 
             std::string modulePath;
 
@@ -2281,8 +2232,6 @@ void ScriptEngine::LuauVM::Close()
 {
     lua_State* L = MainThread;
 
-    lua_pop(L, 1);
-
     lua_rawgeti(L, LUA_ENVIRONINDEX, 67);
 
     if (std::filesystem::path* path = (std::filesystem::path*)lua_tolightuserdatatagged(L, -1, LightUserdataTag::RequirerContext))
@@ -2400,6 +2349,14 @@ nlohmann::json ScriptEngine::DumpApiToJson()
     luaL_openlibs(base);
     lua_pushinteger(base, 0);
     lua_setglobal(base, "require");
+
+    lua_setreadonly(luhx, LUA_GLOBALSINDEX, 0);
+
+    for (const auto& [ name, open ] : BuiltinLibraries)
+    {
+        open(luhx);
+        lua_setglobal(luhx, std::format("@phoenix/{}", name).c_str());
+    }
 
     // Compare the environment of our extended environment ("Luhx")
     // with the standard Luau environment to figure out what got added

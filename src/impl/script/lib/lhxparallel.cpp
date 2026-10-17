@@ -552,8 +552,7 @@ int luhxopen_parallel(lua_State* L)
 
     lua_setuserdatametatable(L, UserdataTag::AtomicInteger);
 
-    luaL_register(L, LUHX_PARALLELLIBNAME, parallel_funcs);
-    return 1;
+    return luhx_makemodule(L, parallel_funcs);
 }
 
 void CollectParallelResourceGarbage()

@@ -5,13 +5,13 @@
 
 #include <glm/mat4x4.hpp>
 #include <cstdint>
+#include "lua.h"
 
 #include "datatype/EntityComponent.hpp"
 #include "datatype/Ref.hpp"
 
 struct InputEvent;
 class Color;
-struct lua_State;
 
 namespace Reflection
 {
@@ -22,22 +22,14 @@ void luhx_openlibs(lua_State*);
 
 int luhxopen_base(lua_State*);
 
-#define LUHX_FSLIBNAME "phoenix.fs"
+int luhxopen_ecs(lua_State*);
+int luhxopen_world(lua_State*);
+
 int luhxopen_fs(lua_State*);
-
-#define LUHX_IMGUILIBNAME "phoenix.imgui"
 int luhxopen_imgui(lua_State*);
-
-#define LUHX_JSONLIBNAME "phoenix.json"
 int luhxopen_json(lua_State*);
-
-#define LUHX_TASKLIBNAME "phoenix.task"
 int luhxopen_task(lua_State*);
-
-#define LUHX_PARALLELLIBNAME "phoenix.parallel"
 int luhxopen_parallel(lua_State*);
-
-#define LUHX_SYSTEMLIBNAME "phoenix.system"
 int luhxopen_system(lua_State*);
 
 int luhxopen_debug(lua_State*);
@@ -50,6 +42,17 @@ int luhxopen_Color(lua_State*);
 
 #define LUHX_MATRIXLIBNAME "Matrix"
 int luhxopen_Matrix(lua_State*);
+
+static const inline std::unordered_map<std::string_view, lua_CFunction> BuiltinLibraries = {
+	{ "ecs", luhxopen_ecs },
+	{ "world", luhxopen_world },
+	{ "fs", luhxopen_fs },
+	{ "imgui", luhxopen_imgui },
+	{ "json", luhxopen_json },
+	{ "task", luhxopen_task },
+	{ "parallel", luhxopen_parallel },
+	{ "system", luhxopen_system },
+};
 
 #define LUHX_GAMEOBJECTLIBNAME "GameObject"
 int luhxopen_GameObject(lua_State*);
@@ -64,6 +67,16 @@ void luhx_pushmatrix(lua_State*, const glm::mat4&);
 void luhx_pushcolor(lua_State*, const Color&);
 void luhx_pushsignal(lua_State*, const Reflection::EventDescriptor*, const ReflectorRef&, const char*, uint32_t RestrictDataModel);
 void luhx_pushinputevent(lua_State*, const InputEvent&);
+
+struct World;
+World* luhx_checkworld(lua_State* L, int idx);
+
+using Id = uint64_t;
+Id luhx_checkid(lua_State* L, int idx);
+
+void luhx_pushid(lua_State* L, Id id);
+
+int luhx_makemodule(lua_State* L, const struct luaL_Reg* l);
 
 GameObject* luhx_checkgameobject(lua_State*, int);
 

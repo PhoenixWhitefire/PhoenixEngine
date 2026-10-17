@@ -83,6 +83,5 @@ luaL_Reg system_funcs[] = {
 
 int luhxopen_system(lua_State* L)
 {
-    luaL_register(L, LUHX_SYSTEMLIBNAME, system_funcs);
-    return 1;
+    return luhx_makemodule(L, system_funcs);
 }

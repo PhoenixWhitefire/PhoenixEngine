@@ -1291,8 +1291,6 @@ int luhxopen_imgui(lua_State* L)
         }
     }
 
-    luaL_register(L, LUHX_IMGUILIBNAME, imgui_funcs);
-
     lua_newtable(L);
 
     const luaL_Reg* l = imgui_funcs;

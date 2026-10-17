@@ -32,7 +32,5 @@ static const luaL_Reg json_funcs[] =
 
 int luhxopen_json(lua_State* L)
 {
-    luaL_register(L, LUHX_JSONLIBNAME, json_funcs);
-
-    return 1;
+    return luhx_makemodule(L, json_funcs);
 }

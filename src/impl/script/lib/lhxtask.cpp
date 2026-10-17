@@ -210,7 +210,7 @@ const luaL_Reg task_funcs[] = {
 
 int luhxopen_task(lua_State* L)
 {
-    luaL_register(L, LUHX_TASKLIBNAME, task_funcs);
+    luhx_makemodule(L, task_funcs);
 
     lua_pushcfunction(L, task_load, "task.load internal");
     lua_pushcclosure(L, task_loadfile, "task.loadfile", 1);

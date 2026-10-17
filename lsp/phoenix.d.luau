@@ -241,8 +241,13 @@ declare extern type Color with
   R: number
 end
 
-declare Color: {
-  new: (( R: number, G: number, B: number ) -> (Color)) & (( Color: vector ) -> (Color))
+type Color = {
+    --- Returns a Color with the provided R, G, and B values
+    ---
+    --- Values are expected to be in the range 0 to 1
+    ---
+    --- This datatype is not hash consed! Two separate value-identical colors are not `rawequal` and will not behave as expected when used as table keys
+    read new: (( R: number, G: number, B: number ) -> (Color)) & (( Color: vector ) -> (Color))
 }
 declare extern type ColorGradient with
 end
@@ -255,12 +260,19 @@ end
 
 
 
-declare GameObject: {
-  clearAllComponentDefinitions: () -> (),
-  component: <C>({ read Name: string }) -> ComponentDefinition & C,
-  fromTemplate: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
-  new: (<T, C>(Components: { read T | "" }, Custom: { read [C & ComponentDefinition]: C }?) -> GameObject & IntersectComponents<T> & C) & () -> GameObject,
-  validComponents: { string }
+type GameObject = {
+    --- Clears all previously defined component data
+    read clearAllComponentDefinitions: () -> (),
+    --- Defines a custom component
+    ---
+    --- Throws an error if one with this name was already defined
+    read component: <C>({ read Name: string }) -> ComponentDefinition & C,
+    --- Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)
+    read fromTemplate: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
+    --- Creates an Object with only the specified Components, or a blank Object if no table is given
+    read new: (<T, C>(Components: { read T | "" }, Custom: { read [C & ComponentDefinition]: C }?) -> GameObject & IntersectComponents<T> & C) & () -> GameObject,
+    --- A list of all valid component names which can be passed into `.new`
+    read validComponents: { string }
 }
 declare extern type InputEvent with
 end
@@ -298,13 +310,19 @@ declare extern type Matrix with
   Up: vector
 end
 
-declare Matrix: {
-  identity: Matrix,
-  lookAt: (( Eye: vector, Target: vector, Up: vector? ) -> (Matrix)),
-  new: ((  ) -> (Matrix)) & (( C1R1: number, C2R1: number, C3R1: number, C4R1: number, C1R2: number, C2R2: number, C3R2: number, C4R2: number, C1R3: number, C2R3: number, C3R3: number, C4R3: number, C1R4: number, C2R4: number, C3R4: number, C4R4: number ) -> (Matrix)),
-  rotated: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
-  scaled: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Scale: vector ) -> (Matrix)),
-  translated: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
+type Matrix = {
+    --- An identity matrix, the same value as what gets returned with `.new()` with no arguments
+    read identity: Matrix,
+    --- Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
+    read lookAt: (( Eye: vector, Target: vector, Up: vector? ) -> (Matrix)),
+    --- Returns a new identity matrix when given no arguments, and a matrix with each individual cell set when given 16 number arguments
+    read new: ((  ) -> (Matrix)) & (( C1R1: number, C2R1: number, C3R1: number, C4R1: number, C1R2: number, C2R2: number, C3R2: number, C4R2: number, C1R3: number, C2R3: number, C3R3: number, C4R3: number, C1R4: number, C2R4: number, C3R4: number, C4R4: number ) -> (Matrix)),
+    --- Creates a Matrix which has been rotated by the given Euler angles (in radians) with the rotation order Y-X-Z
+    read rotated: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Angles: vector ) -> (Matrix)),
+    --- Creates a scaled Matrix
+    read scaled: (( X: number, Y: number, Z: number ) -> (Matrix)) & (( Scale: vector ) -> (Matrix)),
+    --- Creates a Matrix which has been translated to the given coordinates (specified as either a `vector` or the individual X, Y, and Z components)
+    read translated: (( Position: vector ) -> (Matrix)) & (( X: number, Y: number, Z: number ) -> (Matrix))
 }
 declare extern type Mutex with
   function Lock(self): (  )
@@ -780,6 +798,12 @@ type Creatables = {
   LuauData: EcLuauData,
 }
 
+
+
+
+
+
+
 declare extern type EnumCollisionType extends EnumItem with end
 export type EnumListCollisionType = {
   read Cube: EnumCollisionType,
@@ -1089,173 +1113,35 @@ declare Enum: {
 
 
 declare _RUNTIME: _RUNTIME
+    --- The name of the runtime
+    --- URL associated with the runtime
+    --- Version information
 
-declare debug: {
+type debug = {
 	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,
 	info: (level: number, s: string) -> string,
-  breakpoint: (( (Line: number ) -> (number)) & (() -> ())),
-  profilemessage: (( Message: string ) -> ()),
-  zonebegin: (( Name: string? ) -> ()),
-  zoneend: ((  ) -> ()),
-  zonetext: (( Text: string ) -> ())
+    --- Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on
+    ---
+    --- If a line is not specified, breaks into Debugger immediately, and returns no values
+    ---
+    --- If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect
+    read breakpoint: (( (Line: number ) -> (number)) & (() -> ())),
+    --- Generates a profiler log message event
+    read profilemessage: (( Message: string ) -> ()),
+    --- Begins a profiling zone for the current function, optionally accepting a name
+    read zonebegin: (( Name: string? ) -> ()),
+    --- Ends the last profiling zone
+    read zoneend: ((  ) -> ()),
+    --- Set additional debug text for the zone
+    read zonetext: (( Text: string ) -> ())
 }
 
 declare phoenix: {
-imgui: {
-  anyitemactive: ((  ) -> (boolean)),
-  begin: (( WindowTitle: string, WindowFlags: string?, HasCloseButton: boolean? ) -> (boolean, boolean)),
-  beginchild: (( Name: string, Size: vector?, ChildFlags: string?, WindowFlags: string? ) -> (boolean)),
-  beginfullscreen: (( Name: string, OffsetX: number?, OffsetY: number? ) -> ()),
-  beginmainmenubar: ((  ) -> (boolean)),
-  beginmenu: (( Name: string, Enabled: boolean? ) -> (boolean)),
-  beginmenubar: ((  ) -> (boolean)),
-  beginpopup: (( Name: string ) -> (boolean)),
-  beginpopupmodal: (( Name: string, HasCloseButton: boolean? ) -> (boolean)),
-  begintooltip: ((  ) -> (boolean)),
-  button: (( Text: string, Width: number?, Height: number? ) -> (boolean)),
-  checkbox: (( Name: string, Value: boolean ) -> (boolean)),
-  closecurrentpopup: ((  ) -> ()),
-  collapsingheader: (( Label: string ) -> (boolean)),
-  combo: (( Text: string, Options: { string }, CurrentOption: number ) -> (number, boolean)),
-  contentregionavail: ((  ) -> (vector)),
-  cursorposition: ((  ) -> (vector)),
-  demowindow: (( HasCloseButton: boolean? ) -> (boolean)),
-  dummy: (( Width: number?, Height: number? ) -> ()),
-  endchild: ((  ) -> ()),
-  endmainmenubar: ((  ) -> ()),
-  endmenu: ((  ) -> ()),
-  endmenubar: ((  ) -> ()),
-  endpopup: ((  ) -> ()),
-  endtooltip: ((  ) -> ()),
-  endw: ((  ) -> ()),
-  focuskeyboardhere: (( Offset: number? ) -> ()),
-  getscrollmaxx: ((  ) -> (number)),
-  getscrollmaxy: ((  ) -> (number)),
-  getscrollx: ((  ) -> (number)),
-  getscrolly: ((  ) -> (number)),
-  getstylecolor: (( Token: EnumImGuiColor ) -> ({ number })),
-  image: (( ImagePath: string, Size: vector?, FlipVertically: boolean?, TintColor: { number }?, LinearlySmooth: boolean? ) -> ()),
-  imagebutton: (( Name: string, Image: string, Size: vector? ) -> (boolean)),
-  indent: (( Indent: number? ) -> ()),
-  inputnumber: (( Text: string, Value: number ) -> (number, boolean)),
-  inputstring: (( Name: string, Value: string, IsPassword: boolean? ) -> (string, boolean)),
-  ispopupopen: (( Name: string ) -> (boolean)),
-  itemactive: ((  ) -> (boolean)),
-  itemclicked: (( EnumMouseButton? ) -> (boolean)),
-  itemdeactivatedafteredit: ((  ) -> (boolean)),
-  itemhovered: ((  ) -> (boolean)),
-  menuitem: (( Text: string, Enabled: boolean? ) -> (boolean)),
-  newline: ((  ) -> ()),
-  openpopup: (( Name: string ) -> ()),
-  popid: ((  ) -> ()),
-  popstylecolor: ((  ) -> ()),
-  pushid: (( Id: string ) -> ()),
-  pushstylecolor: (( Token: EnumImGuiColor, Color: { number } ) -> ()),
-  radiobutton: (( Label: string, Active: boolean ) -> (boolean)),
-  rgbaedit: (( Label: string, Color: { number } ) -> (boolean)),
-  rgbedit: (( Label: string, Color: { number } ) -> (boolean)),
-  sameline: ((  ) -> ()),
-  scalefactor: ((  ) -> (number)),
-  scrollherex: ((  ) -> ()),
-  scrollherey: ((  ) -> ()),
-  separator: ((  ) -> ()),
-  separatortext: (( Text: string ) -> ()),
-  setclipboardtext: (Text: string) -> (),
-  setcursorposition: ((Position: vector) -> ()) & ((X: number, Y: number) -> ()),
-  setitemtooltip: (( Text: string ) -> ()),
-  setnextitemopen: (( Open: boolean? ) -> ()),
-  setnextitemwidth: (( Width: number ) -> ()),
-  setnextwindowfocus: ((  ) -> ()),
-  setnextwindowopen: (( Open: boolean? ) -> ()),
-  setnextwindowposition: (( X: number, Y: number ) -> ()),
-  setnextwindowsize: (( Width: number, Height: number ) -> ()),
-  setstylecolor: (( Token: EnumImGuiColor, Color: { number } ) -> ()),
-  settooltip: (( Tooltip: string ) -> ()),
-  setviewportdockspace: (( PositionX: number, PositionY: number, SizeX: number, SizeY: number ) -> ()),
-  setviewportdockspacedefault: ((  ) -> ()),
-  stylecolors: (( Theme: 'l' | 'd' | 'c' ) -> ()),
-  text: (( Text: string ) -> ()),
-  textlink: (( Text: string ) -> (boolean)),
-  textsize: (( Text: string ) -> (vector)),
-  treenode: (( Text: string, Flags: string? ) -> (boolean)),
-  treepop: ((  ) -> ()),
-  urllink: (( Text: string, Url: string? ) -> (boolean)),
-  windowappearing: ((  ) -> (boolean)),
-  windowhovered: (( Flags: string? ) -> (boolean)),
-  windowposition: ((  ) -> (vector)),
-  windowsize: ((  ) -> (vector))
-},
-
-fs: {
-  copy: (( From: string, To: string ) -> ()),
-  cwd: ((  ) -> (string)),
-  definealias: (( Alias: string, For: string ) -> ()),
-  execute: (( Command: string ) -> (string)),
-  exists: (( Path: string ) -> (boolean)),
-  home: ((  ) -> (string)),
-  isdirectory: (( string ) -> (boolean)),
-  isfile: (( string ) -> (boolean)),
-  issymlink: (( Path: string ) -> (boolean)),
-  lastwritten: (( Path: string ) -> (number)),
-  listdir: (( Path: string, Filter: ('a' | 'f' | 'd')? ) -> ({ [string]: 'f' | 'd' })),
-  mkdir: (( Path: string ) -> ()),
-  move: (( CurrentPath: string, NewPath: string ) -> ()),
-  promptopen: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string?, AllowMultipleFiles: boolean? ) -> ({ string })),
-  promptopenfolder: (( Title: string, DefaultDirectory: string? ) -> (string?)),
-  promptsave: (( DefaultLocation: string?, Filter: ( { string } | string)?, FilterName: string? ) -> (string?)),
-  read: (( Path: string ) -> (string?, string?)),
-  readsymlink: (( Path: string ) -> (string)),
-  remove: (( Path: string ) -> ()),
-  removealias: (( Alias: string ) -> ()),
-  rename: (( Path: string, NewName: string ) -> ()),
-  resolvepath: (Path: string) -> string,
-  resolvepathabsolute: (Path: string) -> string,
-  setunqualifiedroot: (( Alias: string ) -> ()),
-  symlink: (( Path: string, Target: string ) -> ()),
-  systemopen: (( Path: string ) -> ()),
-  tempdir: ((  ) -> (string)),
-  watch: (( Path: string, Callback: (Path: string, Event: EnumFileSystemEvent) -> () ) -> (() -> ())),
-  write: (( Path: string, Contents: string | buffer, CreateDirectories: boolean? ) -> ())
-},
-
-parallel: {
-  atomicinteger: (( Id: string, InitialValue: number? ) -> (AtomicInteger)),
-  desynchronize: ((  ) -> ()),
-  mutex: (( Id: string ) -> (Mutex)),
-  sharedbuffer: (( Id: string, Size: number --[[| integer]] ) -> (SharedBuffer)),
-  spawn: (( FilePath: string, ...unknown ) -> ()),
-  synchronize: ((  ) -> ()),
-  synchronized: ((  ) -> (boolean))
-},
-
-json: {
-  encode: (( Value: JsonEncodable, Indent: number? ) -> (string)),
-  parse: (( Json: string ) -> (JsonDecodable))
-},
-
-task: {
-  defer: (<A..., R...>( Task: ((A...) -> R...) | thread, A... ) -> (thread)),
-  delay: (<A..., R...>( Delay: number, Task: ((A...) -> R...) | thread, A... ) -> (thread)),
-  load: (( Code: string, ChunkName: string? ) -> (thread?, string?)),
-  loadfile: (( File: string, ChunkName: string? ) -> (thread?, string?)),
-  setglobal: (( Coroutine: thread, Global: string, Value: unknown ) -> ()),
-  spawn: (<A..., R...>( Task: ((A...) -> R...) | thread, A... ) -> (thread)),
-  wait: (( SleepTime: number? ) -> (number))
-},
-
-system: {
-  freememory: ((  ) -> (number)),
-  hostname: ((  ) -> (string)),
-  threadcount: ((  ) -> (number)),
-  totalmemory: ((  ) -> (number))
-},
-
 }
 
 
 declare _VMNAME: string
 declare function appendlog<T...>( ...: T... ): ()
-declare game: GameObject & EcDataModel
 declare function warn<T...>( ...: T... ): ()
 
 

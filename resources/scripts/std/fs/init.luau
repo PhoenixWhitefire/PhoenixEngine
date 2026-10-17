@@ -10,6 +10,8 @@ local win32paths = require("@std/path/win32")
 
 local time = require("@std/time")
 
+local fsimpl = require("@phoenix/fs")
+
 local fslib = {}
 
 --- How a file should be opened:
@@ -102,12 +104,12 @@ end
 
 --- Reads the full contents of `file` and returns them as a string.
 function fslib.read(file: File): string
-    return phoenix.fs.read(handles[file.fd]) or ""
+    return fsimpl.read(handles[file.fd]) or ""
 end
 
 --- Writes `contents` to `file`.
 function fslib.write(file: File, contents: string): ()
-    return phoenix.fs.write(handles[file.fd], contents)
+    return fsimpl.write(handles[file.fd], contents)
 end
 
 --- Closes `file`, flushing any pending writes.
@@ -124,7 +126,7 @@ function fslib.readIntoBuffer(
     numBytes: number,
     bufferOffset: number?
 ): number
-    local contents, err = phoenix.fs.read(handles[file.fd])
+    local contents, err = fsimpl.read(handles[file.fd])
     assert(contents, err)
 
     local toCopyStr = string.sub(contents, fileOffset, numBytes)
@@ -136,13 +138,13 @@ end
 
 --- Removes the file at `path`.
 function fslib.remove(path: Pathlike): ()
-    return phoenix.fs.remove(pathlib.format(path))
+    return fsimpl.remove(pathlib.format(path))
 end
 
 --- Returns metadata for the file or directory at `path`.
 function fslib.metadata(path: Pathlike): FileMetadata
     local pathStr = pathlib.format(path)
-    local modified = phoenix.fs.lastwritten(pathStr)
+    local modified = fsimpl.lastwritten(pathStr)
 
     return {
         type = fslib.type(pathStr),
@@ -158,20 +160,20 @@ end
 function fslib.type(path: Pathlike): FileType
     local pathStr = pathlib.format(path)
 
-    return if phoenix.fs.isfile(pathStr) then "file"
-        else if phoenix.fs.isdirectory(pathStr) then "dir"
-        else if phoenix.fs.issymlink(pathStr) then "link"
+    return if fsimpl.isfile(pathStr) then "file"
+        else if fsimpl.isdirectory(pathStr) then "dir"
+        else if fsimpl.issymlink(pathStr) then "link"
         else "unknown"
 end
 
 --- Creates a hard link at `dest` pointing to `src`.
 function fslib.link(src: Pathlike, dest: Pathlike): ()
-    return phoenix.fs.symlink(pathlib.format(dest), pathlib.format(src))
+    return fsimpl.symlink(pathlib.format(dest), pathlib.format(src))
 end
 
 --- Creates a symbolic link at `dest` pointing to `src`.
 function fslib.symbolicLink(src: Pathlike, dest: Pathlike): ()
-    return phoenix.fs.symlink(pathlib.format(dest), pathlib.format(src))
+    return fsimpl.symlink(pathlib.format(dest), pathlib.format(src))
 end
 
 --- Watches `path` for filesystem changes. Returns a `Watcher` with a `next` method that returns the next
@@ -185,10 +187,10 @@ function fslib.watch(path: Pathlike): Watcher
     local deq = deque.new(nil :: { filename: Path, event: WatchEvent }?)
     local watching = pathlib.format(path)
 
-    local close = phoenix.fs.watch(watching, function(newPath, event)
+    local close = fsimpl.watch(watching, function(newPath, event)
         deq:pushback({ filename = pathlib.parse(newPath), event = {
             change = event == Enum.FileSystemEvent.Modified,
-            rename = phoenix.fs.resolvepathabsolute(newPath) ~= phoenix.fs.resolvepathabsolute(watching)
+            rename = fsimpl.resolvepathabsolute(newPath) ~= fsimpl.resolvepathabsolute(watching)
         } })
     end)
 
@@ -211,26 +213,26 @@ end
 
 --- Returns `true` if a file or directory exists at `path`.
 function fslib.exists(path: Pathlike): boolean
-    return phoenix.fs.exists(pathlib.format(path))
+    return fsimpl.exists(pathlib.format(path))
 end
 
 --- Copies the file at `src` to `dest`.
 function fslib.copy(src: Pathlike, dest: Pathlike): ()
-    return phoenix.fs.copy(pathlib.format(src), pathlib.format(dest))
+    return fsimpl.copy(pathlib.format(src), pathlib.format(dest))
 end
 
 --- Moves the file or directory at `src` to `dest`.
 --- Falls back to a copy-then-remove if `src` and `dest` are on different filesystems.
 function fslib.move(src: Pathlike, dest: Pathlike): ()
-    return phoenix.fs.move(pathlib.format(src), pathlib.format(dest))
+    return fsimpl.move(pathlib.format(src), pathlib.format(dest))
 end
 
 --- Returns an array of `DirectoryEntry` values for the immediate children of the directory at `path`.
 function fslib.listDirectory(path: Pathlike): { DirectoryEntry }
-    path = phoenix.fs.resolvepath(pathlib.format(path))
+    path = fsimpl.resolvepath(pathlib.format(path))
     local entries: { DirectoryEntry } = {}
 
-    for p, t in phoenix.fs.listdir(path) do
+    for p, t in fsimpl.listdir(path) do
         table.insert(entries, {
             name = p,
             -- TODO luau cast
@@ -246,12 +248,12 @@ end
 
 --- Returns the entire contents of the file at `filepath` as a string.
 function fslib.readFileToString(filepath: Pathlike): string
-    return assert(phoenix.fs.read(pathlib.format(filepath)))
+    return assert(fsimpl.read(pathlib.format(filepath)))
 end
 
 --- Writes `contents` to the file at `filepath`, replacing any existing contents.
 function fslib.writeStringToFile(filepath: Pathlike, contents: string): ()
-    phoenix.fs.write(pathlib.format(filepath), contents)
+    fsimpl.write(pathlib.format(filepath), contents)
 end
 
 --- Creates a directory at `path`. If `options.makeParents` is `true`, creates any missing parent directories as well.
@@ -274,11 +276,11 @@ function fslib.createDirectory(path: Pathlike, options: CreateDirectoryOptions?)
         for _, part in parts do
             subdir = pathlib.join(subdir, part)
             if not fslib.exists(subdir) then
-                phoenix.fs.mkdir(pathlib.format(subdir))
+                fsimpl.mkdir(pathlib.format(subdir))
             end
         end
     else
-        phoenix.fs.mkdir(pathlib.format(path))
+        fsimpl.mkdir(pathlib.format(path))
     end
 end
 
@@ -296,13 +298,13 @@ function fslib.removeDirectory(path: Pathlike, options: RemoveDirectoryOptions?)
                     fslib.remove(entryPath)
                 end
             end
-            phoenix.fs.remove(pathlib.format(path))
+            fsimpl.remove(pathlib.format(path))
         end
     else
         local pathStr = pathlib.format(path)
 
-        if phoenix.fs.isdirectory(pathStr) then
-            phoenix.fs.remove(pathlib.format(path))
+        if fsimpl.isdirectory(pathStr) then
+            fsimpl.remove(pathlib.format(path))
         else
             error(`Path '{ pathStr }' does not refer to a directory`)
         end

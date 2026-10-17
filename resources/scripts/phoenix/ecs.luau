@@ -4,8 +4,18 @@ export type Id<T = unknown> = {
     --- This is phantom, type system-only data, and does not exist at runtime.
     _T: T
 }
---- An entity identifier.
-export type Entity = Id<nil>
+
+--- An identifier for something in the ECS world, used only for reading.
+export type ReadId<T = unknown> = {
+    --- This is phantom, type system-only data, and does not exist at runtime.
+    read _T: T
+}
+
+--- An identifier for something in the ECS world, used only for writing.
+export type WriteId<T = unknown> = {
+    --- This is phantom, type system-only data, and does not exist at runtime.
+    write _T: T
+}
 
 --[[
 type function quererTy(fnTy: type)
@@ -25,31 +35,31 @@ end
 ]]--
 
 --type QueryIteratorMeta<T...> = { read __iter: (QueryIterator<T...>) -> (quererTy<(Entity, T...) -> ()>, Entity) }
-type QueryIteratorMeta<T...> = { read __iter: (QueryIterator<T...>) -> ((Entity) -> (Entity, T...), Entity) }
+type QueryIteratorMeta<T...> = { read __iter: (QueryIterator<T...>) -> ((Id) -> (Id, T...), Id) }
 type QueryIterator<T...> = setmetatable<{}, QueryIteratorMeta<T...>>
 
 --- The ECS world.
 export type World = {
     --- Creates a new entity and returns its ID.
-    read entity: (self: World) -> Entity,
+    read entity: (self: World) -> Id,
     --- Creates a new component and returns its ID.
     read component: <T>(self: World) -> Id<T>,
 
     --- Adds a component or pair (relationship) to an entity.
-    read add: <T>(self: World, e: Entity, p: T & Id<nil>) -> (),
+    read add: <T>(self: World, e: Id, p: T & Id<nil>) -> (),
     --- Removes a component or pair (relationship) from an entity.
-    read remove: (self: World, e: Entity, p: Id) -> (),
+    read remove: (self: World, e: Id, p: Id) -> (),
 
     --- Finds component data on an entity. Returns `nil` if the component is not present.
     --- Use `get` if you do not want this behavior.
-    read find: <T>(self: World, e: Entity, c: Id<T>) -> T?,
+    read find: <T>(self: World, e: Id, c: Id<T>) -> T?,
 
     --- Gets component data on an entity. This will error if the component is not present.
     --- Use `find` if you do not want this behavior.
-    read get: <T>(self: World, e: Entity, c: Id<T>) -> T,
+    read get: <T>(self: World, e: Id, c: ReadId<T>) -> T,
 
     --- Sets component data on an entity. This will add the component if it is not present on `e`.
-    read set: <T>(self: World, e: Entity, c: Id<T>, data: T) -> (),
+    read set: <T>(self: World, e: Id, c: WriteId<T>, data: T) -> (),
 
     -- TODO: Replace this with the type function once the bug is fixed.
     --- Queries the world for all entities matching the given predicates.

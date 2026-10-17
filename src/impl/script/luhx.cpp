@@ -5,12 +5,6 @@
 static const luaL_Reg luhxlibs[] =
 {
     { "", luhxopen_base },
-    { LUHX_FSLIBNAME, luhxopen_fs },
-    { LUHX_IMGUILIBNAME, luhxopen_imgui },
-    { LUHX_JSONLIBNAME, luhxopen_json },
-    { LUHX_TASKLIBNAME, luhxopen_task },
-    { LUHX_PARALLELLIBNAME, luhxopen_parallel },
-    { LUHX_SYSTEMLIBNAME, luhxopen_system },
     { LUA_DBLIBNAME, luhxopen_debug},
 
     { LUHX_ENUMLIBNAME, luhxopen_Enum },
@@ -39,4 +33,25 @@ void luhx_openlibs(lua_State* L)
 void luhx_pushvector3(lua_State* L, const glm::vec3& v)
 {
     lua_pushvector(L, v.x, v.y, v.z);
+}
+
+static int libsize(const luaL_Reg* l)
+{
+    int size = 0;
+    for (; l->name; l++)
+        size++;
+    return size;
+}
+
+int luhx_makemodule(lua_State* L, const luaL_Reg *l)
+{
+    lua_createtable(L, 0, libsize(l));
+
+    for (; l->name; l++)
+    {
+        lua_pushcfunction(L, l->func, l->name);
+        lua_setfield(L, -2, l->name);
+    }
+
+    return 1;
 }

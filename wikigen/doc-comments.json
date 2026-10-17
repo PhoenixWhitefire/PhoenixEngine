@@ -409,7 +409,7 @@
             "Out": "{ string }"
           },
           "GetConfigValue": {
-            "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`phoenix.conf`)",
+            "Description": "Returns the value associated with the given Key in the Engine's loaded configuration (`@phoenix/conf`)",
             "Type": "(self, Key: string) : JsonDecodable"
           },
           "SetForegroundDataModel": {
@@ -1695,7 +1695,7 @@
       "phoenix": {
         "Description": "Non-standard runtime functionality. Prefer to use `@std` instead"
       },
-      "phoenix.fs": {
+      "@phoenix/fs": {
         "Description": [
           "Interacting with the player's filesystem",
           "Several aliases may be used with functions in this library, these are unrelated to `require` aliases although the same syntax is used",
@@ -1970,7 +1970,7 @@
           }
         }
       },
-      "phoenix.imgui": {
+      "@phoenix/imgui": {
         "Description": "UI with Dear ImGui",
         "Members": {
           "anyitemactive": {
@@ -2613,7 +2613,7 @@
           }
         }
       },
-      "phoenix.json": {
+      "@phoenix/json": {
         "Description": "Encoding and decoding JSON files",
         "Members": {
           "encode": {
@@ -2635,7 +2635,7 @@
           }
         }
       },
-      "phoenix.parallel": {
+      "@phoenix/parallel": {
         "Description": "Parallelization of Luau",
         "Members": {
           "atomicinteger": {
@@ -2672,7 +2672,7 @@
           }
         }
       },
-      "phoenix.system": {
+      "@phoenix/system": {
         "Description": "Information about the player's system",
         "Members": {
           "freememory": {
@@ -2693,7 +2693,7 @@
           }
         }
       },
-      "phoenix.task": {
+      "@phoenix/task": {
         "Description": "Scheduling of tasks (coroutines or functions)",
         "Members": {
           "defer": {
