@@ -1609,21 +1609,27 @@ static void* l_alloc(void*, void* ptr, size_t, size_t nsize)
         return Memory::ReAlloc(ptr, (uint32_t)nsize, Memory::Category::Luau);
 }
 
+static World* checkEcsWorld(lua_State* L, int idx)
+{
+    return *(World**)luaL_checkudatatagged(L, idx, UserdataTag::World);
+}
+
 static Id checkEcsId(lua_State* L, int idx)
 {
-    void* ud = lua_tolightuserdatatagged(L, idx, LightUserdataTag::Id);
-    if (!ud)
+    if (lua_lightuserdatatag(L, idx) != LightUserdataTag::Id)
         luaL_typeerror(L, idx, "Id");
 
-    return (Id)ud;
+    return (Id)lua_tolightuserdatatagged(L, idx, LightUserdataTag::Id);
 }
 
 static void pushComponentData(lua_State* L, const World::ComponentData& cd)
 {
-    if (cd.cr->isLuau && ((LuauComponentRecord*)cd.cr)->owner == lua_mainthread(L))
+    if (LuauComponentRecord* lcr = (LuauComponentRecord*)cd.cr; cd.cr->isLuau && (!lcr->owner || lcr->owner == lua_mainthread(L)))
     {
-        LuauComponentRecord* lcr = (LuauComponentRecord*)cd.cr;
         lua_getref(L, lcr->data[cd.index]);
+
+        if (!lcr->owner)
+            lcr->owner = lua_mainthread(L);
     }
     else
     {
@@ -1662,9 +1668,162 @@ struct QueryData
     int numPredicates = 0;
 };
 
+static int world_entity(lua_State* L)
+{
+    World* world = checkEcsWorld(L, 1);
+    pushEcsId(L, world->entity());
+
+    return 1;
+}
+
+static int world_component(lua_State* L)
+{
+    World* world = checkEcsWorld(L, 1);
+
+    LuauComponentRecord* lcr = new LuauComponentRecord;
+    lcr->owner = lua_mainthread(L);
+
+    pushEcsId(L, world->component(lcr));
+    return 1;
+}
+
+static int world_add(lua_State* L)
+{
+    World* world = checkEcsWorld(L, 1);
+    Id e = checkEcsId(L, 2);
+    Id p = checkEcsId(L, 3);
+
+    world->add(e, p);
+    return 1;
+}
+
+static int world_remove(lua_State* L)
+{
+    World* world = checkEcsWorld(L, 1);
+    Id e = checkEcsId(L, 2);
+    Id p = checkEcsId(L, 3);
+
+    world->remove(e, p);
+    return 1;
+}
+
+static int world_find(lua_State* L)
+{
+    World* world = checkEcsWorld(L, 1);
+    Id e = checkEcsId(L, 2);
+    Id c = checkEcsId(L, 3);
+
+    return findComponentData<true>(L, world, e, c);
+}
+
+static int world_get(lua_State* L)
+{
+    World* world = checkEcsWorld(L, 1);
+    Id e = checkEcsId(L, 2);
+    Id c = checkEcsId(L, 3);
+
+    return findComponentData<false>(L, world, e, c);
+}
+
+static int world_set(lua_State* L)
+{
+    World* world = checkEcsWorld(L, 1);
+    Id e = checkEcsId(L, 2);
+    Id c = checkEcsId(L, 3);
+    luaL_checkany(L, 4);
+
+    World::ComponentData cd = {};
+    if (std::optional<World::ComponentData> cdOpt = world->find(e, c))
+    {
+        cd = cdOpt.value();
+    }
+    else
+    {
+        cd = world->add(e, c);
+    }
+
+    if (cd.cr->isLuau)
+    {
+        LuauComponentRecord* lcr = (LuauComponentRecord*)cd.cr;
+
+        // We want Luau to be the source-of-truth for Luau component data.
+        // If we let other threads change it, then the data stops being related.
+        // (e.g. in the case of table data)
+        if (lcr->owner && lcr->owner != lua_mainthread(L))
+            luaL_error(L, "Luau component data cannot be modified outside of the VM it was created in");
+
+        if (!lcr->owner)
+            lcr->owner = lua_mainthread(L);
+
+        int ref = lua_ref(L, 4);
+
+        if (int oldRef = lcr->data[cd.index]; oldRef != 0)
+            lua_unref(L, oldRef);
+
+        lcr->data[cd.index] = ref;
+    }
+    else
+    {
+        // TODO: Requires deserialization.
+        luaL_error(L, "world:set on non-Luau record: Not implemented!");
+    }
+
+    return 0;
+}
+
+static int world_query(lua_State* L)
+{
+    QueryData qd = {};
+    qd.world = checkEcsWorld(L, 1);
+
+    for (int i = 2; i <= lua_gettop(L); i++)
+    {
+        if (i > 15)
+            luaL_error(L, "Too many query predicates!");
+
+        qd.predicates[i - 2] = checkEcsId(L, i);
+        qd.numPredicates++;
+    }
+
+    QueryData* qdptr = (QueryData*)lua_newuserdatataggedwithmetatable(L, sizeof(QueryData), UserdataTag::Query);
+    memcpy(qdptr, &qd, sizeof(QueryData));
+
+    return 1;
+}
+
+static int queryNext(lua_State* L)
+{
+    QueryData* qd = (QueryData*)luaL_checkudatatagged(L, 1, UserdataTag::Query);
+    Id currentEntity = checkEcsId(L, 2);
+
+    bool done = qd->world->query(std::span(qd->predicates, (size_t)qd->numPredicates), [&](Id e, const std::vector<World::ComponentData>& datas)
+    {
+        pushEcsId(L, e + 1); // Progress 1 step.
+        for (const World::ComponentData& cd : datas)
+            pushComponentData(L, cd);
+
+        return false;
+    }, currentEntity);
+
+    if (done)
+        return 0;
+
+    return 1 + qd->numPredicates;
+}
+
+static int querymeta_iter(lua_State* L)
+{
+    // Iterator layout is `next`, `data`, `state`.
+
+    lua_pushcfunction(L, queryNext, "QueryNext");
+    lua_pushvalue(L, 1); // Iterator data (query object).
+    pushEcsId(L, 0);     // Iterator state (0 = at the beginning).
+    return 3;
+}
+
 static void registerWorldUserdata(lua_State* L)
 {
-    lua_createtable(L, 0, 8);
+    lua_createtable(L, 0, 10);
 
     lua_pushliteral(L, "World");
     lua_setfield(L, -2, "__type");
@@ -1672,208 +1831,38 @@ static void registerWorldUserdata(lua_State* L)
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-
-            pushEcsId(L, world->entity());
-            return 1;
-        },
-        "entity"
-    );
+    lua_pushcfunction(L, world_entity, "entity");
     lua_setfield(L, -2, "entity");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-
-            LuauComponentRecord* lcr = new LuauComponentRecord;
-            lcr->owner = lua_mainthread(L);
-
-            pushEcsId(L, world->component(lcr));
-            return 1;
-        },
-        "component"
-    );
+    lua_pushcfunction(L, world_component, "component");
     lua_setfield(L, -2, "component");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            Id e = checkEcsId(L, 2);
-            Id p = checkEcsId(L, 3);
-
-            world->add(e, p);
-            return 1;
-        },
-        "add"
-    );
+    lua_pushcfunction(L, world_add, "add");
     lua_setfield(L, -2, "add");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            Id e = checkEcsId(L, 2);
-            Id p = checkEcsId(L, 3);
-
-            world->remove(e, p);
-            return 1;
-        },
-        "remove"
-    );
+    lua_pushcfunction(L, world_remove,"remove");
     lua_setfield(L, -2, "remove");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            Id e = checkEcsId(L, 2);
-            Id c = checkEcsId(L, 3);
-
-            return findComponentData<true>(L, world, e, c);
-        },
-        "find"
-    );
+    lua_pushcfunction(L, world_find, "find");
     lua_setfield(L, -2, "find");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            Id e = checkEcsId(L, 2);
-            Id c = checkEcsId(L, 3);
-
-            return findComponentData<false>(L, world, e, c);
-        },
-        "get"
-    );
+    lua_pushcfunction(L, world_get, "get");
     lua_setfield(L, -2, "get");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            World* world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-            Id e = checkEcsId(L, 2);
-            Id c = checkEcsId(L, 3);
-            luaL_checkany(L, 4);
-
-            World::ComponentData cd = {};
-            if (std::optional<World::ComponentData> cdOpt = world->find(e, c))
-            {
-                cd = cdOpt.value();
-            }
-            else
-            {
-                cd = world->add(e, c);
-            }
-
-            if (cd.cr->isLuau)
-            {
-                LuauComponentRecord* lcr = (LuauComponentRecord*)cd.cr;
-
-                // We want Luau to be the source-of-truth for Luau component data.
-                // If we let other threads change it, then the data stops being related.
-                // (e.g. in the case of table data)
-                if (lcr->owner != lua_mainthread(L))
-                    luaL_error(L, "Luau component data cannot be modified outside of the VM it was created in");
-
-                int ref = lua_ref(L, 4);
-
-                if (int oldRef = lcr->data[cd.index]; oldRef != 0)
-                    lua_unref(L, oldRef);
-
-                lcr->data[cd.index] = ref;
-            }
-            else
-            {
-                // TODO: Requires deserialization.
-                luaL_error(L, "Not implemented!");
-            }
-
-            return 0;
-        },
-        "set"
-    );
+    lua_pushcfunction(L, world_set, "set");
     lua_setfield(L, -2, "set");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            QueryData qd = {};
-            qd.world = *(World**)luaL_checkudatatagged(L, 1, UserdataTag::World);
-
-            for (int i = 2; i <= lua_gettop(L); i++)
-            {
-                if (i > 15)
-                    luaL_error(L, "Too many query predicates!");
-
-                qd.predicates[i - 2] = checkEcsId(L, i);
-                qd.numPredicates++;
-            }
-
-            QueryData* qdptr = (QueryData*)lua_newuserdatataggedwithmetatable(L, sizeof(QueryData), UserdataTag::Query);
-            memcpy(qdptr, &qd, sizeof(QueryData));
-
-            return 1;
-        },
-        "query"
-    );
+    lua_pushcfunction(L, world_query, "query");
     lua_setfield(L, -2, "query");
 
     lua_setuserdatametatable(L, UserdataTag::World);
 
-    lua_createtable(L, 0, 8);
+    lua_createtable(L, 0, 2);
 
     lua_pushliteral(L, "Query");
     lua_setfield(L, -2, "__type");
 
-    lua_pushcfunction(
-        L,
-        [](lua_State* L)
-        {
-            lua_pushcfunction(
-                L,
-                [](lua_State* L)
-                {
-                    QueryData* qd = (QueryData*)luaL_checkudatatagged(L, 1, UserdataTag::Query);
-                    Id currentEntity = checkEcsId(L, 2);
-
-                    bool done = qd->world->query(std::span(qd->predicates, (size_t)qd->numPredicates), [&](Id e, const std::vector<World::ComponentData>& datas)
-                    {
-                        pushEcsId(L, e);
-                        for (const World::ComponentData& cd : datas)
-                            pushComponentData(L, cd);
-
-                        currentEntity = e;
-                        return false;
-                    }, currentEntity + 1);
-
-                    if (done)
-                        return 0;
-
-                    return 1 + qd->numPredicates;
-                },
-                "QueryIterator"
-            );
-
-            lua_pushvalue(L, 1); // Iterator data (query object).
-            pushEcsId(L, 0);     // Iterator state (0 = at the beginning).
-            return 3;
-        },
-        "Query.__iter"
-    );
+    lua_pushcfunction(L, querymeta_iter, "Query.__iter");
     lua_setfield(L, -2, "__iter");
 
     lua_setuserdatametatable(L, UserdataTag::Query);

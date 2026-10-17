@@ -2,14 +2,10 @@
 --- An identifier for something in the ECS world.
 export type Id<T = unknown> = {
     --- This is phantom, type system-only data, and does not exist at runtime.
-    read _T: T
+    _T: T
 }
 --- An entity identifier.
 export type Entity = Id<nil>
---- A component identifier.
-export type Component<T = unknown> = Id<T>
---- A pair identifier.
-export type Pair = Id<nil>
 
 --[[
 type function quererTy(fnTy: type)
@@ -37,34 +33,43 @@ export type World = {
     --- Creates a new entity and returns its ID.
     read entity: (self: World) -> Entity,
     --- Creates a new component and returns its ID.
-    read component: <T>(self: World) -> Component<T>,
+    read component: <T>(self: World) -> Id<T>,
 
     --- Adds a component or pair (relationship) to an entity.
-    read add: (self: World, e: Entity, p: Component | Pair) -> (),
+    read add: <T>(self: World, e: Entity, p: T & Id<nil>) -> (),
     --- Removes a component or pair (relationship) from an entity.
-    read remove: (self: World, e: Entity, p: Component | Pair) -> (),
+    read remove: (self: World, e: Entity, p: Id) -> (),
 
     --- Finds component data on an entity. Returns `nil` if the component is not present.
     --- Use `get` if you do not want this behavior.
-    read find: <T>(self: World, e: Entity, c:Component<T>) -> T?,
+    read find: <T>(self: World, e: Entity, c: Id<T>) -> T?,
 
     --- Gets component data on an entity. This will error if the component is not present.
     --- Use `find` if you do not want this behavior.
-    read get: <T>(self: World, e: Entity, c: Component<T>) -> T,
+    read get: <T>(self: World, e: Entity, c: Id<T>) -> T,
 
     --- Sets component data on an entity. This will add the component if it is not present on `e`.
-    read set: <T>(self: World, e: Entity, c: Component<T>, data: T) -> (),
+    read set: <T>(self: World, e: Entity, c: Id<T>, data: T) -> (),
 
+    -- TODO: Replace this with the type function once the bug is fixed.
     --- Queries the world for all entities matching the given predicates.
     --- Predicates are component or pair IDs, where pairs represent relationships.
-    read query: <T...>(World, T...) -> QueryIterator<T...>
+    read query:
+        & ((World) -> QueryIterator<>)
+        & (<A>(World, A) -> QueryIterator<index<A, "_T">>)
+        & (<A, B>(World, A, B) -> QueryIterator<index<A, "_T">, index<B, "_T">>)
+        & (<A, B, C>(World, A, B, C) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">>)
+        & (<A, B, C, D>(World, A, B, C, D) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">>)
+        & (<A, B, C, D, E>(World, A, B, C, D, E) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">, index<E, "_T">>)
+        & (<A, B, C, D, E, F>(World, A, B, C, D, E, F) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">, index<E, "_T">, index<F, "_T">>)
+        & (<A, B, C, D, E, F, G>(World, A, B, C, D, E, F, G) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">, index<E, "_T">, index<F, "_T">, index<G, "_T">>)
 }
 
 --- The ECS library.
 local ecs = {}
 
 --- Provides a pair identifier between two ECS identifiers.
-function ecs.pair(predicate: Id, target: Id): Id
+function ecs.pair<T, U>(predicate: Id<T>, target: Id<U>): Id<nil>
     error(`Unreachable.`)
 end
 

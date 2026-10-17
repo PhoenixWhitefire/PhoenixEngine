@@ -3,7 +3,6 @@
 
 #include <unordered_map>
 #include <functional>
-#include <stdexcept>
 #include <optional>
 #include <cstdint>
 #include <cassert>
@@ -52,15 +51,6 @@ struct ComponentRecord : public ComponentRecordBase
     }
 
     std::vector<T> data;
-};
-
-struct PairRecord : public ComponentRecordBase
-{
-    void insertData() override
-    {
-    }
-
-    Reflection::GenericValue getData(uint64_t index) override;
 };
 
 struct LuauComponentRecord : ComponentRecordBase

@@ -154,7 +154,7 @@ void Engine::LoadConfiguration()
         );
     }
 
-    ScriptManager.DefaultVMAllowedExecutionTime = readFromConfiguration(Config, "DefaultVMAllowedExecutionTime", 10.0);
+    ScriptManager.DefaultVMAllowedExecutionTime = readFromConfiguration(Config, "DefaultVMAllowedExecutionTime", 0.0);
 
     if (ConfigLoadSucceeded)
         Log.Info("Configuration loaded");
@@ -1787,6 +1787,8 @@ void Engine::Shutdown()
     Log.Info("Destroying DataModel...");
     ComponentManagers.DataModel.NotifyAllOfShutdown();
     ScriptManager.StepVMs(); // step event callbacks
+
+    world.shutdown();
 
     ForegroundDataModel->Destroy();
     ForegroundDataModel.Clear();
