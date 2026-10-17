@@ -398,7 +398,7 @@ local function dumpLibMembers(libm: { [string]: any }, t: { [string]: any }, lib
         definitionsFile ..= `--- { if typeof(lib.Description) == "table" then table.concat(lib.Description, "\n---\n--- ") else lib.Description }\n`
     end
 
-    definitionsFile ..= if isPhoenix then `{libname}: \{\n  ` else if hasWholeDefinition then `declare { libname }: { wholeDefinition }\n` else `type { shortName } = \{\n,\n`
+    definitionsFile ..= if isPhoenix then `{libname}: \{\n  ` else if hasWholeDefinition then `declare { libname }: { wholeDefinition }\n` else if isModule then `type { shortName } = \{\n,\n` else `declare { shortName }: \{\n,\n`
 
     local str = ""
     local first = true
@@ -1084,9 +1084,12 @@ local function documentLibrary(name, definitionsFile: string, isPhoenix: boolean
     totalcomment = totalcomment:sub(1, #totalcomment - 1)
 
     libraries ..= totalcomment
-    documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
-        documentation = totalcomment
-    }
+
+    if not isModule then
+        documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
+            documentation = totalcomment
+        }
+    end
 
     libraries ..= "\n"
 

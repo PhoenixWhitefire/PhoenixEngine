@@ -2,6 +2,9 @@
 local world = require("@phoenix/world")
 local ecs = require("@phoenix/ecs")
 
+local imgui = require("@phoenix/imgui")
+local task = require("@std/task")
+
 local Parent = world:component<<ecs.Id>>()
 local Name = world:component<<string>>()
 
@@ -35,9 +38,6 @@ print("Children of root:")
 for e, name, _ in world:query(Name, childrenOfRoot) do
     print(`{e}: {name}`)
 end
-
-local imgui = phoenix.imgui
-local task = phoenix.task
 
 local function renderEnt(e: ecs.Id)
     local name = world:find(e, Name)
@@ -89,6 +89,5 @@ while true do
     end
 
     imgui.endw()
-
     task.wait()
 end

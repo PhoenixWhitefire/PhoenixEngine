@@ -713,24 +713,6 @@
   "@phoenix/enum/ValueType.VectorGradient": {
     "documentation": "Vector3 gradient (not implemented)"
   },
-  "@phoenix/global/@phoenix/fs": {
-    "documentation": "* Interacting with the player's filesystem\n* Several aliases may be used with functions in this library, these are unrelated to `require` aliases although the same syntax is used\n* The following aliases are provided as part of the API:\n* - `self`: The current script file\n* - `selfdir`: The containing directory of the current script file\n* - `project`: Path to the current project folder\n* - `home`: The player's user profile directory\n* - `plugin`: Only valid in Editor plugins. The directory of the plugin, if it is not a single-file `.luau`\n* These may be used in a manner such as `fs.write(\"@project/savefile.json\", saveData)`\n* Other aliases may also exist, however they are strictly internal and should not be explicitly used\n* Avoid overwriting the `base` alias as this may cause certain default assets to stop loading\n* Aliases beginning with `_` may only be defined or remove by the root Luau VM"
-  },
-  "@phoenix/global/@phoenix/imgui": {
-    "documentation": "* UI with Dear ImGui"
-  },
-  "@phoenix/global/@phoenix/json": {
-    "documentation": "* Encoding and decoding JSON files"
-  },
-  "@phoenix/global/@phoenix/parallel": {
-    "documentation": "* Parallelization of Luau"
-  },
-  "@phoenix/global/@phoenix/system": {
-    "documentation": "* Information about the player's system"
-  },
-  "@phoenix/global/@phoenix/task": {
-    "documentation": "* Scheduling of tasks (coroutines or functions)"
-  },
   "@phoenix/global/AtomicInteger": {
     "documentation": "An atomic integer, which can be accessed from multiple threads with an ID through `parallel.atomicinteger`"
   },

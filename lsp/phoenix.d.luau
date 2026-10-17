@@ -241,7 +241,7 @@ declare extern type Color with
   R: number
 end
 
-type Color = {
+declare Color: {
     --- Returns a Color with the provided R, G, and B values
     ---
     --- Values are expected to be in the range 0 to 1
@@ -260,7 +260,7 @@ end
 
 
 
-type GameObject = {
+declare GameObject: {
     --- Clears all previously defined component data
     read clearAllComponentDefinitions: () -> (),
     --- Defines a custom component
@@ -310,7 +310,7 @@ declare extern type Matrix with
   Up: vector
 end
 
-type Matrix = {
+declare Matrix: {
     --- An identity matrix, the same value as what gets returned with `.new()` with no arguments
     read identity: Matrix,
     --- Creates a Matrix at position `Eye` oriented such that the `.Forward` vector moves toward `Target`
@@ -1117,7 +1117,7 @@ declare _RUNTIME: _RUNTIME
     --- URL associated with the runtime
     --- Version information
 
-type debug = {
+declare debug: {
 	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,
 	info: (level: number, s: string) -> string,
     --- Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on
