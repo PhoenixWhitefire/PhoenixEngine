@@ -116,6 +116,7 @@ namespace Reflection
         // Keys will be Strings. Odd items of GenericValue.Array will be the keys, even items will be the values
         Map,
 
+        Component,
         EventSignal,
         InputEvent,
         NumberGradient,
@@ -163,7 +164,7 @@ namespace Reflection
             int64_t Int;
             double Double;
             char* Str;
-            char StrSso[REFLECTION_GV_SSO]; // small string optimization. largest elem is InputAction
+            char StrSso[REFLECTION_GV_SSO]; // small string optimization. largest elem is `Mat`
             glm::vec2 Vec2;
             glm::vec3 Vec3;
             GenericFunction Func;
@@ -171,6 +172,11 @@ namespace Reflection
             glm::mat4 Mat;
             EventSignal Event;
             InputEvent Input;
+            struct ComponentData
+            {
+                uint64_t Record;
+                uint64_t Index;
+            } Component;
             void* Ptr;
         } Val = {};
         // Array length or allocated memory for `Value`

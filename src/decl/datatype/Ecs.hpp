@@ -34,8 +34,10 @@ struct ComponentRecordBase
     Id insert(Id e);
     void remove(Id e);
 
-    // TODO: Should be some specific type instead of just "Map".
     virtual Reflection::GenericValue getData(uint64_t index) = 0;
+    virtual void setData(uint64_t index, const Reflection::GenericValue& value) = 0;
+
+    std::string name;
 
     std::unordered_map<Id, Id> sparse;
     std::vector<Id> dense;
@@ -66,6 +68,7 @@ struct LuauComponentRecord : ComponentRecordBase
     }
 
     Reflection::GenericValue getData(uint64_t index) override;
+    void setData(uint64_t index, const Reflection::GenericValue& value) override;
 
     struct lua_State* owner = nullptr;
     std::vector<int> data;
@@ -73,6 +76,9 @@ struct LuauComponentRecord : ComponentRecordBase
 
 struct World
 {
+    void initialize();
+    void shutdown();
+
     Id entity();
     Id component(ComponentRecordBase* cr);
 
@@ -91,9 +97,7 @@ struct World
         Id start = 0
     );
 
-    void shutdown();
-
-    std::unordered_map<Id, ComponentRecordBase*> Predicates;
-    uint64_t ComponentCount = 0;
-    uint64_t EntityCount = 0;
+    std::unordered_map<Id, ComponentRecordBase*> predicates;
+    uint64_t componentCount = 0;
+    uint64_t entityCount = 0;
 };

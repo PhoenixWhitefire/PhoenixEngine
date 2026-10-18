@@ -68,6 +68,8 @@
 #include "FileRW.hpp"
 #include "Log.hpp"
 
+#include "datatype/Ecs.hpp"
+
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 128;
 
@@ -320,6 +322,9 @@ static std::string findLuauTypeFromDocumentation(const nlohmann::json& Docs, con
 void DeveloperTools::Initialize(Renderer* renderer)
 {
     FileRW::DefineAlias("_editres", "./resources");
+
+    ExplorerShown = true;
+    PropertiesShown = true;
 
     MtlEditorPreview.Initialize(256, 256);
     MtlPreviewRenderer = renderer;
@@ -1701,6 +1706,7 @@ static void renderMaterialEditor()
     ImGui::End();
 }
 
+static std::vector<Id> SelectedEntities;
 static std::vector<ObjectHandle> Selections;
 static std::vector<ObjectHandle> PrevSelections;
 static std::vector<ObjectHandle> VisibleTree;
@@ -3054,6 +3060,27 @@ static void renderExplorer()
         }
     }
 
+    Engine* engine = Engine::Get();
+    World& world = engine->world;
+    world.query({}, [&](Id e, const std::vector<World::ComponentData>&)
+    {
+        ImGui::PushID(e);
+        std::string display;
+
+        if (std::optional<World::ComponentData> cd = world.find(e, 1))
+            display = cd->cr->getData(cd->index).AsString();
+        else
+            display = std::format("({})", e);
+
+        if (ImGui::Button(display.c_str()))
+            SelectedEntities = { e };
+
+        ImGui::PopID();
+        return true;
+    });
+
+    ImGui::Separator();
+
     VisibleTreeWip.clear();
     recursiveIterateTree(ExplorerRoot);
 
@@ -4089,6 +4116,99 @@ static void renderProperties()
     {
         ImGui::End();
         return;
+    }
+
+    if (SelectedEntities.size() > 0)
+    {
+        Engine* engine = Engine::Get();
+        World& world = engine->world;
+        Id e = SelectedEntities[0];
+
+        for (const auto& [ c, cr ] : world.predicates)
+        {
+            ImGui::PushID(c);
+
+            if (std::optional<World::ComponentData> cd = world.find(e, c))
+            {
+                if (isPair(c))
+                {
+                    if (ImGui::CollapsingHeader("(pair)"))
+                    {
+                        Id relation = pairFirst(c);
+                        Id target = pairSecond(c);
+
+                        ImGui::Text("first:");
+                        ImGui::SameLine();
+
+                        if (const auto& it = world.predicates.find(relation); it != world.predicates.end() && !it->second->name.empty())
+                            ImGui::TextUnformatted(it->second->name.c_str());
+                        else
+                            ImGui::Text("<Id: %zu>", relation);
+
+                        ImGui::Text("second:");
+                        ImGui::SameLine();
+
+                        if (const auto& it = world.predicates.find(target); it != world.predicates.end() && !it->second->name.empty())
+                            ImGui::TextUnformatted(it->second->name.c_str());
+                        else
+                            ImGui::Text("<Id: %zu>", target);
+                    }
+                }
+                else
+                {
+                    std::string display = cd->cr->name.empty() ? std::format("({})", c) : cd->cr->name;
+                    ImGui::TextUnformatted(display.c_str());
+                    ImGui::SameLine();
+
+                    if (cd->cr->isLuau)
+                    {
+                        LuauComponentRecord* lcr = (LuauComponentRecord*)cd->cr;
+
+                        if (lcr->owner)
+                        {
+                            lua_pushliteral(lcr->owner, "");
+                            lua_getref(lcr->owner, lcr->data[cd->index]);
+                            debugVariable(lcr->owner, true);
+                        }
+                        else
+                        {
+                            ImGui::Text("(No data.)");
+                        }
+                    }
+                    else
+                    {
+                        const Reflection::GenericValue& value = cd->cr->getData(cd->index);
+
+                        switch (value.Type)
+                        {
+                        case Reflection::ValueType::String:
+                        {
+                            std::string str = value.AsString();
+                            if (ImGui::InputText("##", &str))
+                                cd->cr->setData(cd->index, str);
+
+                            break;
+                        }
+                        case Reflection::ValueType::Matrix:
+                        {
+                            glm::mat4 mtx = value.AsMatrix();
+                            glm::vec3 trans = {};
+                            DecomposeTRS(mtx, &trans);
+
+                            if (ImGui::InputFloat3("##", glm::value_ptr(trans)))
+                                cd->cr->setData(cd->index, glm::translate(glm::mat4(1.f), trans));
+
+                            break;
+                        }
+                        default:
+                            ImGui::TextUnformatted(value.ToString().c_str());
+                        }
+                    }
+                }
+            }
+
+            ImGui::PopID();
+        }
     }
 
     if (Selections.size() > 0)

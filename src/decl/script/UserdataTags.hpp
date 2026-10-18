@@ -1,25 +1,28 @@
 // Luau userdata tag IDs, 27/05/2026
 #pragma once
 
+#include <string_view>
+
 struct UserdataTag_
 {
     enum UdT {
         start = 1,
 
         Mutex = 1,
-        SharedBuffer = 2,
-        AtomicInteger = 3,
-        Color = 4,
-        EventSignal = 5,
-        EventConnection = 6,
-        GameObject = 7,
-        InputEvent = 8,
-        Matrix = 9,
-        NumberGradient = 10,
-        VectorGradient = 11,
-        ColorGradient = 12,
-        World = 13,
-        Query = 14,
+        SharedBuffer,
+        AtomicInteger,
+        Color,
+        EventSignal,
+        EventConnection,
+        GameObject,
+        InputEvent,
+        Matrix,
+        NumberGradient,
+        VectorGradient,
+        ColorGradient,
+        World,
+        Query,
+        Component,
 
         count,
         tagLimit = 127,
@@ -45,6 +48,7 @@ const std::string_view UserdataTagNames[] = {
     "ColorGradient",
     "World",
     "Query",
+    "Component",
 };
 
 static_assert(std::size(UserdataTagNames) == UserdataTag::count);

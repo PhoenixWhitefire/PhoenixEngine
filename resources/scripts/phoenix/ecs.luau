@@ -43,12 +43,16 @@ export type World = {
     --- Creates a new entity and returns its ID.
     read entity: (self: World) -> Id,
     --- Creates a new component and returns its ID.
-    read component: <T>(self: World) -> Id<T>,
+    --- Accepts an optional `name` argument.
+    read component: <T>(self: World, name: string?) -> Id<T>,
 
     --- Adds a component or pair (relationship) to an entity.
     read add: <T>(self: World, e: Id, p: T & Id<nil>) -> (),
     --- Removes a component or pair (relationship) from an entity.
     read remove: (self: World, e: Id, p: Id) -> (),
+
+    --- Returns whether a Component exists on an Entity.
+    read has: (self: World, e: Id, c: ReadId) -> boolean,
 
     --- Finds component data on an entity. Returns `nil` if the component is not present.
     --- Use `get` if you do not want this behavior.
@@ -72,15 +76,22 @@ export type World = {
         & (<A, B, C, D>(World, A, B, C, D) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">>)
         & (<A, B, C, D, E>(World, A, B, C, D, E) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">, index<E, "_T">>)
         & (<A, B, C, D, E, F>(World, A, B, C, D, E, F) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">, index<E, "_T">, index<F, "_T">>)
-        & (<A, B, C, D, E, F, G>(World, A, B, C, D, E, F, G) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">, index<E, "_T">, index<F, "_T">, index<G, "_T">>)
+        & (<A, B, C, D, E, F, G>(World, A, B, C, D, E, F, G) -> QueryIterator<index<A, "_T">, index<B, "_T">, index<C, "_T">, index<D, "_T">, index<E, "_T">, index<F, "_T">, index<G, "_T">>),
 }
 
 --- The ECS library.
-local ecs = {}
+type ecs = {
+    --- Provides a pair identifier between two ECS identifiers.
+    read pair: <T, U>(predicate: Id<T>, target: Id<U>) -> Id<nil>,
 
---- Provides a pair identifier between two ECS identifiers.
-function ecs.pair<T, U>(predicate: Id<T>, target: Id<U>): Id<nil>
+    --- Built-in Name component.
+    read Name: Id<string>,
+    --- Built-in Transform component.
+    read Transform: Id<Matrix>,
+}
+
+local function load(): ecs
     error(`Unreachable.`)
 end
 
-return ecs
+return load()

@@ -685,6 +685,7 @@ static std::string_view BaseNames[] = {
     "Array",
     "Map",
 
+    "Component",
     "EventSignal",
     "InputEvent",
     "NumberGradient",

@@ -57,19 +57,77 @@ void ComponentRecordBase::remove(Id e)
 
 Reflection::GenericValue LuauComponentRecord::getData(uint64_t index)
 {
-    // This case is where we want to *serialize* the data instead of sharing it directly.
+    // This case is where we want to *serialize* the data.
     throw std::runtime_error("getData on LuauComponentRecord: Not implemented!");
+}
+
+void LuauComponentRecord::setData(uint64_t index, const Reflection::GenericValue& value)
+{
+    // Ditto.
+    throw std::runtime_error("setData on LuauComponentRecord: Not implemented!");
+}
+
+struct NameComponentRecord : public ComponentRecord<std::string>
+{
+    NameComponentRecord()
+    {
+        name = "Name";
+    }
+
+    Reflection::GenericValue getData(uint64_t index) override
+    {
+        return data[index];
+    }
+
+    void setData(uint64_t index, const Reflection::GenericValue& value) override
+    {
+        data[index] = value.AsString();
+    }
+};
+
+struct TransformComponentRecord : public ComponentRecord<glm::mat4>
+{
+    TransformComponentRecord()
+    {
+        name = "Transform";
+    }
+
+    Reflection::GenericValue getData(uint64_t index) override
+    {
+        return data[index];
+    }
+
+    void setData(uint64_t index, const Reflection::GenericValue& value) override
+    {
+        data[index] = value.AsMatrix();
+    }
+};
+
+void World::initialize()
+{
+    component(new NameComponentRecord);
+    component(new TransformComponentRecord);
+}
+
+void World::shutdown()
+{
+    for (auto [ c, cr ] : predicates)
+        delete cr;
+
+    predicates.clear();
+    componentCount = 0;
+    entityCount = 0;
 }
 
 Id World::entity()
 {
-    return ++EntityCount;
+    return ++entityCount;
 }
 
 Id World::component(ComponentRecordBase* cr)
 {
-    Id c = ++ComponentCount;
-    Predicates.insert({ c, cr });
+    Id c = ++componentCount;
+    predicates.insert({ c, cr });
 
     return c;
 }
@@ -78,8 +136,8 @@ World::ComponentData World::add(Id e, Id c)
 {
     if (isPair(c))
     {
-        const auto& it = Predicates.find(pairFirst(c));
-        if (it == Predicates.end())
+        const auto& it = predicates.find(pairFirst(c));
+        if (it == predicates.end())
             throw std::runtime_error(std::format("Invalid relationship '{}' in pair", pairFirst(c)));
 
         if (!it->second->isLuau)
@@ -87,7 +145,7 @@ World::ComponentData World::add(Id e, Id c)
 
         LuauComponentRecord* cr = nullptr;
 
-        if (const auto& old = Predicates.find(c); old != Predicates.end())
+        if (const auto& old = predicates.find(c); old != predicates.end())
         {
             if (!old->second->isLuau)
                 throw std::runtime_error("Internal error: Pair was not a Luau record");
@@ -101,13 +159,13 @@ World::ComponentData World::add(Id e, Id c)
 
         cr->insert(e);
 
-        Predicates[c] = cr;
+        predicates[c] = cr;
         return { .cr = cr, .index = 0 };
     }
     else
     {
-        const auto& it = Predicates.find(c);
-        if (it == Predicates.end())
+        const auto& it = predicates.find(c);
+        if (it == predicates.end())
             throw std::runtime_error(std::format("Cannot add invalid predicate '{}' to entity {} (expected component or pair ID)", c, e));
 
         return { .cr = it->second, .index = it->second->insert(e) };
@@ -116,8 +174,8 @@ World::ComponentData World::add(Id e, Id c)
 
 void World::remove(Id e, Id c)
 {
-    const auto& it = Predicates.find(c);
-    if (it == Predicates.end())
+    const auto& it = predicates.find(c);
+    if (it == predicates.end())
         throw std::runtime_error(std::format("Cannot remove invalid predicate '{}' from entity {} (expected component or pair ID)", c, e));
 
     it->second->remove(e);
@@ -125,7 +183,7 @@ void World::remove(Id e, Id c)
 
 std::optional<World::ComponentData> World::find(Id e, Id c)
 {
-    if (const auto& it = Predicates.find(c); it != Predicates.end())
+    if (const auto& it = predicates.find(c); it != predicates.end())
     {
         if (std::optional<uint64_t> index = it->second->findIndex(e))
             return ComponentData{ .cr = it->second, .index = index.value() };
@@ -134,24 +192,24 @@ std::optional<World::ComponentData> World::find(Id e, Id c)
     return std::nullopt;
 }
 
-bool World::query(const std::span<Id>& predicates, const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing, Id start)
+bool World::query(const std::span<Id>& queryPredicates, const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing, Id start)
 {
     std::vector<ComponentRecordBase*> crs;
-    crs.reserve(predicates.size());
+    crs.reserve(queryPredicates.size());
 
-    for (Id pred : predicates)
+    for (Id pred : queryPredicates)
     {
-        const auto& it = Predicates.find(pred);
-        if (it == Predicates.end())
+        const auto& it = predicates.find(pred);
+        if (it == predicates.end())
             throw std::runtime_error(std::format("Invalid query predicate '{}' (expected component or pair ID)", pred));
 
         crs.push_back(it->second);
     }
 
-    std::vector<ComponentData> datas(predicates.size());
+    std::vector<ComponentData> datas(queryPredicates.size());
     Id e = start;
 
-    for (; e <= EntityCount; e++)
+    for (; e <= entityCount; e++)
     {
         bool hasAll = true;
 
@@ -174,15 +232,5 @@ bool World::query(const std::span<Id>& predicates, const std::function<bool(Id, 
             break;
     }
 
-    return e > EntityCount;
-}
-
-void World::shutdown()
-{
-    for (auto [ c, cr ] : Predicates)
-        delete cr;
-
-    Predicates.clear();
-    ComponentCount = 0;
-    EntityCount = 0;
+    return e > entityCount;
 }

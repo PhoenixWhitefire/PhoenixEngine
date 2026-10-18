@@ -416,6 +416,8 @@ void Engine::Initialize(int ThreadCount, bool Headless)
     MaterialManagerInstance.Initialize(); // mat after tex and shd as it may attempt to load a texture and shader
     MeshProviderInstance.Initialize(IsHeadlessMode);
 
+    world.initialize();
+
     if (!PHX_HEADLESS_BUILD && !IsHeadlessMode)
     {
         {

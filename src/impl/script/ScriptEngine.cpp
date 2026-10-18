@@ -78,6 +78,7 @@ static const LuauType s_ValueTypeToLuauType[] = {
     LUA_TTABLE, // Array
     LUA_TTABLE, // Map,
 
+    { LUA_TUSERDATA, UserdataTag::GameObject     },
     { LUA_TUSERDATA, UserdataTag::EventSignal    },
     { LUA_TUSERDATA, UserdataTag::InputEvent     },
     { LUA_TUSERDATA, UserdataTag::NumberGradient },
@@ -1689,6 +1690,16 @@ static int world_remove(lua_State* L)
     return 1;
 }
 
+static int world_has(lua_State* L)
+{
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id c = luhx_checkid(L, 3);
+
+    lua_pushboolean(L, world->find(e, c).has_value());
+    return 1;
+}
+
 static int world_find(lua_State* L)
 {
     World* world = luhx_checkworld(L, 1);
@@ -1746,8 +1757,7 @@ static int world_set(lua_State* L)
     }
     else
     {
-        // TODO: Requires deserialization.
-        luaL_error(L, "world:set on non-Luau record: Not implemented!");
+        cd.cr->setData(cd.index, ScriptEngine::ToGeneric(L, 4));
     }
 
     return 0;
@@ -1805,7 +1815,7 @@ static int querymeta_iter(lua_State* L)
 
 static void registerWorldUserdata(lua_State* L)
 {
-    lua_createtable(L, 0, 10);
+    lua_createtable(L, 0, 11);
 
     lua_pushliteral(L, "World");
     lua_setfield(L, -2, "__type");
@@ -1824,6 +1834,9 @@ static void registerWorldUserdata(lua_State* L)
 
     lua_pushcfunction(L, world_remove,"remove");
     lua_setfield(L, -2, "remove");
+
+    lua_pushcfunction(L, world_has, "has");
+    lua_setfield(L, -2, "has");
 
     lua_pushcfunction(L, world_find, "find");
     lua_setfield(L, -2, "find");
