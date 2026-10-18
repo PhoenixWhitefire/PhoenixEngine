@@ -439,6 +439,7 @@
         }
       },
       "ColorGradient": {},
+      "Component": {},
       "EventConnection": {},
       "EventSignal": {},
       "GameObject": {
@@ -493,6 +494,8 @@
     },
     "Libraries": {
       "@phoenix/ecs": {
+        "Name": "Id",
+        "Transform": "Id",
         "pair": "function"
       },
       "@phoenix/fs": {
@@ -883,21 +886,22 @@
           "Boolean": 1,
           "Buffer": 5,
           "Color": 6,
-          "ColorGradient": 18,
+          "ColorGradient": 19,
+          "Component": 14,
           "Double": 3,
-          "EventSignal": 14,
+          "EventSignal": 15,
           "Function": 11,
           "GameObject": 10,
-          "InputEvent": 15,
+          "InputEvent": 16,
           "Integer": 2,
           "Map": 13,
           "Matrix": 9,
           "Null": 64,
-          "NumberGradient": 16,
+          "NumberGradient": 17,
           "String": 4,
           "Vector2": 7,
           "Vector3": 8,
-          "VectorGradient": 17
+          "VectorGradient": 18
         }
       },
       "_RUNTIME": {

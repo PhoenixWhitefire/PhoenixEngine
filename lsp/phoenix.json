@@ -671,6 +671,9 @@
   "@phoenix/enum/ValueType.ColorGradient": {
     "documentation": "Color gradient (not implemented)"
   },
+  "@phoenix/enum/ValueType.Component": {
+    "documentation": ""
+  },
   "@phoenix/enum/ValueType.Double": {
     "documentation": "The `number` type"
   },
@@ -1005,6 +1008,7 @@
       "Buffer": "@phoenix/enum/ValueType.Buffer",
       "Color": "@phoenix/enum/ValueType.Color",
       "ColorGradient": "@phoenix/enum/ValueType.ColorGradient",
+      "Component": "@phoenix/enum/ValueType.Component",
       "Double": "@phoenix/enum/ValueType.Double",
       "EventSignal": "@phoenix/enum/ValueType.EventSignal",
       "Function": "@phoenix/enum/ValueType.Function",
@@ -1026,24 +1030,6 @@
   },
   "@phoenix/global/EventSignal": {
     "documentation": "* An Event that can be connected to\n* This datatype is not hash consed! Two separate value-identical signals are not `rawequal` and will not behave as expected when used as table keys (e.g. `rawequal(game.OnFrameBegin, game.OnFrameBegin) == false`)"
-  },
-  "@phoenix/global/GameObject": {
-    "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page\n* This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
-  },
-  "@phoenix/global/GameObject.clearAllComponentDefinitions": {
-    "documentation": "* Clears all previously defined component data"
-  },
-  "@phoenix/global/GameObject.component": {
-    "documentation": "* Defines a custom component\n* Throws an error if one with this name was already defined"
-  },
-  "@phoenix/global/GameObject.fromTemplate": {
-    "documentation": "* Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)"
-  },
-  "@phoenix/global/GameObject.new": {
-    "documentation": "* Creates an Object with only the specified Components, or a blank Object if no table is given"
-  },
-  "@phoenix/global/GameObject.validComponents": {
-    "documentation": "* A list of all valid component names which can be passed into `.new`"
   },
   "@phoenix/global/InputEvent": {
     "documentation": "This is a union of `KeyInputEvent`, `MouseInputEvent`, and `ScrollInputEvent`"
@@ -1120,54 +1106,6 @@
   "@phoenix/global/warn": {
     "documentation": "* Same as `print`, except generates a Warning message"
   },
-  "@phoenix/globaltype/Animation.Animation": {
-    "documentation": "The animation file"
-  },
-  "@phoenix/globaltype/Animation.Looped": {
-    "documentation": "Whether the track should loop when it reaches the end"
-  },
-  "@phoenix/globaltype/Animation.Playing": {
-    "documentation": "Whether the track is playing"
-  },
-  "@phoenix/globaltype/Animation.Time": {
-    "documentation": "The current time position of the track"
-  },
-  "@phoenix/globaltype/Animation.Weight": {
-    "documentation": "The influence the track has over the rig. Not implemented yet"
-  },
-  "@phoenix/globaltype/Animator.Animating": {
-    "documentation": "Whether the `Animator` will step its animations"
-  },
-  "@phoenix/globaltype/AssetManager.GetMeshData": {
-    "documentation": "Returns the provided mesh data associated with the provided path"
-  },
-  "@phoenix/globaltype/AssetManager.ImportModel": {
-    "documentation": "Imports the glTF 2.0 model at the provided path and returns it as a `Model` GameObject"
-  },
-  "@phoenix/globaltype/AssetManager.LoadScene": {
-    "documentation": "Loads `GameObject`s from the scene file at the provided path, returning a list of the root objects or `nil` and an error message upon failure"
-  },
-  "@phoenix/globaltype/AssetManager.QueueLoadTexture": {
-    "documentation": "Queues a texture to be preloaded"
-  },
-  "@phoenix/globaltype/AssetManager.SaveMesh": {
-    "documentation": "Saves the mesh data at the provided path to a file"
-  },
-  "@phoenix/globaltype/AssetManager.SaveScene": {
-    "documentation": "Saves the list of `GameObject`s to the provided path, returning whether the operation succeeded"
-  },
-  "@phoenix/globaltype/AssetManager.SetMeshData": {
-    "documentation": "Associates the provided mesh data with the provided path"
-  },
-  "@phoenix/globaltype/AssetManager.UnloadMaterial": {
-    "documentation": "Removes the given Material path from the Engine's cache"
-  },
-  "@phoenix/globaltype/AssetManager.UnloadMesh": {
-    "documentation": "Removes the given Mesh path from the Engine's cache"
-  },
-  "@phoenix/globaltype/AssetManager.UnloadTexture": {
-    "documentation": "Removes the given texture from the Engine's cache, forcing it to be reloaded upon next use"
-  },
   "@phoenix/globaltype/AtomicInteger": {
     "documentation": "An atomic integer, which can be accessed from multiple threads with an ID through `parallel.atomicinteger`"
   },
@@ -1176,48 +1114,6 @@
   },
   "@phoenix/globaltype/AtomicInteger.Set": {
     "documentation": "* Sets the value\n"
-  },
-  "@phoenix/globaltype/Bone.IsActive": {
-    "documentation": "Whether or not the Bone Object is actively affecting a `Mesh`"
-  },
-  "@phoenix/globaltype/Bone.SkeletalBoneId": {
-    "documentation": "The internal ID of the bone, valid range is 0-255"
-  },
-  "@phoenix/globaltype/Bone.TargetMesh": {
-    "documentation": "The `Mesh` component containing Object the Bone is currently targeting. Note that this property is read-only, and will only either be equal to the Mesh that created the Bone, or `nil`"
-  },
-  "@phoenix/globaltype/Bone.Transform": {
-    "documentation": "The transformation of the Bone"
-  },
-  "@phoenix/globaltype/Camera.FieldOfView": {
-    "documentation": "The field-of-view. By default, `90`"
-  },
-  "@phoenix/globaltype/Camera.UseSimpleController": {
-    "documentation": "Whether it is affected by the built-in controller (`W`/`A`/`S`/`D` horizontal movement, `Q`/`E` vertical, Mouse to look around)"
-  },
-  "@phoenix/globaltype/Collections.GetCollections": {
-    "documentation": "Returns a list of all collections that the Collections system has recognized. They may be empty. Order is *not* guaranteed"
-  },
-  "@phoenix/globaltype/Collections.GetComponentCreatedSignal": {
-    "documentation": "Returns a signal that fires when a given component is created from the world"
-  },
-  "@phoenix/globaltype/Collections.GetComponentDeletedSignal": {
-    "documentation": "Returns a signal that fires when a given component is deleted from the world"
-  },
-  "@phoenix/globaltype/Collections.GetObjectsWithComponent": {
-    "documentation": "Returns a list of all objects with the given component"
-  },
-  "@phoenix/globaltype/Collections.GetTagAddedSignal": {
-    "documentation": "Returns a signal that fires when the given tag is added to any Objects"
-  },
-  "@phoenix/globaltype/Collections.GetTagRemovedSignal": {
-    "documentation": "Returns a signal that fires when the given tag is removed from any Objects, including when an Object with a tag is `:Destroy`'d"
-  },
-  "@phoenix/globaltype/Collections.GetTagged": {
-    "documentation": "Returns a list containing all Objects with the given tag"
-  },
-  "@phoenix/globaltype/Collections.Query": {
-    "documentation": "Returns a list of all objects with the specified Luau components"
   },
   "@phoenix/globaltype/Color": {
     "documentation": "An RGB color"
@@ -1233,147 +1129,6 @@
   },
   "@phoenix/globaltype/ColorGradient": {
     "documentation": "Not implemented"
-  },
-  "@phoenix/globaltype/DataModel.AreScriptsBound": {
-    "documentation": "If this is `true`, attempting to change `.LiveScripts` will throw an error"
-  },
-  "@phoenix/globaltype/DataModel.BindToClose": {
-    "documentation": "Sets a callback that is invoked when the datamodel is being destroyed. May only be called once. Callback cannot yield"
-  },
-  "@phoenix/globaltype/DataModel.Close": {
-    "documentation": "Closes the application with the specified exit code integer or 0"
-  },
-  "@phoenix/globaltype/DataModel.Closing": {
-    "documentation": "This event fires when the datamodel is closing. Do not yield within the callback as the thread may never be resumed again"
-  },
-  "@phoenix/globaltype/DataModel.GetService": {
-    "documentation": "Gets the Object representing the specified Service. If it does not exist yet in the Data Model, it is created"
-  },
-  "@phoenix/globaltype/DataModel.LiveScripts": {
-    "documentation": "May either refer to a directory of Scripts, or a single Script, to run when the DataModel is bound"
-  },
-  "@phoenix/globaltype/DataModel.OnFrameBegin": {
-    "documentation": "Fires at the beginning of a frame, passing in the time elapsed since the last frame (delta time)"
-  },
-  "@phoenix/globaltype/DataModel.Time": {
-    "documentation": "Number of seconds since the Engine started running"
-  },
-  "@phoenix/globaltype/DataModel.VM": {
-    "documentation": "The Luau Virtual Machine that Scripts bound to this Data Model will run in"
-  },
-  "@phoenix/globaltype/DeveloperTools.BreakpointRemoved": {
-    "documentation": "Fires when a breakpoint is removed"
-  },
-  "@phoenix/globaltype/DeveloperTools.BreakpointUpdated": {
-    "documentation": "Fires when a breakpoint is added or modified"
-  },
-  "@phoenix/globaltype/DeveloperTools.CloseTextDocuments": {
-    "documentation": "Saves and closes all open text documents"
-  },
-  "@phoenix/globaltype/DeveloperTools.DebuggerRequestedStop": {
-    "documentation": "Fires when the developer clicks 'Stop' in the debugger"
-  },
-  "@phoenix/globaltype/DeveloperTools.DocumentationShown": {
-    "documentation": "Whether the Documentation tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.ExplorerShown": {
-    "documentation": "Whether the Explorer tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.GetDocumentBreakpoints": {
-    "documentation": "Gets a list of all breakpoints associated with a text document. If it is not open, returns an empty table"
-  },
-  "@phoenix/globaltype/DeveloperTools.GetExplorerSelections": {
-    "documentation": "Returns what is currently selected in the Explorer"
-  },
-  "@phoenix/globaltype/DeveloperTools.GetOpenTextDocuments": {
-    "documentation": "Gets a list of all open text documents"
-  },
-  "@phoenix/globaltype/DeveloperTools.GetToolNames": {
-    "documentation": "Returns a list of valid Engine tools"
-  },
-  "@phoenix/globaltype/DeveloperTools.InfoShown": {
-    "documentation": "Whether the Info tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.Initialize": {
-    "documentation": "Initializes the developer tools system if it was not already initialized"
-  },
-  "@phoenix/globaltype/DeveloperTools.Initialized": {
-    "documentation": "Whether developer tools were ever initialized"
-  },
-  "@phoenix/globaltype/DeveloperTools.IsToolEnabled": {
-    "documentation": "Returns whether the given tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.MaterialsShown": {
-    "documentation": "Whether the Materials tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.OpenTextDocument": {
-    "documentation": "Opens a text file. This requires Developer Mode to be enabled to have any effect"
-  },
-  "@phoenix/globaltype/DeveloperTools.PropertiesShown": {
-    "documentation": "Whether the Properties tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.RendererShown": {
-    "documentation": "Whether the Renderer tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.SaveTextDocuments": {
-    "documentation": "Saves all open text documents"
-  },
-  "@phoenix/globaltype/DeveloperTools.ScriptsShown": {
-    "documentation": "Whether the Scripts tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.SetDocumentBreakpoints": {
-    "documentation": "Sets the breakpoints of a text document. This will queue if the document is not open at the time of the call"
-  },
-  "@phoenix/globaltype/DeveloperTools.SetExplorerRoot": {
-    "documentation": "Changes the Root of the built-in Explorer's hierarchy view"
-  },
-  "@phoenix/globaltype/DeveloperTools.SetExplorerSelections": {
-    "documentation": "Changes the built-in Explorer's Object selections to the specified Objects"
-  },
-  "@phoenix/globaltype/DeveloperTools.SetToolEnabled": {
-    "documentation": "Enabled/disables the given tool"
-  },
-  "@phoenix/globaltype/DeveloperTools.SettingsShown": {
-    "documentation": "Whether the Settings tool is enabled"
-  },
-  "@phoenix/globaltype/DeveloperTools.ShadersShown": {
-    "documentation": "Whether the Shaders tool is enabled"
-  },
-  "@phoenix/globaltype/DirectionalLight.Brightness": {
-    "documentation": "How bright the Light is"
-  },
-  "@phoenix/globaltype/DirectionalLight.Direction": {
-    "documentation": "The direction light is emitted from"
-  },
-  "@phoenix/globaltype/DirectionalLight.LightColor": {
-    "documentation": "The color of the Light"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewDistance": {
-    "documentation": "How far back the shadow view is offset from the focus"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewFarPlane": {
-    "documentation": "The Far Z plane of the shadow view. Should be greater than `ShadowViewNearPlane`"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewMoveWithCamera": {
-    "documentation": "Sets the focus of the shadow view to be the Scene Camera"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewNearPlane": {
-    "documentation": "The Near Z plane of the shadow view. Should be less than `ShadowViewFarPlane`. Shouldn't be `0`"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewOffset": {
-    "documentation": "Offset of the shadow view from the focus, after `ShadowViewDistance` is applied"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewSize": {
-    "documentation": "Size of the shadow view. Sets `ShadowViewSizeH` and `ShadowViewSizeV` to the assigned value if they are equal. Is `-1` if they are not equal"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewSizeH": {
-    "documentation": "Horizontal size of the shadow view"
-  },
-  "@phoenix/globaltype/DirectionalLight.ShadowViewSizeV": {
-    "documentation": "Vertical size of the shadow view"
-  },
-  "@phoenix/globaltype/DirectionalLight.Shadows": {
-    "documentation": "Whether the Light can render shadows"
   },
   "@phoenix/globaltype/EcAnimation": {
     "documentation": "An animation"
@@ -1477,78 +1232,6 @@
   "@phoenix/globaltype/EcWorkspace": {
     "documentation": "* The container used for storing the main parts of a scene (3D objects)\n* If this is `Destroy`'d, the application closes"
   },
-  "@phoenix/globaltype/Engine.BindDataModel": {
-    "documentation": "Binds the datamodel provided. Bound datamodels fire their `OnFrameBegin` events"
-  },
-  "@phoenix/globaltype/Engine.CommitHash": {
-    "documentation": "The Git commit that was used to produce this Engine build"
-  },
-  "@phoenix/globaltype/Engine.CommitTag": {
-    "documentation": "The relationship between the Engine's commit at the nearest Release tag"
-  },
-  "@phoenix/globaltype/Engine.Framerate": {
-    "documentation": "The Engine's current framerate"
-  },
-  "@phoenix/globaltype/Engine.FramerateCap": {
-    "documentation": "The maximum framerate the Engine will reach before attempting to self-limit"
-  },
-  "@phoenix/globaltype/Engine.GetCliArguments": {
-    "documentation": "Returns the list of launch arguments given to the Engine. The first item is always a path to the Engine executable"
-  },
-  "@phoenix/globaltype/Engine.GetConfigValue": {
-    "documentation": "Returns the value associated with the given Key in the Engine's loaded configuration (`@phoenix/conf`)"
-  },
-  "@phoenix/globaltype/Engine.IsHeadless": {
-    "documentation": "Whether the Engine is currently running in headless mode"
-  },
-  "@phoenix/globaltype/Engine.SetForegroundDataModel": {
-    "documentation": "Switches the foreground datamodel to the one provided. Foreground datamodels are what are rendered on screen"
-  },
-  "@phoenix/globaltype/Engine.SetWindowTitle": {
-    "documentation": "Sets the title of the game window"
-  },
-  "@phoenix/globaltype/Engine.ShowMessageBox": {
-    "documentation": "Shows a message box to the player with the given specification. The returned number with be the selected option: `0` for Cancel/No, `1` for Ok/Yes, `2` for No in `yesnocancel`. This is a blocking operation and no scripts or other parts of the Engine run until the message is dismissed. Avoid using quotes and backticks in the message"
-  },
-  "@phoenix/globaltype/Engine.TargetPlatform": {
-    "documentation": "The target platform the Engine was compiled for (Windows or Linux, usually)"
-  },
-  "@phoenix/globaltype/Engine.UnbindDataModel": {
-    "documentation": "Unbinds a previously bound datamodel"
-  },
-  "@phoenix/globaltype/Engine.Version": {
-    "documentation": "The version of the Engine build"
-  },
-  "@phoenix/globaltype/Environment.AmbientLight": {
-    "documentation": "Base environment ambient light color (Uniform: `Phoenix_LightAmbient`)"
-  },
-  "@phoenix/globaltype/Environment.BloomEnabled": {
-    "documentation": "Whether bloom is enabled"
-  },
-  "@phoenix/globaltype/Environment.BloomScale": {
-    "documentation": "The sample size for the bloom relative to the screen"
-  },
-  "@phoenix/globaltype/Environment.BloomStdDeviation": {
-    "documentation": "The standard deviation for the gaussian function used for the bloom, affecting the \"width\""
-  },
-  "@phoenix/globaltype/Environment.BloomThreshold": {
-    "documentation": "The threshold luminance at which pixels should bloom"
-  },
-  "@phoenix/globaltype/Environment.Fog": {
-    "documentation": "Fog enablement (Uniform: `Phoenix_Fog`)"
-  },
-  "@phoenix/globaltype/Environment.FogColor": {
-    "documentation": "Color of the fog (Uniform: `Phoenix_FogColor`)"
-  },
-  "@phoenix/globaltype/Environment.GammaCorrection": {
-    "documentation": "Post-processor gamma correction amount (Uniform: `Phoenix_Gamma`)"
-  },
-  "@phoenix/globaltype/Environment.PostProcess": {
-    "documentation": "Post-processor enablement (Uniform: `Phoenix_PostFxEnabled`)"
-  },
-  "@phoenix/globaltype/Environment.Skybox": {
-    "documentation": "The skybox asset. May either be a path directly to an equirectangular panorama image, or a directory containing `[right/left/top/bottom/front/back].jpg` (cubemap). Will error when attempting to assign an invalid path. Cubemap directory paths must contain '`Sky`' (case-sensitive) somewhere in them :)"
-  },
   "@phoenix/globaltype/EventConnection": {
     "documentation": "A connection to an Event"
   },
@@ -1570,152 +1253,8 @@
   "@phoenix/globaltype/EventSignal.Wait": {
     "documentation": "* Yields the thread until the Event is fired\n"
   },
-  "@phoenix/globaltype/GameObject": {
-    "documentation": "* A Game Object\n* Game Objects have a \"base\" API (properties, methods, and events) that can be extended by giving them Components\n* The base API will be documented on the Component APIs page\n* This datatype is hash consed, `t[game]` and `t[workspace.Parent]` are guaranteed to access the same value as `game` and `workspace.Parent` are `rawequal`"
-  },
-  "@phoenix/globaltype/GameObject.AddComponent": {
-    "documentation": "Adds the specified Component to the Object. Will error if it already has it (use `:HasComponent` to check beforehand)"
-  },
-  "@phoenix/globaltype/GameObject.AddTag": {
-    "documentation": "Adds a `Collections` tag to the Object. Has no effect if the Object already has the tag"
-  },
-  "@phoenix/globaltype/GameObject.AsComponent": {
-    "documentation": "Returns `nil` if the component does not exist on the object, and, in Luau, a narrowed type if it does"
-  },
-  "@phoenix/globaltype/GameObject.Destroy": {
-    "documentation": "Marks the Object as \"pending for destruction\". This may or may not remove the Object from memory immediately, depending on whether the Engine is keeping a internal reference to it"
-  },
-  "@phoenix/globaltype/GameObject.Duplicate": {
-    "documentation": "Creates a duplicate of the Object"
-  },
-  "@phoenix/globaltype/GameObject.Enabled": {
-    "documentation": "If this is `false`, the Engine will not render, compute physics for or otherwise update this Object and its subtree"
-  },
-  "@phoenix/globaltype/GameObject.FindChild": {
-    "documentation": "Returns a child Object with the given name, or `nil` if one doesn't exist"
-  },
-  "@phoenix/globaltype/GameObject.FindChildWithComponent": {
-    "documentation": "Returns a child Object which has the given component, or `nil` if one doesn't exist"
-  },
-  "@phoenix/globaltype/GameObject.GetChildren": {
-    "documentation": "Returns a list of the Object's direct children"
-  },
-  "@phoenix/globaltype/GameObject.GetComponents": {
-    "documentation": "Returns a list of the names of all Components that the Object currently has"
-  },
-  "@phoenix/globaltype/GameObject.GetDescendants": {
-    "documentation": "Returns all descendants of the Object (i.e. its children, and their children, etc)"
-  },
-  "@phoenix/globaltype/GameObject.GetFullName": {
-    "documentation": "Returns the full, hierarchal path of the Object"
-  },
-  "@phoenix/globaltype/GameObject.GetTags": {
-    "documentation": "Returns a list of all tags the Object has"
-  },
-  "@phoenix/globaltype/GameObject.HasComponent": {
-    "documentation": "Returns whether or not the Object has the given Component"
-  },
-  "@phoenix/globaltype/GameObject.HasTag": {
-    "documentation": "Returns whether or not the Object has the given `Collections` tag"
-  },
-  "@phoenix/globaltype/GameObject.IsDescendantOf": {
-    "documentation": "Returns whether or not the Object is a descendant (child or indirect child) of the given object"
-  },
-  "@phoenix/globaltype/GameObject.Name": {
-    "documentation": "The name of the Object, usually what was passed into `GameObject.new`"
-  },
-  "@phoenix/globaltype/GameObject.ObjectId": {
-    "documentation": "The ID of the Object, an integer. Remains the same throughout the session, but not guaranteed between sessions"
-  },
-  "@phoenix/globaltype/GameObject.OnTagAdded": {
-    "documentation": "Fires when the Object receives a new tag, passing the tag to the callback"
-  },
-  "@phoenix/globaltype/GameObject.OnTagRemoved": {
-    "documentation": "Fires when the Object loses a tag, passing the tag to the callback"
-  },
-  "@phoenix/globaltype/GameObject.OnTreeEnabledChanged": {
-    "documentation": "Fires when the value of `.TreeEnabled` changes"
-  },
-  "@phoenix/globaltype/GameObject.OnWorkspaceChanged": {
-    "documentation": "Fires when the Object moves between Workspaces"
-  },
-  "@phoenix/globaltype/GameObject.Parent": {
-    "documentation": "The hierarchal parent of the Object, or `nil` if it does not have one"
-  },
-  "@phoenix/globaltype/GameObject.RemoveComponent": {
-    "documentation": "Removes the specified Component from the Object. Will error if does not have it (use `:HasComponent` to check beforehand)"
-  },
-  "@phoenix/globaltype/GameObject.RemoveTag": {
-    "documentation": "Removes the given `Collections` tag from the Object. Has no effect if the Object does not have the tag"
-  },
-  "@phoenix/globaltype/GameObject.Serializes": {
-    "documentation": "Whether or not the Object should be saved with the scene if it is serialized with `AssetManager:SaveScene`, and whether `:Duplicate` will duplicate it (only applies to descendants)"
-  },
-  "@phoenix/globaltype/GameObject.TreeEnabled": {
-    "documentation": "Whether this object and all of its ancestors are enabled"
-  },
-  "@phoenix/globaltype/History.ActionHistorySize": {
-    "documentation": "The total number of Actions that have finished being recorded"
-  },
-  "@phoenix/globaltype/History.CanRedo": {
-    "documentation": "Whether `:Redo` will succeed"
-  },
-  "@phoenix/globaltype/History.CanUndo": {
-    "documentation": "Whether `:Undo` will succeed"
-  },
-  "@phoenix/globaltype/History.ClearHistory": {
-    "documentation": "Clears all recorded history"
-  },
-  "@phoenix/globaltype/History.CurrentActionName": {
-    "documentation": "The name of the Action currently being recorded, or `nil` if no recording is in progress"
-  },
-  "@phoenix/globaltype/History.CurrentWaypoint": {
-    "documentation": "The ID of the Action that was last finished"
-  },
-  "@phoenix/globaltype/History.DiscardAction": {
-    "documentation": "Discards the Action by its ID"
-  },
-  "@phoenix/globaltype/History.FinishAction": {
-    "documentation": "Finishes the Action by its ID. Only one Action may be active at a time"
-  },
-  "@phoenix/globaltype/History.GetActionData": {
-    "documentation": "Retrives information about a previously-recorded Action by its Index (Indexes, separate from IDs, are in the range 0 <= Index < `ActionHistorySize`)"
-  },
-  "@phoenix/globaltype/History.GetCannotRedoReason": {
-    "documentation": "Returns a message explaining why `.CanRedo` is `false`"
-  },
-  "@phoenix/globaltype/History.GetCannotUndoReason": {
-    "documentation": "Returns a message explaining why `.CanUndo` is `false`"
-  },
-  "@phoenix/globaltype/History.GetCurrentActionData": {
-    "documentation": "Retrieves information about the current Action being recorded"
-  },
-  "@phoenix/globaltype/History.IsRecordingAction": {
-    "documentation": "Whether an Action is currently being recorded by History"
-  },
-  "@phoenix/globaltype/History.RecordingEnabled": {
-    "documentation": "Whether events will be recorded"
-  },
-  "@phoenix/globaltype/History.Redo": {
-    "documentation": "Forwards the state of the scene to how it was before the last Undo. If `.CanRedo` is `false`, will throw an error"
-  },
-  "@phoenix/globaltype/History.TargetDataModel": {
-    "documentation": "The DataModel that History will track"
-  },
-  "@phoenix/globaltype/History.TryBeginAction": {
-    "documentation": "Attempts to begin an \"Action.\" Returns the ID of the action. May fail and return `nil`. Only one Action may be active at a time"
-  },
-  "@phoenix/globaltype/History.Undo": {
-    "documentation": "Reverses the state of the scene to how it was before the last Action began. If `.CanUndo` is `false`, will throw an error"
-  },
   "@phoenix/globaltype/InputEvent": {
     "documentation": "This is a union of `KeyInputEvent`, `MouseInputEvent`, and `ScrollInputEvent`"
-  },
-  "@phoenix/globaltype/Logging.OnMessaged": {
-    "documentation": "Fires whenever a Log Message is created"
-  },
-  "@phoenix/globaltype/Logging.Write": {
-    "documentation": "Log a message"
   },
   "@phoenix/globaltype/Matrix": {
     "documentation": "* A 4x4 transformation matrix\n* This datatype is not hash consed! Two separate value-identical matrices are not `rawequal` and will not behave as expected when used as table keys"
@@ -1810,33 +1349,6 @@
   "@phoenix/globaltype/Matrix.__sub": {
     "documentation": "* Subtract a `vector` from a Matrix to directly offset its position by world space\n"
   },
-  "@phoenix/globaltype/Mesh.CastsShadows": {
-    "documentation": "Whether it casts shadows"
-  },
-  "@phoenix/globaltype/Mesh.FaceCulling": {
-    "documentation": "Which faces of the mesh to cull based on viewing direction. See the `FaceCulling` enum"
-  },
-  "@phoenix/globaltype/Mesh.Material": {
-    "documentation": "The name of the `.mtl` in the `resources/materials/` directory it should use"
-  },
-  "@phoenix/globaltype/Mesh.MeshAsset": {
-    "documentation": "The path to the underlying `.hxmesh` file, or a built-in identifier like `!Quad` or `!Cube`"
-  },
-  "@phoenix/globaltype/Mesh.MetalnessFactor": {
-    "documentation": "Metalness modifier"
-  },
-  "@phoenix/globaltype/Mesh.RoughnessFactor": {
-    "documentation": "Roughness modifier"
-  },
-  "@phoenix/globaltype/Mesh.Tint": {
-    "documentation": "The Color it should be tinted with"
-  },
-  "@phoenix/globaltype/Mesh.Transparency": {
-    "documentation": "Its transparency/translucency"
-  },
-  "@phoenix/globaltype/Model.ImportPath": {
-    "documentation": "The original file a model was imported from"
-  },
   "@phoenix/globaltype/Mutex": {
     "documentation": "A mutex which can be fetched with an ID through `parallel.mutex`"
   },
@@ -1849,173 +1361,8 @@
   "@phoenix/globaltype/Mutex.Unlock": {
     "documentation": ""
   },
-  "@phoenix/globaltype/Network.MakeHttpRequestAsync": {
-    "documentation": "Makes an HTTP request to the provided URL. `Ok` will be false upon failure, and `Body` will contain the error message"
-  },
   "@phoenix/globaltype/NumberGradient": {
     "documentation": "Not implemented"
-  },
-  "@phoenix/globaltype/ParticleEmitter.Emitting": {
-    "documentation": "Whether the emitter should emit new particles"
-  },
-  "@phoenix/globaltype/ParticleEmitter.Image": {
-    "documentation": "The path to the image to use for the particles"
-  },
-  "@phoenix/globaltype/ParticleEmitter.Lifetime": {
-    "documentation": "The X and Y components act as a range of how long any particle can last, in seconds"
-  },
-  "@phoenix/globaltype/ParticleEmitter.LinearlySmoothened": {
-    "documentation": "Whether the particle image is smoothened"
-  },
-  "@phoenix/globaltype/ParticleEmitter.ParticlesAreAttached": {
-    "documentation": "Whether the particles are attached to and move with the emitter"
-  },
-  "@phoenix/globaltype/ParticleEmitter.Rate": {
-    "documentation": "An integer indicating how many particles should be emitted per second (must be above or equal to `0`)"
-  },
-  "@phoenix/globaltype/Physics.DebugCollisionAabbs": {
-    "documentation": "Whether physics collision AABBs are rendered"
-  },
-  "@phoenix/globaltype/Physics.DebugContactPoints": {
-    "documentation": "Whether Contact Points are rendered"
-  },
-  "@phoenix/globaltype/Physics.DebugSpatialHeat": {
-    "documentation": "Whether Spatial Heat (spatial hash density) debug rendering is enabled"
-  },
-  "@phoenix/globaltype/Physics.Gravity": {
-    "documentation": "The gravitational field strength"
-  },
-  "@phoenix/globaltype/Physics.SetSimulationForcePaused": {
-    "documentation": "If passed `true`, forces the simulation to be paused, regardless of the value of `.Simulating`"
-  },
-  "@phoenix/globaltype/Physics.Simulating": {
-    "documentation": "Whether the Physics simulation is running. IMPORTANT: The Editor sets this value to `true` and `false` when starting/stopping playtests"
-  },
-  "@phoenix/globaltype/Physics.Timescale": {
-    "documentation": "Slow-down or speed-up the simulation by changing this value from `1`"
-  },
-  "@phoenix/globaltype/PlayerInput.Cursor": {
-    "documentation": "The look of the cursor. See `Enum.Cursor`. Setting this property is *slow* as it needs to poll the OS, avoid placing it in hot loops"
-  },
-  "@phoenix/globaltype/PlayerInput.CursorMode": {
-    "documentation": "The current mode/behaviour of the cursor. Refer to the `Enum.CursorMode` enumeration"
-  },
-  "@phoenix/globaltype/PlayerInput.GetCursorPosition": {
-    "documentation": "Returns the current position of the mouse cursor relative to the window as a `vector`"
-  },
-  "@phoenix/globaltype/PlayerInput.GetViewportInputRect": {
-    "documentation": "Gets the input rectangle area, returning its position and size"
-  },
-  "@phoenix/globaltype/PlayerInput.IsKeyPressed": {
-    "documentation": "Returns whether the specified key (e.g. `Enum.Key.A`, `Enum.Key.One`) is currently being pressed"
-  },
-  "@phoenix/globaltype/PlayerInput.IsKeyboardSunk": {
-    "documentation": "Whether the Engine is currently using keyboard input (such as for Dear ImGui). Do not process keyboard input if this is `true`"
-  },
-  "@phoenix/globaltype/PlayerInput.IsMouseButtonPressed": {
-    "documentation": "Returns whether the specified mouse button (`Enum.MouseButton.Left/Middle/Right`) is currently being pressed"
-  },
-  "@phoenix/globaltype/PlayerInput.IsMouseSunk": {
-    "documentation": "Whether the Engine is currently using mouse input (such as for Dear ImGui). Do not process mouse input if this is `true`"
-  },
-  "@phoenix/globaltype/PlayerInput.KeyEvent": {
-    "documentation": "Fires whenever a key-related event occurs"
-  },
-  "@phoenix/globaltype/PlayerInput.MouseButtonEvent": {
-    "documentation": "Fires whenever a mouse-button-related event occurs"
-  },
-  "@phoenix/globaltype/PlayerInput.ResetViewportInputRect": {
-    "documentation": "Resets the Engine's understanding of where the viewport is on screen back to the default (occupying the entire window)"
-  },
-  "@phoenix/globaltype/PlayerInput.ScrollEvent": {
-    "documentation": "Fires whenever the player scrolls with a scroll device (such as the mouse wheel)"
-  },
-  "@phoenix/globaltype/PlayerInput.SetViewportInputRect": {
-    "documentation": "Configures the Engine to act as through the Viewport is at the given position with the given size. Does *not* change where the viewport is actually rendered"
-  },
-  "@phoenix/globaltype/PointLight.Brightness": {
-    "documentation": "How bright the Light is"
-  },
-  "@phoenix/globaltype/PointLight.LightColor": {
-    "documentation": "The color of the Light"
-  },
-  "@phoenix/globaltype/PointLight.Range": {
-    "documentation": "How far light is emitted. If `>= 0`, the Range is used and attenuation is linear, otherwise it uses the formula `F = 1/D^2 * B` to mirror real-world attenuation, where `F` is the final brightness, `D` is the distance of a point from the Light, and `B` is the `Brightness` property's value"
-  },
-  "@phoenix/globaltype/Renderer.DebugWireframeRendering": {
-    "documentation": "Whether the Wireframe rendering debug mode is enabled"
-  },
-  "@phoenix/globaltype/Renderer.IsFullscreen": {
-    "documentation": "Whether the Window is currently fullscreened"
-  },
-  "@phoenix/globaltype/Renderer.Resolution": {
-    "documentation": "The size of the window, in pixels"
-  },
-  "@phoenix/globaltype/Renderer.SetShaderTextureVariable": {
-    "documentation": "Sets a variable in a shader program to a 2D texture sampler for the provided image. The program will be loaded if it is not already in memory"
-  },
-  "@phoenix/globaltype/Renderer.SetShaderVariable": {
-    "documentation": "Sets a variable in a shader program (qualified `uniform`). The program will be loaded if it is not already in memory. `Type` is required when passing a `vector`, to differentiate between `Vector2` and `Vector3`. See `Enum.ValueType`"
-  },
-  "@phoenix/globaltype/Renderer.VSync": {
-    "documentation": "Whether Vertical Synchronization is enabled"
-  },
-  "@phoenix/globaltype/RigidBody.AngularVelocity": {
-    "documentation": "Its rotational velocity"
-  },
-  "@phoenix/globaltype/RigidBody.CollisionType": {
-    "documentation": "Determines how collisions are detected. See the `CollisionType` enum"
-  },
-  "@phoenix/globaltype/RigidBody.Density": {
-    "documentation": "Its density (`Mass = Density * Size`)"
-  },
-  "@phoenix/globaltype/RigidBody.Friction": {
-    "documentation": "Fraction of Velocity it should lose per second while in contact with another object while `PhysicsDynamics` is `true`"
-  },
-  "@phoenix/globaltype/RigidBody.GravityFactor": {
-    "documentation": "Influence of the force of gravity"
-  },
-  "@phoenix/globaltype/RigidBody.HullsFile": {
-    "documentation": "The file containing a set of convex hull meshes to load. Used for when `.CollisionType` is `Hulls`"
-  },
-  "@phoenix/globaltype/RigidBody.LinearVelocity": {
-    "documentation": "Its velocity"
-  },
-  "@phoenix/globaltype/RigidBody.PhysicsCollisions": {
-    "documentation": "Whether other physics objects can collide with it"
-  },
-  "@phoenix/globaltype/RigidBody.PhysicsDynamics": {
-    "documentation": "Whether the Physics engine should apply forces to it"
-  },
-  "@phoenix/globaltype/RigidBody.PhysicsRotations": {
-    "documentation": "Whether the Physics engine will apply angular impulses to rotate the object on collisions. Prefer to keep this at `false` as the simulation is not very precise"
-  },
-  "@phoenix/globaltype/RigidBody.Restitution": {
-    "documentation": "Restitution"
-  },
-  "@phoenix/globaltype/ScriptEngine.BreakpointMoved": {
-    "documentation": "Fires when a breakpoint queued by `:SetScriptBreakpoint` is applied to a different line number than originally requested"
-  },
-  "@phoenix/globaltype/ScriptEngine.CloseVM": {
-    "documentation": "Closes the specified Luau VM, releasing its resources"
-  },
-  "@phoenix/globaltype/ScriptEngine.CompileToBytecode": {
-    "documentation": "Compiles the given Luau source code to Luau bytecode. `OptimizationLevel` and `DebugLevel` may be `0`-`2`, or `-1` for default"
-  },
-  "@phoenix/globaltype/ScriptEngine.CreateVM": {
-    "documentation": "Creates a new Luau VM with the given name. The `workspace` and `game` globals of the VM are taken from the currently-bound DataModel"
-  },
-  "@phoenix/globaltype/ScriptEngine.DetachDebuggerFromVM": {
-    "documentation": "Detaches the Developer-mode exclusive debugger from a VM, if it is attached. No effect otherwise"
-  },
-  "@phoenix/globaltype/ScriptEngine.RunInVM": {
-    "documentation": "Runs the given code in the specified VM. Returns `false` and an error message upon failure or if the code does not finish executing (yield or break)"
-  },
-  "@phoenix/globaltype/ScriptEngine.SetScriptBreakpoint": {
-    "documentation": "Sets the breakpoint for a given script, returning the line number it was applied to. If the script has not loaded yet, it will queue the breakpoint and return the requested line number. The line number may be different than what was requested. Changes for queued breakpoints are signaled by `.BreakpointMoved`"
-  },
-  "@phoenix/globaltype/ScriptEngine.SetVMAllowedExecutionTime": {
-    "documentation": "Sets how long script coroutines are allowed to run for, in seconds, before yielding. Scripts that overrun this duration will error"
   },
   "@phoenix/globaltype/SharedBuffer": {
     "documentation": "A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`"
@@ -2029,121 +1376,7 @@
   "@phoenix/globaltype/SharedBuffer.Size": {
     "documentation": "* Size of the buffer, in bytes\n"
   },
-  "@phoenix/globaltype/Sound.FinishedLoading": {
-    "documentation": "Whether the Sound has finished loading the `SoundFile`"
-  },
-  "@phoenix/globaltype/Sound.Length": {
-    "documentation": "The length of the sound in seconds"
-  },
-  "@phoenix/globaltype/Sound.LoadSucceeded": {
-    "documentation": "Whether or not the sound loaded successfully"
-  },
-  "@phoenix/globaltype/Sound.Looped": {
-    "documentation": "Whether playback should loop once it reaches the end"
-  },
-  "@phoenix/globaltype/Sound.Play": {
-    "documentation": "Play the Sound from the beginning"
-  },
-  "@phoenix/globaltype/Sound.Playing": {
-    "documentation": "Whether the Sound is currently playing (or requested to play, if `.Playing` is set to `true` by a `Script` before it has finished loading)"
-  },
-  "@phoenix/globaltype/Sound.SoundFile": {
-    "documentation": "The sound file to be played"
-  },
-  "@phoenix/globaltype/Sound.Speed": {
-    "documentation": "The speed at which the sound plays, within the range of 0.01 to 100"
-  },
-  "@phoenix/globaltype/Sound.TimePosition": {
-    "documentation": "The playback position of playback in number of seconds from the beginning of the file"
-  },
-  "@phoenix/globaltype/Sound.Volume": {
-    "documentation": "The volume at which the sound plays. Must be positive"
-  },
-  "@phoenix/globaltype/SpotLight.Angle": {
-    "documentation": "The Field-of-View (in radians) of light emission"
-  },
-  "@phoenix/globaltype/SpotLight.Brightness": {
-    "documentation": "How bright the Light is"
-  },
-  "@phoenix/globaltype/SpotLight.LightColor": {
-    "documentation": "The color of the Light"
-  },
-  "@phoenix/globaltype/SpotLight.Range": {
-    "documentation": "How far light is emitted"
-  },
-  "@phoenix/globaltype/Transform.LocalTransform": {
-    "documentation": "The Object's transformation, relative to its parent Transform ancestor or the world origin"
-  },
-  "@phoenix/globaltype/Transform.OnScriptMoved": {
-    "documentation": "Fires when a script moves the object"
-  },
-  "@phoenix/globaltype/Transform.Transform": {
-    "documentation": "The Object's world-space transformation"
-  },
-  "@phoenix/globaltype/UIButton.ClickChanged": {
-    "documentation": "Fires when the button click state changes"
-  },
-  "@phoenix/globaltype/UIButton.HoverChanged": {
-    "documentation": "Fires when the button hover state changes"
-  },
-  "@phoenix/globaltype/UIButton.IsClicking": {
-    "documentation": "Whether the cursor is currently holding the button down"
-  },
-  "@phoenix/globaltype/UIButton.IsHovering": {
-    "documentation": "Whether the cursor is currently hovering over the button"
-  },
-  "@phoenix/globaltype/UIFrame.BackgroundColor": {
-    "documentation": "The color of the frame"
-  },
-  "@phoenix/globaltype/UIFrame.BackgroundTransparency": {
-    "documentation": "Its transparency"
-  },
-  "@phoenix/globaltype/UIImage.Image": {
-    "documentation": "The path to the image"
-  },
-  "@phoenix/globaltype/UIImage.ImageTint": {
-    "documentation": "The color the image is tinted with"
-  },
-  "@phoenix/globaltype/UIImage.ImageTransparency": {
-    "documentation": "Its transparency"
-  },
-  "@phoenix/globaltype/UIText.Text": {
-    "documentation": "The text string to be displayed"
-  },
-  "@phoenix/globaltype/UIText.TextColor": {
-    "documentation": "The color of the text"
-  },
-  "@phoenix/globaltype/UIText.TextTransparency": {
-    "documentation": "The transparency of the text"
-  },
-  "@phoenix/globaltype/UITransform.Position": {
-    "documentation": "The 2D position, from `0`-`1`"
-  },
-  "@phoenix/globaltype/UITransform.Rotation": {
-    "documentation": "The 2D rotation (not functional)"
-  },
-  "@phoenix/globaltype/UITransform.Size": {
-    "documentation": "The 2D scale, from `0`-`1`"
-  },
-  "@phoenix/globaltype/UITransform.ZIndex": {
-    "documentation": "The ordering indexing, higher being further in front (not functional)"
-  },
   "@phoenix/globaltype/VectorGradient": {
     "documentation": "Not implemented"
-  },
-  "@phoenix/globaltype/Workspace.GetObjectsInAabb": {
-    "documentation": "Get a list of Objects whose bounds are within the AABB"
-  },
-  "@phoenix/globaltype/Workspace.Raycast": {
-    "documentation": "Cast a ray. This currently treats collisions as Axis-Aligned Bounding Boxes!"
-  },
-  "@phoenix/globaltype/Workspace.SceneCamera": {
-    "documentation": "The `Camera` the Player sees the world through. If set to `nil`, a *fallback* is created at the origin"
-  },
-  "@phoenix/globaltype/Workspace.ScreenPointToVector": {
-    "documentation": "Converts the provided screen coordinates to a world-space direction. `Length` is optional and `1.0` by default"
-  },
-  "@phoenix/globaltype/Workspace.WorldToScreenPoint": {
-    "documentation": "Converts the provided world coordinate (`vector`) into its location in screen-space pixel coordinates, additionally returning the depth"
   }
 }

@@ -101,62 +101,9 @@ end
 declare extern type EnumItem with
 end
 
-type function findComponentsFromUnionRecursive(un: type): { type }
-    -- TODO luau
-    if not Components then
-        return {}
-    end
-
-    local results = {}
-
-    for _, t in un:components() do
-        if t:is("union") then
-            for _, inner in findComponentsFromUnionRecursive(t) do
-                table.insert(results, inner)
-            end
-        else
-            local found = false
-
-            -- Note: can't do direct index check because types won't be rawequal
-            for i, c in Components:properties() do
-                if i:value() == t:value() then
-                    table.insert(results, c.read)
-                    found = true
-                    break
-                end
-            end
-
-            if not found and t:value() ~= "" then
-                error(`Invalid component '{t:value()}'`)
-            end
-        end
-    end
-
-    return results
-end
-
-type function IntersectComponents(ty: type)
-    if ty:is("singleton") then
-        for i, c in Components:properties() do
-            if i:value() == ty:value() then
-                return c.read
-            end
-        end
-
-        error(`invalid component '{ty:value()}'`)
-
-    elseif ty:is("union") then
-        local results = findComponentsFromUnionRecursive(ty)
-
-        return types.intersectionof(table.unpack(results))
-    end
-
-    error(`expected singleton or union, got {ty.tag}`)
-    return types.never
-end
-
 declare function ______leakgenericshack<T>(_: T): T
 
+--[[
 export type HistoryEvent = {
     Type: "Component",
     Action: "Add" | "Remove",
@@ -198,6 +145,7 @@ declare plugin: {
     ProjectDatamodel: GameObject & EcDataModel,
     ProjectWorkspace: GameObject & EcWorkspace,
 }?
+]]--
 
 export type DebugBreakpointInfo = {
     Enabled: boolean,
@@ -212,24 +160,6 @@ declare extern type ComponentDefinition with
 end
 
 -- Finish intro --
-
-type Services = {
-  Engine: EcEngine,
-  PlayerInput: EcPlayerInput,
-  AssetManager: EcAssetManager,
-  History: EcHistory,
-  Physics: EcPhysics,
-  Renderer: EcRenderer,
-  Collections: EcCollections,
-  Network: EcNetwork,
-  Logging: EcLogging,
-  Interface: EcInterface,
-  Environment: EcEnvironment,
-  DeveloperTools: EcDeveloperTools,
-  ScriptEngine: EcScriptEngine,
-  Workspace: EcWorkspace,
-}
-
 declare extern type AtomicInteger with
   function Get(self): ( number )
   function Set(self, Value: number): (  )
@@ -259,21 +189,6 @@ declare extern type EventConnection with
 end
 
 
-
-declare GameObject: {
-    --- Clears all previously defined component data
-    read clearAllComponentDefinitions: () -> (),
-    --- Defines a custom component
-    ---
-    --- Throws an error if one with this name was already defined
-    read component: <C>({ read Name: string }) -> ComponentDefinition & C,
-    --- Creates a new Object based on the specified Component, adding additional Components to make it more complete (such as `Mesh` receiving `Mesh`, `RigidBody` and `Transform` to make it fully functional)
-    read fromTemplate: (<T>(MainComponent: T & keyof<Creatables>) -> GameObject & index<Creatables, T>),
-    --- Creates an Object with only the specified Components, or a blank Object if no table is given
-    read new: (<T, C>(Components: { read T | "" }, Custom: { read [C & ComponentDefinition]: C }?) -> GameObject & IntersectComponents<T> & C) & () -> GameObject,
-    --- A list of all valid component names which can be passed into `.new`
-    read validComponents: { string }
-}
 declare extern type InputEvent with
 end
 
@@ -344,459 +259,13 @@ end
 
 
 
-export type GameObject = {
-  Enabled: boolean,
-  Name: string,
-  read ObjectId: number,
-  Parent: GameObject?,
-  Serializes: boolean,
-  read TreeEnabled: boolean,
-
-  AddComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
-  AddTag: (self: GameObject, Tag: string) -> (),
-  AsComponent: <T>(self: GameObject, Component: T & keyof<Components>) -> (GameObject & index<Components, T>)?,
-  Destroy: (self: GameObject) -> (),
-  Duplicate: <T>(self: GameObject & T) -> GameObject & T,
-  FindChild: (self: GameObject, ChildName: string) -> (GameObject?),
-  FindChildWithComponent: <T>(self: GameObject, T & keyof<Components>) -> GameObject & index<Components, T>,
-  GetChildren: (self: GameObject) -> { GameObject },
-  GetComponents: (self: GameObject) -> { keyof<Creatables> },
-  GetDescendants: (self: GameObject) -> { GameObject },
-  GetFullName: (self: GameObject) -> (string),
-  GetTags: (self: GameObject) -> { string },
-  HasComponent: (self: GameObject, Component: keyof<Creatables>) -> boolean,
-  HasTag: (self: GameObject, Tag: string) -> (boolean),
-  IsDescendantOf: (self: GameObject, Ancestor: GameObject) -> (boolean),
-  RemoveComponent: (self: GameObject, Component: keyof<Creatables>) -> (),
-  RemoveTag: (self: GameObject, Tag: string) -> (),
-
-  OnTagAdded: EventSignal<(Tag: string) -> (), string>,
-  OnTagRemoved: EventSignal<(Tag: string) -> (), string>,
-  OnTreeEnabledChanged: EventSignal<(TreeEnabled: boolean) -> (), boolean>,
-  OnWorkspaceChanged: EventSignal<(Previous: GameObject, Current: GameObject) -> (), GameObject, GameObject>,
-}
-
-export type EcAnimation = {
-  Animation: string,
-  Looped: boolean,
-  Playing: boolean,
-  Time: number,
-  Weight: number,
-}
-
-export type EcAnimator = {
-  Animating: boolean,
-}
-
-export type EcAssetManager = {
-
-  GetMeshData: (self: EcAssetManager, Id: string) -> MeshAssetData,
-  ImportModel: (self: EcAssetManager, Path: string) -> GameObject & EcModel & EcTransform,
-  LoadScene: (self: EcAssetManager, Path: string) -> ({ GameObject }?, string),
-  QueueLoadTexture: (self: EcAssetManager, Path: string, LoadInLinearSpace: boolean?) -> (),
-  SaveMesh: (self: EcAssetManager, Id: string, Path: string) -> (),
-  SaveScene: (self: EcAssetManager, RootNodes: { GameObject }, Path: string) -> (boolean, string?),
-  SetMeshData: (self: EcAssetManager, Id: string, MeshData: MeshAssetData | buffer) -> (),
-  UnloadMaterial: (self: EcAssetManager, Material: string) -> (),
-  UnloadMesh: (self: EcAssetManager, Mesh: string) -> (),
-  UnloadTexture: (self: EcAssetManager, Texture: string) -> (),
-}
-
-export type EcBone = {
-  read IsActive: boolean,
-  read SkeletalBoneId: number,
-  read TargetMesh: GameObject,
-  Transform: Matrix,
-}
-
-export type EcCamera = {
-  FieldOfView: number,
-  UseSimpleController: boolean,
-}
-
-export type EcCollections = {
-
-  GetCollections: (self: EcCollections) -> { string },
-  GetComponentCreatedSignal: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject & index<Components, T>) -> (), GameObject & index<Components, T>>,
-  GetComponentDeletedSignal: (self: EcCollections, Component: keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> EventSignal<(Object: GameObject) -> (), GameObject>,
-  GetObjectsWithComponent: <T>(self: EcCollections, Component: T & keyof<Components>, DataModel: (GameObject & EcDataModel)?) -> GameObject & index<Components, T>,
-  GetTagAddedSignal: (self: EcCollections, Tag: string) -> EventSignal<(Object: GameObject) -> (), GameObject>,
-  GetTagRemovedSignal: (self: EcCollections, Tag: string) -> EventSignal<(Object: GameObject) -> (), GameObject>,
-  GetTagged: (self: EcCollections, Tag: string) -> { GameObject },
-  Query: <C>(self: EcCollections, { read ComponentDefinition & C }) -> { GameObject & C },
-}
-
-export type EcDataModel = {
-  read AreScriptsBound: boolean,
-  LiveScripts: string,
-  read Time: number,
-  VM: string,
-
-  BindToClose: (self: EcDataModel, Callback: () -> ()) -> (),
-  Close: (self: EcDataModel, ExitCode: number?) -> (),
-  GetService: <T>(self: EcDataModel, Service: keyof<Services> & T) -> GameObject & index<Services, T>,
-
-  Closing: EventSignal<() -> (), ()>,
-  OnFrameBegin: EventSignal<(DeltaTime: number) -> (), number>,
-}
-
-export type EcDeveloperTools = {
-  DocumentationShown: boolean,
-  ExplorerShown: boolean,
-  InfoShown: boolean,
-  read Initialized: boolean,
-  MaterialsShown: boolean,
-  PropertiesShown: boolean,
-  RendererShown: boolean,
-  ScriptsShown: boolean,
-  SettingsShown: boolean,
-  ShadersShown: boolean,
-
-  CloseTextDocuments: (self: EcDeveloperTools) -> (),
-  GetDocumentBreakpoints: (self: EcDeveloperTools, File: string) -> { DebugBreakpointInfo },
-  GetExplorerSelections: (self: EcDeveloperTools) -> { GameObject },
-  GetOpenTextDocuments: (self: EcDeveloperTools) -> { string },
-  GetToolNames: (self: EcDeveloperTools) -> { string },
-  Initialize: (self: EcDeveloperTools) -> (),
-  IsToolEnabled: (self: EcDeveloperTools, ToolName: string) -> (boolean),
-  OpenTextDocument: (self: EcDeveloperTools, Path: string, Line: number?, TakeFocus: boolean?) -> (),
-  SaveTextDocuments: (self: EcDeveloperTools) -> (),
-  SetDocumentBreakpoints: (self: EcDeveloperTools, File: string, Breakpoints: { read DebugBreakpointInfo }) -> (),
-  SetExplorerRoot: (self: EcDeveloperTools, Root: GameObject) -> (),
-  SetExplorerSelections: (self: EcDeveloperTools, Selections: { GameObject }) -> (),
-  SetToolEnabled: (self: EcDeveloperTools, ToolName: string, Enabled: boolean) -> (),
-
-  BreakpointRemoved: EventSignal<(File: string, Line: number) -> (), string, number>,
-  BreakpointUpdated: EventSignal<(File: string, Breakpoint: DebugBreakpointInfo) -> (), string, DebugBreakpointInfo>,
-  DebuggerRequestedStop: EventSignal<() -> (), ()>,
-}
-
-export type EcDirectionalLight = {
-  Brightness: number,
-  Direction: vector,
-  LightColor: Color,
-  ShadowViewDistance: number,
-  ShadowViewFarPlane: number,
-  ShadowViewMoveWithCamera: boolean,
-  ShadowViewNearPlane: number,
-  ShadowViewOffset: vector,
-  ShadowViewSize: number,
-  ShadowViewSizeH: number,
-  ShadowViewSizeV: number,
-  Shadows: boolean,
-}
-
-export type EcEngine = {
-  read CommitHash: string,
-  read CommitTag: string,
-  read Framerate: number,
-  FramerateCap: number,
-  read IsHeadless: boolean,
-  read TargetPlatform: string,
-  read Version: string,
-
-  BindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel, State: { read Rendered: boolean, read Simulated: boolean }) -> (),
-  GetCliArguments: (self: EcEngine) -> { string },
-  GetConfigValue: (self: EcEngine, Key: string) -> JsonDecodable,
-  SetForegroundDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
-  SetWindowTitle: (self: EcEngine, Title: string) -> (),
-  ShowMessageBox: (self: EcEngine, Title: string, Message: string, Buttons: 'ok' | 'okcancel' | 'yesno' | 'yesnocancel' | nil, Icon: 'info' | 'warning' | 'error' | 'question' | nil, DefaultButton: number?) -> number,
-  UnbindDataModel: (self: EcEngine, DataModel: GameObject & EcDataModel) -> (),
-}
-
-export type EcEnvironment = {
-  AmbientLight: Color,
-  BloomEnabled: boolean,
-  BloomScale: number,
-  BloomStdDeviation: number,
-  BloomThreshold: number,
-  Fog: boolean,
-  FogColor: Color,
-  GammaCorrection: number,
-  PostProcess: boolean,
-  Skybox: string,
-}
-
-export type EcHistory = {
-  read ActionHistorySize: number,
-  read CanRedo: boolean,
-  read CanUndo: boolean,
-  read CurrentActionName: string?,
-  read CurrentWaypoint: number,
-  read IsRecordingAction: boolean,
-  RecordingEnabled: boolean,
-  TargetDataModel: GameObject,
-
-  ClearHistory: (self: EcHistory) -> (),
-  DiscardAction: (self: EcHistory, Id: number) -> (),
-  FinishAction: (self: EcHistory, Id: number) -> (),
-  GetActionData: (self: EcHistory, Index: number) -> HistoryAction,
-  GetCannotRedoReason: (self: EcHistory) -> (string),
-  GetCannotUndoReason: (self: EcHistory) -> (string),
-  GetCurrentActionData: (self: EcHistory) -> HistoryAction?,
-  Redo: (self: EcHistory) -> (),
-  TryBeginAction: (self: EcHistory, Name: string) -> (number?),
-  Undo: (self: EcHistory) -> (),
-}
-
-export type EcInterface = {
-}
-
-export type EcLogging = {
-
-  Write: (self: EcLogging, Message: string, Type: EnumLogType, ExtraTags: string?) -> (),
-
-  OnMessaged: EventSignal<(Time: number, Type: EnumLogType, Message: string, ExtraTags: string, Values: { LoggingLogValue }) -> (), number, EnumLogType, string, string, { LoggingLogValue }>,
-}
-
-export type EcLuauData = {
-}
-
-export type EcMesh = {
-  CastsShadows: boolean,
-  FaceCulling: EnumFaceCulling,
-  Material: string,
-  MeshAsset: string,
-  MetalnessFactor: number,
-  RoughnessFactor: number,
-  Tint: Color,
-  Transparency: number,
-}
-
-export type EcModel = {
-  ImportPath: string,
-}
-
-export type EcNetwork = {
-
-  MakeHttpRequestAsync: (self: EcNetwork, { Url: string, Method: nil | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'PATCH', Headers: { [string]: string }?, Body: string? }) -> { Ok: boolean, Status: number, Headers: { [string]: string }, Body: string },
-}
-
-export type EcParticleEmitter = {
-  Emitting: boolean,
-  Image: string,
-  Lifetime: vector,
-  LinearlySmoothened: boolean,
-  ParticlesAreAttached: boolean,
-  Rate: number,
-}
-
-export type EcPhysics = {
-  DebugCollisionAabbs: boolean,
-  DebugContactPoints: boolean,
-  DebugSpatialHeat: boolean,
-  Gravity: vector,
-  Simulating: boolean,
-  Timescale: number,
-
-  SetSimulationForcePaused: (self: EcPhysics, Paused: boolean) -> (),
-}
-
-export type EcPlayerInput = {
-  Cursor: EnumCursor,
-  CursorMode: EnumCursorMode,
-  read IsKeyboardSunk: boolean,
-  read IsMouseSunk: boolean,
-
-  GetCursorPosition: (self: EcPlayerInput) -> (vector),
-  GetViewportInputRect: (self: EcPlayerInput) -> (vector, vector),
-  IsKeyPressed: (self: EcPlayerInput, Key: EnumKey) -> boolean,
-  IsMouseButtonPressed: (self: EcPlayerInput, Button: EnumMouseButton) -> boolean,
-  ResetViewportInputRect: (self: EcPlayerInput) -> (),
-  SetViewportInputRect: (self: EcPlayerInput, Position: vector, Size: vector) -> (),
-
-  KeyEvent: EventSignal<(Event: KeyInputEvent) -> (), KeyInputEvent>,
-  MouseButtonEvent: EventSignal<(Event: MouseButtonInputEvent) -> (), MouseButtonInputEvent>,
-  ScrollEvent: EventSignal<(Event: ScrollInputEvent) -> (), ScrollInputEvent>,
-}
-
-export type EcPointLight = {
-  Brightness: number,
-  LightColor: Color,
-  Range: number,
-}
-
-export type EcRenderer = {
-  DebugWireframeRendering: boolean,
-  IsFullscreen: boolean,
-  Resolution: vector,
-  VSync: boolean,
-
-  SetShaderTextureVariable: (self: EcRenderer, Shader: string, Variable: string, TexturePath: string, InLinearColorSpace: boolean) -> (),
-  SetShaderVariable: ((self: EcRenderer, Shader: string, Variable: string, Value: boolean | number | Color | Matrix, Type: EnumValueType?) -> ()) & ((_: EcRenderer, Shader: string, Variable: string, Value: vector, Type: EnumValueType) -> ()),
-}
-
-export type EcRigidBody = {
-  AngularVelocity: vector,
-  CollisionType: EnumCollisionType,
-  Density: number,
-  Friction: number,
-  GravityFactor: number,
-  HullsFile: string,
-  LinearVelocity: vector,
-  PhysicsCollisions: boolean,
-  PhysicsDynamics: boolean,
-  PhysicsRotations: boolean,
-  Restitution: number,
-}
-
-export type EcScriptEngine = {
-
-  CloseVM: (self: EcScriptEngine, VmName: string) -> (),
-  CompileToBytecode: (self: EcScriptEngine, Source: string, OptimizationLevel: number?, DebugLevel: number?) -> (buffer),
-  CreateVM: (self: EcScriptEngine, VmName: string) -> (),
-  DetachDebuggerFromVM: (self: EcScriptEngine, VM: string) -> (),
-  RunInVM: (self: EcScriptEngine, VmName: string, Code: string, ChunkName: string) -> (boolean, string?),
-  SetScriptBreakpoint: (self: EcScriptEngine, VM: string, ScriptPath: string, Line: number, Enabled: boolean) -> number,
-  SetVMAllowedExecutionTime: (self: EcScriptEngine, VmName: string, Length: number) -> (),
-
-  BreakpointMoved: EventSignal<(File: string, RequestedLine: number, ActualLine: number) -> (), string, number, number>,
-}
-
-export type EcSound = {
-  read FinishedLoading: boolean,
-  read Length: number,
-  read LoadSucceeded: boolean,
-  Looped: boolean,
-  Playing: boolean,
-  SoundFile: string,
-  Speed: number,
-  TimePosition: number,
-  Volume: number,
-
-  Play: (self: EcSound) -> (),
-}
-
-export type EcSpotLight = {
-  Angle: number,
-  Brightness: number,
-  LightColor: Color,
-  Range: number,
-}
-
-export type EcTransform = {
-  LocalTransform: Matrix,
-  Transform: Matrix,
-
-  OnScriptMoved: EventSignal<(Previous: Matrix, Current: Matrix) -> (), Matrix, Matrix>,
-}
-
-export type EcUIButton = {
-  IsClicking: boolean,
-  IsHovering: boolean,
-
-  ClickChanged: EventSignal<(IsHolding: boolean) -> (), boolean>,
-  HoverChanged: EventSignal<(IsHovering: boolean) -> (), boolean>,
-}
-
-export type EcUIFrame = {
-  BackgroundColor: Color,
-  BackgroundTransparency: number,
-}
-
-export type EcUIImage = {
-  Image: string,
-  ImageTint: Color,
-  ImageTransparency: number,
-}
-
-export type EcUIText = {
-  Text: string,
-  TextColor: Color,
-  TextTransparency: number,
-}
-
-export type EcUITransform = {
-  Position: vector,
-  Rotation: number,
-  Size: vector,
-  ZIndex: number,
-}
-
-export type EcWorkspace = {
-  SceneCamera: GameObject & EcCamera & EcTransform,
-
-  GetObjectsInAabb: (self: EcWorkspace, Position: vector, Size: vector, IgnoreList: { GameObject }?) -> { GameObject & EcRigidBody & EcTransform },
-  Raycast: (self: EcWorkspace, Origin: vector, CastVector: vector, FilterList: { GameObject }?, FilterIsIgnoreList: boolean?) -> { Object: GameObject & EcRigidBody & EcTransform, Position: vector, Normal: vector }?,
-  ScreenPointToVector: (self: EcWorkspace, ScreenPoint: vector, Length: number?) -> (vector),
-  WorldToScreenPoint: (self: EcWorkspace, WorldPoint: vector) -> (vector, number),
-}
 
 
 
 
-type Components = {
-  Transform: EcTransform,
-  Mesh: EcMesh,
-  ParticleEmitter: EcParticleEmitter,
-  Sound: EcSound,
-  Workspace: EcWorkspace,
-  DataModel: EcDataModel,
-  PointLight: EcPointLight,
-  DirectionalLight: EcDirectionalLight,
-  SpotLight: EcSpotLight,
-  Camera: EcCamera,
-  Model: EcModel,
-  Bone: EcBone,
-  Engine: EcEngine,
-  PlayerInput: EcPlayerInput,
-  AssetManager: EcAssetManager,
-  History: EcHistory,
-  RigidBody: EcRigidBody,
-  Physics: EcPhysics,
-  Renderer: EcRenderer,
-  Collections: EcCollections,
-  Network: EcNetwork,
-  Logging: EcLogging,
-  Interface: EcInterface,
-  UITransform: EcUITransform,
-  UIFrame: EcUIFrame,
-  UIImage: EcUIImage,
-  UIText: EcUIText,
-  UIButton: EcUIButton,
-  Environment: EcEnvironment,
-  DeveloperTools: EcDeveloperTools,
-  Animator: EcAnimator,
-  Animation: EcAnimation,
-  ScriptEngine: EcScriptEngine,
-  LuauData: EcLuauData,
-}
-type Creatables = {
-  Transform: EcTransform,
-  Mesh: EcMesh & EcRigidBody & EcTransform,
-  ParticleEmitter: EcParticleEmitter & EcTransform,
-  Sound: EcSound,
-  Workspace: EcWorkspace,
-  DataModel: EcDataModel,
-  PointLight: EcPointLight & EcTransform,
-  DirectionalLight: EcDirectionalLight,
-  SpotLight: EcSpotLight & EcTransform,
-  Camera: EcCamera & EcTransform,
-  Model: EcModel & EcTransform,
-  Bone: EcBone,
-  Engine: EcEngine,
-  PlayerInput: EcPlayerInput,
-  AssetManager: EcAssetManager,
-  History: EcHistory,
-  RigidBody: EcRigidBody & EcTransform,
-  Physics: EcPhysics,
-  Renderer: EcRenderer,
-  Collections: EcCollections,
-  Network: EcNetwork,
-  Logging: EcLogging,
-  Interface: EcInterface,
-  UITransform: EcUITransform,
-  UIFrame: EcUIFrame,
-  UIImage: EcUIImage,
-  UIText: EcUIText,
-  UIButton: EcUIButton,
-  Environment: EcEnvironment,
-  DeveloperTools: EcDeveloperTools,
-  Animator: EcAnimator,
-  Animation: EcAnimation,
-  ScriptEngine: EcScriptEngine,
-  LuauData: EcLuauData,
-}
+
+
+
 
 
 
@@ -1087,6 +556,7 @@ export type EnumListValueType = {
   read Function: EnumValueType,
   read Array: EnumValueType,
   read Map: EnumValueType,
+  read Component: EnumValueType,
   read EventSignal: EnumValueType,
   read InputEvent: EnumValueType,
   read NumberGradient: EnumValueType,
@@ -1094,7 +564,7 @@ export type EnumListValueType = {
   read ColorGradient: EnumValueType,
   read Null: EnumValueType,
   read Any: EnumValueType,
-  read [ | "Boolean" | "Integer" | "Double" | "String" | "Buffer" | "Color" | "Vector2" | "Vector3" | "Matrix" | "GameObject" | "Function" | "Array" | "Map" | "EventSignal" | "InputEvent" | "NumberGradient" | "VectorGradient" | "ColorGradient" | "Null" | "Any"]: EnumValueType
+  read [ | "Boolean" | "Integer" | "Double" | "String" | "Buffer" | "Color" | "Vector2" | "Vector3" | "Matrix" | "GameObject" | "Function" | "Array" | "Map" | "Component" | "EventSignal" | "InputEvent" | "NumberGradient" | "VectorGradient" | "ColorGradient" | "Null" | "Any"]: EnumValueType
 }
 declare Enum: {
   CollisionType: EnumListCollisionType,
