@@ -52,3 +52,15 @@ void luhx_pushid(lua_State* L, Id id)
 {
     lua_pushlightuserdatatagged(L, (void*)id, LightUserdataTag::Id);
 }
+
+const ComponentUserdata* luhx_checkcomponent(lua_State* L, int idx)
+{
+    return (ComponentUserdata*)luaL_checkudatatagged(L, idx, UserdataTag::Component);
+}
+
+void luhx_pushcomponent(lua_State* L, ComponentRecordBase* cr, uint64_t index)
+{
+    ComponentUserdata* cu = (ComponentUserdata*)lua_newuserdatataggedwithmetatable(L, sizeof(ComponentUserdata), UserdataTag::Component);
+    cu->cr = cr;
+    cu->index = index;
+}

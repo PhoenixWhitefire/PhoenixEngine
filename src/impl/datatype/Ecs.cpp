@@ -85,22 +85,77 @@ struct NameComponentRecord : public ComponentRecord<std::string>
     }
 };
 
-struct TransformComponentRecord : public ComponentRecord<glm::mat4>
+struct TransformComponent
+{
+    glm::mat4 Local = { 1.f };
+    glm::mat4 World = { 1.f };
+};
+
+struct TransformComponentRecord : public ComponentRecord<TransformComponent>
 {
     TransformComponentRecord()
     {
         name = "Transform";
+
+        fields = {
+            { "Local", Reflection::FieldDescriptor{
+                .Read = [](ComponentRecordBase* cr, uint64_t index) -> Reflection::GenericValue
+                {
+                    TransformComponentRecord* tcr = (TransformComponentRecord*)cr;
+                    return tcr->data[index].Local;
+                },
+                .Write = [](ComponentRecordBase* cr, uint64_t index, const Reflection::GenericValue& value)
+                {
+                    TransformComponentRecord* tcr = (TransformComponentRecord*)cr;
+                    tcr->data[index].Local = value.AsMatrix();
+                },
+                .Type = Reflection::ValueType::Matrix,
+            } },
+            { "World", Reflection::FieldDescriptor{
+                .Read = [](ComponentRecordBase* cr, uint64_t index) -> Reflection::GenericValue
+                {
+                    TransformComponentRecord* tcr = (TransformComponentRecord*)cr;
+                    return tcr->data[index].World;
+                },
+                .Write = [](ComponentRecordBase* cr, uint64_t index, const Reflection::GenericValue& value)
+                {
+                    TransformComponentRecord* tcr = (TransformComponentRecord*)cr;
+                    tcr->data[index].World = value.AsMatrix();
+                },
+                .Type = Reflection::ValueType::Matrix,
+                .Serializes = false,
+            } },
+        };
     }
 
     Reflection::GenericValue getData(uint64_t index) override
     {
-        return data[index];
+        Reflection::GenericValue cell;
+        cell.Val.Component = { .cr = this, .index = index };
+        cell.Type = Reflection::ValueType::Component;
+
+        return cell;
     }
 
     void setData(uint64_t index, const Reflection::GenericValue& value) override
     {
-        data[index] = value.AsMatrix();
+        value.ForEachMapPair([&](const Reflection::GenericValue& key, const Reflection::GenericValue& value)
+        {
+            std::string_view field = key.AsStringView();
+
+            if (field == "Local")
+                data[index].Local = value.AsMatrix();
+            else if (field == "World")
+                data[index].World = value.AsMatrix();
+        });
     }
+
+    const Reflection::FieldMap& getFields() override
+    {
+        return fields;
+    }
+
+    static inline Reflection::FieldMap fields;
 };
 
 void World::initialize()

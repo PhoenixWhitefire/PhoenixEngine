@@ -73,8 +73,18 @@ World* luhx_checkworld(lua_State* L, int idx);
 
 using Id = uint64_t;
 Id luhx_checkid(lua_State* L, int idx);
-
 void luhx_pushid(lua_State* L, Id id);
+
+struct ComponentRecordBase;
+
+struct ComponentUserdata
+{
+	ComponentRecordBase* cr = nullptr;
+	uint64_t index = UINT64_MAX;
+};
+
+const ComponentUserdata* luhx_checkcomponent(lua_State* L, int idx);
+void luhx_pushcomponent(lua_State* L, ComponentRecordBase* cr, uint64_t index);
 
 int luhx_makemodule(lua_State* L, const struct luaL_Reg* l);
 

@@ -37,6 +37,11 @@ struct ComponentRecordBase
     virtual Reflection::GenericValue getData(uint64_t index) = 0;
     virtual void setData(uint64_t index, const Reflection::GenericValue& value) = 0;
 
+    virtual const Reflection::FieldMap& getFields()
+    {
+        throw std::runtime_error("No reflection data");
+    }
+
     std::string name;
 
     std::unordered_map<Id, Id> sparse;

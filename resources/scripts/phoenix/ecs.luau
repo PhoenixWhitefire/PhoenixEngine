@@ -87,7 +87,7 @@ type ecs = {
     --- Built-in Name component.
     read Name: Id<string>,
     --- Built-in Transform component.
-    read Transform: Id<Matrix>,
+    read Transform: Id<{ Local: Matrix, World: Matrix }>,
 }
 
 local function load(): ecs

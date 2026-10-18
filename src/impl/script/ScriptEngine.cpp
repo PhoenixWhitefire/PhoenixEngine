@@ -1245,6 +1245,11 @@ void ScriptEngine::PushGenericValue(lua_State* L, const Reflection::GenericValue
 
         break;
     }
+    case Reflection::ValueType::Component:
+    {
+        luhx_pushcomponent(L, gv.Val.Component.cr, gv.Val.Component.index);
+        break;
+    }
     case Reflection::ValueType::EventSignal:
     {
         luhx_pushsignal(
@@ -1866,6 +1871,60 @@ static void registerWorldUserdata(lua_State* L)
     lua_setuserdatametatable(L, UserdataTag::Query);
 }
 
+static int componentmeta_index(lua_State* L)
+{
+    const ComponentUserdata* cu = luhx_checkcomponent(L, 1);
+    size_t keyLength = 0;
+    const char* keyCstr = luaL_checklstring(L, 2, &keyLength);
+
+    std::string_view key = std::string_view(keyCstr, keyLength);
+    const Reflection::FieldMap& fields = cu->cr->getFields();
+
+    if (const auto& fieldIt = fields.find(key); fieldIt != fields.end())
+    {
+        ScriptEngine::PushGenericValue(L, fieldIt->second.Read(cu->cr, cu->index));
+        return 1;
+    }
+
+    luaL_error(L, "Invalid field '%s'", keyCstr);
+}
+
+static int componentmeta_newindex(lua_State* L)
+{
+    const ComponentUserdata* cu = luhx_checkcomponent(L, 1);
+
+    size_t keyLength = 0;
+    const char* keyCstr = luaL_checklstring(L, 2, &keyLength);
+
+    Reflection::GenericValue value = ScriptEngine::ToGeneric(L, 3);
+
+    std::string_view key = std::string_view(keyCstr, keyLength);
+    const Reflection::FieldMap& fields = cu->cr->getFields();
+
+    if (const auto& fieldIt = fields.find(key); fieldIt != fields.end())
+        fieldIt->second.Write(cu->cr, cu->index, value);
+    else
+        luaL_error(L, "Invalid field '%s'", keyCstr);
+
+    return 0;
+}
+
+static void registerComponentUserdata(lua_State* L)
+{
+    lua_createtable(L, 0, 4);
+
+    lua_pushliteral(L, "Component");
+    lua_setfield(L, -2, "__type");
+
+    lua_pushcfunction(L, componentmeta_index, "__index");
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, componentmeta_newindex, "__newindex");
+    lua_setfield(L, -2, "__newindex");
+
+    lua_setuserdatametatable(L, UserdataTag::Component);
+}
+
 void ScriptEngine::s_InitRequireConfig(luarequire_Configuration* config)
 {
     config->is_require_allowed = [](lua_State*, void*, const char*)
@@ -2133,7 +2192,9 @@ lua_State* ScriptEngine::LuauVM::CreateMainThread()
     luaL_openlibs(state);
     // Load runtime-specific libraries
     luhx_openlibs(state);
+
     registerWorldUserdata(state);
+    registerComponentUserdata(state);
 
     lua_createtable(state, 0, 8);
     lua_setfield(state, LUA_REGISTRYINDEX, REGISTRY_CHUNKS);

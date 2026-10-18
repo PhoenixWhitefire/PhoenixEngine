@@ -88,6 +88,8 @@
 
 #define REFLECTION_GV_SSO sizeof(glm::mat4)
 
+struct ComponentRecordBase;
+
 class GameObject;
 
 namespace Reflection
@@ -174,8 +176,8 @@ namespace Reflection
             InputEvent Input;
             struct ComponentData
             {
-                uint64_t Record;
-                uint64_t Index;
+                ComponentRecordBase* cr;
+                uint64_t index;
             } Component;
             void* Ptr;
         } Val = {};
@@ -269,6 +271,21 @@ namespace Reflection
     using EventConnectFunction = std::function<uint32_t(void*, const EventConnection&)>;
     using EventDisconnectFunction = std::function<void(void*, uint32_t)>;
     using EventCleanupFunction = std::function<void(void*)>;
+
+    using FieldReader = Reflection::GenericValue(*)(ComponentRecordBase* cr, uint64_t index);
+    using FieldWriter = void(*)(ComponentRecordBase* cr, uint64_t index, const Reflection::GenericValue& value);
+
+    struct FieldDescriptor
+    {
+        std::string_view Name = "";
+        FieldReader Read = nullptr;
+        FieldWriter Write = nullptr;
+
+        Reflection::ValueType Type = ValueType::Null; // at the end for better size
+        bool Serializes = true;
+    };
+
+    using FieldMap = std::unordered_map<std::string_view, FieldDescriptor>;
 
     struct PropertyDescriptor
     {

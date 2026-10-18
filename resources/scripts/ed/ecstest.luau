@@ -28,7 +28,7 @@ world:set(childA, Parent, root)
 world:set(childB, Parent, root)
 world:set(descendant, Parent, childA)
 
-world:set(childA, ecs.Transform, Matrix.translated(0, 1, 0))
+world:set(childA, ecs.Transform, { World = Matrix.translated(0, 1, 0), Local = Matrix.translated(1, 0, 0) })
 world:set(childB, Strength, 50)
 world:set(descendant, Health, { Current = 40, Max = 50 })
 
@@ -95,12 +95,30 @@ while true do
             imgui.text("Transform")
             imgui.sameline()
 
-            local x, xChanged = imgui.inputnumber("##x", trans.Translation.x)
-            local y, yChanged = imgui.inputnumber("##y", trans.Translation.y)
-            local z, zChanged = imgui.inputnumber("##z", trans.Translation.z)
+            imgui.setnextitemwidth(50)
+            local x, xChanged = imgui.inputnumber("##x", trans.World.Translation.x)
+            imgui.sameline()
+            imgui.setnextitemwidth(50)
+            local y, yChanged = imgui.inputnumber("##y", trans.World.Translation.y)
+            imgui.sameline()
+            imgui.setnextitemwidth(50)
+            local z, zChanged = imgui.inputnumber("##z", trans.World.Translation.z)
 
             if xChanged or yChanged or zChanged then
-                world:set(sel, ecs.Transform, Matrix.translated(x, y, z))
+                trans.World = Matrix.translated(x, y, z)
+            end
+
+            imgui.setnextitemwidth(50)
+            x, xChanged = imgui.inputnumber("##lx", trans.Local.Translation.x)
+            imgui.sameline()
+            imgui.setnextitemwidth(50)
+            y, yChanged = imgui.inputnumber("##ly", trans.Local.Translation.y)
+            imgui.sameline()
+            imgui.setnextitemwidth(50)
+            z, zChanged = imgui.inputnumber("##lz", trans.Local.Translation.z)
+
+            if xChanged or yChanged or zChanged then
+                trans.Local = Matrix.translated(x, y, z)
             end
         end
 
