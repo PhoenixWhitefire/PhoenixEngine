@@ -4208,6 +4208,42 @@ static void renderProperties()
 
                             break;
                         }
+                        case Reflection::ValueType::Component:
+                        {
+                            ImGui::NewLine();
+                            ImGui::Indent();
+
+                            for (const auto& [ field, descriptor ] : cd->cr->getFields())
+                            {
+                                ImGui::PushID(field.data());
+
+                                ImGui::Text("%s:", field.data());
+                                ImGui::SameLine();
+
+                                const Reflection::GenericValue& inner = descriptor.Read(cd->cr, cd->index);
+
+                                switch (inner.Type)
+                                {
+                                case Reflection::ValueType::Matrix:
+                                {
+                                    glm::mat4 mtx = inner.AsMatrix();
+                                    glm::vec3 trans = {};
+                                    DecomposeTRS(mtx, &trans);
+
+                                    if (ImGui::InputFloat3("##", glm::value_ptr(trans)))
+                                        descriptor.Write(cd->cr, cd->index, glm::translate(glm::mat4(1.f), trans));
+                                    break;
+                                }
+                                default:
+                                    ImGui::TextUnformatted(inner.ToString().c_str());
+                                }
+
+                                ImGui::PopID();
+                            }
+
+                            ImGui::Unindent();
+                            break;
+                        }
                         default:
                             ImGui::TextUnformatted(value.ToString().c_str());
                         }
