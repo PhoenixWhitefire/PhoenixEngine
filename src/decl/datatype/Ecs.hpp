@@ -42,8 +42,6 @@ struct ComponentRecordBase
         throw std::runtime_error("No reflection data");
     }
 
-    std::string name;
-
     std::unordered_map<Id, Id> sparse;
     std::vector<Id> dense;
     bool isLuau = false;
@@ -103,6 +101,5 @@ struct World
     );
 
     std::unordered_map<Id, ComponentRecordBase*> predicates;
-    uint64_t componentCount = 0;
     uint64_t entityCount = 0;
 };

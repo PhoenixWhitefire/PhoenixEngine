@@ -84,6 +84,8 @@ type ecs = {
     --- Provides a pair identifier between two ECS identifiers.
     read pair: <T, U>(predicate: Id<T>, target: Id<U>) -> Id<nil>,
 
+    --- Relationship wildcard.
+    read Wildcard: Id,
     --- Built-in Name component.
     read Name: Id<string>,
     --- Built-in Transform component.

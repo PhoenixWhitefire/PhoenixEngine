@@ -69,11 +69,6 @@ void LuauComponentRecord::setData(uint64_t index, const Reflection::GenericValue
 
 struct NameComponentRecord : public ComponentRecord<std::string>
 {
-    NameComponentRecord()
-    {
-        name = "Name";
-    }
-
     Reflection::GenericValue getData(uint64_t index) override
     {
         return data[index];
@@ -95,8 +90,6 @@ struct TransformComponentRecord : public ComponentRecord<TransformComponent>
 {
     TransformComponentRecord()
     {
-        name = "Transform";
-
         fields = {
             { "Local", Reflection::FieldDescriptor{
                 .Read = [](ComponentRecordBase* cr, uint64_t index) -> Reflection::GenericValue
@@ -160,8 +153,19 @@ struct TransformComponentRecord : public ComponentRecord<TransformComponent>
 
 void World::initialize()
 {
-    component(new NameComponentRecord);
-    component(new TransformComponentRecord);
+    NameComponentRecord* ncr = new NameComponentRecord;
+
+    Id wildcard = component(new LuauComponentRecord);
+    Id name = component(ncr);
+    Id transform = component(new TransformComponentRecord);
+
+    ComponentData wildcardName = add(wildcard, name);
+    ComponentData nameName = add(name, name);
+    ComponentData transformName = add(transform, name);
+
+    ncr->data[wildcardName.index] = "Wildcard";
+    ncr->data[nameName.index] = "Name";
+    ncr->data[transformName.index] = "Transform";
 }
 
 void World::shutdown()
@@ -170,7 +174,6 @@ void World::shutdown()
         delete cr;
 
     predicates.clear();
-    componentCount = 0;
     entityCount = 0;
 }
 
@@ -181,10 +184,32 @@ Id World::entity()
 
 Id World::component(ComponentRecordBase* cr)
 {
-    Id c = ++componentCount;
+    Id c = ++entityCount;
     predicates.insert({ c, cr });
 
     return c;
+}
+
+static ComponentRecordBase* addPair(World* world, Id e, Id pair)
+{
+    LuauComponentRecord* cr = nullptr;
+
+    if (const auto& old = world->predicates.find(pair); old != world->predicates.end())
+    {
+        if (!old->second->isLuau)
+            throw std::runtime_error("Internal error: Pair was not a Luau record");
+
+        cr = (LuauComponentRecord*)old->second;
+    }
+    else
+    {
+        cr = new LuauComponentRecord;
+    }
+
+    cr->insert(e);
+    world->predicates[pair] = cr;
+
+    return cr;
 }
 
 World::ComponentData World::add(Id e, Id c)
@@ -198,24 +223,11 @@ World::ComponentData World::add(Id e, Id c)
         if (!it->second->isLuau)
             throw std::runtime_error("Expected pair relation to be a Luau record");
 
-        LuauComponentRecord* cr = nullptr;
+        // 1 = Wildcard.
+        addPair(this, e, pair(pairFirst(c), 1));
+        addPair(this, e, pair(1, pairSecond(c)));
 
-        if (const auto& old = predicates.find(c); old != predicates.end())
-        {
-            if (!old->second->isLuau)
-                throw std::runtime_error("Internal error: Pair was not a Luau record");
-
-            cr = (LuauComponentRecord*)old->second;
-        }
-        else
-        {
-            cr = new LuauComponentRecord;
-        }
-
-        cr->insert(e);
-
-        predicates[c] = cr;
-        return { .cr = cr, .index = 0 };
+        return { .cr = addPair(this, e, c), .index = 0 };
     }
     else
     {
@@ -262,7 +274,7 @@ bool World::query(const std::span<Id>& queryPredicates, const std::function<bool
     }
 
     std::vector<ComponentData> datas(queryPredicates.size());
-    Id e = start;
+    Id e = start == 0 ? 1 : start;
 
     for (; e <= entityCount; e++)
     {

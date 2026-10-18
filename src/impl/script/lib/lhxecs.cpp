@@ -27,9 +27,12 @@ int luhxopen_ecs(lua_State* L)
     lua_setfield(L, -2, "pair");
 
     luhx_pushid(L, 1);
-    lua_setfield(L, -2, "Name");
+    lua_setfield(L, -2, "Wildcard");
 
     luhx_pushid(L, 2);
+    lua_setfield(L, -2, "Name");
+
+    luhx_pushid(L, 3);
     lua_setfield(L, -2, "Transform");
 
     return 1;

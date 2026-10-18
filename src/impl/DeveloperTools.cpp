@@ -2979,6 +2979,15 @@ static bool isInInterface(const ObjectHandle& Object)
     return false;
 }
 
+static std::string displayedName(World& world, Id id)
+{
+    // 2 = `Name`
+    if (std::optional<World::ComponentData> cd = world.find(id, 2))
+        return cd->cr->getData(cd->index).AsString();
+    else
+        return std::format("({})", id);
+}
+
 static void renderExplorer()
 {
     ZoneScoped;
@@ -3067,12 +3076,7 @@ static void renderExplorer()
         ImGui::PushID(e);
         std::string display;
 
-        if (std::optional<World::ComponentData> cd = world.find(e, 1))
-            display = cd->cr->getData(cd->index).AsString();
-        else
-            display = std::format("({})", e);
-
-        if (ImGui::Button(display.c_str()))
+        if (ImGui::Button(displayedName(world, e).c_str()))
             SelectedEntities = { e };
 
         ImGui::PopID();
@@ -4105,6 +4109,8 @@ static bool isInternalTagName(const std::string_view& name)
 
 static bool debugVariable(lua_State* L, bool CanEdit = true);
 
+
+
 static void renderProperties()
 {
     ZoneScoped;
@@ -4137,27 +4143,13 @@ static void renderProperties()
                         Id relation = pairFirst(c);
                         Id target = pairSecond(c);
 
-                        ImGui::Text("first:");
-                        ImGui::SameLine();
-
-                        if (const auto& it = world.predicates.find(relation); it != world.predicates.end() && !it->second->name.empty())
-                            ImGui::TextUnformatted(it->second->name.c_str());
-                        else
-                            ImGui::Text("<Id: %zu>", relation);
-
-                        ImGui::Text("second:");
-                        ImGui::SameLine();
-
-                        if (const auto& it = world.predicates.find(target); it != world.predicates.end() && !it->second->name.empty())
-                            ImGui::TextUnformatted(it->second->name.c_str());
-                        else
-                            ImGui::Text("<Id: %zu>", target);
+                        ImGui::Text("first: %s", displayedName(world, relation).c_str());
+                        ImGui::Text("second: %s",  displayedName(world, target).c_str());
                     }
                 }
                 else
                 {
-                    std::string display = cd->cr->name.empty() ? std::format("({})", c) : cd->cr->name;
-                    ImGui::TextUnformatted(display.c_str());
+                    ImGui::TextUnformatted(displayedName(world, c).c_str());
                     ImGui::SameLine();
 
                     if (cd->cr->isLuau)
@@ -4177,6 +4169,8 @@ static void renderProperties()
                                 lua_rawseti(lcr->owner, LUA_REGISTRYINDEX, ref);
                                 lcr->data[cd->index] = ref;
                             }
+
+                            lua_pop(lcr->owner, 2);
                         }
                         else
                         {
