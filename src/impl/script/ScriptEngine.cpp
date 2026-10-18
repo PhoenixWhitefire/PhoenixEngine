@@ -1666,6 +1666,9 @@ static int world_component(lua_State* L)
     LuauComponentRecord* lcr = new LuauComponentRecord;
     lcr->owner = lua_mainthread(L);
 
+    if (lua_isstring(L, 2))
+        lcr->name = lua_tostring(L, 2);
+
     luhx_pushid(L, world->component(lcr));
     return 1;
 }

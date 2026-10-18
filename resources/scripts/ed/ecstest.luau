@@ -7,6 +7,7 @@ local task = require("@std/task")
 
 local Parent = world:component<<ecs.Id>>("Parent")
 local Health = world:component<<{ Current: number, read Max: number }>>("Health")
+local Strength = world:component<<number>>("Strength")
 
 local root = world:entity()
 local childA = world:entity()
@@ -28,6 +29,7 @@ world:set(childB, Parent, root)
 world:set(descendant, Parent, childA)
 
 world:set(childA, ecs.Transform, Matrix.translated(0, 1, 0))
+world:set(childB, Strength, 50)
 world:set(descendant, Health, { Current = 40, Max = 50 })
 
 print("Names:")
@@ -114,6 +116,17 @@ while true do
             imgui.text(`Max: { health.Max }`)
 
             imgui.indent(-20)
+        end
+
+        local strength = world:find(sel, Strength)
+        if strength then
+            imgui.text("Strength:")
+            imgui.sameline()
+
+            local new, changed = imgui.inputnumber("##strength", strength)
+            if changed then
+                world:set(sel, Strength, new)
+            end
         end
 
         imgui.popid()

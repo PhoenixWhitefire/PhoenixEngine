@@ -4168,7 +4168,15 @@ static void renderProperties()
                         {
                             lua_pushliteral(lcr->owner, "");
                             lua_getref(lcr->owner, lcr->data[cd->index]);
-                            debugVariable(lcr->owner, true);
+
+                            if (debugVariable(lcr->owner, true))
+                            {
+                                lua_unref(lcr->owner, lcr->data[cd->index]);
+
+                                int ref = lua_ref(lcr->owner, -1);
+                                lua_rawseti(lcr->owner, LUA_REGISTRYINDEX, ref);
+                                lcr->data[cd->index] = ref;
+                            }
                         }
                         else
                         {
