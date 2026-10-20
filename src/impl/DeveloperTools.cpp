@@ -4138,13 +4138,19 @@ static void renderProperties()
             {
                 if (isPair(c))
                 {
-                    if (ImGui::CollapsingHeader("(pair)"))
-                    {
-                        Id relation = pairFirst(c);
-                        Id target = pairSecond(c);
+                    Id relation = pairFirst(c);
+                    Id target = pairSecond(c);
 
-                        ImGui::Text("first: %s", displayedName(world, relation).c_str());
-                        ImGui::Text("second: %s",  displayedName(world, target).c_str());
+                    if (std::optional<World::ComponentData> cd = world.find(c, Ec::Name))
+                    {
+                        ImGui::TextUnformatted(cd->cr->getData(cd->index).AsStringView().data());
+                    }
+                    else
+                    {
+                        ImGui::Text(
+                            "[ %s, %s ]",
+                            displayedName(world, relation).c_str(), displayedName(world, target).c_str()
+                        );
                     }
                 }
                 else

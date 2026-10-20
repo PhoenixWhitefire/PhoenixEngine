@@ -21,26 +21,50 @@ world:set(childA, ecs.Name, "A")
 world:set(childB, ecs.Name, "B")
 world:set(descendant, ecs.Name, "descendant")
 
-local childrenOfRoot = ecs.pair(ecs.ChildOf, root)
-local childrenOfA = ecs.pair(ecs.ChildOf, childA)
-world:add(childA, childrenOfRoot)
-world:add(childB, childrenOfRoot)
-world:add(descendant, childrenOfA)
+local childOfRoot = ecs.pair(ecs.ChildOf, root)
+local childOfA = ecs.pair(ecs.ChildOf, childA)
+world:add(childA, childOfRoot)
+world:add(childB, childOfRoot)
+world:add(descendant, childOfA)
+
+world:set(childOfRoot, ecs.Name, "ChildOfRoot")
 
 world:set(childA, ecs.Transform, { World = Matrix.translated(0, 1, 0), Local = Matrix.translated(1, 0, 0) })
 world:set(childB, Strength, 50)
 world:set(descendant, Health, { Current = 40, Max = 50 })
 
+print("")
 print("Names:")
 
 for e, name in world:query(ecs.Name) do
-    print(`{e}: {name}`)
+    print(`* {e}: {name}`)
+end
+
+print("")
+
+local function nameOf(e: ecs.ReadId)
+    local name = world:find(e, ecs.Name)
+    return name or `({ e })`
 end
 
 print("Children of root:")
 
-for e, name, _ in world:query(ecs.Name, ecs.pair(ecs.Wildcard, childA)) do
-    print(`{e}: {name}`)
+for e, _ in world:query(ecs.pair(ecs.ChildOf, childA)) do
+    print(`* {nameOf(e)}`)
+end
+
+print("")
+print("Non-root:")
+
+for e, _ in world:query(ecs.pair(ecs.ChildOf, ecs.Wildcard)) do
+    print(`* {e} = {nameOf(e)}`)
+end
+
+print("")
+print("All relationships targetting 'A':")
+
+for e, _ in world:query(ecs.pair(ecs.Wildcard, childA)) do
+    print(`* {nameOf(e)}`)
 end
 
 local function renderEnt(e: ecs.Id)
