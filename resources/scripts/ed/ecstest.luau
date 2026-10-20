@@ -61,7 +61,7 @@ for e, _ in world:query(ecs.pair(ecs.ChildOf, ecs.Wildcard)) do
 end
 
 print("")
-print("All relationships targetting 'A':")
+print("All relationships targeting 'A':")
 
 for e, _ in world:query(ecs.pair(ecs.Wildcard, childA)) do
     print(`* {nameOf(e)}`)

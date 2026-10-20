@@ -4,22 +4,24 @@
 #include "datatype/Ecs.hpp"
 #include "datatype/BuiltinComponents.hpp"
 
-Id pair(Id predicate, Id object)
+Id pair(Id relation, Id object)
 {
-    predicate %= EcsEntityMask;
+    relation %= EcsEntityMask;
     object %= EcsEntityMask;
 
-    return object + (predicate * EcsEntityMask) + EcsPairOffset;
+    return object + (relation * EcsEntityMask) + EcsPairOffset;
 }
 
-Id pairFirst(Id pair)
+Id pairFirst(Id p)
 {
-    return (pair - EcsPairOffset) / EcsEntityMask;
+    assert(isPair(p));
+    return (p - EcsPairOffset) / EcsEntityMask;
 }
 
-Id pairSecond(Id pair)
+Id pairSecond(Id p)
 {
-    return (pair - EcsPairOffset) % EcsEntityMask;
+    assert(isPair(p));
+    return (p - EcsPairOffset) % EcsEntityMask;
 }
 
 bool isPair(Id id)
@@ -133,14 +135,14 @@ struct TransformComponentRecord : public ComponentRecord<TransformComponent>
 
     void setData(uint64_t index, const Reflection::GenericValue& value) override
     {
-        value.ForEachMapPair([&](const Reflection::GenericValue& key, const Reflection::GenericValue& value)
+        value.ForEachMapPair([&](const Reflection::GenericValue& k, const Reflection::GenericValue& v)
         {
-            std::string_view field = key.AsStringView();
+            std::string_view field = k.AsStringView();
 
             if (field == "Local")
-                data[index].Local = value.AsMatrix();
+                data[index].Local = v.AsMatrix();
             else if (field == "World")
-                data[index].World = value.AsMatrix();
+                data[index].World = v.AsMatrix();
         });
     }
 
@@ -154,6 +156,8 @@ struct TransformComponentRecord : public ComponentRecord<TransformComponent>
 
 void World::initialize()
 {
+    assert(predicates.size() == 0 && "World::initialize called multiple times!");
+
     NameComponentRecord* ncr = new NameComponentRecord;
 
     Id wildcard = component(new LuauComponentRecord);
@@ -200,11 +204,11 @@ Id World::component(ComponentRecordBase* cr)
     return c;
 }
 
-static ComponentRecordBase* addPair(World* world, Id e, Id pair)
+static ComponentRecordBase* addPair(World* world, Id e, Id p)
 {
     LuauComponentRecord* cr = nullptr;
 
-    if (const auto& old = world->predicates.find(pair); old != world->predicates.end())
+    if (const auto& old = world->predicates.find(p); old != world->predicates.end())
     {
         if (!old->second->isLuau)
             throw std::runtime_error("Internal error: Pair was not a Luau record");
@@ -217,7 +221,7 @@ static ComponentRecordBase* addPair(World* world, Id e, Id pair)
     }
 
     cr->insert(e);
-    world->predicates[pair] = cr;
+    world->predicates[p] = cr;
 
     return cr;
 }
@@ -274,13 +278,18 @@ bool World::query(const std::span<Id>& queryPredicates, const std::function<bool
     {
         const auto& it = predicates.find(pred);
         if (it == predicates.end())
-            throw std::runtime_error(std::format("Invalid query predicate '{}' (expected component or pair ID)", pred));
+        {
+            if (isPair(pred))
+                return true; // Relationship not used anywhere.
+            else
+                throw std::runtime_error(std::format("Internal error: Invalid component {:x}", pred)); // It should be impossible to get a non-pair ID that doesn't refer to anything.
+        }
 
         crs.push_back(it->second);
     }
 
     std::vector<ComponentData> datas(queryPredicates.size());
-    Id e = start == 0 ? 1 : start;
+    Id e = start;
 
     for (; e <= entityCount; e++)
     {

@@ -16,16 +16,44 @@ static int ecs_pair(lua_State* L)
     return 1;
 }
 
+static int ecs_isPair(lua_State* L)
+{
+    Id maybePair = luhx_checkid(L, 1);
+
+    lua_pushboolean(L, isPair(maybePair));
+    return 1;
+}
+
+static int ecs_pairFirst(lua_State* L)
+{
+    Id pair = luhx_checkid(L, 1);
+    luaL_argcheck(L, isPair(pair), 1, "expected a pair");
+
+    luhx_pushid(L, pairFirst(pair));
+    return 1;
+}
+
+static int ecs_pairSecond(lua_State* L)
+{
+    Id pair = luhx_checkid(L, 1);
+    luaL_argcheck(L, isPair(pair), 1, "expected a pair");
+
+    luhx_pushid(L, pairSecond(pair));
+    return 1;
+}
+
+static const luaL_Reg ecs_funcs[] = {
+    { "pair", ecs_pair },
+    { "isPair", ecs_isPair },
+    { "pairFirst", ecs_pairFirst },
+    { "pairSecond", ecs_pairSecond },
+
+    { nullptr, nullptr }
+};
+
 int luhxopen_ecs(lua_State* L)
 {
-    lua_createtable(L, 0, 8);
-
-    lua_pushcfunction(
-        L,
-        ecs_pair,
-        "pair"
-    );
-    lua_setfield(L, -2, "pair");
+    luhx_makemodule(L, ecs_funcs);
 
     for (Id c = Ec::start; c <= Ec::count; c++)
     {

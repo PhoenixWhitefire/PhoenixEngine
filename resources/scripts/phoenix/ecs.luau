@@ -81,7 +81,15 @@ export type World = {
 --- The ECS library.
 type ecs = {
     --- Provides a pair identifier between two ECS identifiers.
-    read pair: <T, U>(predicate: Id<T>, target: Id<U>) -> Id<nil>,
+    read pair: (predicate: ReadId, target: ReadId) -> Id<nil>,
+    --- Returns whether the ID is a pair.
+    read isPair: (id: ReadId) -> boolean,
+    --- Returns the first component of the pair ID.
+    --- Throws an error if the ID given is not a pair ID.
+    read pairFirst: (id: ReadId) -> boolean,
+    --- Returns the second component of the pair ID.
+    --- Throws an error if the ID given is not a pair ID.
+    read pairSecond: (id: ReadId) -> boolean,
 
     --- Relationship wildcard.
     read Wildcard: Id,
