@@ -5,9 +5,11 @@ local ecs = require("@phoenix/ecs")
 local imgui = require("@phoenix/imgui")
 local task = require("@std/task")
 
-local Parent = world:component<<ecs.Id>>("Parent")
-local Health = world:component<<{ Current: number, read Max: number }>>("Health")
-local Strength = world:component<<number>>("Strength")
+local Health = world:component<<{ Current: number, read Max: number }>>()
+local Strength = world:component<<number>>()
+
+world:set(Health, ecs.Name, "Health")
+world:set(Strength, ecs.Name, "Strength")
 
 local root = world:entity()
 local childA = world:entity()
@@ -19,8 +21,8 @@ world:set(childA, ecs.Name, "A")
 world:set(childB, ecs.Name, "B")
 world:set(descendant, ecs.Name, "descendant")
 
-local childrenOfRoot = ecs.pair(Parent, root)
-local childrenOfA = ecs.pair(Parent, childA)
+local childrenOfRoot = ecs.pair(ecs.ChildOf, root)
+local childrenOfA = ecs.pair(ecs.ChildOf, childA)
 world:add(childA, childrenOfRoot)
 world:add(childB, childrenOfRoot)
 world:add(descendant, childrenOfA)
@@ -37,7 +39,7 @@ end
 
 print("Children of root:")
 
-for e, name, _ in world:query(ecs.Name, childrenOfRoot) do
+for e, name, _ in world:query(ecs.Name, ecs.pair(ecs.Wildcard, childA)) do
     print(`{e}: {name}`)
 end
 
@@ -77,7 +79,7 @@ while true do
             end
         end
 
-        local parent = world:find(sel, Parent)
+        local parent = world:find(sel, ecs.ChildOf)
         if parent then
             imgui.text("Parent")
             imgui.sameline()

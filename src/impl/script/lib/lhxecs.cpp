@@ -5,6 +5,7 @@
 #include "script/LightUserdataTags.hpp"
 #include "script/UserdataTags.hpp"
 #include "datatype/Ecs.hpp"
+#include "datatype/BuiltinComponents.hpp"
 
 static int ecs_pair(lua_State* L)
 {
@@ -26,14 +27,11 @@ int luhxopen_ecs(lua_State* L)
     );
     lua_setfield(L, -2, "pair");
 
-    luhx_pushid(L, 1);
-    lua_setfield(L, -2, "Wildcard");
-
-    luhx_pushid(L, 2);
-    lua_setfield(L, -2, "Name");
-
-    luhx_pushid(L, 3);
-    lua_setfield(L, -2, "Transform");
+    for (Id c = Ec::start; c <= Ec::count; c++)
+    {
+        luhx_pushid(L, c);
+        lua_setfield(L, -2, EcNames[c - 1].data());
+    }
 
     return 1;
 }

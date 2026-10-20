@@ -43,27 +43,26 @@ export type World = {
     --- Creates a new entity and returns its ID.
     read entity: (self: World) -> Id,
     --- Creates a new component and returns its ID.
-    --- Accepts an optional `name` argument.
-    read component: <T>(self: World, name: string?) -> Id<T>,
+    read component: <T>(self: World) -> Id<T>,
 
     --- Adds a component or pair (relationship) to an entity.
-    read add: <T>(self: World, e: Id, p: T & Id<nil>) -> (),
+    read add: <T>(self: World, e: ReadId, p: T & Id<nil>) -> (),
     --- Removes a component or pair (relationship) from an entity.
-    read remove: (self: World, e: Id, p: Id) -> (),
+    read remove: (self: World, e: ReadId, p: Id) -> (),
 
     --- Returns whether a Component exists on an Entity.
-    read has: (self: World, e: Id, c: ReadId) -> boolean,
+    read has: (self: World, e: ReadId, c: ReadId) -> boolean,
 
     --- Finds component data on an entity. Returns `nil` if the component is not present.
     --- Use `get` if you do not want this behavior.
-    read find: <T>(self: World, e: Id, c: Id<T>) -> T?,
+    read find: <T>(self: World, e: ReadId, c: Id<T>) -> T?,
 
     --- Gets component data on an entity. This will error if the component is not present.
     --- Use `find` if you do not want this behavior.
-    read get: <T>(self: World, e: Id, c: ReadId<T>) -> T,
+    read get: <T>(self: World, e: ReadId, c: ReadId<T>) -> T,
 
     --- Sets component data on an entity. This will add the component if it is not present on `e`.
-    read set: <T>(self: World, e: Id, c: WriteId<T>, data: T) -> (),
+    read set: <T>(self: World, e: ReadId, c: WriteId<T>, data: T) -> (),
 
     -- TODO: Replace this with the type function once the bug is fixed.
     --- Queries the world for all entities matching the given predicates.
@@ -88,6 +87,8 @@ type ecs = {
     read Wildcard: Id,
     --- Built-in Name component.
     read Name: Id<string>,
+    --- Built-in ChildOf component.
+    read ChildOf: Id<Id>,
     --- Built-in Transform component.
     read Transform: Id<{ Local: Matrix, World: Matrix }>,
 }

@@ -69,6 +69,7 @@
 #include "Log.hpp"
 
 #include "datatype/Ecs.hpp"
+#include "datatype/BuiltinComponents.hpp"
 
 constexpr uint32_t MATERIAL_NEW_NAME_BUFSIZE = 64;
 constexpr uint32_t MATERIAL_TEXTUREPATH_BUFSIZE = 128;
@@ -2981,8 +2982,7 @@ static bool isInInterface(const ObjectHandle& Object)
 
 static std::string displayedName(World& world, Id id)
 {
-    // 2 = `Name`
-    if (std::optional<World::ComponentData> cd = world.find(id, 2))
+    if (std::optional<World::ComponentData> cd = world.find(id, Ec::Name))
         return cd->cr->getData(cd->index).AsString();
     else
         return std::format("({})", id);

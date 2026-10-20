@@ -2,6 +2,7 @@
 #include <format>
 
 #include "datatype/Ecs.hpp"
+#include "datatype/BuiltinComponents.hpp"
 
 Id pair(Id predicate, Id object)
 {
@@ -157,15 +158,24 @@ void World::initialize()
 
     Id wildcard = component(new LuauComponentRecord);
     Id name = component(ncr);
+    Id childOf = component(new LuauComponentRecord);
     Id transform = component(new TransformComponentRecord);
 
-    ComponentData wildcardName = add(wildcard, name);
-    ComponentData nameName = add(name, name);
-    ComponentData transformName = add(transform, name);
+    assert(wildcard == Ec::Wildcard);
+    assert(name == Ec::Name);
+    assert(childOf == Ec::ChildOf);
+    assert(transform == Ec::Transform);
 
-    ncr->data[wildcardName.index] = "Wildcard";
-    ncr->data[nameName.index] = "Name";
-    ncr->data[transformName.index] = "Transform";
+    (void)wildcard;
+    (void)name;
+    (void)childOf;
+    (void)transform;
+
+    for (Id c = Ec::start; c <= Ec::count; c++)
+    {
+        ComponentData cName = add(c, name);
+        ncr->data[cName.index] = EcNames[c - 1];
+    }
 }
 
 void World::shutdown()
@@ -220,12 +230,8 @@ World::ComponentData World::add(Id e, Id c)
         if (it == predicates.end())
             throw std::runtime_error(std::format("Invalid relationship '{}' in pair", pairFirst(c)));
 
-        if (!it->second->isLuau)
-            throw std::runtime_error("Expected pair relation to be a Luau record");
-
-        // 1 = Wildcard.
-        addPair(this, e, pair(pairFirst(c), 1));
-        addPair(this, e, pair(1, pairSecond(c)));
+        addPair(this, e, pair(pairFirst(c), Ec::Wildcard));
+        addPair(this, e, pair(Ec::Wildcard, pairSecond(c)));
 
         return { .cr = addPair(this, e, c), .index = 0 };
     }

@@ -33,6 +33,7 @@
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 #include "datatype/Ecs.hpp"
+#include "datatype/BuiltinComponents.hpp"
 // #include "component/ScriptEngineService.hpp"
 // #include "DeveloperTools.hpp"
 #include "Utilities.hpp"
@@ -1671,15 +1672,7 @@ static int world_component(lua_State* L)
     LuauComponentRecord* lcr = new LuauComponentRecord;
     lcr->owner = lua_mainthread(L);
 
-    Id c = world->component(lcr);
-    if (const char* nameStr = luaL_optstring(L, 2, nullptr))
-    {
-        // 2 = `Name`
-        World::ComponentData name = world->add(c, 2);
-        name.cr->setData(name.index, nameStr);
-    }
-
-    luhx_pushid(L, c);
+    luhx_pushid(L, world->component(lcr));
     return 1;
 }
 
