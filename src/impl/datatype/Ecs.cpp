@@ -351,7 +351,7 @@ bool World::query(const std::span<Id>& queryPredicates, const std::function<bool
     }
 
     std::vector<ComponentData> datas(queryPredicates.size());
-    Id e = start;
+    Id e = start == 0 ? 1 : start;
 
     for (; e <= entityCount; e++)
     {

@@ -1858,12 +1858,12 @@ static int queryNext(lua_State* L)
 
     bool done = qd->world->query(std::span(qd->predicates, (size_t)qd->numPredicates), [&](Id e, const std::vector<World::ComponentData>& datas)
     {
-        luhx_pushid(L, e + 1); // Progress 1 step.
+        luhx_pushid(L, e);
         for (const World::ComponentData& cd : datas)
             pushComponentData(L, cd);
 
         return false;
-    }, currentEntity);
+    }, currentEntity + 1);
 
     if (done)
         return 0;

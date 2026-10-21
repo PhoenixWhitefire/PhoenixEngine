@@ -2985,7 +2985,7 @@ static std::string displayedName(World& world, Id id)
     if (std::optional<World::ComponentData> cd = world.find(id, Ec::Name))
         return cd->cr->getData(cd->index).AsString();
     else
-        return std::format("({})", id);
+        return std::format("({:x})", id);
 }
 
 static void renderExplorer()
@@ -4127,6 +4127,8 @@ static void renderProperties()
         Engine* engine = Engine::Get();
         World& world = engine->world;
         Id e = SelectedEntities[0];
+
+        ImGui::Text("ID: %lx", e);
 
         for (const auto& [ c, cr ] : world.predicates)
         {

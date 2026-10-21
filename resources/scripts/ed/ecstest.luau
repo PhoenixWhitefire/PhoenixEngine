@@ -10,6 +10,7 @@ local Likes = world:component()
 local Health = world:component<<{ Current: number, read Max: number }>>()
 local Strength = world:component<<number>>()
 
+world:set(Likes, ecs.Name, "Likes")
 world:set(Health, ecs.Name, "Health")
 world:set(Strength, ecs.Name, "Strength")
 
@@ -86,13 +87,7 @@ for _, e in world:targets(childA, Likes) do
 end
 
 local function renderEnt(e: ecs.Id)
-    local name = world:find(e, ecs.Name)
-
-    if name then
-        return imgui.button(name)
-    else
-        return imgui.button(`<{ e }>`)
-    end
+    return imgui.button(nameOf(e))
 end
 
 local sel = nil
