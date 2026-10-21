@@ -331,7 +331,7 @@ std::optional<Id> World::parent(Id e)
     return target(e, Ec::ChildOf);
 }
 
-bool World::query(const std::span<Id>& queryPredicates, const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing, Id start)
+bool World::query(const std::span<const Id>& queryPredicates, const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing, Id start)
 {
     std::vector<ComponentRecordBase*> crs;
     crs.reserve(queryPredicates.size());

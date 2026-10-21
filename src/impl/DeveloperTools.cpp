@@ -58,6 +58,7 @@
 
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
+#include "script/luhx.hpp"
 #include "geometry/DecomposeTRS.hpp"
 
 #include "Utilities.hpp"
@@ -1707,15 +1708,14 @@ static void renderMaterialEditor()
     ImGui::End();
 }
 
-static std::vector<Id> SelectedEntities;
-static std::vector<ObjectHandle> Selections;
-static std::vector<ObjectHandle> PrevSelections;
-static std::vector<ObjectHandle> VisibleTree;
-static std::vector<ObjectHandle> VisibleTreeWip;
-static ObjectHandle LastSelected;
-static ObjectHandle ObjectInsertionTarget = nullptr;
+static std::vector<Id> Selections;
+static std::vector<Id> PrevSelections;
+static std::vector<Id> VisibleTree;
+static std::vector<Id> VisibleTreeWip;
+static Id LastSelected = 0;
+static Id ObjectInsertionTarget = 0;
 static bool IsPickingObject = false;
-static std::vector<ObjectHandle> PickerTargets;
+static std::vector<Id> PickerTargets;
 static std::string PickerTargetPropName;
 static bool FocusRenameSelection = false;
 
@@ -1755,30 +1755,37 @@ typedef void(*ContextActionMenuHandlerFunc)(void);
 static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
     []()
     {
+        /*
         std::vector<ObjectHandle> newSelections;
         newSelections.reserve(Selections.size());
 
-        for (const ObjectHandle& sel : Selections)
+        for (const Id& sel : Selections)
             newSelections.push_back(sel->Duplicate());
 
         Selections = newSelections;
         ExplorerShouldSeekToCurrentSelection = true;
+        */
+
+        RAISE_RT("Duplicate not implemented!");
     },
 
     []()
     {
-        for (const ObjectHandle& sel : Selections)
-            sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
+        for (Id sel : Selections)
+            Engine::Get()->world.remove(sel, pair(Ec::ChildOf, Ec::Wildcard));
 
         Selections.clear();
     },
 
     []()
     {
+        RAISE_RT("Serialization not implemented!");
+
+        /*
         std::vector<GameObject*> sels;
         std::string sceneName = "";
 
-        for (const ObjectHandle& sel : Selections)
+        for (Id sel : Selections)
         {
             sels.push_back(sel.Dereference());
             sceneName += sel->Name + "_";
@@ -1804,10 +1811,14 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
         }
         else
             Log.Info("No save path select to save objects");
+        */
     },
 
     []()
     {
+        RAISE_RT("Load not implemented!");
+
+        /*
         const char* filter[] = { "*.hxscene" };
 
         const char* path = tinyfd_openFileDialog(
@@ -1870,6 +1881,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
         }
         else
             Log.Info("No file selected to insert object from");
+        */
     },
 
     []()
@@ -1878,7 +1890,7 @@ static ContextActionMenuHandlerFunc ContextMenuActionHandlers[] = {
     }
 };
 
-static bool isInSelections(const ObjectHandle& obj)
+static bool isInSelections(Id obj)
 {
     return std::find(Selections.begin(), Selections.end(), obj) != Selections.end();
 }
@@ -1890,7 +1902,8 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
 
     if (Selections.size() > 0)
     {
-        for (const ObjectHandle& sel : Selections)
+        /*
+        for (Id sel : Selections)
         {
             if (sel->FindComponent<EcModel>())
             {
@@ -1898,6 +1911,7 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
                 break;
             }
         }
+        */
 
         actions.push_back(ContextMenuAction::Rename);
         actions.push_back(ContextMenuAction::Duplicate);
@@ -1909,7 +1923,7 @@ static std::vector<ContextMenuAction> getPossibleActionsForSelections()
     return actions;
 }
 
-static void onTreeItemClicked(const ObjectHandle& nodeClicked)
+static void onTreeItemClicked(Id nodeClicked)
 {
     if (IsPickingObject)
     {
@@ -1917,8 +1931,9 @@ static void onTreeItemClicked(const ObjectHandle& nodeClicked)
 
         try
         {
-            for (const ObjectHandle& target : PickerTargets)
-                target->SetPropertyValue(PickerTargetPropName, nodeClicked->ToGenericValue());
+            RAISE_RT("Picker not implemented!");
+            // for (const Id target : PickerTargets)
+            //     target->SetPropertyValue(PickerTargetPropName, nodeClicked);
         }
         catch (const std::runtime_error& Error)
         {
@@ -1938,7 +1953,7 @@ static void onTreeItemClicked(const ObjectHandle& nodeClicked)
 
     if (ImGui::GetIO().KeyCtrl)
     {
-        ObjectHandle tempNc = nodeClicked;
+        Id tempNc = nodeClicked;
 
         if (const auto& it = std::find(Selections.begin(), Selections.end(), tempNc); it != Selections.end())
             Selections.erase(it);
@@ -1948,25 +1963,25 @@ static void onTreeItemClicked(const ObjectHandle& nodeClicked)
 
     else if (ImGui::GetIO().KeyShift)
     {
-        if (LastSelected.Reference.Referred() && LastSelected.Dereference() != nodeClicked)
+        if (LastSelected != nodeClicked)
         {
             if (!isInSelections(nodeClicked))
                 Selections.push_back(nodeClicked);
 
             auto start = std::find(VisibleTree.begin(), VisibleTree.end(), LastSelected);
-            auto end = std::find(VisibleTree.begin(), VisibleTree.end(), ObjectHandle(nodeClicked));
+            auto end = std::find(VisibleTree.begin(), VisibleTree.end(), nodeClicked);
 
             if (start > end)
             {
                 // doesn't seem to work unless it is copied fsr
-                std::vector<ObjectHandle>::iterator temp = end;
+                std::vector<Id>::iterator temp = end;
                 end = start;
                 start = temp;
             }
 
             // 25/01/2025 this feels weird, like surely there's a better way
             // to iterate between `start` and `end`
-            for (const ObjectHandle& middle : std::span<ObjectHandle>(start, end))
+            for (Id middle : std::span<Id>(start, end))
                 if (!isInSelections(middle))
                     Selections.push_back(middle);
         }
@@ -2041,15 +2056,23 @@ static std::string getDescriptionForComponent(EntityComponent Ec)
     return Descriptions[index];
 }
 
-static ObjectHandle InsertObjectButtonHoveredOver = nullptr;
+static Id InsertObjectButtonHoveredOver = 0;
 
-static void recursiveIterateTree(const ObjectHandle& current)
+static std::string displayedName(World& world, Id id)
+{
+    if (std::optional<World::ComponentData> cd = world.find(id, Ec::Name))
+        return cd->cr->getData(cd->index).AsString();
+    else
+        return std::format("({:x})", id);
+}
+
+static void recursiveIterateTree(World& world, Id current)
 {
     ZoneScopedC(tracy::Color::DarkSeaGreen);
 
     // https://github.com/ocornut/imgui/issues/581#issuecomment-216054349
     // 07/10/2024
-    ObjectHandle nodeClicked = nullptr;
+    Id nodeClicked = 0;
 
     if (ExplorerShouldSeekToCurrentSelection && isInSelections(current))
     {
@@ -2057,21 +2080,24 @@ static void recursiveIterateTree(const ObjectHandle& current)
         ImGui::SetScrollHereY();
     }
 
-    InsertObjectButtonHoveredOver = nullptr;
+    InsertObjectButtonHoveredOver = 0;
 
-    current->ForEachChild([&](const ObjectHandle& object)
+    //const Id ChildrenQuery[] = { pair(Ec::ChildOf, current) };
+
+    //world.query(ChildrenQuery, [&](Id e, const std::vector<World::ComponentData>&)
     {
-        ImGui::PushID((int)object->ObjectId);
+        Id e = current;
+        ImGui::PushID(e);
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow
             | ImGuiTreeNodeFlags_AllowOverlap
             | ImGuiTreeNodeFlags_SpanAvailWidth
             | ImGuiTreeNodeFlags_DrawLinesFull;
 
-        if (isInSelections(object))
+        if (isInSelections(e))
         {
             // make the insert button have better contrast
-            if (object != InsertObjectButtonHoveredOver)
+            if (e != InsertObjectButtonHoveredOver)
                 flags |= ImGuiTreeNodeFlags_Selected;
 
             if (ExplorerShouldSeekToCurrentSelection)
@@ -2086,15 +2112,16 @@ static void recursiveIterateTree(const ObjectHandle& current)
             }
         }
 
-        if (object->Children.empty())
+        if (!world.find(Ec::Wildcard, pair(Ec::ChildOf, e)))
             flags |= ImGuiTreeNodeFlags_Leaf;
 
         ImGui::AlignTextToFramePadding();
 
-        ReflectorRef primaryComponent = object->Components.size() > 0 ? object->Components[0] : ReflectorRef();
-        if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
-            primaryComponent = object->Components[1];
+        // ReflectorRef primaryComponent = object->Components.size() > 0 ? object->Components[0] : ReflectorRef();
+        // if (primaryComponent.Type == EntityComponent::Transform && object->Components.size() > 1)
+        //     primaryComponent = object->Components[1];
 
+        /*
         if (ExplorerShouldSeekToCurrentSelection)
         {
             std::vector<ObjectHandle> descs = object->GetDescendants();
@@ -2109,33 +2136,35 @@ static void recursiveIterateTree(const ObjectHandle& current)
                 }
             }
         }
+        */
 
         const ImGuiStyle& style = ImGui::GetStyle();
 
         bool openInserter = false;
         bool isHovered = false;
 
-        bool open = ImGui::TreeNodeEx(object->Name.c_str(), flags, "%s", "");
+        const std::string name = displayedName(world, e);
+        bool open = ImGui::TreeNodeEx(name.c_str(), flags, "%s", "");
 
-        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? object : nodeClicked;
+        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? e : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
         {
-            std::vector<uint32_t> draggingVec;
+            std::vector<Id> draggingVec;
 
             if (Selections.size() == 1 && std::find(PrevSelections.begin(), PrevSelections.end(), Selections[0]) != PrevSelections.end())
                 Selections = PrevSelections;
 
             draggingVec.reserve(Selections.size());
-            for (const ObjectHandle& selected : Selections)
-                draggingVec.push_back(selected->ObjectId);
+            for (Id selected : Selections)
+                draggingVec.push_back(selected);
 
-            ImGui::SetDragDropPayload("Explorer_DragGameObject", draggingVec.data(), sizeof(uint32_t) * Selections.size());
-            ImGui::Text("Moving %s", object->Name.c_str());
+            ImGui::SetDragDropPayload("Explorer_DragGameObject", draggingVec.data(), sizeof(Id) * Selections.size());
+            ImGui::Text("Moving %s", name.c_str());
             ImGui::EndDragDropSource();
-            nodeClicked = object;
+            nodeClicked = e;
         }
 
         if (ImGui::BeginDragDropTarget())
@@ -2143,8 +2172,8 @@ static void recursiveIterateTree(const ObjectHandle& current)
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Explorer_DragGameObject"))
             {
                 History::ScopedAction action = { "DragAndDropObject" };
-                uint32_t* objects = (uint32_t*)payload->Data;
-                int count = payload->DataSize / sizeof(uint32_t);
+                Id* objects = (Id*)payload->Data;
+                int count = payload->DataSize / sizeof(Id);
 
                 try
                 {
@@ -2152,21 +2181,16 @@ static void recursiveIterateTree(const ObjectHandle& current)
 
                     for (int index = 0; index < count; index++)
                     {
-                        uint32_t objectId = objects[index];
+                        Id dragging = objects[index];
 
-                        if (GameObject* dragging = GameObjectManager::Get()->FindById(objectId))
+                        world.add(dragging, pair(Ec::ChildOf, e));
+                        if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
                         {
-                            dragging->SetParent(object);
-                            if (!ImGui::IsKeyDown(ImGuiKey_LeftShift))
-                            {
-                                ExplorerShouldSeekToCurrentSelection = true;
-                                ExplorerShouldSeekToCurrentSelection_Frame = true;
-                            }
-
-                            Selections.emplace_back(dragging);
+                            ExplorerShouldSeekToCurrentSelection = true;
+                            ExplorerShouldSeekToCurrentSelection_Frame = true;
                         }
-                        else
-                            setErrorMessage("Object was deleted");
+
+                        Selections.emplace_back(dragging);
                     }
                 }
                 catch (const std::runtime_error& e)
@@ -2183,33 +2207,33 @@ static void recursiveIterateTree(const ObjectHandle& current)
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f); // not the faintest idea
 
         ImGui::ImageWithBg(
-            getIconForComponent(primaryComponent.Type).GpuId,
+            getIconForComponent(EntityComponent::None).GpuId,
             ImVec2(16.f, 16.f),
             ImVec2(0.f, 0.f),
             ImVec2(1.f, 1.f),
-            ImVec4(),
-            object->TreeEnabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : (object->GetEnabled() ? ImVec4(.6f, .6f, .6f, 1.f) : ImVec4(.4f, .4f, .4f, 1.f))
+            ImVec4()//,
+            // object->TreeEnabled ? ImVec4(1.f, 1.f, 1.f, 1.f) : (object->GetEnabled() ? ImVec4(.6f, .6f, .6f, 1.f) : ImVec4(.4f, .4f, .4f, 1.f))
         );
-        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? object : nodeClicked;
+        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? e : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
         ImGui::SameLine();
-        ImGui::TextUnformatted(object->Name.c_str());
+        ImGui::TextUnformatted(name.c_str());
 
-        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? object : nodeClicked;
+        nodeClicked = (ImGui::IsItemActivated() || ImGui::IsItemClicked(ImGuiMouseButton_Left)) ? e : nodeClicked;
         openInserter = ImGui::IsItemClicked(ImGuiMouseButton_Right) ? true : openInserter;
         isHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) ? true : isHovered;
 
-        VisibleTreeWip.push_back(object);
+        VisibleTreeWip.push_back(e);
 
         if (openInserter || ImGui::IsItemClicked(ImGuiMouseButton_Right))
         {
             ImGui::OpenPopup(1979); // the mimic!!
 
-            if (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeyShift || !isInSelections(object))
+            if (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeyShift || !isInSelections(e))
                 // select/add to selections
-                onTreeItemClicked(object);
+                onTreeItemClicked(e);
 
             ContextActionsForSelection = getPossibleActionsForSelections();
         }
@@ -2229,27 +2253,26 @@ static void recursiveIterateTree(const ObjectHandle& current)
             // with the ordering 15/12/2024
             if (ImGui::IsItemActivated())
             {
-                ObjectInsertionTarget = object;
+                ObjectInsertionTarget = e;
                 ImGui::OpenPopup(45);
             }
 
             if (ImGui::IsItemHovered())
             {
-                ImGui::SetItemTooltip("Insert new Object");
-                InsertObjectButtonHoveredOver = object;
+                ImGui::SetItemTooltip("Insert new Entity");
+                InsertObjectButtonHoveredOver = e;
             }
         }
 
         if (open)
         {
-            if (object->Children.size() > 0)
-                recursiveIterateTree(object);
+            //recursiveIterateTree(world, e);
             ImGui::TreePop();
         }
 
         ImGui::PopID();
-        return true;
-    });
+        //return true;
+    }//);
 
     if (nodeClicked)
     {
@@ -2966,8 +2989,9 @@ static void renderDocumentationViewer()
     DocumentationViewerJumpingToPage = false;
 }
 
-static bool isInInterface(const ObjectHandle& Object)
+static bool isInInterface(Id entity)
 {
+    /*
     ObjectRef checking = Object.Reference;
 
     while (checking)
@@ -2976,25 +3000,19 @@ static bool isInInterface(const ObjectHandle& Object)
             return true;
         checking = checking->GetParent();
     }
+    */
 
     return false;
-}
-
-static std::string displayedName(World& world, Id id)
-{
-    if (std::optional<World::ComponentData> cd = world.find(id, Ec::Name))
-        return cd->cr->getData(cd->index).AsString();
-    else
-        return std::format("({:x})", id);
 }
 
 static void renderExplorer()
 {
     ZoneScoped;
 
+    /*
     for (size_t i = 0; i < Selections.size(); i++)
     {
-        ObjectHandle& handle = Selections[i];
+        Id handle = Selections[i];
         if (!handle.HasValue() || !handle.Reference.Referred() || handle->IsDestructionPending)
         {
             Selections[i].Clear();
@@ -3003,6 +3021,7 @@ static void renderExplorer()
             i--;
         }
     }
+    */
 
     if (!DeveloperTools::ExplorerShown)
         return;
@@ -3014,7 +3033,8 @@ static void renderExplorer()
     {
         ImGui::SetNextWindowFocus();
 
-        for (const ObjectHandle& handle : Selections)
+        /*
+        for (Id handle : Selections)
         {
             if (!handle->IsDescendantOf(ExplorerRoot.Dereference()))
             {
@@ -3022,6 +3042,7 @@ static void renderExplorer()
                 break;
             }
         }
+        */
     }
 
     if (!ImGui::Begin("Explorer", &DeveloperTools::ExplorerShown, ImGuiWindowFlags_HorizontalScrollbar))
@@ -3029,6 +3050,9 @@ static void renderExplorer()
         ImGui::End();
         return;
     }
+
+    Engine* engine = Engine::Get();
+    World& world = engine->world;
 
     if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
         ImGui::OpenPopup(1979); // the mimic!!;
@@ -3045,8 +3069,8 @@ static void renderExplorer()
         {
             History::ScopedAction action = { "Delete by hotkey" };
 
-            for (const ObjectHandle& sel : Selections)
-                sel->SetParent(nullptr); // We can't actually `::Destroy` it because then we won't be able to Undo it back
+            for (Id sel : Selections)
+                world.add(sel, pair(Ec::ChildOf, 0)); // We can't actually `::Destroy` it because then we won't be able to Undo it back
 
             Selections.clear();
             ImGui::SetWindowFocus();
@@ -3069,24 +3093,14 @@ static void renderExplorer()
         }
     }
 
-    Engine* engine = Engine::Get();
-    World& world = engine->world;
+    VisibleTreeWip.clear();
+    // recursiveIterateTree(Engine::Get()->world, ExplorerRoot);
+
     world.query({}, [&](Id e, const std::vector<World::ComponentData>&)
     {
-        ImGui::PushID(e);
-        std::string display;
-
-        if (ImGui::Button(displayedName(world, e).c_str()))
-            SelectedEntities = { e };
-
-        ImGui::PopID();
+        recursiveIterateTree(world, e);
         return true;
     });
-
-    ImGui::Separator();
-
-    VisibleTreeWip.clear();
-    recursiveIterateTree(ExplorerRoot);
 
     ImVec2 rootDropTargetSize = ImGui::GetContentRegionAvail();
     rootDropTargetSize.y = std::max(rootDropTargetSize.y, 16.f);
@@ -3132,13 +3146,13 @@ static void renderExplorer()
         {
             History::ScopedAction action = { "InsertEmptyObject" };
 
-            ObjectHandle newObject = GameObjectManager::Get()->Create();
-            newObject->SetParent(ObjectInsertionTarget);
-            Selections = { newObject };
+            Id newEntity = world.entity();
+            world.add(newEntity, pair(Ec::ChildOf, ObjectInsertionTarget));
+            Selections = { newEntity };
             ExplorerShouldSeekToCurrentSelection = true;
         }
 
-        bool inInterface = isInInterface(ObjectInsertionTarget);
+        bool inInterface = false; //isInInterface(ObjectInsertionTarget);
         size_t listSize = inInterface ? AddableInterfaceComponents.size() : AddableComponents.size();
 
         for (size_t i = 0; i < listSize; i++)
@@ -3149,16 +3163,16 @@ static void renderExplorer()
             {
                 History::ScopedAction action = { "InsertObject" };
 
-                ObjectHandle newObject = GameObjectManager::s_Create(name);
+                Id newEntity = world.entity();
 
-                for(EntityComponent ecx : GetCommonDependenciesForComponent(FindComponentTypeByName(name)))
-                    newObject->AddComponent(ecx);
+                // for(EntityComponent ecx : GetCommonDependenciesForComponent(FindComponentTypeByName(name)))
+                //     newObject->AddComponent(ecx);
 
-                newObject->SetParent(ObjectInsertionTarget);
-                Selections = { newObject };
+                world.add(newEntity, pair(Ec::ChildOf, ObjectInsertionTarget));
+                Selections = { newEntity };
             
                 ExplorerShouldSeekToCurrentSelection = true;
-                ObjectInsertionTarget.Clear();
+                ObjectInsertionTarget = 0;
             }
 
             if (ImGui::IsItemHovered())
@@ -3184,11 +3198,11 @@ static void renderExplorer()
             }
         }
 
-        InsertObjectButtonHoveredOver = nullptr;
+        InsertObjectButtonHoveredOver = 0;
         ImGui::EndPopup();
     }
     else
-        ObjectInsertionTarget.Clear();
+        ObjectInsertionTarget = 0;
 
     if (ImGui::BeginPopupEx(1979, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
     {
@@ -3218,7 +3232,8 @@ static void renderExplorer()
                         const std::string ReimportableStr = "Phoenix_ReimportableModel";
                         bool autoReimport = false;
 
-                        for (const ObjectHandle& sel : Selections)
+                        /*
+                        for (Id sel : Selections)
                         {
                             if (sel->HasTag(ReimportableStr))
                             {
@@ -3226,21 +3241,24 @@ static void renderExplorer()
                                 break;
                             }
                         }
+                        */
 
                         if (ImGui::Checkbox(name, &autoReimport))
                         {
                             std::optional<size_t> id = history->TryBeginAction("Change auto re-import setting");
 
+                            /*
                             if (autoReimport)
                             {
-                                for (const ObjectHandle& sel : Selections)
+                                for (Id sel : Selections)
                                     sel->AddTag(ReimportableStr);
                             }
                             else
                             {
-                                for (const ObjectHandle& sel : Selections)
+                                for (Id sel : Selections)
                                     sel->RemoveTag(ReimportableStr);
                             }
+                            */
 
                             if (id)
                                 history->FinishAction(id.value());
@@ -3785,20 +3803,22 @@ static const Reflection::PropertyDescriptor* EditingProperty = nullptr;
 
 static void setProperties(const std::string_view& PropertyName, const Reflection::GenericValue& Value)
 {
-    for (const ObjectHandle& sel : Selections)
+    /*
+    for (Id sel : Selections)
+    {
+        if (sel->FindProperty(PropertyName))
         {
-            if (sel->FindProperty(PropertyName))
+            try
             {
-                try
-                {
-                    sel->SetPropertyValue(PropertyName, Value);
-                }
-                catch (const std::runtime_error& err)
-                {
-                    setErrorMessage(err.what());
-                }
+                sel->SetPropertyValue(PropertyName, Value);
+            }
+            catch (const std::runtime_error& err)
+            {
+                setErrorMessage(err.what());
             }
         }
+    }
+    */
 }
 
 static bool openFileSelectorForAssetProp(const std::string_view& PropertyName)
@@ -4122,11 +4142,14 @@ static void renderProperties()
         return;
     }
 
-    if (SelectedEntities.size() > 0)
+    Engine* engine = Engine::Get();
+    World& world = engine->world;
+
+    if (Selections.size() > 0)
     {
         Engine* engine = Engine::Get();
         World& world = engine->world;
-        Id e = SelectedEntities[0];
+        Id e = Selections[0];
 
         ImGui::Text("ID: %lx", e);
 
@@ -4260,9 +4283,9 @@ static void renderProperties()
         if (ImGui::IsWindowHovered() && ImGui::IsKeyDown(ImGuiKey_F2))
             FocusRenameSelection = true;
 
-        uint32_t idSum = 0;
-        for (const ObjectHandle& sel : Selections)
-            idSum += sel->ObjectId;
+        uint64_t idSum = 0;
+        for (Id sel : Selections)
+            idSum += sel;
 
         ImGui::PushID(idSum);
 
@@ -4270,7 +4293,7 @@ static void renderProperties()
         if (Selections.size() == 1)
             sepStr = std::format(
                 "Properties of {}",
-                Selections[0]->Name
+                displayedName(world, Selections[0])
             );
 
         ImGui::SeparatorText(sepStr.c_str());
@@ -4283,9 +4306,11 @@ static void renderProperties()
 
         std::set<EntityComponent> components;
 
-        for (const ObjectHandle& sel : Selections)
+        /*
+        for (Id sel : Selections)
             for (const ReflectorRef& ref : sel->Components)
                 components.insert(ref.Type);
+        */
 
         static EntityComponent RemoveComponentPopupTarget = EntityComponent::None;
 
@@ -4322,7 +4347,7 @@ static void renderProperties()
         {
             bool inInterface = false;
 
-            for (const ObjectHandle& obj : Selections)
+            for (Id obj : Selections)
             {
                 if (isInInterface(obj))
                 {
@@ -4344,11 +4369,13 @@ static void renderProperties()
                     EntityComponent ec = FindComponentTypeByName(comp);
                     assert(ec != EntityComponent::None);
 
-                    for (const ObjectHandle& obj : Selections)
+                    /*
+                    for (Id obj : Selections)
                     {
                         if (!obj->FindComponentByType(ec))
                             obj->AddComponent(ec);
                     }
+                    */
                 }
 
                 std::string tooltip = getDescriptionAsString(
@@ -4378,9 +4405,11 @@ static void renderProperties()
             {
                 History::ScopedAction action = { "RemoveComponent" };
 
-                for (const ObjectHandle& obj : Selections)
+                /*
+                for (Id obj : Selections)
                     if (obj->FindComponentByType(RemoveComponentPopupTarget))
                         obj->RemoveComponent(RemoveComponentPopupTarget);
+                */
             }
             
             ImGui::EndPopup();
@@ -4393,7 +4422,8 @@ static void renderProperties()
         std::unordered_map<std::string_view, EntityComponent> propToComponent;
         std::set<std::string_view> tags;
 
-        for (const ObjectHandle& sel : Selections)
+        /*
+        for (Id sel : Selections)
         {
             for (const auto& prop : sel->GetProperties())
             {
@@ -4430,6 +4460,7 @@ static void renderProperties()
             for (uint16_t tag : sel->Tags)
                 tags.insert(GameObjectManager::Get()->Collections[tag].Name);
         }
+        */
 
         using PropsIteratorType = std::pair<std::string_view, std::pair<const Reflection::PropertyDescriptor*, Reflection::GenericValue>>;
 
@@ -4444,6 +4475,7 @@ static void renderProperties()
 
         ImGui::Separator();
 
+        /*
         if (EcLuauData* el = Selections[0]->FindComponent<EcLuauData>(); Selections.size() == 1 && el)
         {
             for (EcLuauData::LuauComponent& component : el->ComponentData)
@@ -4463,6 +4495,7 @@ static void renderProperties()
                 }
             }
         }
+        */
 
         for (size_t propIndex = 0; propIndex < propsOrdered.size(); propIndex++)
         {
@@ -4716,8 +4749,8 @@ static void renderProperties()
                         {
                             if (referenced)
                             {
-                                GameObject* target = GameObjectManager::Get()->FromGenericValue(newVal);
-                                Selections = { target };
+                                //GameObject* target = GameObjectManager::Get()->FromGenericValue(newVal);
+                                //Selections = { target };
                                 ExplorerShouldSeekToCurrentSelection = true;
                                 DeveloperTools::ExplorerShown = true;
                             }
@@ -4739,8 +4772,10 @@ static void renderProperties()
                         {
                             History::ScopedAction action = { "SetObjectPropertyToNil" };
 
-                            for (const ObjectHandle& object : Selections)
+                            /*
+                            for (Id : Selections)
                                 object->SetPropertyValue(propName, Reflection::GenericValue::Null());
+                            */
                         }
                     }
                 }
@@ -4791,7 +4826,7 @@ static void renderProperties()
             {
                 History* history = History::Get();
 
-                static uint32_t prevObject = PHX_GAMEOBJECT_NULL_ID;
+                static Id prevObject = 0;
                 static size_t curWaypoint = history->GetCurrentWaypoint();
 
                 if (!doConflict)
@@ -4806,14 +4841,14 @@ static void renderProperties()
 
                     glm::mat4 mat = curVal.AsMatrix();
 
-                    if (Selections[0]->ObjectId != prevObject || history->GetCurrentWaypoint() != curWaypoint || !ImGui::IsAnyItemActive())
+                    if (Selections[0] != prevObject || history->GetCurrentWaypoint() != curWaypoint || !ImGui::IsAnyItemActive())
                     {
                         DecomposeTRS(mat, &trans, &rotquat, &scale);
 
                         glm::vec3 rotrads = glm::eulerAngles(rotquat);
                         rotdegs = { glm::degrees(rotrads.x), glm::degrees(rotrads.y), glm::degrees(rotrads.z) };
 
-                        prevObject = Selections[0]->ObjectId;
+                        prevObject = Selections[0];
                         curWaypoint = history->GetCurrentWaypoint();
                     }
 
@@ -4892,8 +4927,10 @@ static void renderProperties()
 
                 try
                 {
-                    for (const ObjectHandle& sel : Selections)
+                    /*
+                    for (Id sel : Selections)
                         sel->SetPropertyValue(propName, newVal);
+                    */
                 }
                 catch (const std::runtime_error& Err)
                 {
@@ -4931,8 +4968,10 @@ static void renderProperties()
             {
                 History::ScopedAction action = { "RemoveTag" };
 
-                for (const ObjectHandle& sel : Selections)
+                /*
+                for (Id sel : Selections)
                     sel->RemoveTag(std::string(tag));
+                */
             }
 
             ImGui::PopID();
@@ -4970,8 +5009,10 @@ static void renderProperties()
             {
                 History::ScopedAction action = { "AddEnteredTag" };
 
-                for (const ObjectHandle& sel : Selections)
+                /*
+                for (Id sel : Selections)
                     sel->AddTag(std::string(EntryBuffer));
+                */
 
                 ImGui::CloseCurrentPopup();
             }
@@ -4993,8 +5034,10 @@ static void renderProperties()
                 {
                     History::ScopedAction action = { "AddEnteredTagFromList" };
 
-                    for (const ObjectHandle& sel : Selections)
+                    /*
+                    for (Id sel : Selections)
                         sel->AddTag(std::string(name));
+                    */
 
                     ImGui::CloseCurrentPopup();
                 }
@@ -5753,7 +5796,7 @@ void DeveloperTools::SetExplorerRoot(const ObjectHandle NewRoot)
     PrevSelections.clear();
 }
 
-void DeveloperTools::SetExplorerSelections(const std::vector<ObjectHandle>& NewSelections)
+void DeveloperTools::SetExplorerSelections(const std::vector<Id>& NewSelections)
 {
     Selections = NewSelections;
     PrevSelections.clear();
@@ -5765,20 +5808,8 @@ void DeveloperTools::SetExplorerSelections(const std::vector<ObjectHandle>& NewS
     }
 }
 
-const std::vector<ObjectHandle>& DeveloperTools::GetExplorerSelections()
+const std::vector<Id>& DeveloperTools::GetExplorerSelections()
 {
-    for (size_t i = 0; i < Selections.size(); i++)
-    {
-        ObjectHandle& handle = Selections[i];
-        if (!handle.HasValue() || !handle.Reference.Referred() || handle->IsDestructionPending)
-        {
-            Selections[i].Clear();
-            Selections[i] = Selections[Selections.size() - 1];
-            Selections.erase(Selections.end() - 1);
-            i--;
-        }
-    }
-
     return Selections;
 }
 
@@ -5816,8 +5847,8 @@ void DeveloperTools::Shutdown()
 {
     MtlPreviewCamera.Clear();
     ExplorerRoot.Clear();
-    LastSelected.Clear();
-    ObjectInsertionTarget.Clear();
+    LastSelected = 0;
+    ObjectInsertionTarget = 0;
     PrevEditSelections.clear();
     Selections.clear();
     PrevSelections.clear();
@@ -5979,7 +6010,7 @@ static bool debugVariable(lua_State* L, bool CanEdit)
     default:
     {
         std::string valueString;
-        GameObject* targetObject = nullptr;
+        Id targetEntity = 0;
         bool editableValue = false;
 
         switch (lua_type(L, -1))
@@ -5993,15 +6024,10 @@ static bool debugVariable(lua_State* L, bool CanEdit)
         {
             if (!CanEdit || lua_type(L, -1) == LUA_TUSERDATA)
             {
-                if (const uint32_t* id = (uint32_t*)lua_touserdatatagged(L, -1, UserdataTag::GameObject))
+                if (const ComponentUserdata* ud = (ComponentUserdata*)lua_touserdatatagged(L, -1, UserdataTag::Component))
                 {
-                    GameObjectManager* objectManager = GameObjectManager::Get();
-                    targetObject = objectManager->FindById(*id);
-
-                    if (targetObject)
-                        valueString = targetObject->GetFullName();
-                    else
-                        valueString = std::format("[Invalid GameObject, ID={}]", *id);
+                    targetEntity = ud->cr->dense[ud->index];
+                    valueString = displayedName(Engine::Get()->world, targetEntity);
                 }
                 else if (const Color* color = (Color*)lua_touserdatatagged(L, -1, UserdataTag::Color))
                     valueString = std::format("{}, {}, {}", color->R, color->G, color->B);
@@ -6035,8 +6061,8 @@ static bool debugVariable(lua_State* L, bool CanEdit)
             varname.c_str(), valueString.c_str()
         );
 
-        if (ImGui::IsItemClicked() && targetObject)
-            DeveloperTools::SetExplorerSelections({ targetObject });
+        if (ImGui::IsItemClicked() && targetEntity)
+            Selections = { targetEntity };
 
         if (opened_what)
             ImGui::TreePop();

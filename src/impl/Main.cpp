@@ -474,8 +474,8 @@ static void installCrashSignalHandlers()
 {
 #ifdef __clang__
 
-    for (int sig : { SIGSEGV, SIGABRT, SIGILL, SIGBUS })
-        signal(sig, handleCrashSignal);
+    //for (int sig : { SIGSEGV, SIGABRT, SIGILL, SIGBUS })
+    //    signal(sig, handleCrashSignal);
 
 #endif
 }

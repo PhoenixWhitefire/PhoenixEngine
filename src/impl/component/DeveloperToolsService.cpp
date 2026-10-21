@@ -106,6 +106,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
             }
         } },
 
+        /*
         { "SetExplorerSelections", Reflection::MethodDescriptor{
             REFLECTION_SPAN({ Reflection::ValueType::Array }),
             {},
@@ -123,7 +124,9 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
                 return {};
             }
         } },
+        */
 
+        /*
         { "GetExplorerSelections", Reflection::MethodDescriptor{
             {},
             REFLECTION_SPAN({ Reflection::ValueType::Array }),
@@ -140,6 +143,7 @@ const Reflection::StaticMethodMap& DeveloperToolsComponentManager::GetMethods()
                 return { Reflection::GenericValue(out) };
             }
         } },
+        */
 
         { "GetToolNames", Reflection::MethodDescriptor{
             {},

@@ -14,8 +14,8 @@ namespace DeveloperTools
     void Shutdown();
 
     void Frame(double DeltaTime);
-    void SetExplorerSelections(const std::vector<ObjectHandle>&);
-    const std::vector<ObjectHandle>& GetExplorerSelections();
+    void SetExplorerSelections(const std::vector<uint64_t>&);
+    const std::vector<uint64_t>& GetExplorerSelections();
     void SetExplorerRoot(const ObjectHandle);
     void OpenTextDocument(const std::string&, int Line = 1, bool TakeFocus = true);
     void SaveTextDocuments();

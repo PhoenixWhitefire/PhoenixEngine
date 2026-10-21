@@ -58,7 +58,7 @@ end
 
 print("Children of root:")
 
-for e, _ in world:query(ecs.pair(ecs.ChildOf, childA)) do
+for e, _ in world:query(ecs.pair(ecs.ChildOf, root)) do
     print(`* {nameOf(e)}`)
 end
 

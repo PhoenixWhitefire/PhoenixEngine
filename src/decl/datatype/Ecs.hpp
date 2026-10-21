@@ -98,7 +98,7 @@ struct World
     std::optional<Id> target(Id e, Id relation, uint64_t index = 0);
     std::optional<Id> parent(Id e);
     bool query(
-        const std::span<Id>& predicates,
+        const std::span<const Id>& predicates,
         const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing,
         Id start = 0
     );
