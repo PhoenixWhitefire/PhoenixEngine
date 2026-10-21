@@ -1769,6 +1769,52 @@ static int world_set(lua_State* L)
     return 0;
 }
 
+static int world_targets(lua_State* L)
+{
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id relation = luhx_checkid(L, 3);
+
+    lua_newtable(L);
+
+    std::optional<Id> target;
+    for (int index = 0; (target = world->target(e, relation, index)); index++)
+    {
+        luhx_pushid(L, target.value());
+        lua_rawseti(L, -2, index + 1);
+    }
+
+    return 1;
+}
+
+static int world_target(lua_State* L)
+{
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+    Id relation = luhx_checkid(L, 3);
+    int index = luaL_optinteger(L, 4, 1) - 1; // 1-based
+
+    if (std::optional<Id> target = world->target(e, relation, index))
+        luhx_pushid(L, target.value());
+    else
+        lua_pushnil(L);
+
+    return 1;
+}
+
+static int world_parent(lua_State* L)
+{
+    World* world = luhx_checkworld(L, 1);
+    Id e = luhx_checkid(L, 2);
+
+    if (std::optional<Id> parent = world->parent(e))
+        luhx_pushid(L, parent.value());
+    else
+        lua_pushnil(L);
+
+    return 1;
+}
+
 static int world_query(lua_State* L)
 {
     QueryData qd = {};
@@ -1788,6 +1834,22 @@ static int world_query(lua_State* L)
 
     return 1;
 }
+
+static const luaL_Reg world_funcs[] = {
+    { "entity", world_entity },
+    { "component", world_component },
+    { "add", world_add },
+    { "remove", world_remove },
+    { "has", world_has },
+    { "find", world_find },
+    { "get", world_get },
+    { "set", world_set },
+    { "targets", world_targets },
+    { "target", world_target },
+    { "parent", world_parent },
+    { "query", world_query },
+    { nullptr, nullptr }
+};
 
 static int queryNext(lua_State* L)
 {
@@ -1821,40 +1883,13 @@ static int querymeta_iter(lua_State* L)
 
 static void registerWorldUserdata(lua_State* L)
 {
-    lua_createtable(L, 0, 11);
+    luhx_makemodule(L, world_funcs);
 
     lua_pushliteral(L, "World");
     lua_setfield(L, -2, "__type");
 
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
-
-    lua_pushcfunction(L, world_entity, "entity");
-    lua_setfield(L, -2, "entity");
-
-    lua_pushcfunction(L, world_component, "component");
-    lua_setfield(L, -2, "component");
-
-    lua_pushcfunction(L, world_add, "add");
-    lua_setfield(L, -2, "add");
-
-    lua_pushcfunction(L, world_remove,"remove");
-    lua_setfield(L, -2, "remove");
-
-    lua_pushcfunction(L, world_has, "has");
-    lua_setfield(L, -2, "has");
-
-    lua_pushcfunction(L, world_find, "find");
-    lua_setfield(L, -2, "find");
-
-    lua_pushcfunction(L, world_get, "get");
-    lua_setfield(L, -2, "get");
-
-    lua_pushcfunction(L, world_set, "set");
-    lua_setfield(L, -2, "set");
-
-    lua_pushcfunction(L, world_query, "query");
-    lua_setfield(L, -2, "query");
 
     lua_setuserdatametatable(L, UserdataTag::World);
 

@@ -93,7 +93,10 @@ struct World
 
     ComponentData add(Id e, Id c);
     void remove(Id e, Id c);
+
     std::optional<ComponentData> find(Id e, Id c);
+    std::optional<Id> target(Id e, Id relation, uint64_t index = 0);
+    std::optional<Id> parent(Id e);
     bool query(
         const std::span<Id>& predicates,
         const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing,

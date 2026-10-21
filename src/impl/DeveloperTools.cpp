@@ -4109,8 +4109,6 @@ static bool isInternalTagName(const std::string_view& name)
 
 static bool debugVariable(lua_State* L, bool CanEdit = true);
 
-
-
 static void renderProperties()
 {
     ZoneScoped;

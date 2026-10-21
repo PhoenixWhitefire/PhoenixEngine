@@ -27,6 +27,8 @@ world:add(childA, childOfRoot)
 world:add(childB, childOfRoot)
 world:add(descendant, childOfA)
 
+world:add(childA, childOfA)
+
 world:set(childOfRoot, ecs.Name, "ChildOfRoot")
 
 world:set(childA, ecs.Transform, { World = Matrix.translated(0, 1, 0), Local = Matrix.translated(1, 0, 0) })
@@ -66,6 +68,9 @@ print("All relationships targeting 'A':")
 for e, _ in world:query(ecs.pair(ecs.Wildcard, childA)) do
     print(`* {nameOf(e)}`)
 end
+
+print("")
+print(`Parent of B: { nameOf(assert(world:parent(childB))) }`)
 
 local function renderEnt(e: ecs.Id)
     local name = world:find(e, ecs.Name)
@@ -112,6 +117,9 @@ while true do
                 sel = parent
             end
         end
+
+        -- TODO luau
+        assert(sel)
 
         local trans = world:find(sel, ecs.Transform)
         if trans then

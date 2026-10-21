@@ -4,12 +4,12 @@
 #include "datatype/Ecs.hpp"
 #include "datatype/BuiltinComponents.hpp"
 
-Id pair(Id relation, Id object)
+Id pair(Id relation, Id target)
 {
     relation %= EcsEntityMask;
-    object %= EcsEntityMask;
+    target %= EcsEntityMask;
 
-    return object + (relation * EcsEntityMask) + EcsPairOffset;
+    return target + (relation * EcsEntityMask) + EcsPairOffset;
 }
 
 Id pairFirst(Id p)
@@ -161,25 +161,30 @@ void World::initialize()
     NameComponentRecord* ncr = new NameComponentRecord;
 
     Id wildcard = component(new LuauComponentRecord);
-    Id name = component(ncr);
+    Id exclusive = component(new LuauComponentRecord);
     Id childOf = component(new LuauComponentRecord);
+    Id name = component(ncr);
     Id transform = component(new TransformComponentRecord);
 
-    assert(wildcard == Ec::Wildcard);
-    assert(name == Ec::Name);
-    assert(childOf == Ec::ChildOf);
-    assert(transform == Ec::Transform);
-
-    (void)wildcard;
-    (void)name;
-    (void)childOf;
-    (void)transform;
+    add(childOf, exclusive);
 
     for (Id c = Ec::start; c <= Ec::count; c++)
     {
         ComponentData cName = add(c, name);
         ncr->data[cName.index] = EcNames[c - 1];
     }
+
+    assert(wildcard == Ec::Wildcard);
+    assert(exclusive == Ec::Exclusive);
+    assert(childOf == Ec::ChildOf);
+    assert(name == Ec::Name);
+    assert(transform == Ec::Transform);
+
+    (void)wildcard;
+    (void)exclusive;
+    (void)childOf;
+    (void)name;
+    (void)transform;
 }
 
 void World::shutdown()
@@ -204,7 +209,23 @@ Id World::component(ComponentRecordBase* cr)
     return c;
 }
 
-static ComponentRecordBase* addPair(World* world, Id e, Id p)
+static void removeTargets(World* world, Id e, Id relation)
+{
+    for (const auto& [ id, cr ] : world->predicates)
+    {
+        if (!isPair(id) || pairFirst(id) != relation)
+            continue;
+
+        Id target = pairSecond(id);
+        if (target == Ec::Wildcard)
+            continue;
+
+        if (cr->findIndex(e))
+            world->remove(e, id);
+    }
+}
+
+static World::ComponentData addPair(World* world, Id e, Id p)
 {
     LuauComponentRecord* cr = nullptr;
 
@@ -218,12 +239,10 @@ static ComponentRecordBase* addPair(World* world, Id e, Id p)
     else
     {
         cr = new LuauComponentRecord;
+        world->predicates[p] = cr;
     }
 
-    cr->insert(e);
-    world->predicates[p] = cr;
-
-    return cr;
+    return { .cr = cr, .index = cr->insert(e) };
 }
 
 World::ComponentData World::add(Id e, Id c)
@@ -232,30 +251,44 @@ World::ComponentData World::add(Id e, Id c)
     {
         const auto& it = predicates.find(pairFirst(c));
         if (it == predicates.end())
-            throw std::runtime_error(std::format("Invalid relationship '{}' in pair", pairFirst(c)));
+            throw std::runtime_error(std::format("Invalid relationship '{:x}' in pair", pairFirst(c)));
 
-        addPair(this, e, pair(pairFirst(c), Ec::Wildcard));
-        addPair(this, e, pair(Ec::Wildcard, pairSecond(c)));
+        Id relation = pairFirst(c);
+        Id target = pairSecond(c);
 
-        return { .cr = addPair(this, e, c), .index = 0 };
+        if (find(relation, Ec::Exclusive))
+            removeTargets(this, e, relation);
+
+        addPair(this, e, pair(relation, Ec::Wildcard));
+        addPair(this, e, pair(Ec::Wildcard, target));
+
+        return addPair(this, e, c);
     }
     else
     {
         const auto& it = predicates.find(c);
         if (it == predicates.end())
-            throw std::runtime_error(std::format("Cannot add invalid predicate '{}' to entity {} (expected component or pair ID)", c, e));
+            throw std::runtime_error(std::format("Cannot add invalid predicate '{:x}' to entity {:x} (expected component or pair ID)", c, e));
 
         return { .cr = it->second, .index = it->second->insert(e) };
     }
 }
 
+static void removeSingle(World* world, Id e, Id c)
+{
+    if (const auto& it = world->predicates.find(c); it != world->predicates.end())
+        it->second->remove(e);
+}
+
 void World::remove(Id e, Id c)
 {
-    const auto& it = predicates.find(c);
-    if (it == predicates.end())
-        throw std::runtime_error(std::format("Cannot remove invalid predicate '{}' from entity {} (expected component or pair ID)", c, e));
+    removeSingle(this, e, c);
 
-    it->second->remove(e);
+    if (isPair(c))
+    {
+        removeSingle(this, e, pair(pairFirst(c), Ec::Wildcard));
+        removeSingle(this, e, pair(Ec::Wildcard, pairSecond(c)));
+    }
 }
 
 std::optional<World::ComponentData> World::find(Id e, Id c)
@@ -267,6 +300,35 @@ std::optional<World::ComponentData> World::find(Id e, Id c)
     }
 
     return std::nullopt;
+}
+
+std::optional<Id> World::target(Id e, Id relation, uint64_t index)
+{
+    uint64_t count = 0;
+
+    for (const auto& [ id, cr ] : predicates)
+    {
+        if (!isPair(id) || pairFirst(id) != relation)
+            continue;
+
+        Id target = pairSecond(id);
+        if (target == Ec::Wildcard)
+            continue;
+
+        if (cr->findIndex(e))
+        {
+            if (count == index)
+                return target;
+            count++;
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<Id> World::parent(Id e)
+{
+    return target(e, Ec::ChildOf);
 }
 
 bool World::query(const std::span<Id>& queryPredicates, const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing, Id start)

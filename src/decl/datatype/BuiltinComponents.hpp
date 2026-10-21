@@ -10,10 +10,13 @@ struct Ec_
     {
         start = 1,
 
+        // Relationship wildcard.
         Wildcard = 1,
-        Name = 2,
-        ChildOf = 3,
-        Transform = 4,
+        // Exclusive relationship.
+        Exclusive,
+        ChildOf,
+        Name,
+        Transform,
 
         afterEnd,
         count = afterEnd - 1
@@ -24,8 +27,9 @@ using Ec = Ec_::EC;
 
 constexpr std::string_view EcNames[] = {
     "Wildcard",
-    "Name",
+    "Exclusive",
     "ChildOf",
+    "Name",
     "Transform",
 };
 

@@ -494,9 +494,15 @@
     },
     "Libraries": {
       "@phoenix/ecs": {
+        "ChildOf": "Id",
+        "Exclusive": "Id",
         "Name": "Id",
         "Transform": "Id",
-        "pair": "function"
+        "Wildcard": "Id",
+        "isPair": "function",
+        "pair": "function",
+        "pairFirst": "function",
+        "pairSecond": "function"
       },
       "@phoenix/fs": {
         "copy": "function",

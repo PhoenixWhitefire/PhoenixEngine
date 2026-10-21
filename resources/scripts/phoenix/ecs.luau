@@ -40,22 +40,22 @@ type QueryIterator<T...> = setmetatable<{}, QueryIteratorMeta<T...>>
 
 --- The ECS world.
 export type World = {
-    --- Creates a new entity and returns its ID.
-    read entity: (self: World) -> Id,
-    --- Creates a new component and returns its ID.
+    --- Creates a new entity.
+    read entity: (self: World) -> ReadId,
+    --- Creates a new component.
     read component: <T>(self: World) -> Id<T>,
 
     --- Adds a component or pair (relationship) to an entity.
-    read add: <T>(self: World, e: ReadId, p: T & Id<nil>) -> (),
+    read add: <T>(self: World, e: ReadId, p: T & ReadId<nil>) -> (),
     --- Removes a component or pair (relationship) from an entity.
-    read remove: (self: World, e: ReadId, p: Id) -> (),
+    read remove: (self: World, e: ReadId, p: ReadId) -> (),
 
     --- Returns whether a Component exists on an Entity.
     read has: (self: World, e: ReadId, c: ReadId) -> boolean,
 
     --- Finds component data on an entity. Returns `nil` if the component is not present.
     --- Use `get` if you do not want this behavior.
-    read find: <T>(self: World, e: ReadId, c: Id<T>) -> T?,
+    read find: <T>(self: World, e: ReadId, c: ReadId<T>) -> T?,
 
     --- Gets component data on an entity. This will error if the component is not present.
     --- Use `find` if you do not want this behavior.
@@ -63,6 +63,13 @@ export type World = {
 
     --- Sets component data on an entity. This will add the component if it is not present on `e`.
     read set: <T>(self: World, e: ReadId, c: WriteId<T>, data: T) -> (),
+
+    --- Find all entities targeted by the relationship with this entity.
+    read targets: (self: World, e: ReadId, relation: ReadId) -> ReadId?,
+    --- Find the Nth entity (the first by default) targeted by the relationship with this entity.
+    read target: (self: World, e: ReadId, relation: ReadId, index: number?) -> ReadId?,
+    --- Find the parent of this entity through the `ChildOf` relationship.
+    read parent: (self: World, e: ReadId) -> ReadId,
 
     -- TODO: Replace this with the type function once the bug is fixed.
     --- Queries the world for all entities matching the given predicates.
@@ -81,7 +88,7 @@ export type World = {
 --- The ECS library.
 type ecs = {
     --- Provides a pair identifier between two ECS identifiers.
-    read pair: (predicate: ReadId, target: ReadId) -> Id<nil>,
+    read pair: (predicate: ReadId, target: ReadId) -> WriteId,
     --- Returns whether the ID is a pair.
     read isPair: (id: ReadId) -> boolean,
     --- Returns the first component of the pair ID.
