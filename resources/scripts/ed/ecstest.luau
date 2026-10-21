@@ -5,6 +5,8 @@ local ecs = require("@phoenix/ecs")
 local imgui = require("@phoenix/imgui")
 local task = require("@std/task")
 
+local Likes = world:component()
+
 local Health = world:component<<{ Current: number, read Max: number }>>()
 local Strength = world:component<<number>>()
 
@@ -34,6 +36,10 @@ world:set(childOfRoot, ecs.Name, "ChildOfRoot")
 world:set(childA, ecs.Transform, { World = Matrix.translated(0, 1, 0), Local = Matrix.translated(1, 0, 0) })
 world:set(childB, Strength, 50)
 world:set(descendant, Health, { Current = 40, Max = 50 })
+
+world:add(childA, ecs.pair(Likes, root))
+world:add(childA, ecs.pair(Likes, Health))
+world:add(childA, ecs.pair(Likes, Strength))
 
 print("")
 print("Names:")
@@ -71,6 +77,13 @@ end
 
 print("")
 print(`Parent of B: { nameOf(assert(world:parent(childB))) }`)
+
+print("")
+print("All things liked by 'A':")
+
+for _, e in world:targets(childA, Likes) do
+    print(`* { nameOf(e) }`)
+end
 
 local function renderEnt(e: ecs.Id)
     local name = world:find(e, ecs.Name)

@@ -65,7 +65,7 @@ export type World = {
     read set: <T>(self: World, e: ReadId, c: WriteId<T>, data: T) -> (),
 
     --- Find all entities targeted by the relationship with this entity.
-    read targets: (self: World, e: ReadId, relation: ReadId) -> ReadId?,
+    read targets: (self: World, e: ReadId, relation: ReadId) -> { ReadId },
     --- Find the Nth entity (the first by default) targeted by the relationship with this entity.
     read target: (self: World, e: ReadId, relation: ReadId, index: number?) -> ReadId?,
     --- Find the parent of this entity through the `ChildOf` relationship.
