@@ -116,7 +116,6 @@
         "Methods": {
           "CloseTextDocuments": "() -> ()",
           "GetDocumentBreakpoints": "(String) -> (Array)",
-          "GetExplorerSelections": "() -> (Array)",
           "GetOpenTextDocuments": "() -> (Array)",
           "GetToolNames": "() -> (Array)",
           "Initialize": "() -> ()",
@@ -125,7 +124,6 @@
           "SaveTextDocuments": "() -> ()",
           "SetDocumentBreakpoints": "(String, Array) -> ()",
           "SetExplorerRoot": "(GameObject) -> ()",
-          "SetExplorerSelections": "(Array) -> ()",
           "SetToolEnabled": "(String, Boolean) -> ()"
         },
         "Properties": {
@@ -631,6 +629,9 @@
         "spawn": "function",
         "synchronize": "function",
         "synchronized": "function"
+      },
+      "@phoenix/schedule": {
+        "frame": "function"
       },
       "@phoenix/system": {
         "freememory": "function",

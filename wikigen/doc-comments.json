@@ -2672,6 +2672,15 @@
           }
         }
       },
+      "@phoenix/schedule": {
+        "Description": "Scheduling of tasks",
+        "Members": {
+          "frame": {
+            "Description": "Registers a function to run every frame",
+            "Type": "<R...>(f: (deltaTime: number) -> R...) -> ()"
+          }
+        }
+      },
       "@phoenix/system": {
         "Description": "Information about the player's system",
         "Members": {

@@ -2,8 +2,7 @@
 
 #include "script/luhx.hpp"
 
-static const luaL_Reg luhxlibs[] =
-{
+static const luaL_Reg luhxlibs[] = {
     { "", luhxopen_base },
     { LUA_DBLIBNAME, luhxopen_debug},
 

@@ -102,7 +102,7 @@ public:
     struct LuauVM
     {
         lua_State* CreateMainThread();
-        void StepScheduler(std::deque<YieldedCoroutine>* Yielded = nullptr);
+        void StepScheduler(double DeltaTime, std::deque<YieldedCoroutine>* Yielded = nullptr);
         void Close();
 
         virtual ~LuauVM() = default;
@@ -119,13 +119,14 @@ public:
 
         std::deque<YieldedCoroutine> YieldedCoroutines = {};
         std::vector<SharedMutex*> LockedSharedMutexes = {};
+        std::vector<int> PerFrame;
         std::string Name;
         lua_State* MainThread = nullptr;
     };
 
     struct ParallelVM : public LuauVM
     {
-        void StepParallelScheduler(ExecutionPhase Phase);
+        void StepParallelScheduler(double DeltaTime, ExecutionPhase Phase);
 
         std::deque<YieldedCoroutine> YieldedCoroutinesSync;
         std::vector<int> CoroutineRefs; // have to pin coroutines outside of serial phase
@@ -139,7 +140,7 @@ public:
         void m_ProcessParallelSpawnRequests();
     };
 
-    void StepVMs();
+    void StepVMs(double DeltaTime);
 
     LuauVM& RegisterNewVM(const std::string& Name);
     ParallelVM* CreateParallelVM();

@@ -33,7 +33,6 @@
 #include "script/luhx.hpp"
 #include "datatype/Color.hpp"
 #include "datatype/Ecs.hpp"
-#include "datatype/BuiltinComponents.hpp"
 // #include "component/ScriptEngineService.hpp"
 // #include "DeveloperTools.hpp"
 #include "Utilities.hpp"
@@ -332,7 +331,7 @@ void ScriptEngine::ParallelVM::m_ProcessParallelSpawnRequests()
     }
 }
 
-void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOverride)
+void ScriptEngine::LuauVM::StepScheduler(double DeltaTime, std::deque<YieldedCoroutine>* YieldedOverride)
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(Name.data(), Name.size());
@@ -439,9 +438,32 @@ void ScriptEngine::LuauVM::StepScheduler(std::deque<YieldedCoroutine>* YieldedOv
                 break;
         }
     }
+
+    for (int ref : PerFrame)
+    {
+        lua_State* L = lua_newthread(MainThread);
+        lua_getref(L, ref);
+        lua_pushnumber(L, DeltaTime);
+
+        lua_Status status = Resume(L, nullptr, 1);
+
+        if (status != LUA_OK && status != LUA_YIELD && status != LUA_BREAK)
+        {
+            int top = lua_gettop(L);
+            const char* err = lua_tostring(L, -1); // can't use `luaL_tolstring` because it might do a metatable check and trigger another exception
+
+            Log.ErrorF(
+                "Script resumption: {}",
+                err ? err : "unknown error"
+            );
+            lua_settop(L, top);
+
+            DumpStacktrace(L);
+        }
+    }
 }
 
-void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
+void ScriptEngine::ParallelVM::StepParallelScheduler(double DeltaTime, ExecutionPhase Phase)
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
     ZoneText(Name.data(), Name.size());
@@ -461,10 +483,10 @@ void ScriptEngine::ParallelVM::StepParallelScheduler(ExecutionPhase Phase)
         */
 
         m_ProcessParallelSpawnRequests();
-        LuauVM::StepScheduler();
+        LuauVM::StepScheduler(DeltaTime);
     }
     else
-        LuauVM::StepScheduler(&YieldedCoroutinesSync);
+        LuauVM::StepScheduler(DeltaTime, &YieldedCoroutinesSync);
 }
 
 void ScriptEngine::m_ProcessParallelEvents()
@@ -479,7 +501,7 @@ void ScriptEngine::m_ProcessParallelEvents()
     ScriptEngine::ParallelEvents.clear();
 }
 
-void ScriptEngine::StepVMs()
+void ScriptEngine::StepVMs(double DeltaTime)
 {
     ZoneScopedC(tracy::Color::LightSkyBlue);
     CollectParallelResourceGarbage();
@@ -491,13 +513,13 @@ void ScriptEngine::StepVMs()
         vm->CoroutineRefs.clear();
 
         vm->Desynchronized = false;
-        vm->StepParallelScheduler(ExecutionPhase::Serial);
+        vm->StepParallelScheduler(DeltaTime, ExecutionPhase::Serial);
     }
 
     m_ProcessParallelEvents();
 
     for (auto& [ _, vm ] : VMs)
-        vm->StepScheduler();
+        vm->StepScheduler(DeltaTime);
 }
 
 // Also in `EngineService.cpp`!!

@@ -1,8 +1,8 @@
 -- ecstest.luau, 16/10/2026
+local schedule = require("@phoenix/schedule")
+local imgui = require("@phoenix/imgui")
 local world = require("@phoenix/world")
 local ecs = require("@phoenix/ecs")
-
-local imgui = require("@phoenix/imgui")
 local task = require("@std/task")
 
 local Likes = world:component()
@@ -92,7 +92,7 @@ end
 
 local sel = nil
 
-while true do
+schedule.frame(function(dt)
     imgui.begin("Entity report")
 
     for e in world:query() do
@@ -191,4 +191,4 @@ while true do
 
     imgui.endw()
     task.wait()
-end
+end)

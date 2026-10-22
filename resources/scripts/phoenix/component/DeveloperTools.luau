@@ -28,8 +28,6 @@ export type DeveloperTools = {
     read CloseTextDocuments: (self: EcDeveloperTools) -> (),
     --- Gets a list of all breakpoints associated with a text document. If it is not open, returns an empty table
     read GetDocumentBreakpoints: (self: EcDeveloperTools, File: string) -> { DebugBreakpointInfo },
-    --- Returns what is currently selected in the Explorer
-    read GetExplorerSelections: (self: EcDeveloperTools) -> { GameObject },
     --- Gets a list of all open text documents
     read GetOpenTextDocuments: (self: EcDeveloperTools) -> { string },
     --- Returns a list of valid Engine tools
@@ -46,8 +44,6 @@ export type DeveloperTools = {
     read SetDocumentBreakpoints: (self: EcDeveloperTools, File: string, Breakpoints: { read DebugBreakpointInfo }) -> (),
     --- Changes the Root of the built-in Explorer's hierarchy view
     read SetExplorerRoot: (self: EcDeveloperTools, Root: GameObject) -> (),
-    --- Changes the built-in Explorer's Object selections to the specified Objects
-    read SetExplorerSelections: (self: EcDeveloperTools, Selections: { GameObject }) -> (),
     --- Enabled/disables the given tool
     read SetToolEnabled: (self: EcDeveloperTools, ToolName: string, Enabled: boolean) -> (),
     --- Fires when a breakpoint is removed

@@ -31,6 +31,7 @@ int luhxopen_json(lua_State*);
 int luhxopen_task(lua_State*);
 int luhxopen_parallel(lua_State*);
 int luhxopen_system(lua_State*);
+int luhxopen_schedule(lua_State*);
 
 int luhxopen_debug(lua_State*);
 
@@ -52,6 +53,7 @@ static const inline std::unordered_map<std::string_view, lua_CFunction> BuiltinL
 	{ "task", luhxopen_task },
 	{ "parallel", luhxopen_parallel },
 	{ "system", luhxopen_system },
+	{ "schedule", luhxopen_schedule },
 };
 
 #define LUHX_GAMEOBJECTLIBNAME "GameObject"

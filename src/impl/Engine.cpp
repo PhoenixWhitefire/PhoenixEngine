@@ -1330,7 +1330,7 @@ bool Engine::IsDataModelBound(const ObjectHandle& DataModel)
     ) != BoundDataModels.end();
 }
 
-static void dispatchParallelVMs(Engine* engine)
+static void dispatchParallelVMs(Engine* engine, double deltaTime)
 {
     ZoneScoped;
 
@@ -1349,7 +1349,7 @@ static void dispatchParallelVMs(Engine* engine)
                 ZoneText(vm->Name.data(), vm->Name.size());
 
                 engine->ScriptManager.ParallelVMsExecuting++;
-                vm->StepParallelScheduler(ScriptEngine::ExecutionPhase::Parallel);
+                vm->StepParallelScheduler(deltaTime, ScriptEngine::ExecutionPhase::Parallel);
                 engine->ScriptManager.ParallelVMsExecuting--;
             },
             true
@@ -1575,8 +1575,8 @@ void Engine::Start()
             Reflection::SignalEvent(bound.Object->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
         waitForParallelVMs(this);   // tsan ??
-        ScriptManager.StepVMs();    // serial phase
-        dispatchParallelVMs(this);
+        ScriptManager.StepVMs(deltaTime);    // serial phase
+        dispatchParallelVMs(this, deltaTime);
 
         // fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
         // (really need a generic `Ref` system)
@@ -1788,7 +1788,7 @@ void Engine::Shutdown()
 
     Log.Info("Destroying DataModel...");
     ComponentManagers.DataModel.NotifyAllOfShutdown();
-    ScriptManager.StepVMs(); // step event callbacks
+    ScriptManager.StepVMs(0.0); // step event callbacks
 
     world.shutdown();
 
