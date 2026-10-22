@@ -182,6 +182,9 @@ declare Color: {
 declare extern type ColorGradient with
 end
 
+declare extern type Component with
+end
+
 declare extern type EventConnection with
   function Disconnect(self): (  )
   Connected: boolean
@@ -248,6 +251,9 @@ end
 declare extern type NumberGradient with
 end
 
+declare extern type Query with
+end
+
 declare extern type SharedBuffer with
   Pull: (SharedBuffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> buffer
   Push: (SharedBuffer, Source: buffer, Start: number | --[[integer |]] nil, Length: number | --[[integer |]] nil) -> ()
@@ -256,6 +262,10 @@ end
 
 declare extern type VectorGradient with
 end
+
+declare extern type World with
+end
+
 
 
 
@@ -588,31 +598,5 @@ declare _RUNTIME: _RUNTIME
     --- URL associated with the runtime
     --- Version information
 
-declare debug: {
-	traceback: ((msg: string?, level: number?) -> string) & (co: thread, msg: string?, level: number?) -> string,
-	info: (level: number, s: string) -> string,
-    --- Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on
-    ---
-    --- If a line is not specified, breaks into Debugger immediately, and returns no values
-    ---
-    --- If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect
-    read breakpoint: (( (Line: number ) -> (number)) & (() -> ())),
-    --- Generates a profiler log message event
-    read profilemessage: (( Message: string ) -> ()),
-    --- Begins a profiling zone for the current function, optionally accepting a name
-    read zonebegin: (( Name: string? ) -> ()),
-    --- Ends the last profiling zone
-    read zoneend: ((  ) -> ()),
-    --- Set additional debug text for the zone
-    read zonetext: (( Text: string ) -> ())
-}
-
 declare phoenix: {
 }
-
-
-declare _VMNAME: string
-declare function appendlog<T...>( ...: T... ): ()
-declare function warn<T...>( ...: T... ): ()
-
-

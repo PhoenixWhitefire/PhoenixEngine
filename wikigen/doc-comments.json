@@ -994,6 +994,9 @@
       "ColorGradient": {
         "Description": "Not implemented"
       },
+      "Component": {
+        "Description": "A handle to a component's data"
+      },
       "EventConnection": {
         "Description": "A connection to an Event",
         "Members": {
@@ -1290,6 +1293,9 @@
       "NumberGradient": {
         "Description": "Not implemented"
       },
+      "Query": {
+        "Description": "A query on the world that can be iterated over"
+      },
       "SharedBuffer": {
         "Description": "A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`",
         "Members": {
@@ -1309,6 +1315,9 @@
       },
       "VectorGradient": {
         "Description": "Not implemented"
+      },
+      "World": {
+        "Description": "An ECS world"
       }
     },
     "Globals": {
@@ -1327,7 +1336,8 @@
         "Description": "Same as `print`, except generates a Warning message",
         "Generics": "T...",
         "In": "...: T..."
-      }
+      },
+      "@phoenix/world": "The primary ECS world"
     },
     "Libraries": {
       "_RUNTIME": {
@@ -1640,6 +1650,7 @@
               "Buffer": "Luau `buffer`s",
               "Color": "The `Color` datatype",
               "ColorGradient": "Color gradient (not implemented)",
+              "Component": "Handle to a component's data",
               "Double": "The `number` type",
               "EventSignal": "The `EventSignal` datatype",
               "Function": "A function, equivalent to `(...unknown) -> (...unknown)`",
@@ -1658,42 +1669,6 @@
             "Type": "EnumMouseButton"
           }
         }
-      },
-      "debug": {
-        "Description": "Extensions to the standard Luau `debug` library are documented below",
-        "Members": {
-          "breakpoint": {
-            "Description": [
-              "Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on",
-              "If a line is not specified, breaks into Debugger immediately, and returns no values",
-              "If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect"
-            ],
-            "In": "(Line: number",
-            "Out": "number)) & (() -> ()"
-          },
-          "zonebegin": {
-            "Description": "Begins a profiling zone for the current function, optionally accepting a name",
-            "In": "Name: string?"
-          },
-          "zoneend": {
-            "Description": "Ends the last profiling zone"
-          },
-          "profilemessage": {
-            "Description": "Generates a profiler log message event",
-            "In": "Message: string"
-          },
-          "profilezonename": {
-            "Description": "Set zone name on a per-call basis",
-            "In": "Name: string"
-          },
-          "zonetext": {
-            "Description": "Set additional debug text for the zone",
-            "In": "Text: string"
-          }
-        }
-      },
-      "phoenix": {
-        "Description": "Non-standard runtime functionality. Prefer to use `@std` instead"
       },
       "@phoenix/fs": {
         "Description": [
@@ -2669,6 +2644,30 @@
           "synchronized": {
             "Description": "Returns whether the current thread is synchronized with the main thread",
             "Out": "boolean"
+          }
+        }
+      },
+      "@phoenix/profiler": {
+        "Description": "Interacting with the performance profiler",
+        "Members": {
+          "zonebegin": {
+            "Description": "Begins a profiling zone for the current function, optionally accepting a name",
+            "In": "Name: string?"
+          },
+          "zoneend": {
+            "Description": "Ends the last profiling zone"
+          },
+          "message": {
+            "Description": "Generates a profiler log message event",
+            "In": "Message: string"
+          },
+          "zonename": {
+            "Description": "Set zone name on a per-call basis",
+            "In": "Name: string"
+          },
+          "zonetext": {
+            "Description": "Set additional debug text for the zone",
+            "In": "Text: string"
           }
         }
       },

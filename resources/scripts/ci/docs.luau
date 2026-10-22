@@ -1095,52 +1095,6 @@ end
 phoenixDefs ..= "}\n"
 definitionsFile ..= phoenixDefs
 
-definitionsFile ..= "\n\n"
-
-for _, name in orderedGlobals do
-    local contents = docComments.ScriptEnv.Globals[name]
-
-    if not contents then
-        docWarn(`Missing doc entry for global '{ name }'`)
-        continue
-    end
-
-    if apiDump.ScriptEnv.Globals[name] == "function" then
-        local args = contents.In or ""
-        local returns = contents.Out or "()"
-
-        local generics = ""
-        if contents.Generics then
-            generics = `<{contents.Generics}>`
-        end
-
-        globals ..= `\`\`\`luau\nfunction { name }{generics}({ args }): { returns }\n\`\`\`\n`
-        definitionsFile ..= `declare function { name }{generics}( { args } ){ if #returns > 0 then ": " .. returns else "" }\n`
-    else
-        globals ..= `\`\`\`luau\n{ name }: { apiDump.ScriptEnv.Globals[name] }\n\`\`\`\n`
-        definitionsFile ..= `declare { name }: { apiDump.ScriptEnv.Globals[name] }\n`
-    end
-
-    local totalcomment = ""
-    for _, comment in (if typeof(contents.Description) == "table" then contents.Description else { contents.Description }) do
-        if not comment then
-            docWarn(`Missing doc comment for global '{ name }'`)
-        end
-
-        totalcomment ..= `* { comment }\n`
-    end
-    totalcomment = totalcomment:sub(1, #totalcomment - 1)
-
-    globals ..= totalcomment
-    documentationData[`@{DOCS_PREFIX}/global/{name}`] = {
-        documentation = totalcomment
-    }
-
-    globals ..= "\n"
-end
-
-definitionsFile ..= "\n\n"
-
 local scriptenv = datatypesPrologue .. datatypes .. librariesPrologue .. libraries .. globalsPrologue .. globals
 
 if not fs.exists(WIKI_PATH) then

@@ -672,7 +672,7 @@
     "documentation": "Color gradient (not implemented)"
   },
   "@phoenix/enum/ValueType.Component": {
-    "documentation": ""
+    "documentation": "Handle to a component's data"
   },
   "@phoenix/enum/ValueType.Double": {
     "documentation": "The `number` type"
@@ -727,6 +727,9 @@
   },
   "@phoenix/global/ColorGradient": {
     "documentation": "Not implemented"
+  },
+  "@phoenix/global/Component": {
+    "documentation": "A handle to a component's data"
   },
   "@phoenix/global/Enum": {
     "documentation": "* Contains enumerations\n* See the Enums page for details"
@@ -1061,11 +1064,17 @@
   "@phoenix/global/NumberGradient": {
     "documentation": "Not implemented"
   },
+  "@phoenix/global/Query": {
+    "documentation": "A query on the world that can be iterated over"
+  },
   "@phoenix/global/SharedBuffer": {
     "documentation": "A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`"
   },
   "@phoenix/global/VectorGradient": {
     "documentation": "Not implemented"
+  },
+  "@phoenix/global/World": {
+    "documentation": "An ECS world"
   },
   "@phoenix/global/_RUNTIME": {
     "documentation": "* Describes the Luau runtime"
@@ -1078,33 +1087,6 @@
   },
   "@phoenix/global/_RUNTIME.version": {
     "documentation": "* Version information"
-  },
-  "@phoenix/global/_VMNAME": {
-    "documentation": "* A non-unique identifier for the current Luau VM"
-  },
-  "@phoenix/global/appendlog": {
-    "documentation": "* Same as `print`, but does not prefix the log message with `[INFO]`"
-  },
-  "@phoenix/global/debug": {
-    "documentation": "* Extensions to the standard Luau `debug` library are documented below"
-  },
-  "@phoenix/global/debug.breakpoint": {
-    "documentation": "* Set a breakpoint at the closest possible line to the given target line within the calling function, returning the actual line the breakpoint landed on\n* If a line is not specified, breaks into Debugger immediately, and returns no values\n* If a Debugger is not attached (such as in non-developer mode or headless mode), has no effect"
-  },
-  "@phoenix/global/debug.profilemessage": {
-    "documentation": "* Generates a profiler log message event"
-  },
-  "@phoenix/global/debug.zonebegin": {
-    "documentation": "* Begins a profiling zone for the current function, optionally accepting a name"
-  },
-  "@phoenix/global/debug.zoneend": {
-    "documentation": "* Ends the last profiling zone"
-  },
-  "@phoenix/global/debug.zonetext": {
-    "documentation": "* Set additional debug text for the zone"
-  },
-  "@phoenix/global/warn": {
-    "documentation": "* Same as `print`, except generates a Warning message"
   },
   "@phoenix/globaltype/AtomicInteger": {
     "documentation": "An atomic integer, which can be accessed from multiple threads with an ID through `parallel.atomicinteger`"
@@ -1129,6 +1111,9 @@
   },
   "@phoenix/globaltype/ColorGradient": {
     "documentation": "Not implemented"
+  },
+  "@phoenix/globaltype/Component": {
+    "documentation": "A handle to a component's data"
   },
   "@phoenix/globaltype/EcAnimation": {
     "documentation": "An animation"
@@ -1364,6 +1349,9 @@
   "@phoenix/globaltype/NumberGradient": {
     "documentation": "Not implemented"
   },
+  "@phoenix/globaltype/Query": {
+    "documentation": "A query on the world that can be iterated over"
+  },
   "@phoenix/globaltype/SharedBuffer": {
     "documentation": "A buffer accessible without locking between mulitple parallel threads, which can be fetched through `parallel.sharedbuffer`"
   },
@@ -1378,5 +1366,8 @@
   },
   "@phoenix/globaltype/VectorGradient": {
     "documentation": "Not implemented"
+  },
+  "@phoenix/globaltype/World": {
+    "documentation": "An ECS world"
   }
 }

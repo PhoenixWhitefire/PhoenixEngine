@@ -4,7 +4,6 @@
 
 static const luaL_Reg luhxlibs[] = {
     { "", luhxopen_base },
-    { LUA_DBLIBNAME, luhxopen_debug},
 
     { LUHX_ENUMLIBNAME, luhxopen_Enum },
     { LUHX_COLORLIBNAME, luhxopen_Color },

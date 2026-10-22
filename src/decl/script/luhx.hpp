@@ -32,8 +32,7 @@ int luhxopen_task(lua_State*);
 int luhxopen_parallel(lua_State*);
 int luhxopen_system(lua_State*);
 int luhxopen_schedule(lua_State*);
-
-int luhxopen_debug(lua_State*);
+int luhxopen_profiler(lua_State*);
 
 #define LUHX_ENUMLIBNAME "Enum"
 int luhxopen_Enum(lua_State*);
@@ -54,6 +53,7 @@ static const inline std::unordered_map<std::string_view, lua_CFunction> BuiltinL
 	{ "parallel", luhxopen_parallel },
 	{ "system", luhxopen_system },
 	{ "schedule", luhxopen_schedule },
+	{ "profiler", luhxopen_profiler },
 };
 
 #define LUHX_GAMEOBJECTLIBNAME "GameObject"
