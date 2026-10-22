@@ -65,11 +65,11 @@ export type World = {
     read set: <T>(self: World, e: ReadId, c: WriteId<T>, data: T) -> (),
 
     --- Find all entities targeted by the relationship with this entity.
-    read targets: (self: World, e: ReadId, relation: ReadId) -> { ReadId },
+    read targetsOf: (self: World, e: ReadId, relation: ReadId) -> { ReadId },
     --- Find the Nth entity (the first by default) targeted by the relationship with this entity.
-    read target: (self: World, e: ReadId, relation: ReadId, index: number?) -> ReadId?,
+    read targetOf: (self: World, e: ReadId, relation: ReadId, index: number?) -> ReadId?,
     --- Find the parent of this entity through the `ChildOf` relationship.
-    read parent: (self: World, e: ReadId) -> ReadId,
+    read parentOf: (self: World, e: ReadId) -> ReadId,
 
     -- TODO: Replace this with the type function once the bug is fixed.
     --- Queries the world for all entities matching the given predicates.

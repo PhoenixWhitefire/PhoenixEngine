@@ -77,12 +77,12 @@ for e, _ in world:query(ecs.pair(ecs.Wildcard, childA)) do
 end
 
 print("")
-print(`Parent of B: { nameOf(assert(world:parent(childB))) }`)
+print(`Parent of B: { nameOf(assert(world:parentOf(childB))) }`)
 
 print("")
 print("All things liked by 'A':")
 
-for _, e in world:targets(childA, Likes) do
+for _, e in world:targetsOf(childA, Likes) do
     print(`* { nameOf(e) }`)
 end
 

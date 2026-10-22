@@ -302,7 +302,7 @@ std::optional<World::ComponentData> World::find(Id e, Id c)
     return std::nullopt;
 }
 
-std::optional<Id> World::target(Id e, Id relation, uint64_t index)
+std::optional<Id> World::targetOf(Id e, Id relation, uint64_t index)
 {
     uint64_t count = 0;
 
@@ -326,9 +326,9 @@ std::optional<Id> World::target(Id e, Id relation, uint64_t index)
     return std::nullopt;
 }
 
-std::optional<Id> World::parent(Id e)
+std::optional<Id> World::parentOf(Id e)
 {
-    return target(e, Ec::ChildOf);
+    return targetOf(e, Ec::ChildOf);
 }
 
 bool World::query(const std::span<const Id>& queryPredicates, const std::function<bool(Id, const std::vector<ComponentData>&)>& keepGoing, Id start)

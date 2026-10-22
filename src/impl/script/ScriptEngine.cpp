@@ -1769,7 +1769,7 @@ static int world_set(lua_State* L)
     return 0;
 }
 
-static int world_targets(lua_State* L)
+static int world_targetsOf(lua_State* L)
 {
     World* world = luhx_checkworld(L, 1);
     Id e = luhx_checkid(L, 2);
@@ -1778,7 +1778,7 @@ static int world_targets(lua_State* L)
     lua_newtable(L);
 
     std::optional<Id> target;
-    for (int index = 0; (target = world->target(e, relation, index)); index++)
+    for (int index = 0; (target = world->targetOf(e, relation, index)); index++)
     {
         luhx_pushid(L, target.value());
         lua_rawseti(L, -2, index + 1);
@@ -1787,14 +1787,14 @@ static int world_targets(lua_State* L)
     return 1;
 }
 
-static int world_target(lua_State* L)
+static int world_targetOf(lua_State* L)
 {
     World* world = luhx_checkworld(L, 1);
     Id e = luhx_checkid(L, 2);
     Id relation = luhx_checkid(L, 3);
     int index = luaL_optinteger(L, 4, 1) - 1; // 1-based
 
-    if (std::optional<Id> target = world->target(e, relation, index))
+    if (std::optional<Id> target = world->targetOf(e, relation, index))
         luhx_pushid(L, target.value());
     else
         lua_pushnil(L);
@@ -1802,12 +1802,12 @@ static int world_target(lua_State* L)
     return 1;
 }
 
-static int world_parent(lua_State* L)
+static int world_parentOf(lua_State* L)
 {
     World* world = luhx_checkworld(L, 1);
     Id e = luhx_checkid(L, 2);
 
-    if (std::optional<Id> parent = world->parent(e))
+    if (std::optional<Id> parent = world->parentOf(e))
         luhx_pushid(L, parent.value());
     else
         lua_pushnil(L);
@@ -1844,9 +1844,9 @@ static const luaL_Reg world_funcs[] = {
     { "find", world_find },
     { "get", world_get },
     { "set", world_set },
-    { "targets", world_targets },
-    { "target", world_target },
-    { "parent", world_parent },
+    { "targetsOf", world_targetsOf },
+    { "targetOf", world_targetOf },
+    { "parentOf", world_parentOf },
     { "query", world_query },
     { nullptr, nullptr }
 };
