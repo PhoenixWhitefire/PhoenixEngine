@@ -632,9 +632,9 @@
       },
       "@phoenix/profiler": {
         "message": "function",
-        "zonebegin": "function",
-        "zoneend": "function",
-        "zonetext": "function"
+        "zoneBegin": "function",
+        "zoneEnd": "function",
+        "zoneText": "function"
       },
       "@phoenix/schedule": {
         "frame": "function"

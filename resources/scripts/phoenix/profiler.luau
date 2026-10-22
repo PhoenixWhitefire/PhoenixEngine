@@ -5,11 +5,11 @@ type profiler = {
     --- Generates a profiler log message event
     read message: (( Message: string ) -> ()),
     --- Begins a profiling zone for the current function, optionally accepting a name
-    read zonebegin: (( Name: string? ) -> ()),
+    read zoneBegin: (( Name: string? ) -> ()),
     --- Ends the last profiling zone
-    read zoneend: ((  ) -> ()),
+    read zoneEnd: ((  ) -> ()),
     --- Set additional debug text for the zone
-    read zonetext: (( Text: string ) -> ())
+    read zoneText: (( Text: string ) -> ())
 }
 
 local function load(): profiler

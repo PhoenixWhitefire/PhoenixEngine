@@ -2650,22 +2650,22 @@
       "@phoenix/profiler": {
         "Description": "Interacting with the performance profiler",
         "Members": {
-          "zonebegin": {
+          "zoneBegin": {
             "Description": "Begins a profiling zone for the current function, optionally accepting a name",
             "In": "Name: string?"
           },
-          "zoneend": {
+          "zoneEnd": {
             "Description": "Ends the last profiling zone"
           },
           "message": {
             "Description": "Generates a profiler log message event",
             "In": "Message: string"
           },
-          "zonename": {
+          "zoneName": {
             "Description": "Set zone name on a per-call basis",
             "In": "Name: string"
           },
-          "zonetext": {
+          "zoneText": {
             "Description": "Set additional debug text for the zone",
             "In": "Text: string"
           }

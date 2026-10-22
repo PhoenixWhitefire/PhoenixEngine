@@ -7,7 +7,7 @@ static ScriptEngine::StateUserdata* getVmUserdata(lua_State* L)
     return (ScriptEngine::StateUserdata*)lua_getthreaddata(lua_mainthread(L));
 }
 
-static int profiler_zonebegin(lua_State* L)
+static int profiler_zoneBegin(lua_State* L)
 {
     std::string zoneName;
     tracy::LuauZoneBeginNImpl(L, &zoneName);
@@ -18,7 +18,7 @@ static int profiler_zonebegin(lua_State* L)
     return 0;
 }
 
-static int profiler_zoneend(lua_State* L)
+static int profiler_zoneEnd(lua_State* L)
 {
     tracy::LuauZoneEnd(L);
 
@@ -29,9 +29,9 @@ static int profiler_zoneend(lua_State* L)
 }
 
 static const luaL_Reg profiler_funcs[] = {
-    { "zonebegin", profiler_zonebegin },
-    { "zoneend", profiler_zoneend, },
-    { "zonetext", tracy::LuauZoneText },
+    { "zoneBegin", profiler_zoneBegin },
+    { "zoneEnd", profiler_zoneEnd },
+    { "zoneText", tracy::LuauZoneText },
     { "message", tracy::LuauMessage },
 
     { NULL, NULL }

@@ -3,7 +3,6 @@ local schedule = require("@phoenix/schedule")
 local imgui = require("@phoenix/imgui")
 local world = require("@phoenix/world")
 local ecs = require("@phoenix/ecs")
-local task = require("@std/task")
 
 local Likes = world:component()
 
@@ -190,5 +189,4 @@ schedule.frame(function(dt)
     end
 
     imgui.endw()
-    task.wait()
 end)
