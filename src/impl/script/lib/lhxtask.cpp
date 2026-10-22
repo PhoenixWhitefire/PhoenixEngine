@@ -61,32 +61,26 @@ static int task_spawn(lua_State* L)
     return 1;
 }
 
-static lua_State* asThread(lua_State* L, int idx, int& ref)
-{
-    lua_State* task = nullptr;
-
-    if (lua_type(L, idx) == LUA_TFUNCTION)
-    {
-        task = lua_newthread(L);
-        lua_xpush(L, task, idx);
-        ref = lua_ref(task, -1);
-    }
-    else if (lua_type(L, idx) == LUA_TTHREAD)
-    {
-        task = lua_tothread(L, idx);
-        ref = lua_ref(L, idx);
-    }
-
-    return task;
-}
-
 static int schedule(lua_State* L, double sleepTime, int taskStackIndex, int numFnArgs)
 {
     int taskType = lua_type(L, taskStackIndex);
     luaL_argexpected(L, taskType == LUA_TFUNCTION || taskType == LUA_TTHREAD, taskStackIndex, "function or thread (coroutine)");
 
-    int ref = LUA_NOREF;
-    lua_State* DL = asThread(L, taskStackIndex, ref);
+    lua_State* DL = nullptr;
+    int ref = 0;
+
+    if (taskType == LUA_TFUNCTION)
+    {
+        DL = lua_newthread(L);
+        lua_xpush(L, DL, taskStackIndex);
+        ref = lua_ref(L, -1);
+        lua_pop(L, 1);
+    }
+    else
+    {
+        DL = lua_tothread(L, taskStackIndex);
+        ref = lua_ref(L, taskStackIndex);
+    }
 
     lua_State* arguments = lua_newthread(DL);
     int argsRef = lua_ref(DL, -1);

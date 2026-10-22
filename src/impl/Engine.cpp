@@ -1574,8 +1574,8 @@ void Engine::Start()
         for (const BoundDataModel& bound : BoundDataModels)
             Reflection::SignalEvent(bound.Object->FindComponent<EcDataModel>()->OnFrameBeginCallbacks, { deltaTime }, "DataModel.OnFrameBegin");
 
-        waitForParallelVMs(this);   // tsan ??
-        ScriptManager.StepVMs(deltaTime);    // serial phase
+        waitForParallelVMs(this);
+        ScriptManager.StepVMs(deltaTime); // serial phase
         dispatchParallelVMs(this, deltaTime);
 
         // fetch the camera again because of potential CurrentScene changes that may have caused re-alloc'd
