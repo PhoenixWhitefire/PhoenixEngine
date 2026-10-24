@@ -34,6 +34,7 @@ static void updateSpatialHash(EcRigidBody* crb, bool placeNew)
                 assert(it != cell.end());
 
                 cell.erase(it);
+                crb->Object->DecrementHardRefs();
             }
         }
 
@@ -64,6 +65,7 @@ static void updateSpatialHash(EcRigidBody* crb, bool placeNew)
     {
         cw->SpatialHash[min].push_back(crb->Object.TargetId);
         crb->SpatialHashPoints = { min };
+        crb->Object->IncrementHardRefs();
         return;
     }
 
@@ -76,6 +78,7 @@ static void updateSpatialHash(EcRigidBody* crb, bool placeNew)
 
                 cw->SpatialHash[point].push_back(crb->Object.TargetId);
                 crb->SpatialHashPoints.push_back(point);
+                crb->Object->IncrementHardRefs();
             }
 }
 

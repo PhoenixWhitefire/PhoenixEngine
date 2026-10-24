@@ -1,9 +1,9 @@
+#include <format>
 #include <lualib.h>
 
 #include "script/luhx.hpp"
 #include "script/ScriptEngine.hpp"
 #include "script/UserdataTags.hpp"
-#include "Utilities.hpp"
 
 static void disconnect(EventConnectionData* ec)
 {
@@ -21,10 +21,8 @@ static int conn_namecall(lua_State* L)
     {
         EventConnectionData* ec = (EventConnectionData*)luaL_checkudatatagged(L, 1, UserdataTag::EventConnection);
 
-        if (ec->ConnectionId == UINT32_MAX)
-            luaL_error(L, "Event Connection was already disconnected!");
-
-        disconnect(ec);
+        if (ec->ConnectionId != UINT32_MAX)
+            disconnect(ec);
     }
     else
         luaL_error(L, "No such method of Event Connection known as '%s'", lua_namecallatom(L, nullptr));
