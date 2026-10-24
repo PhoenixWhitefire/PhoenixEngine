@@ -3,7 +3,7 @@ local Types = require("@ci/test-types.luau")
 
 return function(test: Types.Test, expect: Types.Expect)
     test("Lemongrab", function()
-        local response = Network:MakeHttpRequestAsync({ Url = "https://phoenixwhitefire.github.io/net_test.txt" })
+        local response = Network:MakeHttpRequestAsync({ Url = "https://5-erin.github.io/net_test.txt" })
 
         if not response.Ok then
             warn(response.Body)
