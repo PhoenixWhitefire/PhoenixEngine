@@ -139,6 +139,8 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
         vis:Destroy()
     end
 
+    table.clear(CoreTools.VisualizationTargets)
+
     for _, conns in VisualizationsChangedConnections do
         if conns.WorkspaceChanged then
             conns.WorkspaceChanged:Disconnect()
@@ -149,7 +151,7 @@ function ProjectEditing.Enter(PreviousStage: Types.Stage)
         end
     end
 
-    table.clear(CoreTools.VisualizationTargets)
+    table.clear(VisualizationsChangedConnections)
 
     if PreviousStage == "SelectProject" then
         EditorCameraTransform.Load(EditorCam)
